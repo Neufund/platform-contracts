@@ -10,7 +10,7 @@ const BEFORE_DURATION = 1 * 24 * 60 * 60 + START_DATE_GAP;
 const WHITELIST_DURATION = 5 * 24 * 60 * 60;
 const PUBLIC_DURATION = 30 * 24 * 60 * 60;
 
-const TestTimedStateMachine = artifacts.require("TestTimedStateMachine");
+const TestICBMTimedStateMachine = artifacts.require("TestICBMTimedStateMachine");
 
 contract("TimedStateMachine", () => {
   let timedStateMachine;
@@ -19,7 +19,7 @@ contract("TimedStateMachine", () => {
   beforeEach(async () => {
     timebase = await latestTimestamp();
     const startDate = timebase + BEFORE_DURATION;
-    timedStateMachine = await TestTimedStateMachine.new(startDate);
+    timedStateMachine = await TestICBMTimedStateMachine.new(startDate);
   });
 
   it("should have initial state", async () => {

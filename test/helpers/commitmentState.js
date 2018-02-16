@@ -1,4 +1,4 @@
-// Needs to match contracts/Commitment/StateMachine.sol:State
+// Needs to match contracts/ICBM/ICBMCommitment/ICBMStateMachine.sol:State
 export const CommitmentState = {
   Before: 0,
   Whitelist: 1,

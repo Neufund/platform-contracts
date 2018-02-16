@@ -17,16 +17,16 @@ import { etherToWei } from "./helpers/unitConverter";
 import roles from "./helpers/roles";
 import { promisify } from "./helpers/evmCommands";
 
-const LockedAccount = artifacts.require("LockedAccount");
+const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
 const EtherToken = artifacts.require("EtherToken");
-const EuroToken = artifacts.require("EuroToken");
+const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 const TestNullContract = artifacts.require("TestNullContract");
-const TestLockedAccountController = artifacts.require(
-  "TestLockedAccountController"
+const TestICBMLockedAccountController = artifacts.require(
+  "TestICBMLockedAccountController"
 );
-const TestLockedAccountMigrationTarget = artifacts.require(
-  "TestLockedAccountMigrationTarget"
+const TestICBMLockedAccountMigrationTarget = artifacts.require(
+  "TestICBMLockedAccountMigrationTarget"
 );
 
 const Q18 = new web3.BigNumber(10).pow(18);
@@ -35,7 +35,7 @@ const LOCK_PERIOD = 18 * monthInSeconds;
 const UNLOCK_PENALTY_FRACTION = Q18.mul(0.1).round(0, 0);
 
 contract(
-  "LockedAccount",
+  "ICBMLockedAccount",
   ([_, admin, investor, investor2, otherMigrationSource, operatorWallet]) => {
     let controller;
     let startTimestamp;
@@ -108,7 +108,7 @@ contract(
       });
     });
 
-    describe("EuroToken", () => {
+    describe("ICBMEuroToken", () => {
       async function applyTransferPermissions(permissions) {
         for (const p of permissions) {
           switch (p.side) {
@@ -127,7 +127,7 @@ contract(
       }
 
       async function deployEuroToken() {
-        assetToken = await EuroToken.new(accessPolicy.address);
+        assetToken = await ICBMEuroToken.new(accessPolicy.address);
         await accessPolicy.setUserRole(
           admin,
           roles.eurtDepositManager,
@@ -562,7 +562,7 @@ contract(
         investorAddress,
         neumarkToBurn
       ) {
-        // asset token is not allowed to call unlock on LockedAccount, change to neumark for test to fail
+        // asset token is not allowed to call unlock on ICBMLockedAccount, change to neumark for test to fail
         await expect(
           assetToken.approveAndCall(lockedAccount.address, neumarkToBurn, "", {
             from: investorAddress
@@ -1124,7 +1124,7 @@ contract(
       unlockPenaltyFraction,
       { leaveUnlocked = false } = {}
     ) {
-      lockedAccount = await LockedAccount.new(
+      lockedAccount = await ICBMLockedAccount.new(
         accessPolicy.address,
         token.address,
         neumark.address,
@@ -1140,7 +1140,7 @@ contract(
       );
       noCallbackContract = await TestNullContract.new();
       testDisbursal = await TestFeeDistributionPool.new();
-      controller = await TestLockedAccountController.new(lockedAccount.address);
+      controller = await TestICBMLockedAccountController.new(lockedAccount.address);
       if (!leaveUnlocked) {
         await lockedAccount.setController(controller.address, {
           from: admin
@@ -1150,7 +1150,7 @@ contract(
     }
 
     async function deployMigrationTarget(token, feeDisbursalAddress) {
-      const target = await TestLockedAccountMigrationTarget.new(
+      const target = await TestICBMLockedAccountMigrationTarget.new(
         accessPolicy.address,
         token.address,
         neumark.address,

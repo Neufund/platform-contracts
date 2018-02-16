@@ -2,7 +2,7 @@ require("babel-register");
 const getConfig = require("./config").default;
 
 const Neumark = artifacts.require("Neumark");
-const Commitment = artifacts.require("Commitment");
+const Commitment = artifacts.require("ICBMCommitment");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   // do not deploy testing network

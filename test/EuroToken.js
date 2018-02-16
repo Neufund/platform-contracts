@@ -15,13 +15,13 @@ import { etherToWei } from "./helpers/unitConverter";
 import roles from "./helpers/roles";
 import EvmError from "./helpers/EVMThrow";
 
-const EuroToken = artifacts.require("EuroToken");
-const TestEuroTokenMigrationTarget = artifacts.require(
-  "TestEuroTokenMigrationTarget"
+const ICBMEuroToken = artifacts.require("ICBMEuroToken");
+const TestICBMEuroTokenMigrationTarget = artifacts.require(
+  "TestICBMEuroTokenMigrationTarget"
 );
 
 contract(
-  "EuroToken",
+  "ICBMEuroToken",
   ([_, depositManager, other, broker, reclaimer, ...investors]) => {
     let rbap;
     let euroToken;
@@ -31,7 +31,7 @@ contract(
         { subject: depositManager, role: roles.eurtDepositManager },
         { subject: reclaimer, role: roles.reclaimer }
       ]);
-      euroToken = await EuroToken.new(rbap.address);
+      euroToken = await ICBMEuroToken.new(rbap.address);
     });
 
     describe("specific tests", () => {
@@ -57,7 +57,7 @@ contract(
       }
 
       it("should deploy", async () => {
-        await prettyPrintGasCost("EuroToken deploy", euroToken);
+        await prettyPrintGasCost("ICBMEuroToken deploy", euroToken);
       });
 
       it("should deposit", async () => {
@@ -280,7 +280,7 @@ contract(
     describe("migration tests", () => {
       let testEuroTokenMigrationTarget;
       beforeEach(async () => {
-        testEuroTokenMigrationTarget = await TestEuroTokenMigrationTarget.new(
+        testEuroTokenMigrationTarget = await TestICBMEuroTokenMigrationTarget.new(
           euroToken.address
         );
       });

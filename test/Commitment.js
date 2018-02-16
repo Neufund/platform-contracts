@@ -13,9 +13,9 @@ import { promisify } from "./helpers/evmCommands";
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("./Neumark.sol");
 const EtherToken = artifacts.require("./EtherToken.sol");
-const EuroToken = artifacts.require("./EuroToken.sol");
-const LockedAccount = artifacts.require("./LockedAccount.sol");
-const Commitment = artifacts.require("./Commitment.sol");
+const ICBMEuroToken = artifacts.require("./ICBMEuroToken.sol");
+const ICBMLockedAccount = artifacts.require("./ICBMLockedAccount.sol");
+const ICBMCommitment = artifacts.require("./ICBMCommitment.sol");
 
 const Token = { Ether: 1, Euro: 2 };
 const BEFORE_DURATION = 5 * 24 * 60 * 60;
@@ -46,7 +46,7 @@ const investorShare = nmk => nmk.sub(platformShare(nmk));
 const MIN_TICKET_ETH = eurToEth(MIN_TICKET_EUR);
 
 contract(
-  "Commitment",
+  "ICBMCommitment",
   ([
     deployer, // eslint-disable-line no-unused-vars
     platform,
@@ -73,8 +73,8 @@ contract(
       forkArbiter = await EthereumForkArbiter.new(rbap.address);
       neumark = await Neumark.new(rbap.address, forkArbiter.address);
       etherToken = await EtherToken.new(rbap.address);
-      euroToken = await EuroToken.new(rbap.address);
-      etherLock = await LockedAccount.new(
+      euroToken = await ICBMEuroToken.new(rbap.address);
+      etherLock = await ICBMLockedAccount.new(
         rbap.address,
         etherToken.address,
         neumark.address,
@@ -82,7 +82,7 @@ contract(
         LOCK_DURATION,
         PENALTY_FRACTION
       );
-      euroLock = await LockedAccount.new(
+      euroLock = await ICBMLockedAccount.new(
         rbap.address,
         euroToken.address,
         neumark.address,
@@ -90,7 +90,7 @@ contract(
         LOCK_DURATION,
         PENALTY_FRACTION
       );
-      commitment = await Commitment.new(
+      commitment = await ICBMCommitment.new(
         rbap.address,
         forkArbiter.address,
         startDate,
@@ -175,7 +175,7 @@ contract(
     }
 
     it("should deploy", async () => {
-      await prettyPrintGasCost("Commitment deploy", commitment);
+      await prettyPrintGasCost("ICBMCommitment deploy", commitment);
       expect(await commitment.ethEurFraction()).to.be.bignumber.eq(
         ETH_EUR_FRACTION
       );
@@ -1398,7 +1398,7 @@ contract(
         expect(investorNmk.sub(curveNmk).abs()).to.be.bignumber.lt(epsilon);
       });
 
-      it("should lock EuroToken", async () => {
+      it("should lock ICBMEuroToken", async () => {
         await increaseTime(PUBLIC_START);
         // await mineBlock();
         const now = await latestTimestamp();

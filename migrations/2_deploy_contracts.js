@@ -6,10 +6,10 @@ const moment = require("moment");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("Neumark");
-const LockedAccount = artifacts.require("LockedAccount");
+const LockedAccount = artifacts.require("ICBMLockedAccount");
 const EtherToken = artifacts.require("EtherToken");
-const EuroToken = artifacts.require("EuroToken");
-const Commitment = artifacts.require("Commitment");
+const EuroToken = artifacts.require("ICBMEuroToken");
+const Commitment = artifacts.require("ICBMCommitment");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   // do not deploy testing network

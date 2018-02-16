@@ -3,7 +3,7 @@ const getConfig = require("./config").default;
 const { TriState, GLOBAL } = require("../test/helpers/triState");
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const EuroToken = artifacts.require("EuroToken");
+const EuroToken = artifacts.require("ICBMEuroToken");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   // do not deploy testing network

@@ -2,8 +2,8 @@ require("babel-register");
 const { TriState, GLOBAL } = require("../test/helpers/triState");
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const LockedAccount = artifacts.require("LockedAccount");
-const Commitment = artifacts.require("Commitment");
+const LockedAccount = artifacts.require("ICBMLockedAccount");
+const Commitment = artifacts.require("ICBMCommitment");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   // do not deploy testing network

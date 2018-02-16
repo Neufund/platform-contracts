@@ -4,9 +4,9 @@ const { TriState, EVERYONE, GLOBAL } = require("../test/helpers/triState");
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 const Neumark = artifacts.require("Neumark");
-const LockedAccount = artifacts.require("LockedAccount");
-const EuroToken = artifacts.require("EuroToken");
-const Commitment = artifacts.require("Commitment");
+const LockedAccount = artifacts.require("ICBMLockedAccount");
+const EuroToken = artifacts.require("ICBMEuroToken");
+const Commitment = artifacts.require("ICBMCommitment");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   // do not deploy testing network
