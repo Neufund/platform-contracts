@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { CommitmentState } from "./helpers/commitmentState";
-import increaseTime from "./helpers/increaseTime";
-import { latestTimestamp } from "./helpers/latestTime";
+import { CommitmentState } from "./commitmentState";
+import increaseTime from "../helpers/increaseTime";
+import { latestTimestamp } from "../helpers/latestTime";
 
 // always give one minute more to let testRPC settle
 const START_DATE_GAP = 60;

@@ -1,14 +1,14 @@
 import { expect } from "chai";
-import EvmError from "./helpers/EVMThrow";
-import increaseTime from "./helpers/increaseTime";
-import { latestTimestamp } from "./helpers/latestTime";
-import { eventValue } from "./helpers/events";
-import createAccessPolicy from "./helpers/createAccessPolicy";
-import roles from "./helpers/roles";
-import { prettyPrintGasCost } from "./helpers/gasUtils";
-import { LockState } from "./helpers/lockState";
-import { CommitmentState } from "./helpers/commitmentState";
-import { promisify } from "./helpers/evmCommands";
+import EvmError from "../helpers/EVMThrow";
+import increaseTime from "../helpers/increaseTime";
+import { latestTimestamp } from "../helpers/latestTime";
+import { eventValue } from "../helpers/events";
+import createAccessPolicy from "../helpers/createAccessPolicy";
+import roles from "../helpers/roles";
+import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { LockState } from "./lockState";
+import { CommitmentState } from "./commitmentState";
+import { promisify } from "../helpers/evmCommands";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("./Neumark.sol");

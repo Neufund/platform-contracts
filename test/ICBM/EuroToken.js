@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { prettyPrintGasCost } from "./helpers/gasUtils";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { prettyPrintGasCost } from "../helpers/gasUtils";
+import createAccessPolicy from "../helpers/createAccessPolicy";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -9,11 +9,11 @@ import {
   ZERO_ADDRESS,
   expectTransferEvent,
   testWithdrawal
-} from "./helpers/tokenTestCases";
-import { eventValue } from "./helpers/events";
-import { etherToWei } from "./helpers/unitConverter";
-import roles from "./helpers/roles";
-import EvmError from "./helpers/EVMThrow";
+} from "../helpers/tokenTestCases";
+import { eventValue } from "../helpers/events";
+import { etherToWei } from "../helpers/unitConverter";
+import roles from "../helpers/roles";
+import EvmError from "../helpers/EVMThrow";
 
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const TestICBMEuroTokenMigrationTarget = artifacts.require(

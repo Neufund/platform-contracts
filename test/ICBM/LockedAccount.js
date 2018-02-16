@@ -1,21 +1,21 @@
 import { expect } from "chai";
 import moment from "moment";
-import { hasEvent, eventValue } from "./helpers/events";
+import { hasEvent, eventValue } from "../helpers/events";
 import {
   deployControlContracts,
   deployNeumark,
   dayInSeconds,
   monthInSeconds
-} from "./helpers/deployContracts";
-import increaseTime, { setTimeTo } from "./helpers/increaseTime";
-import { latestTimestamp } from "./helpers/latestTime";
-import EvmError from "./helpers/EVMThrow";
-import { TriState } from "./helpers/triState";
-import { LockState } from "./helpers/lockState";
-import forceEther from "./helpers/forceEther";
-import { etherToWei } from "./helpers/unitConverter";
-import roles from "./helpers/roles";
-import { promisify } from "./helpers/evmCommands";
+} from "../helpers/deployContracts";
+import increaseTime, { setTimeTo } from "../helpers/increaseTime";
+import { latestTimestamp } from "../helpers/latestTime";
+import EvmError from "../helpers/EVMThrow";
+import { TriState } from "../helpers/triState";
+import { LockState } from "./lockState";
+import forceEther from "../helpers/forceEther";
+import { etherToWei } from "../helpers/unitConverter";
+import roles from "../helpers/roles";
+import { promisify } from "../helpers/evmCommands";
 
 const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
 const EtherToken = artifacts.require("EtherToken");
