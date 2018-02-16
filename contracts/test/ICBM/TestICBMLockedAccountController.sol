@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import "../LockedAccount.sol";
+import "../../ICBM/ICBMLockedAccount.sol";
 
 
-contract TestLockedAccountController {
+contract TestICBMLockedAccountController {
 
     ////////////////////////
     // Events
@@ -20,13 +20,13 @@ contract TestLockedAccountController {
     // Immutable state
     ////////////////////////
 
-    LockedAccount private LOCKED_ACCOUNT;
+    ICBMLockedAccount private LOCKED_ACCOUNT;
 
     ////////////////////////
     // Constructor
     ////////////////////////
 
-    function TestLockedAccountController(LockedAccount lockedAccount) public {
+    function TestICBMLockedAccountController(ICBMLockedAccount lockedAccount) public {
         LOCKED_ACCOUNT = lockedAccount;
     }
 

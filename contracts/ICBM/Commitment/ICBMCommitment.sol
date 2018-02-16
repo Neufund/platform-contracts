@@ -1,21 +1,21 @@
 pragma solidity 0.4.15;
 
-import '../EtherToken.sol';
-import '../EuroToken.sol';
-import '../LockedAccount.sol';
-import '../Math.sol';
-import '../Neumark.sol';
-import './TimedStateMachine.sol';
-import "../AccessControl/AccessControlled.sol";
-import "../Agreement.sol";
-import "../Reclaimable.sol";
+import '../../EtherToken.sol';
+import '../ICBMEuroToken.sol';
+import '../ICBMLockedAccount.sol';
+import '../../Math.sol';
+import '../../Neumark.sol';
+import './ICBMTimedStateMachine.sol';
+import "../../AccessControl/AccessControlled.sol";
+import "../../Agreement.sol";
+import "../../Reclaimable.sol";
 
 
 /// @title processes capital commitments into Neufund ecosystem
-contract Commitment is
+contract ICBMCommitment is
     AccessControlled,
     Agreement,
-    TimedStateMachine,
+    ICBMTimedStateMachine,
     Reclaimable,
     Math
 {
@@ -66,11 +66,11 @@ contract Commitment is
 
     EtherToken private ETHER_TOKEN;
 
-    EuroToken private EURO_TOKEN;
+    ICBMEuroToken private EURO_TOKEN;
 
-    LockedAccount private ETHER_LOCK;
+    ICBMLockedAccount private ETHER_LOCK;
 
-    LockedAccount private EURO_LOCK;
+    ICBMLockedAccount private EURO_LOCK;
 
     // maximum amount of EuroToken that can be committed to generate Neumark reward
     // indirectly this is cap for Neumark amount generated as it is checked against NEUMARK.totalEuroUlps()
@@ -132,23 +132,23 @@ contract Commitment is
     /// @param capEurUlps maxium amount of euro tokens committed
     /// @param minTicketEurUlps minimum ticket size
     /// @param ethEurFraction Ether to Euro rate, fixed during commitment
-    function Commitment(
+    function ICBMCommitment(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
         int256 startDate,
         address platformWallet,
         Neumark neumark,
         EtherToken etherToken,
-        EuroToken euroToken,
-        LockedAccount etherLock,
-        LockedAccount euroLock,
+        ICBMEuroToken euroToken,
+        ICBMLockedAccount etherLock,
+        ICBMLockedAccount euroLock,
         uint256 capEurUlps,
         uint256 minTicketEurUlps,
         uint256 ethEurFraction
     )
         AccessControlled(accessPolicy)
         Agreement(accessPolicy, forkArbiter)
-        TimedStateMachine(startDate)
+        ICBMTimedStateMachine(startDate)
         public
     {
         require(platformWallet != 0x0);
@@ -338,7 +338,7 @@ contract Commitment is
     function etherLock()
         public
         constant
-        returns (LockedAccount)
+        returns (ICBMLockedAccount)
     {
         return ETHER_LOCK;
     }
@@ -346,7 +346,7 @@ contract Commitment is
     function euroLock()
         public
         constant
-        returns (LockedAccount)
+        returns (ICBMLockedAccount)
     {
         return EURO_LOCK;
     }

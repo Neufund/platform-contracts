@@ -1,13 +1,13 @@
 pragma solidity 0.4.15;
 
-import "../Zeppelin/StandardToken.sol";
-import '../Standards/IMigrationSource.sol';
-import "../EuroTokenMigrationTarget.sol";
+import "../../Zeppelin/StandardToken.sol";
+import '../../Standards/IMigrationSource.sol';
+import "../../ICBM/ICBMEuroTokenMigrationTarget.sol";
 
 
-contract TestEuroTokenMigrationTarget is
+contract TestICBMEuroTokenMigrationTarget is
     StandardToken,
-    EuroTokenMigrationTarget
+    ICBMEuroTokenMigrationTarget
 {
     ////////////////////////
     // Immutable state
@@ -19,7 +19,7 @@ contract TestEuroTokenMigrationTarget is
     // Constructor
     ////////////////////////
 
-    function TestEuroTokenMigrationTarget(address migrationSource)
+    function TestICBMEuroTokenMigrationTarget(address migrationSource)
         public
     {
         MIGRATION_SOURCE = migrationSource;

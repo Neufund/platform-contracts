@@ -1,12 +1,12 @@
 pragma solidity 0.4.15;
 
-import "../LockedAccount.sol";
-import "../LockedAccountMigration.sol";
+import "../../ICBM/ICBMLockedAccount.sol";
+import "../../ICBM/ICBMLockedAccountMigration.sol";
 
 
-contract TestLockedAccountMigrationTarget is
-    LockedAccount,
-    LockedAccountMigration
+contract TestICBMLockedAccountMigrationTarget is
+    ICBMLockedAccount,
+    ICBMLockedAccountMigration
 {
 
     ////////////////////////
@@ -19,13 +19,13 @@ contract TestLockedAccountMigrationTarget is
     // Mutable state
     ////////////////////////
 
-    LockedAccount private _migrationSource;
+    ICBMLockedAccount private _migrationSource;
 
     ////////////////////////
     // Constructor
     ////////////////////////
 
-    function TestLockedAccountMigrationTarget(
+    function TestICBMLockedAccountMigrationTarget(
         IAccessPolicy _policy,
         IERC677Token _assetToken,
         Neumark _neumark,
@@ -33,7 +33,7 @@ contract TestLockedAccountMigrationTarget is
         uint256 _lockPeriod,
         uint256 _penaltyFraction
     )
-        LockedAccount(
+        ICBMLockedAccount(
             _policy,
             _assetToken,
             _neumark,
@@ -50,7 +50,7 @@ contract TestLockedAccountMigrationTarget is
     // Public functions
     ////////////////////////
 
-    function setMigrationSource(LockedAccount source)
+    function setMigrationSource(ICBMLockedAccount source)
         public
         only(ROLE_LOCKED_ACCOUNT_ADMIN)
     {

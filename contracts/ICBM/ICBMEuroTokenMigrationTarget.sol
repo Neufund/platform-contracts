@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import './MigrationTarget.sol';
+import '../MigrationTarget.sol';
 
 
-contract EuroTokenMigrationTarget is
+contract ICBMEuroTokenMigrationTarget is
     MigrationTarget
 {
     ////////////////////////

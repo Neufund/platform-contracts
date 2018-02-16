@@ -11,7 +11,7 @@ import './AccessRoles.sol';
 /// @dev use with care!
 ///     1. ROLE_RECLAIMER is allowed to claim tokens, it's not returning tokens to original owner
 ///     2. in derived contract that holds any token by design you must override `reclaim` and block such possibility.
-///         see LockedAccount as an example
+///         see ICBMLockedAccount as an example
 contract Reclaimable is AccessControlled, AccessRoles {
 
     ////////////////////////

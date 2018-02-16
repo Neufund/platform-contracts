@@ -1,17 +1,17 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './Reclaimable.sol';
-import './SnapshotToken/Helpers/TokenMetadata.sol';
-import './Zeppelin/StandardToken.sol';
-import './MigrationSource.sol';
-import './EuroTokenMigrationTarget.sol';
+import '../AccessControl/AccessControlled.sol';
+import '..//Reclaimable.sol';
+import '../SnapshotToken/Helpers/TokenMetadata.sol';
+import '../Zeppelin/StandardToken.sol';
+import '../MigrationSource.sol';
+import './ICBMEuroTokenMigrationTarget.sol';
 
 
 /// Simple implementation of EuroToken which is pegged 1:1 to certain off-chain
 /// pool of Euro. Balances of this token are intended to be migrated to final
 /// implementation that will be available later
-contract EuroToken is
+contract ICBMEuroToken is
     IERC677Token,
     AccessControlled,
     StandardToken,
@@ -87,7 +87,7 @@ contract EuroToken is
     // Constructor
     ////////////////////////
 
-    function EuroToken(IAccessPolicy accessPolicy)
+    function ICBMEuroToken(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
@@ -210,7 +210,7 @@ contract EuroToken is
         _allowedTransferTo[msg.sender] = false;
         _allowedTransferFrom[msg.sender] = false;
         // migrate to
-        EuroTokenMigrationTarget(_migration).migrateEuroTokenOwner(msg.sender, amount);
+        ICBMEuroTokenMigrationTarget(_migration).migrateEuroTokenOwner(msg.sender, amount);
         // set event
         LogEuroTokenOwnerMigrated(msg.sender, amount);
     }

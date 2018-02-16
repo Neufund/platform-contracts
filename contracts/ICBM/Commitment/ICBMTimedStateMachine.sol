@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './StateMachine.sol';
+import './ICBMStateMachine.sol';
 
 
 /// @title time induced state machine
@@ -13,7 +13,7 @@ import './StateMachine.sol';
 ///     correct state before executing function body. note that this is contract state changing modifier so use with care
 /// @dev state change request is publicly accessible via 'handleTimedTransitions'
 /// @dev time is based on block.timestamp
-contract TimedStateMachine is StateMachine {
+contract ICBMTimedStateMachine is ICBMStateMachine {
 
     ////////////////////////
     // Constants
@@ -50,7 +50,7 @@ contract TimedStateMachine is StateMachine {
     // Constructor
     ////////////////////////
 
-    function TimedStateMachine(int256 whitelistStart)
+    function ICBMTimedStateMachine(int256 whitelistStart)
         internal
     {
         WHITELIST_START = whitelistStart;

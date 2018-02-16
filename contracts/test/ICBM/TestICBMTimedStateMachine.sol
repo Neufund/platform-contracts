@@ -1,17 +1,17 @@
 pragma solidity ^0.4.15;
 
-import "../Commitment/TimedStateMachine.sol";
+import "../../ICBM/Commitment/ICBMTimedStateMachine.sol";
 
 
-contract TestTimedStateMachine is
-    TimedStateMachine
+contract TestICBMTimedStateMachine is
+    ICBMTimedStateMachine
 {
     ////////////////////////
     // Constructor
     ////////////////////////
 
-    function TestTimedStateMachine(int256 whitelistStart)
-        TimedStateMachine(whitelistStart)
+    function TestICBMTimedStateMachine(int256 whitelistStart)
+        ICBMTimedStateMachine(whitelistStart)
         public
     {
     }

@@ -5,7 +5,7 @@ pragma solidity 0.4.15;
 /// @notice implements following state progression Before --> Whitelist --> Public --> Finished
 /// @dev state switching via 'transitionTo' function
 /// @dev inherited contract must implement mAfterTransition which will be called just after state transition happened
-contract StateMachine {
+contract ICBMStateMachine {
 
     ////////////////////////
     // Types
@@ -58,7 +58,7 @@ contract StateMachine {
     // Constructor
     ////////////////////////
 
-    function StateMachine() internal {
+    function ICBMStateMachine() internal {
     }
 
     ////////////////////////

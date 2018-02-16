@@ -1,19 +1,19 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
-import './EtherToken.sol';
-import './IsContract.sol';
-import './MigrationSource.sol';
-import './LockedAccountMigration.sol';
-import './Neumark.sol';
-import './Standards/IERC677Token.sol';
-import './Standards/IERC677Callback.sol';
-import './Reclaimable.sol';
-import './TimeSource.sol';
+import '../AccessControl/AccessControlled.sol';
+import '../AccessRoles.sol';
+import '../EtherToken.sol';
+import '../IsContract.sol';
+import '../MigrationSource.sol';
+import './ICBMLockedAccountMigration.sol';
+import '../Neumark.sol';
+import '../Standards/IERC677Token.sol';
+import '../Standards/IERC677Callback.sol';
+import '../Reclaimable.sol';
+import '../TimeSource.sol';
 
 
-contract LockedAccount is
+contract ICBMLockedAccount is
     AccessControlled,
     AccessRoles,
     TimeSource,
@@ -171,7 +171,7 @@ contract LockedAccount is
     ///     if unlocked before lockPeriod is over
     /// @dev this implementation does not allow spending funds on ICOs but provides
     ///     a migration mechanism to final LockedAccount with such functionality
-    function LockedAccount(
+    function ICBMLockedAccount(
         IAccessPolicy policy,
         IERC677Token assetToken,
         Neumark neumark,
@@ -417,7 +417,7 @@ contract LockedAccount is
 
         // let migration target to own asset balance that belongs to investor
         assert(ASSET_TOKEN.approve(address(_migration), account.balance));
-        LockedAccountMigration(_migration).migrateInvestor(
+        ICBMLockedAccountMigration(_migration).migrateInvestor(
             msg.sender,
             account.balance,
             account.neumarksDue,
