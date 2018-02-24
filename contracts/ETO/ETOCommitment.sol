@@ -9,7 +9,6 @@ import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../Reclaimable.sol";
 import '../Math.sol';
-import "../Standards/IERC223Callback.sol";
 
 
 /// @title capital commitment into Company and share increase
@@ -18,8 +17,8 @@ contract ETOCommitment is
     Agreement,
     ETOTimedStateMachine,
     Reclaimable,
-    Math,
-    IERC223Callback
+    IdentityRecord,
+    Math
 {
 
     ////////////////////////
@@ -84,6 +83,8 @@ contract ETOCommitment is
     uint256 private MIN_CAP_EUR_ULPS;
     // maximum ticket from ETOTerms for low access costs
     uint256 private MAX_TICKET_EUR_ULPS;
+    // maximum ticket for simple investor from ETOTerms for low access costs
+    uint256 private MAX_TICKET_SIMPLE_EUR_ULPS;
     // minimum ticket from ETOTerms for low access costs
     uint256 private MIN_TICKET_EUR_ULPS;
     // price of equity token from ETOTerms for low access costs
@@ -153,6 +154,7 @@ contract ETOCommitment is
         MAX_CAP_EUR_ULPS = etoTerms.MAX_CAP_EUR_ULPS();
         MIN_CAP_EUR_ULPS = etoTerms.MIN_CAP_EUR_ULPS();
         MAX_TICKET_EUR_ULPS = etoTerms.MAX_TICKET_EUR_ULPS();
+        MAX_TICKET_SIMPLE_EUR_ULPS = etoTerms.MAX_TICKET_SIMPLE_EUR_ULPS();
         MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
         TOKEN_EUR_PRICE_ULPS = etoTerms.TOKEN_EUR_PRICE_ULPS();
 
@@ -222,9 +224,7 @@ contract ETOCommitment is
     }
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
-    /// @param investor address of the investor
-    /// @param amount amount commited
-    /// @param data in case of LockedAccount contains investor
+    /// @dev data in case of LockedAccount contains investor address and investor is LockedAccount address
     function onTokenTransfer(address investor, uint256 amount, bytes data)
         public
         withStateTransition()
@@ -241,52 +241,19 @@ contract ETOCommitment is
             investor = addressFromBytes(data);
         }
         // kick out not whitelist or not LockedAccount
-        if (State(state()) == State.Whitelist) {
+        if (state() == State.Whitelist) {
             require(!_whitelist[investor] && !isLockedAccount);
         }
         // kick out on KYC
-        require(!IDENTITY_REGISTRY.hasKYC(investor));
-        uint256 equivEurUlps = amount;
-        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
-        // compute EUR eurEquivalent via oracle if ether
-        if (isEuroInvestment) {
-            var (rate, rate_timestamp) = CURRENCY_RATES.getCurrencyRate(ETHER_TOKEN, EURO_TOKEN);
-            // require if rate older than 4 hours
-            require(block.timestamp - rate_timestamp > 6 hours);
-            equivEurUlps = equivEurUlps * rate;
-        }
-        // kick on minimum ticket
-        require(equivEurUlps < MIN_TICKET_EUR_ULPS);
-        // kick on cap exceeded
-        require(_totalEquivEurUlps + equivEurUlps > MAX_CAP_EUR_ULPS);
-        // read current ticket
-        InvestmentTicket storage ticket = _tickets[investor];
-        // kick on max ticket exceeded
-        require(ticket.equivEurUlps + equivEurUlps > MAX_TICKET_EUR_ULPS);
-        // we trust NEU token so we issue NEU before writing state
-        uint96 rewardNmkUlps;
-        // issue only for "new money" so LockedAccount from ICBM is excluded
-        if (!isLockedAccount) {
-            // uint96 is much more than 1.5 bln of NEU so no overflow
-            rewardNmkUlps = uint96(NEUMARK.issueForEuro(equivEurUlps));
-        }
-        // issue ET
-        assert(equivEurUlps * TOKEN_EUR_PRICE_ULPS < 2**96);
-        uint96 equityTokenUlps = uint96(equivEurUlps * TOKEN_EUR_PRICE_ULPS);
-        // write new values
+        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
+        require(claims.hasKyc);
+        // calculate maximum ticket
+        uint256 maxTicketEurUlps = claims.isSophisticatedInvestor ? MAX_TICKET_EUR_ULPS : MAX_TICKET_SIMPLE_EUR_ULPS;
+        // process ticket
+        var (equityTokenUlps, rewardNmkUlps, equivEurUlps) = processTicket(investor, amount, maxTicketEurUlps, isLockedAccount);
+        // update total investment
         _totalEquivEurUlps += equivEurUlps;
-        ticket.equivEurUlps += uint96(equivEurUlps);
-        ticket.rewardNmkUlps += rewardNmkUlps;
-        ticket.equityTokenUlps += uint96(equityTokenUlps);
-        if (isEuroInvestment) {
-            ticket.equivEurUlps += uint96(amount);
-        } else {
-            ticket.amountEth += uint96(amount);
-        }
-        // issue Equity Token
-        COMPANY.issueTokens(investor, equityTokenUlps);
-
-        // Log successful commitment
+        // log successful commitment
         LogFundsCommitted(
             investor,
             msg.sender,
@@ -299,7 +266,7 @@ contract ETOCommitment is
     }
 
     /// allows to invest with ether directly
-    function commitEther()
+    /*function commitEther()
         external
         payable
         withStateTransition()
@@ -307,7 +274,7 @@ contract ETOCommitment is
         acceptAgreement(msg.sender) // agreement accepted by act of reserving funds in this function
     {
         // if any msg.value must be ether token
-    }
+    }*/
 
     function refund()
         external
@@ -490,6 +457,56 @@ contract ETOCommitment is
     {
         // TODO: implement
         return address(0);
+    }
+
+    function processTicket(
+        address investor,
+        uint256 amount,
+        uint256 maxTicketEurUlps,
+        bool isLockedAccount
+    )
+        private
+        returns (uint96 equityTokenUlps, uint96 rewardNmkUlps, uint256 equivEurUlps)
+    {
+        equivEurUlps = amount;
+        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
+        // compute EUR eurEquivalent via oracle if ether
+        if (isEuroInvestment) {
+            var (rate, rate_timestamp) = CURRENCY_RATES.getCurrencyRate(ETHER_TOKEN, EURO_TOKEN);
+            // require if rate older than 4 hours
+            require(block.timestamp - rate_timestamp > 6 hours);
+            equivEurUlps = equivEurUlps * rate;
+        }
+        // kick on minimum ticket
+        require(equivEurUlps < MIN_TICKET_EUR_ULPS);
+        // kick on cap exceeded
+        require(_totalEquivEurUlps + equivEurUlps > MAX_CAP_EUR_ULPS);
+        // read current ticket
+        InvestmentTicket storage ticket = _tickets[investor];
+        // kick on max ticket exceeded
+        require(ticket.equivEurUlps + equivEurUlps > maxTicketEurUlps);
+        // we trust NEU token so we issue NEU before writing state
+        // issue only for "new money" so LockedAccount from ICBM is excluded
+        if (!isLockedAccount) {
+            // uint96 is much more than 1.5 bln of NEU so no overflow
+            rewardNmkUlps = uint96(NEUMARK.issueForEuro(equivEurUlps));
+        }
+        // issue ET
+        assert(equivEurUlps * TOKEN_EUR_PRICE_ULPS < 2**96);
+        equityTokenUlps = uint96(equivEurUlps * TOKEN_EUR_PRICE_ULPS);
+        // write new values
+        ticket.equivEurUlps += uint96(equivEurUlps);
+        ticket.rewardNmkUlps += rewardNmkUlps;
+        ticket.equityTokenUlps += uint96(equityTokenUlps);
+        if (isEuroInvestment) {
+            ticket.equivEurUlps += uint96(amount);
+        } else {
+            ticket.amountEth += uint96(amount);
+        }
+        // issue Equity Token
+        COMPANY.issueTokens(investor, equityTokenUlps);
+
+        return (equityTokenUlps, rewardNmkUlps, equivEurUlps);
     }
 
     //CONSTANT: interface type according to this EIP (hash of type??)

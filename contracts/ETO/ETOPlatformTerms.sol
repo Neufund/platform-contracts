@@ -22,8 +22,13 @@ contract ETOPlatformTerms {
     // various constaints on ETOTerms by company
 
     // minimum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MIN_ACCEPTABLE_TICKET_EUR_ULPS = 500 * 10**18;
+    uint256 public constant MIN_TICKET_EUR_ULPS = 500 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MAX_ACCEPTABLE_TICKET_EUR_ULPS = 10000000 * 10**18;
-
+    uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
+    // maximum ticket size for sophisiticated investor under crowdfunding regulations
+    uint256 public constant MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS = 10000 * 10**18;
+    // maximum ticket size for simple investor under crowdfunding regulations
+    uint256 public constant MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS = 10000 * 10**18;
+    // maximum raised amount for crowdfunding regulation
+    uint256 public constant MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS = 2500000 * 10**18;
 }

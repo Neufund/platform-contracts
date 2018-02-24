@@ -7,7 +7,7 @@ import "./Neumark.sol";
 import "./ICBM/LockedAccount.sol";
 
 // TODO: should import actual implementations
-import "./Standards/IIdentityRegistry.sol";
+import "./Identity/IIdentityRegistry.sol";
 import "./Standards/ICurrencyRateOracle.sol";
 import "./Standards/IFeeDisbursal.sol";
 

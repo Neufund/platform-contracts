@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import "./Standards/IIdentityRegistry.sol";
+import "./IIdentityRegistry.sol";
 
 
 contract IdentityRegistry is

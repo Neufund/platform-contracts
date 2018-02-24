@@ -33,10 +33,14 @@ contract ETOTerms is Math {
     uint256 public TOKEN_EUR_PRICE_ULPS;
     // minimum ticket
     uint256 public MIN_TICKET_EUR_ULPS;
-    // maximum ticket
+    // maximum ticket for sophisiticated investors
     uint256 public MAX_TICKET_EUR_ULPS;
+    // maximum ticket for simple investors
+    uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
+    // says if we work under crowdfunding regulation
+    bool public IS_CROWDFUNDING;
 
     // paperwork
     // url (typically IPFS hash) to investment agreement between nominee and company
@@ -78,7 +82,9 @@ contract ETOTerms is Math {
             uint256 tokenEurPriceUlps,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
+            uint256 maxTicketSimpleEurUlps,
             bool enableTransfersOnSuccess,
+            bool isCrowdfunding,
             string investmentAgreementUrl,
             string shaTemplateUrl,
             ShareholderRights shareHolderRights
@@ -93,7 +99,9 @@ contract ETOTerms is Math {
         TOKEN_EUR_PRICE_ULPS = tokenEurPriceUlps;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
+        MAX_TICKET_SIMPLE_EUR_ULPS = maxTicketSimpleEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
+        IS_CROWDFUNDING = isCrowdfunding;
         INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementUrl;
         SHA_TEMPLATE_URL = shaTemplateUrl;
         SHAREHOLDER_RIGHTS = shareHolderRights;
@@ -109,6 +117,7 @@ contract ETOTerms is Math {
         private
     {
         // TODO: write checks
+        // TODO: compute ticket size per regulations and settings in platform terms
     }
 
 }
