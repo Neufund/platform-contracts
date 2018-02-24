@@ -15,21 +15,6 @@ import "./IETOCommitment.sol";
 contract ETOTimedStateMachine is IETOCommitment {
 
     ////////////////////////
-    // Types
-    ////////////////////////
-
-    // order must reflect time precedence, do not change order below
-    enum State {
-        Setup,
-        Whitelist,
-        Public,
-        Refund,
-        Signing,
-        Claim,
-        Payout
-    }
-
-    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -108,9 +93,9 @@ contract ETOTimedStateMachine is IETOCommitment {
     function state()
         public
         constant
-        returns (uint32)
+        returns (State)
     {
-        return uint32(_state);
+        return _state;
     }
 
     function startOf(State s)
