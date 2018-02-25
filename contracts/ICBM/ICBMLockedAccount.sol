@@ -1,6 +1,7 @@
 pragma solidity 0.4.15;
 
 import '../AccessControl/AccessControlled.sol';
+import './ICBMRoles.sol';
 import '../AccessRoles.sol';
 import '../EtherToken.sol';
 import '../IsContract.sol';
@@ -15,7 +16,7 @@ import '../TimeSource.sol';
 
 contract ICBMLockedAccount is
     AccessControlled,
-    AccessRoles,
+    ICBMRoles,
     TimeSource,
     Math,
     IsContract,

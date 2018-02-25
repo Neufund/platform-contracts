@@ -5,6 +5,7 @@ import '../ICBMEuroToken.sol';
 import '../ICBMLockedAccount.sol';
 import '../../Math.sol';
 import '../../Neumark.sol';
+import '../ICBMRoles.sol';
 import './ICBMTimedStateMachine.sol';
 import "../../AccessControl/AccessControlled.sol";
 import "../../Agreement.sol";
@@ -17,7 +18,8 @@ contract ICBMCommitment is
     Agreement,
     ICBMTimedStateMachine,
     Reclaimable,
-    Math
+    Math,
+    ICBMRoles
 {
     ////////////////////////
     // Types

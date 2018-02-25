@@ -6,6 +6,7 @@ import '../SnapshotToken/Helpers/TokenMetadata.sol';
 import '../Zeppelin/StandardToken.sol';
 import '../MigrationSource.sol';
 import './ICBMEuroTokenMigrationTarget.sol';
+import './ICBMRoles.sol';
 
 
 /// Simple implementation of EuroToken which is pegged 1:1 to certain off-chain
@@ -17,7 +18,8 @@ contract ICBMEuroToken is
     StandardToken,
     TokenMetadata,
     MigrationSource,
-    Reclaimable
+    Reclaimable,
+    ICBMRoles
 {
     ////////////////////////
     // Constants
