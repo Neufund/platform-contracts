@@ -1,6 +1,8 @@
 pragma solidity 0.4.15;
 
 
+/// @title standard access roles of the Platform
+/// @dev constants are kept in CODE not in STORAGE so they are comparatively cheap
 contract AccessRoles {
 
     ////////////////////////
@@ -10,12 +12,6 @@ contract AccessRoles {
     // NOTE: All roles are set to the keccak256 hash of the
     // CamelCased role name, i.e.
     // ROLE_LOCKED_ACCOUNT_ADMIN = keccak256("LockedAccountAdmin")
-
-    // may setup LockedAccount, change disbursal mechanism and set migration
-    bytes32 internal constant ROLE_LOCKED_ACCOUNT_ADMIN = 0x4675da546d2d92c5b86c4f726a9e61010dce91cccc2491ce6019e78b09d2572e;
-
-    // may setup whitelists and abort whitelisting contract with curve rollback
-    bytes32 internal constant ROLE_WHITELIST_ADMIN = 0xaef456e7c864418e1d2a40d996ca4febf3a7e317fe3af5a7ea4dda59033bbe5c;
 
     // May issue (generate) Neumarks
     bytes32 internal constant ROLE_NEUMARK_ISSUER = 0x921c3afa1f1fff707a785f953a1e197bd28c9c50e300424e015953cbf120c06c;
@@ -37,4 +33,16 @@ contract AccessRoles {
 
     // allows to deposit EUR-T and allow addresses to send and receive EUR-T. keccak256("EurtDepositManager")
     bytes32 internal constant ROLE_EURT_DEPOSIT_MANAGER = 0x7c8ecdcba80ce87848d16ad77ef57cc196c208fc95c5638e4a48c681a34d4fe7;
+
+    // allows to register identities and change associated claims keccak256("IdentityManager")
+    bytes32 internal constant ROLE_IDENTITY_MANAGER = 0x32964e6bc50f2aaab2094a1d311be8bda920fc4fb32b2fb054917bdb153a9e9e;
+
+    // allows to replace controller on euro token and to destroy tokens without withdraw kecckak256("EurtLegalManager")
+    bytes32 internal constant ROLE_EURT_LEGAL_MANAGER = 0x4eb6b5806954a48eb5659c9e3982d5e75bfb2913f55199877d877f157bcc5a9b;
+
+    // allows to change known interfaces in universe kecckak256("UniverseManager")
+    bytes32 internal constant ROLE_UNIVERSE_MANAGER = 0xe8d8f8f9ea4b19a5a4368dbdace17ad71a69aadeb6250e54c7b4c7b446301738;
+
+    // allows to exchange gas for EUR-T keccak("GasExchange")
+    bytes32 internal constant ROLE_GAS_EXCHANGE = 0x9fe43636e0675246c99e96d7abf9f858f518b9442c35166d87f0934abef8a969;
 }
