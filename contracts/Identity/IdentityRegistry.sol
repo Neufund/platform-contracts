@@ -47,6 +47,20 @@ contract IdentityRegistry is
         return _claims[identity];
     }
 
+    function getMultipleClaims(address[] identities)
+        public
+        constant
+        returns (bytes32[])
+    {
+        uint256 idx;
+        bytes32[] memory claims = new bytes32[](identities.length);
+        while(idx++ < identities.length)
+        {
+            claims[idx] = _claims[identities[idx]];
+        }
+        return claims;
+    }
+
     function setClaims(address identity, bytes32 oldClaims, bytes32 newClaims)
         only(ROLE_IDENTITY_MANAGER)
         public
