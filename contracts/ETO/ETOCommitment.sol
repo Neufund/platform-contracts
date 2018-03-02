@@ -3,22 +3,26 @@ pragma solidity 0.4.15;
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
 import '../Universe.sol';
+import '../KnownInterfaces.sol';
 import "../Company/ICompanyManagement.sol";
 import "../Company/IEquityToken.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../Reclaimable.sol";
 import '../Math.sol';
+import '../Serialization.sol';
 
 
 /// @title capital commitment into Company and share increase
 contract ETOCommitment is
     AccessControlled,
+    KnownInterfaces,
     Agreement,
     ETOTimedStateMachine,
     Reclaimable,
     IdentityRecord,
-    Math
+    Math,
+    Serialization
 {
 
     ////////////////////////
@@ -67,12 +71,12 @@ contract ETOCommitment is
     // NEU tokens issued as reward for investment
     Neumark private NEUMARK;
     // ether token to store and transfer ether
-    EtherToken private ETHER_TOKEN;
+    IERC223Token private ETHER_TOKEN;
     // euro token to store and transfer euro
-    EuroToken private EURO_TOKEN;
+    IERC223Token private EURO_TOKEN;
     // allowed icbm investor accounts
-    LockedAccount private ETHER_LOCK;
-    LockedAccount private EURO_LOCK;
+    address private ETHER_LOCK;
+    address private EURO_LOCK;
     // equity token issued
     IEquityToken private EQUITY_TOKEN;
     // wallet registry of KYC procedure
@@ -228,7 +232,7 @@ contract ETOCommitment is
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @dev data in case of LockedAccount contains investor address and investor is LockedAccount address
-    function onTokenTransfer(address investor, uint256 amount, bytes data)
+    function tokenFallback(address investor, uint256 amount, bytes data)
         public
         withStateTransition()
         onlyStates(State.Whitelist, State.Public)
@@ -240,7 +244,6 @@ contract ETOCommitment is
         bool isLockedAccount = (investor == address(ETHER_LOCK) || investor == address(EURO_LOCK));
         if (isLockedAccount) {
             // data contains investor address
-            require(data.length != 0x20);
             investor = addressFromBytes(data);
         }
         // kick out not whitelist or not LockedAccount
@@ -415,7 +418,7 @@ contract ETOCommitment is
     {
         // platform operator gets share of NEU
         var (platformNmk, ) = calculateNeumarkDistribtion(NEUMARK.balanceOf(this));
-        NEUMARK.transfer(PLATFORM_WALLET, platformNmk);
+        assert(NEUMARK.transfer(PLATFORM_WALLET, platformNmk));
         // additional equity tokens are issued and sent to platform operator (temporarily)
         // (_totalEquivEurUlps/TOKEN_EUR_PRICE_ULPS) * TOKEN_PARTICIPATION_FEE_FRACTION
         uint256 tokenParticipationFee = proportion(_totalEquivEurUlps,
@@ -429,12 +432,12 @@ contract ETOCommitment is
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         if (etherBalance > 0) {
             uint256 etherFee = decimalFraction(etherBalance, ETO_TERMS.PLATFORM_TERMS().PLATFORM_FEE_FRACTION());
-            ETHER_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, etherBalance - etherFee);
+            assert(ETHER_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, etherBalance - etherFee));
         }
         uint256 euroBalance = EURO_TOKEN.balanceOf(this);
         if (euroBalance > 0) {
             uint256 euroFee = decimalFraction(euroBalance, ETO_TERMS.PLATFORM_TERMS().PLATFORM_FEE_FRACTION());
-            EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, euroBalance - euroFee);
+            assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, euroBalance - euroFee));
         }
     }
 
@@ -447,22 +450,13 @@ contract ETOCommitment is
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         if (etherBalance > 0) {
             // disburse via ETC223
-            ETHER_TOKEN.transfer(address(disbursal), etherBalance, '');
+            assert(ETHER_TOKEN.transfer(address(disbursal), etherBalance, ''));
         }
         uint256 euroBalance = EURO_TOKEN.balanceOf(this);
         if (euroBalance > 0) {
             // disburse via ETC223
-            EURO_TOKEN.transfer(address(disbursal), euroBalance, '');
+            assert(EURO_TOKEN.transfer(address(disbursal), euroBalance, ''));
         }
-    }
-
-    /// deserialized address from data
-    function addressFromBytes(bytes data)
-        private
-        returns (address)
-    {
-        // TODO: implement
-        return address(0);
     }
 
     function processTicket(
