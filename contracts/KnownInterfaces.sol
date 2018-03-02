@@ -37,6 +37,9 @@ contract KnownInterfaces {
     // token exchange interface and singleton keccak256("ITokenExchange")
     bytes4 internal constant KNOWN_INTERFACE_TOKEN_EXCHANGE = 0xddd7a521;
 
+    // service exchanging euro token for gas ("IGasTokenExchange")
+    bytes4 internal constant KNOWN_INTERFACE_GAS_EXCHANGE = 0x89dbc6de;
+
     // access policy interface and singleton keccak256("IAccessPolicy")
     bytes4 internal constant KNOWN_INTERFACE_ACCESS_POLICY = 0xb05049d9;
 
@@ -46,10 +49,15 @@ contract KnownInterfaces {
     // ether lock account (upgraded) keccak256("LockedAccount:Ether")
     bytes4 internal constant KNOWN_INTERFACE_ETHER_LOCK = 0x978a6823;
 
+    // icbm euro lock account keccak256("ICBMLockedAccount:Euro")
+    bytes4 internal constant KNOWN_INTERFACE_ICBM_EURO_LOCK = 0x36021e14;
+
+    // ether lock account (upgraded) keccak256("ICBMLockedAccount:Ether")
+    bytes4 internal constant KNOWN_INTERFACE_ICBM_ETHER_LOCK = 0x0b58f006;
+
     // ethereum fork arbiter interface and singleton keccak256("IEthereumForkArbiter")
     bytes4 internal constant KNOWN_INTERFACE_FORK_ARBITER = 0x2fe7778c;
 
-    // ETO commitment interface interface and singleton keccak256("IETOCommitment")
-    bytes4 internal constant KNOWN_INTERFACE_ETO_COMMITMENT = 0xa0fd01b8;
-
+    // ETO commitment interface interface and singleton keccak256("ICommitment")
+    bytes4 internal constant KNOWN_INTERFACE_COMMITMENT = 0xfa0e0c60;
 }

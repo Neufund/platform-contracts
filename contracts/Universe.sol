@@ -1,13 +1,10 @@
 pragma solidity 0.4.15;
-
-import "./EtherToken.sol";
-import "./EuroToken.sol";
 import "./Neumark.sol";
 import "./KnownInterfaces.sol";
 import "./AccessRoles.sol";
-import "./ICBM/LockedAccount.sol";
 
 import "./Identity/IIdentityRegistry.sol";
+import "./Standards/IERC223Token.sol";
 import "./Standards/ITokenExchangeRateOracle.sol";
 import "./Standards/IFeeDisbursal.sol";
 import "./Standards/IEthereumForkArbiter.sol";
@@ -24,7 +21,7 @@ contract Universe is
     AccessRoles
 {
     ////////////////////////
-    // Mutable state
+    // Events
     ////////////////////////
 
     /// raised on any change of singleton instance
@@ -77,6 +74,19 @@ contract Universe is
         returns (address)
     {
         return _singletons[interfaceId];
+    }
+
+    function getManySingletons(bytes4[] interfaceIds)
+        public
+        constant
+        returns (address[])
+    {
+        address[] memory addresses = new address[](interfaceIds.length);
+        uint256 idx;
+        while(idx++ < interfaceIds.length) {
+            addresses[idx] = _singletons[interfaceIds[idx]];
+        }
+        return addresses;
     }
 
     /// checks of 'instance' is instance of interface 'interfaceId'
@@ -142,20 +152,28 @@ contract Universe is
         return Neumark(_singletons[KNOWN_INTERFACE_NEUMARK]);
     }
 
-    function etherToken() public constant returns (EtherToken) {
-        return EtherToken(_singletons[KNOWN_INTERFACE_ETHER_TOKEN]);
+    function etherToken() public constant returns (IERC223Token) {
+        return IERC223Token(_singletons[KNOWN_INTERFACE_ETHER_TOKEN]);
     }
 
-    function euroToken() public constant returns (EuroToken) {
-        return EuroToken(_singletons[KNOWN_INTERFACE_EURO_TOKEN]);
+    function euroToken() public constant returns (IERC223Token) {
+        return IERC223Token(_singletons[KNOWN_INTERFACE_EURO_TOKEN]);
     }
 
-    function etherLock() public constant returns (LockedAccount) {
-        return LockedAccount(_singletons[KNOWN_INTERFACE_ETHER_LOCK]);
+    function etherLock() public constant returns (address) {
+        return _singletons[KNOWN_INTERFACE_ETHER_LOCK];
     }
 
-    function euroLock() public constant returns (LockedAccount) {
-        return LockedAccount(_singletons[KNOWN_INTERFACE_EURO_LOCK]);
+    function euroLock() public constant returns (address) {
+        return _singletons[KNOWN_INTERFACE_EURO_LOCK];
+    }
+
+    function icbmEtherLock() public constant returns (address) {
+        return _singletons[KNOWN_INTERFACE_ICBM_ETHER_LOCK];
+    }
+
+    function icbmEuroLock() public constant returns (address) {
+        return _singletons[KNOWN_INTERFACE_ICBM_EURO_LOCK];
     }
 
     function identityRegistry() public constant returns (IIdentityRegistry) {
@@ -172,6 +190,10 @@ contract Universe is
 
     function tokenExchange() public constant returns (address) {
         return address(_singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE]);
+    }
+
+    function gasExchange() public constant returns (address) {
+        return address(_singletons[KNOWN_INTERFACE_GAS_EXCHANGE]);
     }
 
     ////////////////////////
