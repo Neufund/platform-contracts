@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
-import './IBasicToken.sol';
+import './IERC20Token.sol';
 import './ITokenMetadata.sol';
 
 
-contract IERC223Token is IBasicToken {
+contract IERC223Token is IERC20Token {
 
     /// @dev Departure: We do not log data, it has no advantage over a standard
     ///     log event. By sticking to the standard log event we

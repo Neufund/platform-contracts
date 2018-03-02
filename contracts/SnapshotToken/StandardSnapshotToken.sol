@@ -2,7 +2,7 @@ pragma solidity 0.4.15;
 
 import '../Standards/IERC20Token.sol';
 import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223Callback.sol';
+import '../Standards/IERC223FallbackCallback.sol';
 import '../IsContract.sol';
 import './Helpers/TokenAllowance.sol';
 import './MintableSnapshotToken.sol';
@@ -85,7 +85,7 @@ contract StandardSnapshotToken is
 
         // Notify the receiving contract.
         if (isContract(to)) {
-            IERC223Callback(to).onTokenTransfer(msg.sender, amount, data);
+            IERC223FallbackCallback(to).tokenFallback(msg.sender, amount, data);
         }
         return true;
     }

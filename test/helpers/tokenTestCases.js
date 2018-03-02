@@ -4,6 +4,7 @@ import EvmError from "./EVMThrow";
 
 const TestERC677Callback = artifacts.require("TestERC677Callback");
 const TestERC223Callback = artifacts.require("TestERC223Callback");
+const TestERC223FallbackCallback = artifacts.require("TestERC223FallbackCallback");
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export function expectTransferEvent(tx, from, to, amount) {
@@ -33,8 +34,11 @@ export async function deployTestErc677Callback() {
   return TestERC677Callback.new();
 }
 
-async function deployTestErc223Callback() {
-  return TestERC223Callback.new();
+async function deployTestErc223Callback(useTokenFallback) {
+  return useTokenFallback ?
+    TestERC223FallbackCallback.new()
+    :
+    TestERC223Callback.new();
 }
 
 export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
@@ -333,9 +337,9 @@ export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
   });
 }
 
-export function erc223TokenTests(token, fromAddr, toAddr, initialBalance) {
+export function erc223TokenTests(token, fromAddr, toAddr, initialBalance, useTokenFallback = true) {
   it("erc20 compatible transfer should not call fallback", async () => {
-    const erc223cb = await deployTestErc223Callback();
+    const erc223cb = await deployTestErc223Callback(useTokenFallback);
     const tx = await token().transfer(erc223cb.address, initialBalance, {
       from: fromAddr
     });
@@ -349,7 +353,7 @@ export function erc223TokenTests(token, fromAddr, toAddr, initialBalance) {
   });
 
   it("erc223 compatible transfer should call fallback", async () => {
-    const erc223cb = await deployTestErc223Callback();
+    const erc223cb = await deployTestErc223Callback(useTokenFallback);
     const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
     const tx = await token().transfer["address,uint256,bytes"](
       erc223cb.address,
