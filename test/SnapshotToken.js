@@ -1,15 +1,33 @@
 import { expect } from "chai";
 import EvmError from "./helpers/EVMThrow";
-import { ZERO_ADDRESS } from "./helpers/tokenTestCases";
+import {
+  erc223TokenTests,
+  ZERO_ADDRESS
+} from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
+
+const BigNumber = web3.BigNumber;
+const TKN_DECIMALS = new BigNumber(10).toPower(18);
 
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
 
-contract("TestSnapshotToken", ([owner, owner2, broker]) => {
+contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
   let testSnapshotToken;
 
   beforeEach(async () => {
     testSnapshotToken = await TestSnapshotToken.new(ZERO_ADDRESS, 0);
+  });
+
+  describe("IERC223Token tests", () => {
+    const initialBalanceTkn = TKN_DECIMALS.mul(91279837.398827).round();
+    const getToken = () => testSnapshotToken;
+
+    beforeEach(async () => {
+      await getToken().deposit(initialBalanceTkn, { from: owner });
+      await getToken().enableTransfers(true);
+    });
+
+    erc223TokenTests(getToken, owner, accounts[0], initialBalanceTkn);
   });
 
   describe("ITokenSnapshots tests", () => {

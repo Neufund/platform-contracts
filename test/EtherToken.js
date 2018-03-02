@@ -127,7 +127,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       });
     });
 
-    erc223TokenTests(getToken, investors[1], investors[2], initialBalance);
+    erc223TokenTests(getToken, investors[1], investors[2], initialBalance, false);
   });
 
   describe("withdrawal tests", () => {
