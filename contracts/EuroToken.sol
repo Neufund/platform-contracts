@@ -6,7 +6,7 @@ import './IsContract.sol';
 import './SnapshotToken/Helpers/TokenMetadata.sol';
 import './Zeppelin/StandardToken.sol';
 import "./Standards/IERC223Token.sol";
-import "./Standards/IERC223Callback.sol";
+import "./Standards/IERC223FallbackCallback.sol";
 import "./Standards/ITokenController.sol";
 
 
@@ -213,7 +213,7 @@ contract EuroToken is
         // Notify the receiving contract.
         if (isContract(to)) {
             // in case of re-entry (1) transfer is done (2) msg.sender is different
-            IERC223Callback(to).onTokenTransfer(msg.sender, amount, data);
+            IERC223FallbackCallback(to).tokenFallback(msg.sender, amount, data);
         }
         return true;
     }
