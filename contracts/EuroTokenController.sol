@@ -187,7 +187,7 @@ contract EuroTokenController is
         // try to get 'from'
         if (!explicitFrom) {
             // all ETO contracts may send funds (for example: refund)
-            explicitFrom = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_COMMITMENT, from);
+            explicitFrom = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, from);
         }
         if (!explicitFrom) {
             // from will not be resolved, return immediately
@@ -198,7 +198,7 @@ contract EuroTokenController is
         explicitTo = claims.hasKyc;
         if (!explicitTo) {
             // all ETO contracts may receive funds
-            explicitTo = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_COMMITMENT, to);
+            explicitTo = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, to);
         }
         // we only get here if explicitFrom was true
         return explicitTo;
@@ -219,7 +219,7 @@ contract EuroTokenController is
         constant
         returns (bool yes)
     {
-        address exchange = UNIVERSE.tokenExchange();
+        address exchange = UNIVERSE.gasExchange();
         return spender == address(exchange) && amount <= _maxSimpleExchangeAllowanceEurUlps;
     }
 
@@ -260,7 +260,7 @@ contract EuroTokenController is
 
         // contracts below may receive funds
         setAllowedTransferTo(UNIVERSE.feeDisbursal(), true);
-        setAllowedTransferTo(UNIVERSE.tokenExchange(), true);
+        setAllowedTransferTo(UNIVERSE.gasExchange(), true);
 
         LogUniverseReloaded();
     }
