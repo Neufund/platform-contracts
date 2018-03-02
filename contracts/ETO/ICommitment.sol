@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import "../Standards/IERC223FallbackCallback.sol";
+import "../Standards/IERC223Callback.sol";
 
 
 /// @title default interface of commitment process
@@ -8,7 +8,7 @@ import "../Standards/IERC223FallbackCallback.sol";
 ///  methods for checking finality and success/fail of the process are vailable
 ///  commitment event is standardized for tracking
 contract ICommitment is
-    IERC223FallbackCallback
+    IERC223Callback
 {
 
     ////////////////////////

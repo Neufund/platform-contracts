@@ -9,7 +9,6 @@ import './ICBMLockedAccount.sol';
 import './ICBMLockedAccountMigration.sol';
 import '../Neumark.sol';
 import '../Standards/IERC677Callback.sol';
-import '../Standards/IERC223FallbackCallback.sol';
 import '../Reclaimable.sol';
 import '../KnownInterfaces.sol';
 import '../Serialization.sol';
@@ -24,7 +23,6 @@ contract LockedAccount is
     Serialization,
     // MigrationSource,
     ICBMLockedAccountMigration,
-    IERC223FallbackCallback,
     IdentityRecord,
     KnownInterfaces,
     Reclaimable

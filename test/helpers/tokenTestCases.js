@@ -4,7 +4,7 @@ import EvmError from "./EVMThrow";
 
 const TestERC677Callback = artifacts.require("TestERC677Callback");
 const TestERC223Callback = artifacts.require("TestERC223Callback");
-const TestERC223FallbackCallback = artifacts.require("TestERC223FallbackCallback");
+const TestERC223LegacyCallback = artifacts.require("TestERC223LegacyCallback");
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export function expectTransferEvent(tx, from, to, amount) {
@@ -36,9 +36,9 @@ export async function deployTestErc677Callback() {
 
 async function deployTestErc223Callback(useTokenFallback) {
   return useTokenFallback ?
-    TestERC223FallbackCallback.new()
+    TestERC223Callback.new()
     :
-    TestERC223Callback.new();
+    TestERC223LegacyCallback.new();
 }
 
 export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {

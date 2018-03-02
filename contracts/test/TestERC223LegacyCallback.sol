@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
 import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223FallbackCallback.sol';
+import '../Standards/IERC223LegacyCallback.sol';
 
 
-contract TestERC223FallbackCallback is IERC223FallbackCallback {
+contract TestERC223LegacyCallback is IERC223LegacyCallback {
 
     ////////////////////////
     // Mutable state
@@ -17,7 +17,7 @@ contract TestERC223FallbackCallback is IERC223FallbackCallback {
     ////////////////////////
     // Constructor
     ////////////////////////
-    function TestERC223FallbackCallback() public {
+    function TestERC223Callback() public {
         // some "random" hash
         _dataKeccak = sha3(address(this));
     }
@@ -25,7 +25,11 @@ contract TestERC223FallbackCallback is IERC223FallbackCallback {
     ////////////////////////
     // Public functions
     ////////////////////////
-    function tokenFallback(address from, uint256 amount, bytes data)
+    function onTokenTransfer(
+        address from,
+        uint256 amount,
+        bytes data
+    )
         public
     {
         _from = from;
