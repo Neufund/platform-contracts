@@ -45,4 +45,7 @@ contract AccessRoles {
 
     // allows to exchange gas for EUR-T keccak("GasExchange")
     bytes32 internal constant ROLE_GAS_EXCHANGE = 0x9fe43636e0675246c99e96d7abf9f858f518b9442c35166d87f0934abef8a969;
+
+    // allows to set token exchange rates keccak("TokenRateOracle")
+    bytes32 internal constant ROLE_TOKEN_RATE_ORACLE = 0xa80c3a0c8a5324136e4c806a778583a2a980f378bdd382921b8d28dcfe965585;
 }
