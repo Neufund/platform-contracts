@@ -83,8 +83,9 @@ contract Universe is
     {
         address[] memory addresses = new address[](interfaceIds.length);
         uint256 idx;
-        while(idx++ < interfaceIds.length) {
+        while(idx < interfaceIds.length) {
             addresses[idx] = _singletons[interfaceIds[idx]];
+            idx += 1;
         }
         return addresses;
     }
@@ -122,18 +123,31 @@ contract Universe is
     {
         require(interfaceIds.length == instances.length);
         uint256 idx;
-        while(idx++ < interfaceIds.length) {
+        while(idx < interfaceIds.length) {
             setSingletonPrivate(interfaceIds[idx], instances[idx]);
+            idx += 1;
         }
     }
 
-    /// set or unset 'instance' with 'interfaceId' as known instance
+    /// set or unset 'instance' with 'interfaceId' in collection of instances
     function setCollectionInterface(bytes4 interfaceId, address instance, bool set)
         public
         only(ROLE_UNIVERSE_MANAGER)
     {
         _collections[interfaceId][instance] = set;
         LogSetCollectionInterface(interfaceId, instance, set);
+    }
+
+    /// set or unset 'instance' in many collections of instances
+    function setInterfaceInManyCollections(bytes4[] interfaceIds, address instance, bool set)
+        public
+        only(ROLE_UNIVERSE_MANAGER)
+    {
+        uint256 idx;
+        while(idx < interfaceIds.length) {
+            _collections[interfaceIds[idx]][instance] = set;
+            LogSetCollectionInterface(interfaceIds[idx], instance, set);
+        }
     }
 
     ////////////////////////
@@ -180,7 +194,7 @@ contract Universe is
         return IIdentityRegistry(_singletons[KNOWN_INTERFACE_IDENTITY_REGISTRY]);
     }
 
-    function currencyRateOracle() public constant returns (ITokenExchangeRateOracle) {
+    function tokenExchangeRateOracle() public constant returns (ITokenExchangeRateOracle) {
         return ITokenExchangeRateOracle(_singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE_RATE_ORACLE]);
     }
 
