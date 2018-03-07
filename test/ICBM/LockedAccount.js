@@ -1140,7 +1140,9 @@ contract(
       );
       noCallbackContract = await TestNullContract.new();
       testDisbursal = await TestFeeDistributionPool.new();
-      controller = await TestICBMLockedAccountController.new(lockedAccount.address);
+      controller = await TestICBMLockedAccountController.new(
+        lockedAccount.address
+      );
       if (!leaveUnlocked) {
         await lockedAccount.setController(controller.address, {
           from: admin

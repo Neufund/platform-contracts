@@ -624,7 +624,13 @@ contract(
         await neumark.enableTransfer(true, { from: transferAdmin });
       });
 
-      erc223TokenTests(getToken, accounts[0], accounts[1], initialBalanceNmk, false);
+      erc223TokenTests(
+        getToken,
+        accounts[0],
+        accounts[1],
+        initialBalanceNmk,
+        false
+      );
     });
 
     describe("ITokenSnapshots tests", () => {

@@ -35,10 +35,9 @@ export async function deployTestErc677Callback() {
 }
 
 async function deployTestErc223Callback(useTokenFallback) {
-  return useTokenFallback ?
-    TestERC223Callback.new()
-    :
-    TestERC223LegacyCallback.new();
+  return useTokenFallback
+    ? TestERC223Callback.new()
+    : TestERC223LegacyCallback.new();
 }
 
 export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
@@ -337,7 +336,13 @@ export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
   });
 }
 
-export function erc223TokenTests(token, fromAddr, toAddr, initialBalance, useTokenFallback = true) {
+export function erc223TokenTests(
+  token,
+  fromAddr,
+  toAddr,
+  initialBalance,
+  useTokenFallback = true
+) {
   it("erc20 compatible transfer should not call fallback", async () => {
     const erc223cb = await deployTestErc223Callback(useTokenFallback);
     const tx = await token().transfer(erc223cb.address, initialBalance, {

@@ -1,9 +1,6 @@
 import { expect } from "chai";
 import EvmError from "./helpers/EVMThrow";
-import {
-  erc223TokenTests,
-  ZERO_ADDRESS
-} from "./helpers/tokenTestCases";
+import { erc223TokenTests, ZERO_ADDRESS } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
 
 const BigNumber = web3.BigNumber;

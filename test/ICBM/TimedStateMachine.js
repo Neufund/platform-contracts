@@ -10,7 +10,9 @@ const BEFORE_DURATION = 1 * 24 * 60 * 60 + START_DATE_GAP;
 const WHITELIST_DURATION = 5 * 24 * 60 * 60;
 const PUBLIC_DURATION = 30 * 24 * 60 * 60;
 
-const TestICBMTimedStateMachine = artifacts.require("TestICBMTimedStateMachine");
+const TestICBMTimedStateMachine = artifacts.require(
+  "TestICBMTimedStateMachine"
+);
 
 contract("TimedStateMachine", () => {
   let timedStateMachine;
