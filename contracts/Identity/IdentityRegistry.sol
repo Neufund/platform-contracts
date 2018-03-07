@@ -54,9 +54,10 @@ contract IdentityRegistry is
     {
         uint256 idx;
         bytes32[] memory claims = new bytes32[](identities.length);
-        while(idx++ < identities.length)
+        while(idx < identities.length)
         {
             claims[idx] = _claims[identities[idx]];
+            idx += 1;
         }
         return claims;
     }
@@ -78,11 +79,12 @@ contract IdentityRegistry is
         assert(identities.length == oldClaims.length);
         assert(identities.length == newClaims.length);
 
-        uint256 idx = identities.length;
-        while(--idx >= 0) {
+        uint256 idx;
+        while(idx < identities.length) {
             require(_claims[identities[idx]] == oldClaims[idx]);
             _claims[identities[idx]] = newClaims[idx];
             LogSetClaims(identities[idx], oldClaims[idx], newClaims[idx]);
+            idx += 1;
         }
     }
 }

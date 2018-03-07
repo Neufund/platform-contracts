@@ -361,7 +361,7 @@ contract LockedAccount is
         } else {
             // enumerate all destinations and migrate balance piece by piece
             uint256 idx;
-            while(idx++ < destinations.length) {
+            while(idx < destinations.length) {
                 Destination storage destination = destinations[idx];
                 // get partial amount to migrate, if 0 specified then take all, as a result 0 must be the last destination
                 uint112 partialAmount = destination.amount == 0 ? balance : destination.amount;
@@ -378,6 +378,7 @@ contract LockedAccount is
                 neumarksDue -= partialNmkUlps;
                 // lock partial to destination investor
                 lock(destination.investor, partialAmount, partialNmkUlps, unlockDate);
+                idx += 1;
             }
             // all funds and NEU must be migrated
             assert(balance == 0);
@@ -408,8 +409,9 @@ contract LockedAccount is
             delete _destinations[msg.sender];
         }
         uint256 idx;
-        while(idx++ < wallets.length) {
+        while(idx < wallets.length) {
             addDestination(destinations, wallets[idx], amounts[idx]);
+            idx += 1;
         }
     }
 
