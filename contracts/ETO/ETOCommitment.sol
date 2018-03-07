@@ -153,7 +153,7 @@ contract ETOCommitment is
         ETHER_LOCK = universe.etherLock();
         EURO_LOCK = universe.euroLock();
         IDENTITY_REGISTRY = universe.identityRegistry();
-        CURRENCY_RATES = universe.currencyRateOracle();
+        CURRENCY_RATES = universe.tokenExchangeRateOracle();
         EQUITY_TOKEN = equityToken;
 
         ETO_TERMS = etoTerms;
