@@ -16,6 +16,26 @@ contract SimpleExchange is
     Math
 {
     ////////////////////////
+    // Events
+    ////////////////////////
+
+    /// @notice logged on eur-t to gas (ether) exchange
+    /// gasRecipient obtained amountWei gas, there is additional fee of exchangeFeeEurUlps
+    event LogGasExchange(
+        address indexed gasRecipient,
+        uint256 amountEurUlps,
+        uint256 exchangeFeeEurUlps,
+        uint256 amountWei,
+        uint256 rate
+    );
+
+    event LogSetExchangeRate(
+        address indexed numeratorToken,
+        address indexed denominatorToken,
+        uint256 rate
+    );
+
+    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -46,16 +66,30 @@ contract SimpleExchange is
         public
         only(ROLE_GAS_EXCHANGE)
     {
-        // TODO: limit amount
         var (rate, rate_timestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 4 hours
         require(block.timestamp - rate_timestamp < 6 hours);
-        // exchange declared amount
-        uint256 amountEthWei = decimalFraction(amountEurUlps, rate);
-        // transfer out amount + fee
-        assert(EURO_TOKEN.transferFrom(gasRecipient, PLATFORM_WALLET, amountEurUlps + exchangeFeeEurUlps));
-        // transfer ether to gasRecipient
-        gasRecipient.transfer(amountEthWei);
+        gasExchangePrivate(gasRecipient, amountEurUlps, exchangeFeeEurUlps, rate);
+    }
+
+    function gasExchangeMultiple(
+        address[] gasRecipients,
+        uint256[] amountsEurUlps,
+        uint256[] exchangeFeesEurUlps
+    )
+        public
+        only(ROLE_GAS_EXCHANGE)
+    {
+        require(gasRecipients.length == amountsEurUlps.length);
+        require(gasRecipients.length == exchangeFeesEurUlps.length);
+        var (rate, rate_timestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
+        // require if rate older than 4 hours
+        require(block.timestamp - rate_timestamp < 6 hours);
+        uint256 idx;
+        while(idx < gasRecipients.length) {
+            gasExchangePrivate(gasRecipients[idx], amountsEurUlps[idx], exchangeFeesEurUlps[idx], rate);
+            idx += 1;
+        }
     }
 
     /// sets current euro to ether exchange rate, also sets inverse
@@ -75,6 +109,8 @@ contract SimpleExchange is
         _eurEthRateFraction = rateFraction;
         _ethEurRateFraction = 10**18 / rateFraction;
         _rateLastUpdatedTimestamp = uint32(block.timestamp);
+        LogSetExchangeRate(numeratorToken, denominatorToken, rateFraction);
+        LogSetExchangeRate(denominatorToken, numeratorToken, _ethEurRateFraction);
     }
 
     //
@@ -95,5 +131,26 @@ contract SimpleExchange is
         }
         // pair not supported
         revert();
+    }
+
+    ////////////////////////
+    // Private methods
+    ////////////////////////
+
+    function gasExchangePrivate(
+        address gasRecipient,
+        uint256 amountEurUlps,
+        uint256 exchangeFeeEurUlps,
+        uint256 rate
+    )
+        private
+    {
+        // exchange declared amount
+        uint256 amountEthWei = decimalFraction(amountEurUlps, rate);
+        // transfer out amount + fee
+        assert(EURO_TOKEN.transferFrom(gasRecipient, PLATFORM_WALLET, amountEurUlps + exchangeFeeEurUlps));
+        // transfer ether to gasRecipient
+        gasRecipient.transfer(amountEthWei);
+        LogGasExchange(gasRecipient, amountEurUlps, exchangeFeeEurUlps, amountEthWei, rate);
     }
 }
