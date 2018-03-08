@@ -47,6 +47,9 @@ contract Universe is
     // mapping of known interfaces to collections of contracts
     mapping(bytes4 => mapping(address => bool)) private _collections;
 
+    // known instances
+    mapping(address => bytes4[]) private _instances;
+
 
     ////////////////////////
     // Constructor
@@ -108,6 +111,15 @@ contract Universe is
         return _collections[interfaceId][instance];
     }
 
+    /// gets all interfaces of given instance
+    function getInterfacesOfInstance(address instance)
+        public
+        constant
+        returns (bytes4[] interfaces)
+    {
+        return _instances[instance];
+    }
+
     /// sets 'instance' of singleton with interface 'interfaceId'
     function setSingleton(bytes4 interfaceId, address instance)
         public
@@ -134,8 +146,7 @@ contract Universe is
         public
         only(ROLE_UNIVERSE_MANAGER)
     {
-        _collections[interfaceId][instance] = set;
-        LogSetCollectionInterface(interfaceId, instance, set);
+        setCollectionPrivate(interfaceId, instance, set);
     }
 
     /// set or unset 'instance' in many collections of instances
@@ -145,8 +156,7 @@ contract Universe is
     {
         uint256 idx;
         while(idx < interfaceIds.length) {
-            _collections[interfaceIds[idx]][instance] = set;
-            LogSetCollectionInterface(interfaceIds[idx], instance, set);
+            setCollectionPrivate(interfaceIds[idx], instance, set);
         }
     }
 
@@ -217,7 +227,73 @@ contract Universe is
     function setSingletonPrivate(bytes4 interfaceId, address instance)
         private
     {
+        // do nothing if not changing
+        if (_singletons[interfaceId] == instance) {
+            return;
+        }
+        dropInstance(_singletons[interfaceId], interfaceId);
+        addInstance(instance, interfaceId);
         _singletons[interfaceId] = instance;
         LogSetSingleton(interfaceId, instance);
+    }
+
+    function setCollectionPrivate(bytes4 interfaceId, address instance, bool set)
+        private
+    {
+        // do nothing if not changing
+        if (_collections[interfaceId][instance] == set) {
+            return;
+        }
+        _collections[interfaceId][instance] = set;
+        if (set) {
+            addInstance(instance, interfaceId);
+        } else {
+            dropInstance(instance, interfaceId);
+        }
+        LogSetCollectionInterface(interfaceId, instance, set);
+    }
+
+    function addInstance(address instance, bytes4 interfaceId)
+        private
+    {
+        if (instance == address(0)) {
+            // do not add null instance
+            return;
+        }
+        bytes4[] storage current = _instances[instance];
+        uint256 idx;
+        while(idx < current.length) {
+            // instancy has this interface already, do nothing
+            if (current[idx] == interfaceId)
+                return;
+            idx += 1;
+        }
+        // new interface
+        current.push(interfaceId);
+    }
+
+    function dropInstance(address instance, bytes4 interfaceId)
+        private
+    {
+        if (instance == address(0)) {
+            // do not drop null instance
+            return;
+        }
+        bytes4[] storage current = _instances[instance];
+        uint256 idx;
+        uint256 last = current.length - 1;
+        while(idx <= last) {
+            if (current[idx] == interfaceId) {
+                // delete element
+                if (idx < last) {
+                    // if not last element move last element to idx being deleted
+                    current[idx] = current[last];
+                }
+                // delete last element
+                current.length -= 1;
+                return;
+            }
+            idx += 1;
+        }
     }
 }
