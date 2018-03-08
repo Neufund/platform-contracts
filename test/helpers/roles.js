@@ -10,5 +10,6 @@ export default {
   transferAdmin: web3.sha3("TransferAdmin"),
   whitelistAdmin: web3.sha3("WhitelistAdmin"),
   eurtDepositManager: web3.sha3("EurtDepositManager"),
-  universeManager: web3.sha3("UniverseManager")
+  universeManager: web3.sha3("UniverseManager"),
+  identityManager: web3.sha3("IdentityManager"),
 };
