@@ -6,9 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const isFilePinned = async (ipfs, hash) => {
-  const matchedHashes = (await ipfs.pin.ls()).filter(
-    response => response.hash === hash
-  );
+  const matchedHashes = (await ipfs.pin.ls()).filter(response => response.hash === hash);
   return matchedHashes.length > 0;
 };
 
@@ -21,8 +19,7 @@ const addFiletoIpfs = async (ipfs, file, name) => {
   console.log("Adding new file to IPFS and pinning");
   fileHash = (await ipfs.files.add(file, { pin: true }))[0].hash;
   console.log(`checking if file was pinned..`);
-  if (!await isFilePinned(ipfs, fileHash))
-    throw new Error("File not succsseffully pinned");
+  if (!await isFilePinned(ipfs, fileHash)) throw new Error("File not succsseffully pinned");
   console.log("Done");
   return fileHash;
 };
@@ -32,7 +29,7 @@ const loadFiles = filePaths =>
     try {
       return {
         name: path.parse(filePath).base,
-        file: fs.readFileSync(filePath)
+        file: fs.readFileSync(filePath),
       };
     } catch (e) {
       throw new Error(`Can't read file "${filePath}"`);
@@ -46,7 +43,7 @@ const getAbsolutePaths = relativeFilePaths =>
 const main = async ([ipfsNodeAddress, ...relativeFilePaths]) => {
   const defaultFilePaths = [
     path.join(".", "legal", "NEUMARK TOKEN HOLDER AGREEMENT.out.html"),
-    path.join(".", "legal", "RESERVATION AGREEMENT.out.html")
+    path.join(".", "legal", "RESERVATION AGREEMENT.out.html"),
   ];
   try {
     if (!ipfsNodeAddress) throw new Error("Please give ipfs node");
@@ -57,13 +54,8 @@ const main = async ([ipfsNodeAddress, ...relativeFilePaths]) => {
         : getAbsolutePaths(defaultFilePaths);
 
     loadFiles(absoluteFilePaths).forEach(async loadedfile => {
-      const addedFileHash = await addFiletoIpfs(
-        ipfs,
-        loadedfile.file,
-        loadedfile.name
-      );
-      if (addedFileHash)
-        console.log(`name:${loadedfile.name} -- hash:${await addedFileHash}`);
+      const addedFileHash = await addFiletoIpfs(ipfs, loadedfile.file, loadedfile.name);
+      if (addedFileHash) console.log(`name:${loadedfile.name} -- hash:${await addedFileHash}`);
     });
   } catch (e) {
     console.log(e);

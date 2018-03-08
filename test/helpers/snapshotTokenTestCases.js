@@ -8,21 +8,15 @@ export function snapshotTokenTests(
   advanceSnapshotId,
   owner,
   owner2,
-  broker
+  broker,
 ) {
   let token;
 
   async function expectEmptyToken(emptyToken) {
     const initialSnapshotId = await emptyToken.currentSnapshotId.call();
-    expect(
-      await emptyToken.balanceOfAt.call(owner, initialSnapshotId)
-    ).to.be.bignumber.eq(0);
-    expect(
-      await emptyToken.balanceOfAt.call(owner2, initialSnapshotId)
-    ).to.be.bignumber.eq(0);
-    expect(
-      await emptyToken.totalSupplyAt.call(initialSnapshotId)
-    ).to.be.bignumber.eq(0);
+    expect(await emptyToken.balanceOfAt.call(owner, initialSnapshotId)).to.be.bignumber.eq(0);
+    expect(await emptyToken.balanceOfAt.call(owner2, initialSnapshotId)).to.be.bignumber.eq(0);
+    expect(await emptyToken.totalSupplyAt.call(initialSnapshotId)).to.be.bignumber.eq(0);
     expect(await emptyToken.balanceOf.call(owner)).to.be.bignumber.eq(0);
     expect(await emptyToken.balanceOf.call(owner2)).to.be.bignumber.eq(0);
     expect(await emptyToken.totalSupply.call()).to.be.bignumber.eq(0);
@@ -37,15 +31,9 @@ export function snapshotTokenTests(
       // console.log(snapshot);
       const snapshotId = snapshot[0];
       const balances = snapshot[1];
-      expect(await refToken.totalSupplyAt(snapshotId)).to.be.bignumber.eq(
-        balances[2]
-      );
-      expect(await refToken.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(
-        balances[1]
-      );
-      expect(await refToken.balanceOfAt(owner, snapshotId)).to.be.bignumber.eq(
-        balances[0]
-      );
+      expect(await refToken.totalSupplyAt(snapshotId)).to.be.bignumber.eq(balances[2]);
+      expect(await refToken.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(balances[1]);
+      expect(await refToken.balanceOfAt(owner, snapshotId)).to.be.bignumber.eq(balances[0]);
     }
   };
 
@@ -70,28 +58,22 @@ export function snapshotTokenTests(
       let snapshotId = await advanceSnapshotId(token);
       await token.approve(broker, 98128, { from: owner });
       await token.transferFrom(owner, owner2, 98128, { from: broker });
-      snapshots.push([
-        snapshotId,
-        [supply.sub(18281 + 98128), 18281 + 98128, supply]
-      ]);
+      snapshots.push([snapshotId, [supply.sub(18281 + 98128), 18281 + 98128, supply]]);
 
       snapshotId = await advanceSnapshotId(token);
-      snapshots.push([
-        snapshotId,
-        [supply.sub(18281 + 98128), 18281 + 98128, supply]
-      ]);
+      snapshots.push([snapshotId, [supply.sub(18281 + 98128), 18281 + 98128, supply]]);
 
       snapshotId = await advanceSnapshotId(token);
       await token.withdraw(8712, { from: owner2 });
       snapshots.push([
         snapshotId,
-        [supply.sub(18281 + 98128), 18281 + 98128 - 8712, supply.sub(8712)]
+        [supply.sub(18281 + 98128), 18281 + 98128 - 8712, supply.sub(8712)],
       ]);
 
       snapshotId = await advanceSnapshotId(token);
       snapshots.push([
         snapshotId,
-        [supply.sub(18281 + 98128), 18281 + 98128 - 8712, supply.sub(8712)]
+        [supply.sub(18281 + 98128), 18281 + 98128 - 8712, supply.sub(8712)],
       ]);
 
       await expectTokenBalances(token, snapshots);
@@ -99,16 +81,12 @@ export function snapshotTokenTests(
 
     it("should reject on future totalSupplyAt", async () => {
       const initialSnapshotId = await token.currentSnapshotId.call();
-      await expect(
-        token.totalSupplyAt(initialSnapshotId.add(1))
-      ).to.be.rejectedWith(EvmError);
+      await expect(token.totalSupplyAt(initialSnapshotId.add(1))).to.be.rejectedWith(EvmError);
     });
 
     it("should reject on future balanceOfAt", async () => {
       const initialSnapshotId = await token.currentSnapshotId.call();
-      await expect(
-        token.balanceOfAt(owner, initialSnapshotId.add(1))
-      ).to.be.rejectedWith(EvmError);
+      await expect(token.balanceOfAt(owner, initialSnapshotId.add(1))).to.be.rejectedWith(EvmError);
     });
 
     it("allBalances", async () => {
@@ -118,9 +96,7 @@ export function snapshotTokenTests(
       for (let ii = 0; ii < 15; ii += 1) {
         const snapshotId = await token.currentSnapshotId.call();
         // not less than 1 so there is always deposit
-        const toDeposit = new web3.BigNumber(
-          Math.floor(Math.random() * 129837981983) + 1
-        );
+        const toDeposit = new web3.BigNumber(Math.floor(Math.random() * 129837981983) + 1);
         await token.deposit(toDeposit, { from: owner });
         totalDeposit = totalDeposit.add(toDeposit);
         referenceBalances.push([snapshotId, totalDeposit]);
@@ -152,16 +128,10 @@ export function snapshotTokenTests(
       // create clone at initialSnapshotId
       const clonedToken = await createClone(token, 0);
       const clonedAtSnapshotId = (await token.currentSnapshotId()).sub(1);
-      expect(await clonedToken.parentSnapshotId.call()).to.be.bignumber.eq(
-        clonedAtSnapshotId
-      );
+      expect(await clonedToken.parentSnapshotId.call()).to.be.bignumber.eq(clonedAtSnapshotId);
       // tokens already diverged
-      expect(
-        await clonedToken.balanceOfAt(owner2, snapshotId)
-      ).to.be.bignumber.eq(18281);
-      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(
-        18281 + 98128
-      );
+      expect(await clonedToken.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281);
+      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281 + 98128);
 
       snapshotId = await advanceSnapshotId(clonedToken);
       // owner2 zeroes account
@@ -203,10 +173,7 @@ export function snapshotTokenTests(
       const clonedSupply = new web3.BigNumber(97878678826);
       await clonedToken.deposit(clonedSupply, { from: owner });
       await clonedToken.transfer(owner2, 18281, { from: owner });
-      snapshots.push([
-        initialSnapshotId,
-        [clonedSupply.sub(18281), 18281, clonedSupply]
-      ]);
+      snapshots.push([initialSnapshotId, [clonedSupply.sub(18281), 18281, clonedSupply]]);
 
       await expectTokenBalances(clonedToken, snapshots);
     });
@@ -232,21 +199,13 @@ export function snapshotTokenTests(
 
       // create clone at initialSnapshotId
       const clonedToken = await createClone(token, initialSnapshotId);
-      expect(await clonedToken.parentSnapshotId.call()).to.be.bignumber.eq(
-        initialSnapshotId
-      );
+      expect(await clonedToken.parentSnapshotId.call()).to.be.bignumber.eq(initialSnapshotId);
       // but clonedToken actual snapshot is snapshotId like parent
-      expect(await clonedToken.currentSnapshotId.call()).to.be.bignumber.eq(
-        snapshotId
-      );
+      expect(await clonedToken.currentSnapshotId.call()).to.be.bignumber.eq(snapshotId);
 
       // tokens already diverged
-      expect(
-        await clonedToken.balanceOfAt(owner2, snapshotId)
-      ).to.be.bignumber.eq(18281);
-      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(
-        18281 + 98128 + 6718
-      );
+      expect(await clonedToken.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281);
+      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281 + 98128 + 6718);
 
       snapshotId = await advanceSnapshotId(clonedToken);
       // owner2 zeroes account
@@ -277,36 +236,21 @@ export function snapshotTokenTests(
 
       // expect(await clonedToken.totalSupply()).to.be.bignumber.eq(clonedOwnedBalance.add(clonedOwned2Balance).sub(100));
       expect(await clonedToken.totalSupply()).to.be.bignumber.eq(
-        clonedOwnedBalance.add(clonedOwned2Balance)
+        clonedOwnedBalance.add(clonedOwned2Balance),
       );
     }
 
     async function expectCloneFreeze(snapshotId, snapshotDelta, advances) {
       // create clone at current snapshotId
-      const clonedToken = await createClone(
-        token,
-        snapshotId.add(snapshotDelta)
-      );
+      const clonedToken = await createClone(token, snapshotId.add(snapshotDelta));
       await token.transfer(owner2, 98128, { from: owner });
-      expect(
-        await clonedToken.balanceOfAt(owner2, snapshotId)
-      ).to.be.bignumber.eq(18281 + 98128);
-      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(
-        18281 + 98128
-      );
+      expect(await clonedToken.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281 + 98128);
+      expect(await token.balanceOfAt(owner2, snapshotId)).to.be.bignumber.eq(18281 + 98128);
       // all state changes to clone must be blocked until parent is sealed
-      await expect(
-        clonedToken.withdraw(1, { from: owner2 })
-      ).to.be.rejectedWith(EvmError);
-      await expect(clonedToken.deposit(1, { from: owner2 })).to.be.rejectedWith(
-        EvmError
-      );
-      await expect(
-        clonedToken.transfer(owner2, 1, { from: owner })
-      ).to.be.rejectedWith(EvmError);
-      await expect(attemptToDesyncClone(clonedToken)).to.be.rejectedWith(
-        EvmError
-      );
+      await expect(clonedToken.withdraw(1, { from: owner2 })).to.be.rejectedWith(EvmError);
+      await expect(clonedToken.deposit(1, { from: owner2 })).to.be.rejectedWith(EvmError);
+      await expect(clonedToken.transfer(owner2, 1, { from: owner })).to.be.rejectedWith(EvmError);
+      await expect(attemptToDesyncClone(clonedToken)).to.be.rejectedWith(EvmError);
       let advancedBy = advances;
       while (advancedBy > 0) {
         await advanceSnapshotId(token);
@@ -350,41 +294,26 @@ export function snapshotTokenTests(
       const clonedSupply = new web3.BigNumber(88172891);
       await clonedToken.deposit(clonedSupply, { from: owner });
       await clonedToken.transfer(owner2, 18281, { from: owner });
-      clonedSnapshots.push([
-        initialSnapshotId,
-        [clonedSupply.sub(18281), 18281, clonedSupply]
-      ]);
+      clonedSnapshots.push([initialSnapshotId, [clonedSupply.sub(18281), 18281, clonedSupply]]);
       const parentSupply = new web3.BigNumber(9827121);
       await token.deposit(parentSupply, { from: owner2 });
       await token.transfer(owner, 651, { from: owner2 });
-      parentSnapshots.push([
-        initialSnapshotId,
-        [651, parentSupply.sub(651), parentSupply]
-      ]);
+      parentSnapshots.push([initialSnapshotId, [651, parentSupply.sub(651), parentSupply]]);
 
       let snapshotId = await advanceSnapshotId(token);
-      parentSnapshots.push([
-        snapshotId,
-        [651, parentSupply.sub(651), parentSupply]
-      ]);
+      parentSnapshots.push([snapshotId, [651, parentSupply.sub(651), parentSupply]]);
       snapshotId = await advanceSnapshotId(clonedToken);
       await clonedToken.transfer(owner, 1, { from: owner2 });
-      clonedSnapshots.push([
-        snapshotId,
-        [clonedSupply.sub(18280), 18280, clonedSupply]
-      ]);
+      clonedSnapshots.push([snapshotId, [clonedSupply.sub(18280), 18280, clonedSupply]]);
 
       snapshotId = await advanceSnapshotId(token);
       await token.withdraw(9273, { from: owner2 });
       parentSnapshots.push([
         snapshotId,
-        [651, parentSupply.sub(651 + 9273), parentSupply.sub(9273)]
+        [651, parentSupply.sub(651 + 9273), parentSupply.sub(9273)],
       ]);
       snapshotId = await advanceSnapshotId(clonedToken);
-      clonedSnapshots.push([
-        snapshotId,
-        [clonedSupply.sub(18280), 18280, clonedSupply]
-      ]);
+      clonedSnapshots.push([snapshotId, [clonedSupply.sub(18280), 18280, clonedSupply]]);
 
       await expectTokenBalances(clonedToken, clonedSnapshots);
       await expectTokenBalances(token, parentSnapshots);

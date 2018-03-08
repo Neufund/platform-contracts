@@ -9,16 +9,13 @@ export default async initialRules => {
       return;
     }
     const completedRules = rules.map(rule =>
-      Object.assign(
-        { subject: EVERYONE, object: GLOBAL, state: TriState.Allow },
-        rule
-      )
+      Object.assign({ subject: EVERYONE, object: GLOBAL, state: TriState.Allow }, rule),
     );
     await rbap.setUserRoles(
       completedRules.map(({ subject }) => subject),
       completedRules.map(({ role }) => role),
       completedRules.map(({ object }) => object),
-      completedRules.map(({ state }) => state)
+      completedRules.map(({ state }) => state),
     );
   };
   await rbap.set(initialRules);

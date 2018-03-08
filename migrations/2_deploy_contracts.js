@@ -19,11 +19,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   console.log("Deployment parameters:");
   console.log(CONFIG);
   const startDate = moment.unix(CONFIG.START_DATE);
-  console.log(
-    `START_DATE is ${startDate.format()} (local) ${startDate
-      .utc()
-      .format()} (UTC)`
-  );
+  console.log(`START_DATE is ${startDate.format()} (local) ${startDate.utc().format()} (UTC)`);
   console.log("----------------------------------");
 
   deployer.then(async () => {
@@ -48,11 +44,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const ethereumForkArbiter = await EthereumForkArbiter.deployed();
 
     console.log("Neumark deploying...");
-    await deployer.deploy(
-      Neumark,
-      accessPolicy.address,
-      ethereumForkArbiter.address
-    );
+    await deployer.deploy(Neumark, accessPolicy.address, ethereumForkArbiter.address);
     const neumark = await Neumark.deployed();
 
     console.log("EtherToken deploying...");
@@ -71,7 +63,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       neumark.address,
       CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       CONFIG.LOCK_DURATION,
-      CONFIG.PENALTY_FRACTION
+      CONFIG.PENALTY_FRACTION,
     );
     const etherLock = await LockedAccount.deployed();
 
@@ -83,7 +75,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       neumark.address,
       CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       CONFIG.LOCK_DURATION,
-      CONFIG.PENALTY_FRACTION
+      CONFIG.PENALTY_FRACTION,
     );
     const euroLock = await LockedAccount.deployed();
 
@@ -101,7 +93,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       euroLock.address,
       CONFIG.CAP_EUR,
       CONFIG.MIN_TICKET_EUR,
-      CONFIG.ETH_EUR_FRACTION
+      CONFIG.ETH_EUR_FRACTION,
     );
     const commitment = await Commitment.deployed();
 

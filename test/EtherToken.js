@@ -9,7 +9,7 @@ import {
   erc223TokenTests,
   expectTransferEvent,
   ZERO_ADDRESS,
-  testWithdrawal
+  testWithdrawal,
 } from "./helpers/tokenTestCases";
 import { eventValue } from "./helpers/events";
 import { etherToWei } from "./helpers/unitConverter";
@@ -24,9 +24,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
   const RECLAIM_ETHER = "0x0";
 
   beforeEach(async () => {
-    const rbap = await createAccessPolicy([
-      { subject: reclaimer, role: roles.reclaimer }
-    ]);
+    const rbap = await createAccessPolicy([{ subject: reclaimer, role: roles.reclaimer }]);
     etherToken = await EtherToken.new(rbap.address);
   });
 
@@ -46,7 +44,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       const initialBalance = etherToWei(1.19827398791827);
       const tx = await etherToken.deposit({
         from: investors[0],
-        value: initialBalance
+        value: initialBalance,
       });
       expectDepositEvent(tx, investors[0], initialBalance);
       expectTransferEvent(tx, ZERO_ADDRESS, investors[0], initialBalance);
@@ -59,9 +57,9 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     it("should reject to reclaim ether", async () => {
       const amount = web3.toWei(1, "ether");
       await forceEther(etherToken.address, amount, reclaimer);
-      await expect(
-        etherToken.reclaim(RECLAIM_ETHER, { from: reclaimer })
-      ).to.be.rejectedWith(EvmError);
+      await expect(etherToken.reclaim(RECLAIM_ETHER, { from: reclaimer })).to.be.rejectedWith(
+        EvmError,
+      );
     });
   });
 
@@ -72,7 +70,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     beforeEach(async () => {
       await etherToken.deposit({
         from: investors[1],
-        value: initialBalance
+        value: initialBalance,
       });
     });
 
@@ -86,17 +84,11 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     beforeEach(async () => {
       await etherToken.deposit({
         from: investors[1],
-        value: initialBalance
+        value: initialBalance,
       });
     });
 
-    standardTokenTests(
-      getToken,
-      investors[1],
-      investors[2],
-      broker,
-      initialBalance
-    );
+    standardTokenTests(getToken, investors[1], investors[2], broker, initialBalance);
   });
 
   describe("IERC677Token tests", () => {
@@ -108,7 +100,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     beforeEach(async () => {
       await etherToken.deposit({
         from: investors[1],
-        value: initialBalance
+        value: initialBalance,
       });
       erc667cb = await deployTestErc677Callback();
     });
@@ -123,17 +115,11 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     beforeEach(async () => {
       await etherToken.deposit({
         from: investors[1],
-        value: initialBalance
+        value: initialBalance,
       });
     });
 
-    erc223TokenTests(
-      getToken,
-      investors[1],
-      investors[2],
-      initialBalance,
-      false
-    );
+    erc223TokenTests(getToken, investors[1], investors[2], initialBalance, false);
   });
 
   describe("withdrawal tests", () => {
@@ -143,7 +129,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     beforeEach(async () => {
       await etherToken.deposit({
         from: investors[1],
-        value: initialBalance
+        value: initialBalance,
       });
     });
 

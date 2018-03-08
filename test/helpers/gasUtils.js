@@ -5,9 +5,8 @@ export const gasPrice = 21e9 * weiPrice; // https://ethstats.net
 export const gasLimit = 6712392; // https://ethstats.net
 
 const gasCostString = gas =>
-  `${gas} gas (€${Math.round(100 * gas * gasPrice) / 100}, ${Math.round(
-    1000 * gas / gasLimit
-  ) / 10}% of limit)`;
+  `${gas} gas (€${Math.round(100 * gas * gasPrice) / 100}, ${Math.round(1000 * gas / gasLimit) /
+    10}% of limit)`;
 
 export const txGasCost = tx => tx.receipt.gasUsed;
 
@@ -19,9 +18,7 @@ export const gasCost = async obj => {
     return obj.receipt.gasUsed;
   }
 
-  const receipt = await promisify(web3.eth.getTransactionReceipt)(
-    obj.transactionHash
-  );
+  const receipt = await promisify(web3.eth.getTransactionReceipt)(obj.transactionHash);
   return receipt.gasUsed;
 };
 

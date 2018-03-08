@@ -5,15 +5,15 @@ Order within contracts:
 1. Type declarations
 2. Constants
 3. Immutable state variables (Set only in constructor)
-3. State variables
-4. Events
-5. Modifiers
-4. Constructor
-5. Fallback function
-6. External functions (constant functions last)
-7. Public funcions (constant functions last)
-8. Internal functions (constant functions last)
-9. Private functions (constant functions last)
+4. State variables
+5. Events
+6. Modifiers
+7. Constructor
+8. Fallback function
+9. External functions (constant functions last)
+10. Public funcions (constant functions last)
+11. Internal functions (constant functions last)
+12. Private functions (constant functions last)
 
 Order of operations within an external or public function:
 
@@ -24,17 +24,24 @@ Order of operations within an external or public function:
 5. Write logs
 6. Return
 
-The critical section is between the first read and the last write. In this region the control flow needs to be extremely reliable.
+The critical section is between the first read and the last write. In this region the control flow
+needs to be extremely reliable.
 
-Abstract internal functions are used through a Mixin interface; a constract with an `M` prefix containing only abstract internal functions.
+Abstract internal functions are used through a Mixin interface; a constract with an `M` prefix
+containing only abstract internal functions.
 
-Constants and immutable state variables are ALL_CAPS. Internal constants go before private ones. All constants are either internal or private.
+Constants and immutable state variables are ALL_CAPS. Internal constants go before private ones. All
+constants are either internal or private.
 
-Mutable state variables are _camelCase with a `_` prefix. State variables should always be `private` or, when intended to be access by a subclass, `internal`. This is to avoid uncessary public functions cluthering the ABI, or accidental collision/overriding a state variable in a subclass.
+Mutable state variables are _camelCase with a
+`_`prefix. State variables should always be`private`or, when intended to be access by a subclass,`internal`.
+This is to avoid uncessary public functions cluthering the ABI, or accidental collision/overriding a
+state variable in a subclass.
 
 Don't use `uint`, always be explicit and use `uint256`.
 
-Only mutable state variables can start with `_`. In particular functions, arguments and variables do not.
+Only mutable state variables can start with `_`. In particular functions, arguments and variables do
+not.
 
 Log events start with `Log`.
 
@@ -45,7 +52,6 @@ Log events start with `Log`.
 
 [docs]: https://solidity.readthedocs.io/en/develop/style-guide.html
 [csbp]: https://github.com/ConsenSys/smart-contract-best-practices
-
 
 # TODO
 

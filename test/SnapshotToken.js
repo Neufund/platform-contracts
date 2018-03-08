@@ -58,9 +58,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
         const supply = new web3.BigNumber(88172891);
         await token.deposit(supply, { from: owner });
         await token.enableTransfers(false);
-        await expect(
-          token.transfer(owner2, 18281, { from: owner })
-        ).to.be.rejectedWith(EvmError);
+        await expect(token.transfer(owner2, 18281, { from: owner })).to.be.rejectedWith(EvmError);
       });
 
       it("should ERC223 transfer when transfer enabled", async () => {
@@ -68,7 +66,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
         await token.deposit(supply, { from: owner });
         await token.enableTransfers(true);
         await token.transfer["address,uint256,bytes"](owner2, 18281, "", {
-          from: owner
+          from: owner,
         });
       });
 
@@ -78,8 +76,8 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
         await token.enableTransfers(false);
         await expect(
           token.transfer["address,uint256,bytes"](owner2, 18281, "", {
-            from: owner
-          })
+            from: owner,
+          }),
         ).to.be.rejectedWith(EvmError);
       });
 
@@ -90,9 +88,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
 
       it("should reject approve when approve disabled", async () => {
         await token.enableApprovals(false);
-        await expect(
-          token.approve(broker, 18281, { from: owner })
-        ).to.be.rejectedWith(EvmError);
+        await expect(token.approve(broker, 18281, { from: owner })).to.be.rejectedWith(EvmError);
       });
     });
 
@@ -104,13 +100,6 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
       expect(snapshotId).to.be.bignumber.eq(initialSnapshotId);
     });
 
-    snapshotTokenTests(
-      getToken,
-      createClone,
-      advanceSnapshotId,
-      owner,
-      owner2,
-      broker
-    );
+    snapshotTokenTests(getToken, createClone, advanceSnapshotId, owner, owner2, broker);
   });
 });

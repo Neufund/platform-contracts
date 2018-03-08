@@ -35,9 +35,7 @@ export async function deployTestErc677Callback() {
 }
 
 async function deployTestErc223Callback(useTokenFallback) {
-  return useTokenFallback
-    ? TestERC223Callback.new()
-    : TestERC223LegacyCallback.new();
+  return useTokenFallback ? TestERC223Callback.new() : TestERC223LegacyCallback.new();
 }
 
 export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
@@ -52,7 +50,7 @@ export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
     expect(fromAddrBalanceInitial).to.be.bignumber.eq(initialBalance);
     // transfer all
     const tx = await token().transfer(toAddr, initialBalance, {
-      from: fromAddr
+      from: fromAddr,
     });
     expectTransferEvent(tx, fromAddr, toAddr, initialBalance);
     // check balances
@@ -68,7 +66,7 @@ export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
   it("should return correct balances after transfer of amount of 0", async () => {
     // transfer all
     const tx = await token().transfer(toAddr, 0, {
-      from: fromAddr
+      from: fromAddr,
     });
     expectTransferEvent(tx, fromAddr, toAddr, 0);
     // check balances
@@ -82,24 +80,18 @@ export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
     const balance = await token().balanceOf.call(fromAddr);
     expect(balance).to.be.bignumber.eq(initialBalance);
     await expect(
-      token().transfer(toAddr, initialBalance.add(1), { from: fromAddr })
+      token().transfer(toAddr, initialBalance.add(1), { from: fromAddr }),
     ).to.be.rejectedWith(EvmError);
   });
 
   it("should throw an error when trying to transfer to 0x0", async () => {
-    await expect(
-      token().transfer(0x0, initialBalance, { from: fromAddr })
-    ).to.be.rejectedWith(EvmError);
+    await expect(token().transfer(0x0, initialBalance, { from: fromAddr })).to.be.rejectedWith(
+      EvmError,
+    );
   });
 }
 
-export function standardTokenTests(
-  token,
-  fromAddr,
-  toAddr,
-  broker,
-  initialBalance
-) {
+export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalance) {
   it("should check totalSupply and initalBalance", async () => {
     const totalSupply = await token().totalSupply.call();
     expect(totalSupply).to.be.bignumber.eq(initialBalance);
@@ -109,7 +101,7 @@ export function standardTokenTests(
 
   it("should return the correct allowance amount after approval", async () => {
     const tx = await token().approve(toAddr, initialBalance, {
-      from: fromAddr
+      from: fromAddr,
     });
     expectApproveEvent(tx, fromAddr, toAddr, initialBalance);
     const allowance = await token().allowance.call(fromAddr, toAddr);
@@ -126,9 +118,7 @@ export function standardTokenTests(
 
   it("should reject changing approval amount", async () => {
     await token().approve(toAddr, initialBalance, { from: fromAddr });
-    await expect(
-      token().approve(toAddr, 100, { from: fromAddr })
-    ).to.be.rejectedWith(EvmError);
+    await expect(token().approve(toAddr, 100, { from: fromAddr })).to.be.rejectedWith(EvmError);
   });
 
   it("should allow re-setting approval amount", async () => {
@@ -143,7 +133,7 @@ export function standardTokenTests(
 
   it("should return the 0 allowance amount without approval", async () => {
     const tx = await token().approve(toAddr, initialBalance, {
-      from: fromAddr
+      from: fromAddr,
     });
     expectApproveEvent(tx, fromAddr, toAddr, initialBalance);
     // mind reversing spender and owner
@@ -155,7 +145,7 @@ export function standardTokenTests(
     await token().approve(broker, initialBalance, { from: fromAddr });
     // transfer
     const tx = await token().transferFrom(fromAddr, toAddr, initialBalance, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx, fromAddr, toAddr, initialBalance);
     // check balances
@@ -177,7 +167,7 @@ export function standardTokenTests(
     await token().approve(broker, 0, { from: fromAddr });
     // transfer
     const tx = await token().transferFrom(fromAddr, toAddr, 0, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx, fromAddr, toAddr, 0);
     // check balances
@@ -194,7 +184,7 @@ export function standardTokenTests(
     await token().approve(broker, initialBalance, { from: fromAddr });
     // transfer
     const tx = await token().transferFrom(fromAddr, toAddr, 0, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx, fromAddr, toAddr, 0);
     // check balances
@@ -212,7 +202,7 @@ export function standardTokenTests(
     const amount = initialBalance.mul(0.87162378).round();
     // transfer amount
     const tx = await token().transferFrom(fromAddr, toAddr, amount, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx, fromAddr, toAddr, amount);
     // check balances
@@ -240,15 +230,15 @@ export function standardTokenTests(
     const tranche3 = initialBalance.sub(tranche1.add(tranche2));
     // transfer in tranches
     const tx1 = await token().transferFrom(fromAddr, toAddr, tranche1, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx1, fromAddr, toAddr, tranche1);
     const tx2 = await token().transferFrom(fromAddr, toAddr, tranche2, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx2, fromAddr, toAddr, tranche2);
     const tx3 = await token().transferFrom(fromAddr, toAddr, tranche3, {
-      from: broker
+      from: broker,
     });
     expectTransferEvent(tx3, fromAddr, toAddr, tranche3);
     // we transfered whole amount so:
@@ -272,8 +262,8 @@ export function standardTokenTests(
     // transfer more than amount but within balance
     await expect(
       token().transferFrom(fromAddr, toAddr, amount.add(1), {
-        from: broker
-      })
+        from: broker,
+      }),
     ).to.be.rejectedWith(EvmError);
   });
 
@@ -282,14 +272,14 @@ export function standardTokenTests(
     await token().approve(broker, amount, { from: fromAddr });
     // transfer amount that is over balance
     await expect(
-      token().transferFrom(fromAddr, toAddr, amount, { from: broker })
+      token().transferFrom(fromAddr, toAddr, amount, { from: broker }),
     ).to.be.rejectedWith(EvmError);
   });
 
   it("should throw an error when trying to transferFrom to 0x0", async () => {
     await token().approve(broker, initialBalance, { from: fromAddr });
     await expect(
-      token().transferFrom(fromAddr, 0x0, initialBalance, { from: broker })
+      token().transferFrom(fromAddr, 0x0, initialBalance, { from: broker }),
     ).to.be.rejectedWith(EvmError);
   });
 }
@@ -297,12 +287,9 @@ export function standardTokenTests(
 export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
   it("should approve and call whole balance", async () => {
     await erc677cb().setCallbackReturnValue(true);
-    const tx = await token().approveAndCall(
-      erc677cb().address,
-      initialBalance,
-      "",
-      { from: fromAddr }
-    );
+    const tx = await token().approveAndCall(erc677cb().address, initialBalance, "", {
+      from: fromAddr,
+    });
     expectApproveEvent(tx, fromAddr, erc677cb().address, initialBalance);
     expectTransferEvent(tx, fromAddr, erc677cb().address, initialBalance);
     const finalBalance = await token().balanceOf.call(erc677cb().address);
@@ -314,12 +301,9 @@ export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
     const data = "0x79bc68b14fe3225ab8fe3278b412b93956d49c2d";
     // test token requires this data in callback
     await erc677cb().setAcceptedExtraData(data);
-    const tx = await token().approveAndCall(
-      erc677cb().address,
-      initialBalance,
-      data,
-      { from: fromAddr }
-    );
+    const tx = await token().approveAndCall(erc677cb().address, initialBalance, data, {
+      from: fromAddr,
+    });
     expectApproveEvent(tx, fromAddr, erc677cb().address, initialBalance);
     expectTransferEvent(tx, fromAddr, erc677cb().address, initialBalance);
     const finalBalance = await token().balanceOf.call(erc677cb().address);
@@ -330,23 +314,17 @@ export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
     await erc677cb().setCallbackReturnValue(false);
     await expect(
       token().approveAndCall(erc677cb().address, initialBalance, "", {
-        from: fromAddr
-      })
+        from: fromAddr,
+      }),
     ).to.be.rejectedWith(EvmError);
   });
 }
 
-export function erc223TokenTests(
-  token,
-  fromAddr,
-  toAddr,
-  initialBalance,
-  useTokenFallback = true
-) {
+export function erc223TokenTests(token, fromAddr, toAddr, initialBalance, useTokenFallback = true) {
   it("erc20 compatible transfer should not call fallback", async () => {
     const erc223cb = await deployTestErc223Callback(useTokenFallback);
     const tx = await token().transfer(erc223cb.address, initialBalance, {
-      from: fromAddr
+      from: fromAddr,
     });
     // expect erc20 backward compatible Transfer event
     expectTransferEvent(tx, fromAddr, erc223cb.address, initialBalance);
@@ -364,7 +342,7 @@ export function erc223TokenTests(
       erc223cb.address,
       initialBalance,
       data,
-      { from: fromAddr }
+      { from: fromAddr },
     );
     // expect erc20 backward compatible Transfer event
     expectTransferEvent(tx, fromAddr, erc223cb.address, initialBalance);
@@ -381,12 +359,9 @@ export function erc223TokenTests(
 
   it("erc223 compatible transfer should send to simple address", async () => {
     const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
-    const tx = await token().transfer["address,uint256,bytes"](
-      toAddr,
-      initialBalance,
-      data,
-      { from: fromAddr }
-    );
+    const tx = await token().transfer["address,uint256,bytes"](toAddr, initialBalance, data, {
+      from: fromAddr,
+    });
     // expect erc20 backward compatible Transfer event
     expectTransferEvent(tx, fromAddr, toAddr, initialBalance);
     const finalBalance = await token().balanceOf.call(toAddr);
@@ -426,8 +401,8 @@ export function testWithdrawal(token, investor, initialBalance) {
   });
 
   it("should reject to withdraw balance + 1 'wei'", async () => {
-    await expect(
-      token().withdraw(initialBalance.add(1), { from: investor })
-    ).to.be.rejectedWith(EvmError);
+    await expect(token().withdraw(initialBalance.add(1), { from: investor })).to.be.rejectedWith(
+      EvmError,
+    );
   });
 }

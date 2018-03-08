@@ -18,48 +18,38 @@ contract("Math", () => {
   it("should reject on divRound overflow", async () => {
     // https://www.wolframalpha.com/input/?i=round(115792089237316195423570985008687907853269984665640564039457584007913129639935+%2F+2)
     const a = new web3.BigNumber(
-      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935",
     );
     const b = new web3.BigNumber("2");
     /* const expected = new web3.BigNumber(
       "57896044618658097711785492504343953926634992332820282019728792003956564819968"
     ); */
-    await expect(
-      math._divRound(a, b),
-      "divRound(2**256-1, 2) should be 2**255"
-    ).to.be.rejectedWith(EvmError);
+    await expect(math._divRound(a, b), "divRound(2**256-1, 2) should be 2**255").to.be.rejectedWith(
+      EvmError,
+    );
   });
 
   it("should divRound 2**256-2", async () => {
     const a = new web3.BigNumber(
-      "115792089237316195423570985008687907853269984665640564039457584007913129639934"
+      "115792089237316195423570985008687907853269984665640564039457584007913129639934",
     );
     const b = new web3.BigNumber("2");
     const expected = new web3.BigNumber(
-      "57896044618658097711785492504343953926634992332820282019728792003956564819967"
+      "57896044618658097711785492504343953926634992332820282019728792003956564819967",
     );
     const r = await math._divRound(a, b);
-    expect(r, "divRound(2**256-2, 2) should be 2**255").to.be.bignumber.eq(
-      expected
-    );
+    expect(r, "divRound(2**256-2, 2) should be 2**255").to.be.bignumber.eq(expected);
   });
 
   it("should divRound", async () => {
     expect(await math._divRound(1871, 11), "round up").to.be.bignumber.eq(170);
-    expect(
-      await math._divRound(12871, 2),
-      "round up from 0.5"
-    ).to.be.bignumber.eq(6436);
+    expect(await math._divRound(12871, 2), "round up from 0.5").to.be.bignumber.eq(6436);
     expect(await math._divRound(10, 2), "no round").to.be.bignumber.eq(5);
-    expect(await math._divRound(81542, 23), "round down").to.be.bignumber.eq(
-      3545
-    );
+    expect(await math._divRound(81542, 23), "round down").to.be.bignumber.eq(3545);
   });
 
   it("should absDiff", async () => {
-    expect(await math._absDiff(5, 3)).to.be.bignumber.eq(
-      await math._absDiff(3, 5)
-    );
+    expect(await math._absDiff(5, 3)).to.be.bignumber.eq(await math._absDiff(3, 5));
     expect(await math._absDiff(5, 3)).to.be.bignumber.eq(2);
 
     // two's complement
@@ -73,14 +63,10 @@ contract("Math", () => {
     // fractions are computed on 18 decimal places precision
     const amount = Q18.mul(100);
     const full = Q18; // 100%
-    expect(await math._decimalFraction(amount, full)).to.be.bignumber.eq(
-      amount
-    );
+    expect(await math._decimalFraction(amount, full)).to.be.bignumber.eq(amount);
 
     const prc1 = Q18.div(100); // 1%
-    expect(await math._decimalFraction(amount, prc1)).to.be.bignumber.eq(
-      amount.div(100)
-    );
+    expect(await math._decimalFraction(amount, prc1)).to.be.bignumber.eq(amount.div(100));
 
     // how you lose precision on decimal fractions
     const ethRate = Q18.mul(345.7651);
@@ -105,10 +91,7 @@ contract("Math", () => {
     expect(diff.e).to.be.lte(acceptedPrecissionLoss);
 
     // do not lose precision on binary expansions
-    const bAmountMul = new web3.BigNumber(
-      "1110101010111001100110101101110001",
-      2
-    );
+    const bAmountMul = new web3.BigNumber("1110101010111001100110101101110001", 2);
     const bAmount = B56.mul(bAmountMul);
     const bRateMul = new web3.BigNumber("10010111101011111010101", 2);
     const bRate = B56.mul(bRateMul);
@@ -116,7 +99,7 @@ contract("Math", () => {
     // how to get binary decimal from Mathematica directly?
     const bExpectedResult = new web3.BigNumber(
       "1000101100010100100010110001100000000111001001100000001010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      2
+      2,
     ).div(new web3.BigNumber("110111100000101101101011001110100111011001", 2));
     expect(bResult).to.be.bignumber.eq(bExpectedResult.round(0, 4));
 

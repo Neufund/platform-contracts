@@ -1,6 +1,6 @@
 export const promisify = func => async (...args) =>
   new Promise((accept, reject) =>
-    func(...args, (error, result) => (error ? reject(error) : accept(result)))
+    func(...args, (error, result) => (error ? reject(error) : accept(result))),
   );
 
 export const rpcCommand = method => async (...params) =>
@@ -8,7 +8,7 @@ export const rpcCommand = method => async (...params) =>
     jsonrpc: "2.0",
     method,
     params,
-    id: Date.now()
+    id: Date.now(),
   })).result;
 
 export const mineBlock = rpcCommand("evm_mine");

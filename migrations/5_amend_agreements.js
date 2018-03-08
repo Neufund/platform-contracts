@@ -15,7 +15,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log(
       `Must use ${
         CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
-      } account to deploy agreements on live network`
+      } account to deploy agreements on live network`,
     );
     console.log("---------------------------------------------");
     return;
@@ -27,10 +27,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("Amending agreements");
     await neumark.amendAgreement(CONFIG.NEUMARK_HOLDER_AGREEMENT, {
-      from: CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
+      from: CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE,
     });
     await commitment.amendAgreement(CONFIG.RESERVATION_AGREEMENT, {
-      from: CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
+      from: CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE,
     });
   });
 };

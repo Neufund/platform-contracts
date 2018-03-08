@@ -22,43 +22,39 @@ module.exports = function deployContracts(deployer, network, accounts) {
         DEPLOYER,
         web3.sha3("EurtDepositManager"),
         euroToken.address,
-        TriState.Unset
+        TriState.Unset,
       );
       await accessPolicy.setUserRole(
         DEPLOYER,
         web3.sha3("LockedAccountAdmin"),
         GLOBAL,
-        TriState.Unset
+        TriState.Unset,
       );
 
-      console.log(
-        `Adding new ACCESS_CONTROLLER to ${CONFIG.addresses.ACCESS_CONTROLLER}`
-      );
+      console.log(`Adding new ACCESS_CONTROLLER to ${CONFIG.addresses.ACCESS_CONTROLLER}`);
       await accessPolicy.setUserRole(
         CONFIG.addresses.ACCESS_CONTROLLER,
         web3.sha3("AccessController"),
         GLOBAL,
-        TriState.Allow
+        TriState.Allow,
       );
       await accessPolicy.setUserRole(
         CONFIG.addresses.ACCESS_CONTROLLER,
         web3.sha3("AccessController"),
         accessPolicy.address,
-        TriState.Allow
+        TriState.Allow,
       );
       await accessPolicy.setUserRole(
         DEPLOYER,
         web3.sha3("AccessController"),
         GLOBAL,
-        TriState.Unset
+        TriState.Unset,
       );
       console.log("---------------------------------------------");
       console.log(
         `New ACCESS_CONTROLLER ${
           CONFIG.addresses.ACCESS_CONTROLLER
-        } must remove access to deployer ${DEPLOYER} for object ${
-          accessPolicy.address
-        }`
+        } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
       );
       console.log("---------------------------------------------");
 

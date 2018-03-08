@@ -14,19 +14,19 @@ module.exports = {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 4600000
+      gas: 4600000,
     },
     inprocess: {
       network_id: "*",
       provider: TestRPC.provider({
-        accounts: Array(10).fill({ balance: "12300000000000000000000000" })
-      })
+        accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
+      }),
     },
     inprocess_test: {
       network_id: "*",
       provider: TestRPC.provider({
-        accounts: Array(10).fill({ balance: "12300000000000000000000000" })
-      })
+        accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
+      }),
     },
     inprocess_massive_test: {
       network_id: "*",
@@ -34,56 +34,52 @@ module.exports = {
       provider: TestRPC.provider({
         deterministic: true,
         gasLimit: 0xffffffff,
-        accounts: Array(100).fill({ balance: "12300000000000000000000000" })
-      })
+        accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
+      }),
     },
     coverage: {
       network_id: "*",
       gas: 0xfffffffffff,
       gasPrice: 1,
       host: "localhost",
-      port: 8555
+      port: 8555,
     },
     ropsten: {
       host: "localhost", // local parity kovan node
       port: 8544,
       network_id: "3",
       gas: 4300000, // close to current mainnet limit
-      gasPrice: 30000000000 // 10 gwei /shannon
+      gasPrice: 30000000000, // 10 gwei /shannon
     },
     kovan: {
       host: "localhost", // local parity kovan node
       port: 8545,
-      network_id: "42"
+      network_id: "42",
     },
     ropsten_live: {
       host: "localhost", // local parity ropsten
       port: 8544,
       network_id: "3",
       gas: 4300000, // close to current mainnet limit
-      gasPrice: 10000000000 // 10 gwei /shannon
+      gasPrice: 10000000000, // 10 gwei /shannon
     },
     nano: {
       network_id: "*",
       gas: 4600000,
       provider: nanoProvider("http://localhost:8543", "44'/60'/105'/1", "nano"),
-      gasPrice: 10000000000 // 10 gwei /shannon
+      gasPrice: 10000000000, // 10 gwei /shannon
     },
     nano_customer: {
       network_id: "*",
       gas: 4600000,
-      provider: nanoProvider(
-        "http://localhost:8543",
-        "44'/60'/0'/0",
-        "nano_customer"
-      ),
-      gasPrice: 10000000000 // 10 gwei /shannon
+      provider: nanoProvider("http://localhost:8543", "44'/60'/0'/0", "nano_customer"),
+      gasPrice: 10000000000, // 10 gwei /shannon
     },
     simulated_live: {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 4600000
+      gas: 4600000,
     },
     nf_private: {
       host: "localhost",
@@ -91,7 +87,7 @@ module.exports = {
       network_id: "16",
       gas: 4600000,
       // gasPrice: 11904761856
-      gasPrice: 21000000000
+      gasPrice: 21000000000,
     },
     nf_private_test: {
       host: "localhost",
@@ -99,7 +95,7 @@ module.exports = {
       network_id: "16",
       gas: 4600000,
       // gasPrice: 11904761856
-      gasPrice: 21000000000
+      gasPrice: 21000000000,
     },
     nf_dev_test: {
       host: "localhost",
@@ -107,20 +103,20 @@ module.exports = {
       network_id: "17",
       gas: 4600000,
       // gasPrice: 11904761856
-      gasPrice: 21000000000
+      gasPrice: 21000000000,
     },
     live: {
       network_id: 1, // Ethereum public network
       host: "localhost",
       port: 8543,
       gas: 6300000, // close to current mainnet limit
-      gasPrice: 50000000000 // 21 gwei /shannon
+      gasPrice: 50000000000, // 21 gwei /shannon
       // optional config values
       // host - defaults to "localhost"
       // port - defaults to 8545
       // gas
       // gasPrice
       // from - default address to use for any transaction Truffle makes during migrations
-    }
-  }
+    },
+  },
 };

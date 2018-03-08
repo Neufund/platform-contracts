@@ -10,9 +10,7 @@ const BEFORE_DURATION = 1 * 24 * 60 * 60 + START_DATE_GAP;
 const WHITELIST_DURATION = 5 * 24 * 60 * 60;
 const PUBLIC_DURATION = 30 * 24 * 60 * 60;
 
-const TestICBMTimedStateMachine = artifacts.require(
-  "TestICBMTimedStateMachine"
-);
+const TestICBMTimedStateMachine = artifacts.require("TestICBMTimedStateMachine");
 
 contract("TimedStateMachine", () => {
   let timedStateMachine;
@@ -25,9 +23,7 @@ contract("TimedStateMachine", () => {
   });
 
   it("should have initial state", async () => {
-    expect(await timedStateMachine.state.call()).to.be.bignumber.eq(
-      CommitmentState.Before
-    );
+    expect(await timedStateMachine.state.call()).to.be.bignumber.eq(CommitmentState.Before);
   });
 
   it("should have desired state ordering", async () => {
@@ -35,19 +31,15 @@ contract("TimedStateMachine", () => {
   });
 
   it("should enter states at desired time", async () => {
-    expect(
-      await timedStateMachine.startOf(CommitmentState.Before)
-    ).to.be.bignumber.eq(0);
-    expect(
-      await timedStateMachine.startOf(CommitmentState.Whitelist)
-    ).to.be.bignumber.eq(timebase + BEFORE_DURATION);
-    expect(
-      await timedStateMachine.startOf(CommitmentState.Public)
-    ).to.be.bignumber.eq(timebase + BEFORE_DURATION + WHITELIST_DURATION);
-    expect(
-      await timedStateMachine.startOf(CommitmentState.Finished)
-    ).to.be.bignumber.eq(
-      timebase + BEFORE_DURATION + WHITELIST_DURATION + PUBLIC_DURATION
+    expect(await timedStateMachine.startOf(CommitmentState.Before)).to.be.bignumber.eq(0);
+    expect(await timedStateMachine.startOf(CommitmentState.Whitelist)).to.be.bignumber.eq(
+      timebase + BEFORE_DURATION,
+    );
+    expect(await timedStateMachine.startOf(CommitmentState.Public)).to.be.bignumber.eq(
+      timebase + BEFORE_DURATION + WHITELIST_DURATION,
+    );
+    expect(await timedStateMachine.startOf(CommitmentState.Finished)).to.be.bignumber.eq(
+      timebase + BEFORE_DURATION + WHITELIST_DURATION + PUBLIC_DURATION,
     );
   });
 
@@ -62,21 +54,20 @@ contract("TimedStateMachine", () => {
           [CommitmentState.Before]: Math.floor(BEFORE_DURATION / 2) - 2,
           [CommitmentState.Whitelist]: BEFORE_DURATION + 1,
           [CommitmentState.Public]: BEFORE_DURATION + WHITELIST_DURATION + 1,
-          [CommitmentState.Finished]:
-            BEFORE_DURATION + WHITELIST_DURATION + PUBLIC_DURATION + 1
+          [CommitmentState.Finished]: BEFORE_DURATION + WHITELIST_DURATION + PUBLIC_DURATION + 1,
         },
         [CommitmentState.Whitelist]: {
           [CommitmentState.Whitelist]: WHITELIST_DURATION - 5,
           [CommitmentState.Public]: WHITELIST_DURATION + 1,
-          [CommitmentState.Finished]: WHITELIST_DURATION + PUBLIC_DURATION + 1
+          [CommitmentState.Finished]: WHITELIST_DURATION + PUBLIC_DURATION + 1,
         },
         [CommitmentState.Public]: {
           [CommitmentState.Public]: PUBLIC_DURATION - 5,
-          [CommitmentState.Finished]: PUBLIC_DURATION + 1
+          [CommitmentState.Finished]: PUBLIC_DURATION + 1,
         },
         [CommitmentState.Finished]: {
-          [CommitmentState.Finished]: 365 * 24 * 60 * 60 // just stay in the state forever
-        }
+          [CommitmentState.Finished]: 365 * 24 * 60 * 60, // just stay in the state forever
+        },
       };
     });
 
@@ -92,17 +83,10 @@ contract("TimedStateMachine", () => {
       [CommitmentState.Before, [CommitmentState.Before]],
       [
         CommitmentState.Whitelist,
-        [
-          CommitmentState.Whitelist,
-          CommitmentState.Public,
-          CommitmentState.Finished
-        ]
+        [CommitmentState.Whitelist, CommitmentState.Public, CommitmentState.Finished],
       ],
-      [
-        CommitmentState.Public,
-        [CommitmentState.Public, CommitmentState.Finished]
-      ],
-      [CommitmentState.Finished, [CommitmentState.Finished]]
+      [CommitmentState.Public, [CommitmentState.Public, CommitmentState.Finished]],
+      [CommitmentState.Finished, [CommitmentState.Finished]],
     ];
 
     function getKeyByValue(object, value) {
@@ -112,23 +96,19 @@ contract("TimedStateMachine", () => {
     for (const inStateMap of DesiredTimedTransitions) {
       for (const outState of inStateMap[1]) {
         /* eslint-disable no-loop-func */
-        it(`should Before to ${getKeyByValue(
+        it(`should Before to ${getKeyByValue(CommitmentState, inStateMap[0])} to ${getKeyByValue(
           CommitmentState,
-          inStateMap[0]
-        )} to ${getKeyByValue(CommitmentState, outState)}`, async () => {
+          outState,
+        )}`, async () => {
           const inState = inStateMap[0];
           // we are in Before state
           await expectToState(
             CommitmentState.Before,
             inState,
-            timeDifferences[CommitmentState.Before][inState]
+            timeDifferences[CommitmentState.Before][inState],
           );
           // then go to desired state
-          await expectToState(
-            inState,
-            outState,
-            timeDifferences[inState][outState]
-          );
+          await expectToState(inState, outState, timeDifferences[inState][outState]);
         });
         /* eslint-enable no-loop-func */
       }

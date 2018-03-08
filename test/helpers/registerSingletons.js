@@ -6,6 +6,6 @@ export default async (universe, owner, interfaces) => {
   return universe.setManySingletons(
     interfaces.map(({ ki }) => ki),
     interfaces.map(({ addr }) => addr),
-    { from: owner }
+    { from: owner },
   );
 };

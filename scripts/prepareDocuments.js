@@ -7,13 +7,10 @@ const { formatMoney, formatDate } = require("./formatters");
 
 const DOCUMENT_CONSTANTS = {
   repoUrl: "git@github.com:Neufund/ico-contracts.git",
-  website: "https://commit.neufund.org"
+  website: "https://commit.neufund.org",
 };
 
-async function prepareNeumarkTokenHolderAgreement({
-  neumarkContract,
-  companyAddress
-}) {
+async function prepareNeumarkTokenHolderAgreement({ neumarkContract, companyAddress }) {
   const neuDecimals = (await neumarkContract.decimals()).toNumber();
 
   const tags = {
@@ -22,24 +19,21 @@ async function prepareNeumarkTokenHolderAgreement({
     "neumark-sc-address": neumarkContract.address,
     "company-address": companyAddress,
     "neumark-cap": formatMoney(neuDecimals, await neumarkContract.neumarkCap()),
-    "initial-reward": formatMoney(
-      neuDecimals,
-      await neumarkContract.initialRewardFraction()
-    ),
-    "fork-arbiter-sc-address": await neumarkContract.ethereumForkArbiter()
+    "initial-reward": formatMoney(neuDecimals, await neumarkContract.initialRewardFraction()),
+    "fork-arbiter-sc-address": await neumarkContract.ethereumForkArbiter(),
   };
 
   replaceTags(
     join(__dirname, "../legal/NEUMARK TOKEN HOLDER AGREEMENT.html"),
     tags,
-    join(__dirname, "../legal/NEUMARK TOKEN HOLDER AGREEMENT.out.html")
+    join(__dirname, "../legal/NEUMARK TOKEN HOLDER AGREEMENT.out.html"),
   );
 }
 
 async function prepareReservationAgreement({
   commitmentContract,
   neumarkContract,
-  companyAddress
+  companyAddress,
 }) {
   const tags = {
     "repo-url": DOCUMENT_CONSTANTS.repoUrl,
@@ -49,19 +43,19 @@ async function prepareReservationAgreement({
     "company-address": companyAddress,
     "neumark-sc-address": neumarkContract.address,
     "icbm-start-date": formatDate(
-      await commitmentContract.startOf(2) // State.Public
+      await commitmentContract.startOf(2), // State.Public
     ),
     "icbm-end-date": formatDate(
-      await commitmentContract.startOf(3) // State.Finished
+      await commitmentContract.startOf(3), // State.Finished
     ),
     "company-neumark-address": await commitmentContract.platformWalletAddress(),
-    "fork-arbiter-sc-address": await commitmentContract.ethereumForkArbiter()
+    "fork-arbiter-sc-address": await commitmentContract.ethereumForkArbiter(),
   };
 
   replaceTags(
     join(__dirname, "../legal/RESERVATION AGREEMENT.html"),
     tags,
-    join(__dirname, "../legal/RESERVATION AGREEMENT.out.html")
+    join(__dirname, "../legal/RESERVATION AGREEMENT.out.html"),
   );
 }
 
@@ -83,5 +77,5 @@ function replaceTags(inputPath, tags, outputPath) {
 
 module.exports = {
   prepareNeumarkTokenHolderAgreement,
-  prepareReservationAgreement
+  prepareReservationAgreement,
 };

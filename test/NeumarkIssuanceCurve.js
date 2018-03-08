@@ -23,34 +23,29 @@ contract("NeumarkIssuanceCurve", () => {
   beforeEach(async () => {
     curveGas = await CurveGas.new();
     expectedCurvePointsAtIntegers = parseNmkDataset(
-      `${__dirname}/data/expectedCurvePointsAtIntegers.csv`
+      `${__dirname}/data/expectedCurvePointsAtIntegers.csv`,
     );
     expectedCurvePointsAtRandom = parseNmkDataset(
-      `${__dirname}/data/expectedCurvePointsAtRandom.csv`
+      `${__dirname}/data/expectedCurvePointsAtRandom.csv`,
     );
   });
 
   it("should deploy", async () => {
     await prettyPrintGasCost("NeumarkIssuanceCurve deploy", curveGas);
-    expect(await curveGas.initialRewardFraction()).to.be.bignumber.eq(
-      INITIAL_REWARD
-    );
+    expect(await curveGas.initialRewardFraction()).to.be.bignumber.eq(INITIAL_REWARD);
     expect(await curveGas.neumarkCap()).to.be.bignumber.eq(NEUMARK_CAP);
   });
 
   async function expectCumulativeRange(expectedPoints) {
     const gasChunks = await Promise.all(
       expectedPoints.map(async ([e, n]) => {
-        const [neumarkUlps, gas] = await curveGas.cumulativeWithGas.call(
-          EUR_DECIMALS.mul(e)
-        );
+        const [neumarkUlps, gas] = await curveGas.cumulativeWithGas.call(EUR_DECIMALS.mul(e));
         const neumarks = neumarkUlps.div(NMK_DECIMALS);
-        expect(
-          n.sub(neumarks).abs(),
-          `Curve compute failed for EUR value ${e}`
-        ).to.be.bignumber.lt(WEI_EPSILON);
+        expect(n.sub(neumarks).abs(), `Curve compute failed for EUR value ${e}`).to.be.bignumber.lt(
+          WEI_EPSILON,
+        );
         return gas.toNumber();
-      })
+      }),
     );
     const totalGas = gasChunks.reduce((sum, gas) => sum + gas, 0);
 
@@ -71,16 +66,15 @@ contract("NeumarkIssuanceCurve", () => {
     for (const [e, n] of expectedPoints) {
       const neumarkUlps = await curveGas.incremental.call(
         EUR_DECIMALS.mul(prevEur),
-        EUR_DECIMALS.mul(e.sub(prevEur))
+        EUR_DECIMALS.mul(e.sub(prevEur)),
       );
       accumulatedNmkUlps = accumulatedNmkUlps.add(neumarkUlps);
       const neumarks = accumulatedNmkUlps.div(NMK_DECIMALS);
       prevEur = e;
       // console.log(`Curve compute for value ${e} should be ${n} but is ${neumarks}`);
-      expect(
-        n.sub(neumarks).abs(),
-        `Curve compute failed for EUR value ${e}`
-      ).to.be.bignumber.lt(WEI_EPSILON);
+      expect(n.sub(neumarks).abs(), `Curve compute failed for EUR value ${e}`).to.be.bignumber.lt(
+        WEI_EPSILON,
+      );
     }
   }
 
@@ -93,21 +87,15 @@ contract("NeumarkIssuanceCurve", () => {
   });
 
   it("should compute inverse at late point", async () => {
-    let [, gas] = await curveGas.incrementalInverseWithGas.call(
-      LIMIT_EUR_ULPS,
-      NMK_DECIMALS
-    );
+    let [, gas] = await curveGas.incrementalInverseWithGas.call(LIMIT_EUR_ULPS, NMK_DECIMALS);
     await prettyPrintGasCost("At issuance limit", gas.toNumber());
 
-    [, gas] = await curveGas.incrementalInverseWithGas.call(
-      LIMIT_LINEAR_EUR_ULPS,
-      NMK_DECIMALS
-    );
+    [, gas] = await curveGas.incrementalInverseWithGas.call(LIMIT_LINEAR_EUR_ULPS, NMK_DECIMALS);
     await prettyPrintGasCost("At linear limit", gas.toNumber());
 
     [, gas] = await curveGas.incrementalInverseWithGas.call(
       LIMIT_LINEAR_EUR_ULPS.divToInt(2),
-      NMK_DECIMALS
+      NMK_DECIMALS,
     );
     await prettyPrintGasCost("At half of linear limit", gas.toNumber());
     assert(true);
@@ -125,9 +113,10 @@ contract("NeumarkIssuanceCurve", () => {
       if (burnNmk.gt(0)) {
         // if anything to burn
         const expectedEurDeltaUlps = totalEuroUlps.sub(EUR_DECIMALS.mul(e));
-        const actualEurDeltaUlps = await curveGas.incrementalInverse[
-          "uint256,uint256"
-        ](totalEuroUlps, burnNmk);
+        const actualEurDeltaUlps = await curveGas.incrementalInverse["uint256,uint256"](
+          totalEuroUlps,
+          burnNmk,
+        );
         const expectedEurDelta = expectedEurDeltaUlps.div(EUR_DECIMALS);
         const actualEurDelta = actualEurDeltaUlps.div(EUR_DECIMALS);
         const roundingPrecision = e.gte("900000000") ? 4 : 10;
@@ -135,7 +124,7 @@ contract("NeumarkIssuanceCurve", () => {
         // console.log(`should burn ${burnNmk.toNumber()} with expected Euro delta ${expectedEurDelta.toNumber()}, got ${actualEurDelta.toNumber()} diff ${expectedEurDelta.sub(actualEurDelta).toNumber()}`);
         expect(
           actualEurDelta.round(roundingPrecision, 4),
-          `Invalid inverse at NEU ${n} burning NEU ${burnNmk} at ${e.toNumber()}`
+          `Invalid inverse at NEU ${n} burning NEU ${burnNmk} at ${e.toNumber()}`,
         ).to.be.bignumber.eq(expectedEurDelta.round(roundingPrecision, 4));
 
         totalNmk = totalNmk.sub(burnNmk);
@@ -143,7 +132,7 @@ contract("NeumarkIssuanceCurve", () => {
 
         const totalEuro = totalEuroUlps.div(EUR_DECIMALS);
         expect(totalEuro.round(roundingPrecision, 4)).to.be.bignumber.eq(
-          e.round(roundingPrecision, 4)
+          e.round(roundingPrecision, 4),
         );
 
         // check inverse against curve
@@ -173,39 +162,30 @@ contract("NeumarkIssuanceCurve", () => {
     expectedPoints.reverse();
     for (const [e, n] of expectedPoints.filter(([ef]) => ef.lte(LIMIT_EUR))) {
       const nUlps = NMK_DECIMALS.mul(n);
-      const inverseEurUlps = await curveGas.cumulativeInverse(
-        nUlps,
-        0,
-        LIMIT_EUR_ULPS
-      );
+      const inverseEurUlps = await curveGas.cumulativeInverse(nUlps, 0, LIMIT_EUR_ULPS);
       const inverseEur = inverseEurUlps.div(EUR_DECIMALS);
       // console.log(`should inverse ${n} expected ${e.toNumber()}, got ${inverseEur.toNumber()}`);
       if (inverseEurUlps.gt(0)) {
         const atInverseNmk = await curveGas.cumulative(inverseEurUlps);
-        const belowInverseNmk = await curveGas.cumulative(
-          inverseEurUlps.sub(1)
-        );
-        const aboveInverseNmk = await curveGas.cumulative(
-          inverseEurUlps.add(1)
-        );
+        const belowInverseNmk = await curveGas.cumulative(inverseEurUlps.sub(1));
+        const aboveInverseNmk = await curveGas.cumulative(inverseEurUlps.add(1));
         // below must be less, binary search must returns beginning of range of identical values
-        expect(
-          belowInverseNmk,
-          `Not at lower bound for EUR ${inverseEurUlps}`
-        ).to.be.bignumber.lt(atInverseNmk);
+        expect(belowInverseNmk, `Not at lower bound for EUR ${inverseEurUlps}`).to.be.bignumber.lt(
+          atInverseNmk,
+        );
         // must be monotonic (actually we allow +-2 difference as binomial expansion is not monotonic for large euro values)
         expect(
           aboveInverseNmk,
           `Not monotonic for EUR ${inverseEurUlps} diff ${aboveInverseNmk
             .sub(atInverseNmk)
-            .toNumber()}`
+            .toNumber()}`,
         ).to.be.bignumber.gte(atInverseNmk.sub(2));
       }
       // request precision depending on point on the curce
       const roundingPrecision = e.gte("900000000") ? 4 : 10;
       expect(
         inverseEur.round(roundingPrecision, 4),
-        `Invalid inverse for NEU ${n}`
+        `Invalid inverse for NEU ${n}`,
       ).to.be.bignumber.eq(e.round(roundingPrecision, 4));
     }
   }
@@ -220,24 +200,20 @@ contract("NeumarkIssuanceCurve", () => {
 
   it("should revert on cumulative inverse from not in range", async () => {
     const expectedInverseEurUlps = EUR_DECIMALS.mul(5000000);
-    const burnNmkUlps = NMK_DECIMALS.mul(
-      new BigNumber("3.21504457765812047556165399769811884e7")
-    );
+    const burnNmkUlps = NMK_DECIMALS.mul(new BigNumber("3.21504457765812047556165399769811884e7"));
     await curveGas.cumulativeInverse(burnNmkUlps, 0, expectedInverseEurUlps);
     await expect(
-      curveGas.cumulativeInverse(burnNmkUlps, 0, expectedInverseEurUlps.sub(1))
+      curveGas.cumulativeInverse(burnNmkUlps, 0, expectedInverseEurUlps.sub(1)),
     ).to.be.rejectedWith(EvmError);
   });
 
   it("should compute inverse with low gas cost when search ranges equal inverse", async () => {
     const expectedInverseEurUlps = EUR_DECIMALS.mul(5000000);
-    const burnNmkUlps = NMK_DECIMALS.mul(
-      new BigNumber("3.21504457765812047556165399769811884e7")
-    );
+    const burnNmkUlps = NMK_DECIMALS.mul(new BigNumber("3.21504457765812047556165399769811884e7"));
     const [actualInverseEurUlps, gas] = await curveGas.cumulativeInverseWithGas(
       burnNmkUlps,
       expectedInverseEurUlps,
-      expectedInverseEurUlps
+      expectedInverseEurUlps,
     );
     expect(actualInverseEurUlps).to.be.bignumber.eq(expectedInverseEurUlps);
     await prettyPrintGasCost("Inverse gas", gas.toNumber());
@@ -245,15 +221,13 @@ contract("NeumarkIssuanceCurve", () => {
 
   it("should reject to compute inverse with low gas cost when search ranges not equal inverse", async () => {
     const expectedInverseEurUlps = EUR_DECIMALS.mul(5000000);
-    const burnNmkUlps = NMK_DECIMALS.mul(
-      new BigNumber("3.21504457765812047556165399769811884e7")
-    );
+    const burnNmkUlps = NMK_DECIMALS.mul(new BigNumber("3.21504457765812047556165399769811884e7"));
     await expect(
       curveGas.cumulativeInverseWithGas(
         burnNmkUlps,
         expectedInverseEurUlps.sub(1),
-        expectedInverseEurUlps.sub(1)
-      )
+        expectedInverseEurUlps.sub(1),
+      ),
     ).to.be.rejectedWith(EvmError);
   });
 
@@ -262,13 +236,11 @@ contract("NeumarkIssuanceCurve", () => {
     // 5000000,3.21504457765812047556165399769811884e7
     const totalEuroUlps = EUR_DECIMALS.mul(5000000);
     const expectedInverseEurDeltaUlps = EUR_DECIMALS.mul(5000000 - 4000000);
-    const afterBurnNmk = new BigNumber(
-      "2.57759629704150400556252848464617472e7"
-    );
+    const afterBurnNmk = new BigNumber("2.57759629704150400556252848464617472e7");
     const expectedInverseEurUlps = await curveGas.cumulativeInverse(
       afterBurnNmk.mul(NMK_DECIMALS),
       0,
-      totalEuroUlps
+      totalEuroUlps,
     );
     // expect(expectedInverseEurUlps).to.be.bignumber.eq(EUR_DECIMALS.mul(4000000));
     // const controlInverseNmkUlps = await curveGas.cumulative(expectedInverseEurUlps);
@@ -280,27 +252,17 @@ contract("NeumarkIssuanceCurve", () => {
     await curveGas.cumulativeInverse(
       afterBurnNmk.mul(NMK_DECIMALS),
       expectedInverseEurUlps.sub(1),
-      expectedInverseEurUlps
+      expectedInverseEurUlps,
     );
     // calculate incremental nmk burn
-    const burnNmk = new BigNumber(
-      "3.21504457765812047556165399769811884e7"
-    ).sub(afterBurnNmk);
+    const burnNmk = new BigNumber("3.21504457765812047556165399769811884e7").sub(afterBurnNmk);
     const burnNmkUlps = NMK_DECIMALS.mul(burnNmk);
-    const [
-      actualInverseEurDeltaUlps,
-      gas
-    ] = await curveGas.incrementalInverseWithGas[
+    const [actualInverseEurDeltaUlps, gas] = await curveGas.incrementalInverseWithGas[
       "uint256,uint256,uint256,uint256"
-    ](
-      totalEuroUlps,
-      burnNmkUlps,
-      expectedInverseEurUlps.sub(1),
-      expectedInverseEurUlps
+    ](totalEuroUlps, burnNmkUlps, expectedInverseEurUlps.sub(1), expectedInverseEurUlps);
+    expect(actualInverseEurDeltaUlps.sub(expectedInverseEurDeltaUlps).abs()).to.be.bignumber.lt(
+      WEI_EPSILON,
     );
-    expect(
-      actualInverseEurDeltaUlps.sub(expectedInverseEurDeltaUlps).abs()
-    ).to.be.bignumber.lt(WEI_EPSILON);
     await prettyPrintGasCost("Inverse gas", gas.toNumber());
   });
 
@@ -309,7 +271,7 @@ contract("NeumarkIssuanceCurve", () => {
     const neu1EurUlps = await curveGas.cumulative(1);
     // 6.4999999999999999999999999859166667 * 10^-18 but disregard decimals for clarity
     expect(neu1EurUlps).to.be.bignumber.eq(
-      new BigNumber("6.4999999999999999999999999859166667").round(0)
+      new BigNumber("6.4999999999999999999999999859166667").round(0),
     );
     for (let nmkUlps = 1; nmkUlps <= neu1EurUlps.toNumber(); nmkUlps += 1) {
       const approxInv = await curveGas.cumulativeInverse(nmkUlps, 0, 1);
@@ -317,9 +279,7 @@ contract("NeumarkIssuanceCurve", () => {
     }
     // for 2 ulps of Eur we should get 12 ulps of Neumark (because rounded down)
     const neu2EurUlps = await curveGas.cumulative(2);
-    expect(neu2EurUlps).to.be.bignumber.eq(
-      new BigNumber("12.9999999999999999999999999").round(0)
-    );
+    expect(neu2EurUlps).to.be.bignumber.eq(new BigNumber("12.9999999999999999999999999").round(0));
     for (
       let nmkUlps = neu1EurUlps.toNumber() + 1;
       nmkUlps <= neu2EurUlps.toNumber();
@@ -332,10 +292,7 @@ contract("NeumarkIssuanceCurve", () => {
 
   it("should inverse 1 nmk ulp when on eurUlps max limit", async () => {
     await curveGas.incrementalInverse["uint256,uint256"](LIMIT_EUR_ULPS, 1);
-    await curveGas.incrementalInverse["uint256,uint256"](
-      LIMIT_LINEAR_EUR_ULPS,
-      1
-    );
+    await curveGas.incrementalInverse["uint256,uint256"](LIMIT_LINEAR_EUR_ULPS, 1);
   });
 
   it("should perform approximate binary search", async () => {
@@ -367,10 +324,7 @@ contract("NeumarkIssuanceCurve", () => {
     };
 
     // output search table
-    const neumarks = Array.from(new Array(maxSearch + 1), (x, i) => [
-      i,
-      simpleExp(i)
-    ]);
+    const neumarks = Array.from(new Array(maxSearch + 1), (x, i) => [i, simpleExp(i)]);
     // console.log(neumarks);
 
     let avgIters = 0;
@@ -389,9 +343,7 @@ contract("NeumarkIssuanceCurve", () => {
     // eslint-disable-next-line no-console
     console.log(
       `\tAverage searches ${avgIters /
-        (simpleExp(maxSearch) - 2)} vs theoretical O(log N) ${Math.log2(
-        maxSearch
-      )}`
+        (simpleExp(maxSearch) - 2)} vs theoretical O(log N) ${Math.log2(maxSearch)}`,
     );
   });
 
@@ -401,9 +353,9 @@ contract("NeumarkIssuanceCurve", () => {
     // const atInverseNmk = await curveGas.cumulative(inverseEurUlps);
     // const aboveInverseNmk = await curveGas.cumulative(inverseEurUlps.add(delta));
     // console.log(aboveInverseNmk.sub(atInverseNmk).toString());
-    await expect(
-      curveGas.incremental["uint256,uint256"](inverseEurUlps, delta)
-    ).to.be.rejectedWith(EvmError);
+    await expect(curveGas.incremental["uint256,uint256"](inverseEurUlps, delta)).to.be.rejectedWith(
+      EvmError,
+    );
   });
 
   it("should revert on overflow on non monotonic incremental inverse", async () => {
@@ -411,12 +363,7 @@ contract("NeumarkIssuanceCurve", () => {
     const newEurUlps = new BigNumber("1.999999999999999999999000050e+27");
     const deltaNmk = 3;
     await expect(
-      curveGas.incrementalInverse(
-        inverseEurUlps,
-        deltaNmk,
-        newEurUlps,
-        newEurUlps
-      )
+      curveGas.incrementalInverse(inverseEurUlps, deltaNmk, newEurUlps, newEurUlps),
     ).to.be.rejectedWith(EvmError);
   });
 

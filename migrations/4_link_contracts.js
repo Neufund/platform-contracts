@@ -22,15 +22,15 @@ module.exports = function deployContracts(deployer, network, accounts) {
       DEPLOYER,
       web3.sha3("LockedAccountAdmin"),
       GLOBAL,
-      TriState.Allow
+      TriState.Allow,
     );
 
     console.log("Attaching Commitment to LockedAccounts");
     await euroLock.setController(commitment.address, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
     await etherLock.setController(commitment.address, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
   });
 };

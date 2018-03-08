@@ -28,46 +28,46 @@ module.exports = function deployContracts(deployer, network, accounts) {
       commitment.address,
       web3.sha3("NeumarkIssuer"),
       neumark.address,
-      TriState.Allow
+      TriState.Allow,
     );
     // allow commitment contract to enable Neumark trading after ICBM
     await accessPolicy.setUserRole(
       commitment.address,
       web3.sha3("TransferAdmin"),
       neumark.address,
-      TriState.Allow
+      TriState.Allow,
     );
     // allow anyone to burn their neumarks
     await accessPolicy.setUserRole(
       EVERYONE,
       web3.sha3("NeumarkBurner"),
       neumark.address,
-      TriState.Allow
+      TriState.Allow,
     );
 
     await accessPolicy.setUserRole(
       CONFIG.addresses.LOCKED_ACCOUNT_ADMIN,
       web3.sha3("LockedAccountAdmin"),
       GLOBAL,
-      TriState.Allow
+      TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.WHITELIST_ADMIN,
       web3.sha3("WhitelistAdmin"),
       commitment.address,
-      TriState.Allow
+      TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE,
       web3.sha3("PlatformOperatorRepresentative"),
       GLOBAL,
-      TriState.Allow
+      TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.EURT_DEPOSIT_MANAGER,
       web3.sha3("EurtDepositManager"),
       euroToken.address,
-      TriState.Allow
+      TriState.Allow,
     );
 
     // deposit role to yourself during deployment and relinquish control later
@@ -75,21 +75,21 @@ module.exports = function deployContracts(deployer, network, accounts) {
       DEPLOYER,
       web3.sha3("EurtDepositManager"),
       euroToken.address,
-      TriState.Allow
+      TriState.Allow,
     );
 
     console.log("EuroToken deposit permissions");
     await euroToken.setAllowedTransferFrom(commitment.address, true, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
     await euroToken.setAllowedTransferTo(commitment.address, true, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
     await euroToken.setAllowedTransferTo(euroLock.address, true, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
     await euroToken.setAllowedTransferFrom(euroLock.address, true, {
-      from: DEPLOYER
+      from: DEPLOYER,
     });
   });
 };

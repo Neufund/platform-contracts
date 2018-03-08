@@ -13,5 +13,5 @@ export default {
   etherLock: web3.sha3("LockedAccount:Ether").slice(0, 10),
   icbmEuroLock: web3.sha3("ICBMLockedAccount:Euro").slice(0, 10),
   icbmEtherLock: web3.sha3("ICBMLockedAccount:Ether").slice(0, 10),
-  commitmentInterface: web3.sha3("ICommitment").slice(0, 10)
+  commitmentInterface: web3.sha3("ICommitment").slice(0, 10),
 };

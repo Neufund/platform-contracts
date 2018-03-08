@@ -16,20 +16,17 @@ export default function getConfig(web3, network, accounts) {
     MIN_TICKET_EUR: web3.toBigNumber("290").mul(Q18),
     ETH_EUR_FRACTION: web3.toBigNumber("290").mul(Q18),
     // Agreements
-    RESERVATION_AGREEMENT:
-      "ipfs:QmbH7mtyWpwTxigGtvnbYJAJ9ZZPe1FDxr9hTc2mNwpRe2", // attached to Commitment
-    NEUMARK_HOLDER_AGREEMENT:
-      "ipfs:QmVQfuibCipv9j6v4cSYTnvkjoBnx3DqSLNY3PKg8MZbP4", // attached to Neumark
+    RESERVATION_AGREEMENT: "ipfs:QmbH7mtyWpwTxigGtvnbYJAJ9ZZPe1FDxr9hTc2mNwpRe2", // attached to Commitment
+    NEUMARK_HOLDER_AGREEMENT: "ipfs:QmVQfuibCipv9j6v4cSYTnvkjoBnx3DqSLNY3PKg8MZbP4", // attached to Neumark
     addresses: {
       // Maps roles to addresses
       ACCESS_CONTROLLER: "0x8AD8B24594ef90c15B2bd05edE0c67509c036B29",
       LOCKED_ACCOUNT_ADMIN: "0x94c32ab2c5d946aCA3aEbb543b46948d5ad0B622",
       WHITELIST_ADMIN: "0x7F5552B918a6FfC97c1705852029Fb40380aA399",
       PLATFORM_OPERATOR_WALLET: "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4",
-      PLATFORM_OPERATOR_REPRESENTATIVE:
-        "0x83CBaB70Bc1d4e08997e5e00F2A3f1bCE225811F",
-      EURT_DEPOSIT_MANAGER: "0x30A72cD2F5AEDCd86c7f199E0500235674a08E27"
-    }
+      PLATFORM_OPERATOR_REPRESENTATIVE: "0x83CBaB70Bc1d4e08997e5e00F2A3f1bCE225811F",
+      EURT_DEPOSIT_MANAGER: "0x30A72cD2F5AEDCd86c7f199E0500235674a08E27",
+    },
   };
 
   // modify live configuration according to network type
