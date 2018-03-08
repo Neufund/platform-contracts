@@ -2,7 +2,7 @@ pragma solidity 0.4.15;
 
 import '../AccessControl/AccessControlled.sol';
 import '../AccessRoles.sol';
-import '../EthereumForkArbiter.sol';
+import '../Universe.sol';
 import "./IIdentityRegistry.sol";
 
 
@@ -11,11 +11,6 @@ contract IdentityRegistry is
     AccessControlled,
     AccessRoles
 {
-    ////////////////////////
-    // Immutable state
-    ////////////////////////
-
-    IEthereumForkArbiter private ETHEREUM_FORK_ARBITER;
 
     ////////////////////////
     // Mutable state
@@ -27,13 +22,10 @@ contract IdentityRegistry is
     // Constructor functions
     ////////////////////////
 
-    function IdentityRegistry(IAccessPolicy accessPolicy, IEthereumForkArbiter forkArbiter)
-        AccessControlled(accessPolicy)
+    function IdentityRegistry(Universe universe)
+        AccessControlled(universe.accessPolicy())
         public
-    {
-        require(forkArbiter != IEthereumForkArbiter(0x0));
-        ETHEREUM_FORK_ARBITER = forkArbiter;
-    }
+    {}
 
     ////////////////////////
     // Public functions
