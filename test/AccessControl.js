@@ -3,6 +3,7 @@ import EvmError from "./helpers/EVMThrow";
 import { eventValue } from "./helpers/events";
 import { TriState, EVERYONE, GLOBAL } from "./helpers/triState";
 import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
@@ -16,7 +17,7 @@ contract(
     let exampleRole;
 
     beforeEach(async () => {
-      accessPolicy = await createAccessPolicy();
+      accessPolicy = await deployAccessControl();
       accessControlled = await TestAccessControl.new(accessPolicy.address);
       exampleRole = roles.example;
     });
@@ -344,7 +345,7 @@ contract(
 
     it("should deny when at the bottom of cascade if all allowed", async () => {
       // set full cascade to allowed
-      await accessPolicy.set([
+      await createAccessPolicy(accessPolicy, [
         {
           subject: EVERYONE,
           object: GLOBAL,
@@ -402,7 +403,7 @@ contract(
 
     it("should allow when at the bottom of cascade if all denied", async () => {
       // set full cascade to allowed
-      await accessPolicy.set([
+      await createAccessPolicy(accessPolicy, [
         {
           subject: EVERYONE,
           object: GLOBAL,
@@ -460,8 +461,14 @@ contract(
 
     describe("enumerating subjects", () => {
       beforeEach(async () => {
-        await accessPolicy.set(accounts.map(a => ({ subject: a, role: exampleRole })));
-        await accessPolicy.set(accounts.map(a => ({ subject: a, role: roles.whitelistAdmin })));
+        await createAccessPolicy(
+          accessPolicy,
+          accounts.map(a => ({ subject: a, role: exampleRole })),
+        );
+        await createAccessPolicy(
+          accessPolicy,
+          accounts.map(a => ({ subject: a, role: roles.whitelistAdmin })),
+        );
       });
 
       it("should enumerate default ACCESS_CONTROL permissions", async () => {

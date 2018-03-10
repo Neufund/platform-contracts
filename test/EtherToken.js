@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -10,6 +10,7 @@ import {
   expectTransferEvent,
   ZERO_ADDRESS,
   testWithdrawal,
+  deployTestErc223Callback,
 } from "./helpers/tokenTestCases";
 import { eventValue } from "./helpers/events";
 import { etherToWei } from "./helpers/unitConverter";
@@ -24,7 +25,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
   const RECLAIM_ETHER = "0x0";
 
   beforeEach(async () => {
-    const rbap = await createAccessPolicy([{ subject: reclaimer, role: roles.reclaimer }]);
+    const rbap = await deployAccessControl([{ subject: reclaimer, role: roles.reclaimer }]);
     etherToken = await EtherToken.new(rbap.address);
   });
 
@@ -111,15 +112,18 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
   describe("IERC223Token tests", () => {
     const initialBalance = etherToWei(3.98172);
     const getToken = () => etherToken;
+    let erc223cb;
+    const getTestErc223cb = () => erc223cb;
 
     beforeEach(async () => {
+      erc223cb = await deployTestErc223Callback(false);
       await etherToken.deposit({
         from: investors[1],
         value: initialBalance,
       });
     });
 
-    erc223TokenTests(getToken, investors[1], investors[2], initialBalance, false);
+    erc223TokenTests(getToken, getTestErc223cb, investors[1], investors[2], initialBalance);
   });
 
   describe("withdrawal tests", () => {

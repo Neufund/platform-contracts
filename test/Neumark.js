@@ -3,13 +3,14 @@ import EvmError from "./helpers/EVMThrow";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { EVERYONE } from "./helpers/triState";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 import {
   basicTokenTests,
   standardTokenTests,
   erc677TokenTests,
   deployTestErc677Callback,
+  deployTestErc223Callback,
   erc223TokenTests,
   expectTransferEvent,
   ZERO_ADDRESS,
@@ -35,7 +36,7 @@ contract(
     let neumark;
 
     beforeEach(async () => {
-      rbap = await createAccessPolicy([
+      rbap = await deployAccessControl([
         { subject: transferAdmin, role: roles.transferAdmin },
         { subject: deployer, role: roles.snapshotCreator },
         { subject: issuer1, role: roles.neumarkIssuer },
@@ -550,14 +551,17 @@ contract(
     describe("IERC223Token tests", () => {
       const initialBalanceNmk = NMK_DECIMALS.mul(91279837.398827).round();
       const getToken = () => neumark;
+      let erc223cb;
+      const getTestErc223cb = () => erc223cb;
 
       beforeEach(async () => {
+        erc223cb = await deployTestErc223Callback(false);
         await initNeumarkBalance(initialBalanceNmk, accounts[0]);
         // enable transfers for token tests
         await neumark.enableTransfer(true, { from: transferAdmin });
       });
 
-      erc223TokenTests(getToken, accounts[0], accounts[1], initialBalanceNmk, false);
+      erc223TokenTests(getToken, getTestErc223cb, accounts[0], accounts[1], initialBalanceNmk);
     });
 
     describe("ITokenSnapshots tests", () => {

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import { eventValue } from "./helpers/events";
 import roles from "./helpers/roles";
 import { promisify } from "./helpers/evmCommands";
@@ -12,7 +12,7 @@ contract("EthereumForkArbiter", ([deployer, arbiter, other]) => {
   let block;
 
   beforeEach(async () => {
-    const accessPolicy = await createAccessPolicy([
+    const accessPolicy = await deployAccessControl([
       { subject: arbiter, role: roles.platformOperatorRepresentative },
     ]);
     ethereumForkArbiter = await EthereumForkArbiter.new(accessPolicy.address);

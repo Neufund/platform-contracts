@@ -3,6 +3,7 @@ import EvmError from "../helpers/EVMThrow";
 import increaseTime from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
 import { eventValue } from "../helpers/events";
+import { deployAccessControl } from "../helpers/deployContracts";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import roles from "../helpers/roles";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
@@ -11,11 +12,11 @@ import { CommitmentState } from "./commitmentState";
 import { promisify } from "../helpers/evmCommands";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
-const Neumark = artifacts.require("./Neumark.sol");
-const EtherToken = artifacts.require("./EtherToken.sol");
-const ICBMEuroToken = artifacts.require("./ICBMEuroToken.sol");
-const ICBMLockedAccount = artifacts.require("./ICBMLockedAccount.sol");
-const ICBMCommitment = artifacts.require("./ICBMCommitment.sol");
+const Neumark = artifacts.require("Neumark");
+const EtherToken = artifacts.require("EtherToken");
+const ICBMEuroToken = artifacts.require("ICBMEuroToken");
+const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
+const ICBMCommitment = artifacts.require("ICBMCommitment");
 
 const Token = { Ether: 1, Euro: 2 };
 const BEFORE_DURATION = 5 * 24 * 60 * 60;
@@ -69,7 +70,7 @@ contract(
     beforeEach(async () => {
       const now = await latestTimestamp();
       const startDate = now + BEFORE_DURATION;
-      rbap = await createAccessPolicy();
+      rbap = await deployAccessControl();
       forkArbiter = await EthereumForkArbiter.new(rbap.address);
       neumark = await Neumark.new(rbap.address, forkArbiter.address);
       etherToken = await EtherToken.new(rbap.address);
@@ -104,7 +105,7 @@ contract(
         MIN_TICKET_EUR,
         ETH_EUR_FRACTION,
       );
-      await rbap.set([
+      await createAccessPolicy(rbap, [
         { subject: representative, role: roles.platformOperatorRepresentative },
         {
           subject: whitelistAdmin,
