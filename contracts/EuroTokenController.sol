@@ -77,7 +77,7 @@ contract EuroTokenController is
         public
     {
         UNIVERSE = universe;
-        applySettings(
+        applySettingsPrivate(
             minDepositAmountEurUlps,
             minWithdrawAmountEurUlps,
             maxSimpleExchangeAllowanceEurUlps
@@ -94,8 +94,7 @@ contract EuroTokenController is
         public
         only(ROLE_EURT_LEGAL_MANAGER)
     {
-        _allowedTransferTo[to] = allowed;
-        LogAllowedToAddress(to, allowed);
+        setAllowedTransferToPrivate(to, allowed);
     }
 
     /// @notice enables or disables address to be sender of EUR-T
@@ -103,8 +102,7 @@ contract EuroTokenController is
         public
         only(ROLE_EURT_LEGAL_MANAGER)
     {
-        _allowedTransferFrom[from] = allowed;
-        LogAllowedFromAddress(from, allowed);
+        setAllowedTransferFromPrivate(from, allowed);
     }
 
     /// @notice sets limits and whitelists contracts from universe
@@ -116,10 +114,11 @@ contract EuroTokenController is
         public
         only(ROLE_EURT_LEGAL_MANAGER)
     {
-        allowFromUniverse();
-        _minDepositAmountEurUlps = minDepositAmountEurUlps;
-        _minWithdrawAmountEurUlps = minWithdrawAmountEurUlps;
-        _maxSimpleExchangeAllowanceEurUlps = maxSimpleExchangeAllowanceEurUlps;
+        applySettingsPrivate(
+            minDepositAmountEurUlps,
+            minWithdrawAmountEurUlps,
+            maxSimpleExchangeAllowanceEurUlps
+        );
     }
 
     //
@@ -184,7 +183,11 @@ contract EuroTokenController is
         if (explicitFrom && explicitTo) {
             return true;
         }
-        // try to get 'from'
+        // try to resolve 'from'
+        if (!explicitFrom) {
+            IdentityClaims memory claimsFrom = deserializeClaims(UNIVERSE.identityRegistry().getClaims(from));
+            explicitFrom = claimsFrom.hasKyc;
+        }
         if (!explicitFrom) {
             // all ETO contracts may send funds (for example: refund)
             explicitFrom = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, from);
@@ -193,12 +196,18 @@ contract EuroTokenController is
             // from will not be resolved, return immediately
             return false;
         }
-        // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
-        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(to));
-        explicitTo = claims.hasKyc;
         if (!explicitTo) {
             // all ETO contracts may receive funds
             explicitTo = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, to);
+        }
+        if (!explicitTo) {
+            // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
+            IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(to));
+            explicitTo = claims.hasKyc;
+        }
+        if(claims.hasKyc && claimsFrom.hasKyc) {
+            // user to user transfer not allowed
+            return false;
         }
         // we only get here if explicitFrom was true
         return explicitTo;
@@ -229,7 +238,12 @@ contract EuroTokenController is
         constant
         returns (bool allow)
     {
-        require(amount >= _minDepositAmountEurUlps);
+        if (amount < _minDepositAmountEurUlps) {
+            return false;
+        }
+        if(_allowedTransferTo[owner]) {
+            return true;
+        }
         IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(owner));
         return claims.hasKyc;
     }
@@ -240,7 +254,12 @@ contract EuroTokenController is
         constant
         returns (bool allow)
     {
-        require(amount >= _minWithdrawAmountEurUlps);
+        if (amount < _minWithdrawAmountEurUlps) {
+            return false;
+        }
+        if(_allowedTransferFrom[owner]) {
+            return true;
+        }
         IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(owner));
         return claims.hasKyc && claims.hasBankAccount;
     }
@@ -249,19 +268,51 @@ contract EuroTokenController is
     // Private Functions
     ////////////////////////
 
+    function applySettingsPrivate(
+        uint256 pMinDepositAmountEurUlps,
+        uint256 pMinWithdrawAmountEurUlps,
+        uint256 pMaxSimpleExchangeAllowanceEurUlps
+    )
+        private
+    {
+        allowFromUniverse();
+        _minDepositAmountEurUlps = pMinDepositAmountEurUlps;
+        _minWithdrawAmountEurUlps = pMinWithdrawAmountEurUlps;
+        _maxSimpleExchangeAllowanceEurUlps = pMaxSimpleExchangeAllowanceEurUlps;
+    }
+
     /// enables to and from transfers for several Universe singletons
     function allowFromUniverse()
         private
     {
         // contracts below may send funds
-        setAllowedTransferFrom(UNIVERSE.euroToken(), true);
-        setAllowedTransferFrom(UNIVERSE.euroLock(), true);
-        setAllowedTransferFrom(UNIVERSE.feeDisbursal(), true);
+        // euro lock must be able to send (invest)
+        setAllowedTransferFromPrivate(UNIVERSE.euroLock(), true);
+        // fee disbursal must be able to pay out
+        setAllowedTransferFromPrivate(UNIVERSE.feeDisbursal(), true);
+        // gas exchange must be able to act as a broker (from)
+        setAllowedTransferFromPrivate(UNIVERSE.gasExchange(), true);
 
         // contracts below may receive funds
-        setAllowedTransferTo(UNIVERSE.feeDisbursal(), true);
-        setAllowedTransferTo(UNIVERSE.gasExchange(), true);
+        // fee disbursal may receive funds to disburse
+        setAllowedTransferToPrivate(UNIVERSE.feeDisbursal(), true);
+        // euro lock may receive refunds
+        setAllowedTransferToPrivate(UNIVERSE.euroLock(), true);
 
         LogUniverseReloaded();
+    }
+
+    function setAllowedTransferToPrivate(address to, bool allowed)
+        private
+    {
+        _allowedTransferTo[to] = allowed;
+        LogAllowedToAddress(to, allowed);
+    }
+
+    function setAllowedTransferFromPrivate(address from, bool allowed)
+        private
+    {
+        _allowedTransferFrom[from] = allowed;
+        LogAllowedFromAddress(from, allowed);
     }
 }
