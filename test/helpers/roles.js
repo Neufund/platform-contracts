@@ -12,4 +12,5 @@ export default {
   eurtDepositManager: web3.sha3("EurtDepositManager"),
   universeManager: web3.sha3("UniverseManager"),
   identityManager: web3.sha3("IdentityManager"),
+  eurtLegalManager: web3.sha3("EurtLegalManager"),
 };
