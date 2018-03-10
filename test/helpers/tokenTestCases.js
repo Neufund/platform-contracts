@@ -34,7 +34,7 @@ export async function deployTestErc677Callback() {
   return TestERC677Callback.new();
 }
 
-async function deployTestErc223Callback(useTokenFallback) {
+export async function deployTestErc223Callback(useTokenFallback = true) {
   return useTokenFallback ? TestERC223Callback.new() : TestERC223LegacyCallback.new();
 }
 
@@ -320,40 +320,38 @@ export function erc677TokenTests(token, erc677cb, fromAddr, initialBalance) {
   });
 }
 
-export function erc223TokenTests(token, fromAddr, toAddr, initialBalance, useTokenFallback = true) {
+export function erc223TokenTests(token, erc223cb, fromAddr, toAddr, initialBalance) {
   it("erc20 compatible transfer should not call fallback", async () => {
-    const erc223cb = await deployTestErc223Callback(useTokenFallback);
-    const tx = await token().transfer(erc223cb.address, initialBalance, {
+    const tx = await token().transfer(erc223cb().address, initialBalance, {
       from: fromAddr,
     });
     // expect erc20 backward compatible Transfer event
-    expectTransferEvent(tx, fromAddr, erc223cb.address, initialBalance);
-    const finalBalance = await token().balanceOf.call(erc223cb.address);
+    expectTransferEvent(tx, fromAddr, erc223cb().address, initialBalance);
+    const finalBalance = await token().balanceOf.call(erc223cb().address);
     expect(finalBalance).to.be.bignumber.eq(initialBalance);
     // fallback was not called on contract
-    const fallbackAmount = await erc223cb.amount.call();
+    const fallbackAmount = await erc223cb().amount.call();
     expect(fallbackAmount).to.be.bignumber.eq(0);
   });
 
   it("erc223 compatible transfer should call fallback", async () => {
-    const erc223cb = await deployTestErc223Callback(useTokenFallback);
     const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
     const tx = await token().transfer["address,uint256,bytes"](
-      erc223cb.address,
+      erc223cb().address,
       initialBalance,
       data,
       { from: fromAddr },
     );
     // expect erc20 backward compatible Transfer event
-    expectTransferEvent(tx, fromAddr, erc223cb.address, initialBalance);
-    const finalBalance = await token().balanceOf.call(erc223cb.address);
+    expectTransferEvent(tx, fromAddr, erc223cb().address, initialBalance);
+    const finalBalance = await token().balanceOf.call(erc223cb().address);
     expect(finalBalance).to.be.bignumber.eq(initialBalance);
     // fallback was called on contract
-    const fallbackAmount = await erc223cb.amount.call();
+    const fallbackAmount = await erc223cb().amount.call();
     expect(fallbackAmount).to.be.bignumber.eq(initialBalance);
-    const fallbackFrom = await erc223cb.from.call();
+    const fallbackFrom = await erc223cb().from.call();
     expect(fallbackFrom).to.eq(fromAddr);
-    const fallbackDataKeccak = await erc223cb.dataKeccak();
+    const fallbackDataKeccak = await erc223cb().dataKeccak();
     expect(fallbackDataKeccak).to.eq(web3.sha3(data));
   });
 
