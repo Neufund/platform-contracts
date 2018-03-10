@@ -1,14 +1,9 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
-import roles from "./helpers/roles";
-import knownInterfaces from "./helpers/knownInterfaces";
-import { deployUniverse } from "./helpers/deployContracts";
-import { TriState } from "./helpers/triState";
+import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const IdentityRegistry = artifacts.require("IdentityRegistry");
 
 contract(
   "IdentityRegistry",
@@ -23,17 +18,7 @@ contract(
 
     beforeEach(async () => {
       universe = await deployUniverse(platformLegalRepresentative, universeManager);
-      identityRegistry = await IdentityRegistry.new(universe.address);
-      await universe.setSingleton(knownInterfaces.identityRegistry, identityRegistry.address, {
-        from: universeManager,
-      });
-      const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-      await accessPolicy.setUserRole(
-        identityManager,
-        roles.identityManager,
-        identityRegistry.address,
-        TriState.Allow,
-      );
+      identityRegistry = await deployIdentityRegistry(universe, universeManager, identityManager);
     });
 
     function deserializeClaims(claims) {
@@ -53,10 +38,6 @@ contract(
 
     function referenceClaims(hasKYC, isSophisticatedInvestor, hasBankAccount) {
       return [{ hasKyc: hasKYC }, { isSophisticatedInvestor }, { hasBankAccount }];
-    }
-
-    function toBytes32(hex) {
-      return `0x${web3.padLeft(hex.slice(2), 64)}`;
     }
 
     function expectSetClaimsEvent(tx, i, oldClaims, newClaims) {
@@ -155,6 +136,7 @@ contract(
 
     for (let ii = 0; ii <= 8; ii += 1) {
       const claims = toBytes32(web3.toHex(ii));
+      /* eslint-disable no-loop-func */
       it(`should deserialize claims - ${claims}`, async () => {
         const structMap = await testIdentityRecord.getIdentityRecord(claims);
         expect(deserializeClaims(claims)).to.deep.eq(
