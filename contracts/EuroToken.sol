@@ -1,13 +1,13 @@
 pragma solidity 0.4.15;
 
 import './AccessControl/AccessControlled.sol';
-import './Reclaimable.sol';
-import './IsContract.sol';
 import './SnapshotToken/Helpers/TokenMetadata.sol';
 import './Zeppelin/StandardToken.sol';
 import "./Standards/IERC223Token.sol";
 import "./Standards/IERC223Callback.sol";
 import "./Standards/ITokenController.sol";
+import './IsContract.sol';
+import "./AccessRoles.sol";
 
 
 contract EuroToken is
@@ -15,8 +15,8 @@ contract EuroToken is
     AccessControlled,
     StandardToken,
     TokenMetadata,
-    Reclaimable,
     IERC223Token,
+    AccessRoles,
     IsContract
 {
     ////////////////////////
@@ -94,7 +94,6 @@ contract EuroToken is
         AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
-        Reclaimable()
         public
     {
         require(tokenController != ITokenController(0x0));
@@ -127,26 +126,20 @@ contract EuroToken is
         onlyIfWithdrawAllowed(msg.sender, amount)
         public
     {
-        require(_balances[msg.sender] >= amount);
-        _balances[msg.sender] = sub(_balances[msg.sender], amount);
-        _totalSupply = sub(_totalSupply, amount);
+        destroyTokensPrivate(msg.sender, amount);
         LogWithdrawal(msg.sender, amount);
-        Transfer(msg.sender, address(0), amount);
     }
 
     /// @notice this method allows to destroy EUR-T belonging to any account
     ///     note that EURO is fiat currency and is not trustless, EUR-T is also
     ///     just internal currency of Neufund platform, not general purpose stable coin
     ///     we need to be able to destroy EUR-T if ordered by authorities
-    function destroy(address from, uint256 amount)
+    function destroy(address owner, uint256 amount)
         only(ROLE_EURT_LEGAL_MANAGER)
         public
     {
-        require(_balances[from] >= amount);
-        _balances[from] = sub(_balances[from], amount);
-        _totalSupply = sub(_totalSupply, amount);
-        LogDestroy(from, msg.sender, amount);
-        Transfer(from, address(0), amount);
+        destroyTokensPrivate(owner, amount);
+        LogDestroy(owner, msg.sender, amount);
     }
 
     //
@@ -158,8 +151,8 @@ contract EuroToken is
         public
     {
         require(newController != ITokenController(0x0));
-        ChangeTokenController(_tokenController, newController);
         _tokenController = newController;
+        ChangeTokenController(_tokenController, newController);
     }
 
     function tokenController()
@@ -216,5 +209,18 @@ contract EuroToken is
             IERC223Callback(to).tokenFallback(msg.sender, amount, data);
         }
         return true;
+    }
+
+    ////////////////////////
+    // Public functions
+    ////////////////////////
+
+    function destroyTokensPrivate(address owner, uint256 amount)
+        private
+    {
+        require(_balances[msg.sender] >= amount);
+        _balances[owner] = sub(_balances[owner], amount);
+        _totalSupply = sub(_totalSupply, amount);
+        Transfer(owner, address(0), amount);
     }
 }
