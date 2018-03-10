@@ -101,6 +101,9 @@ contract LockedAccount is
     // all accounts
     mapping(address => Account) internal _accounts;
 
+    // tracks investment to be able to control refunds (commitment => investor => account)
+    mapping(address => mapping(address => Account)) internal _investments;
+
     // account migration destinations
     mapping(address => Destination[]) private _destinations;
 
@@ -138,6 +141,15 @@ contract LockedAccount is
         address indexed investor,
         uint256 amount,
         uint256 neumarks
+    );
+
+    /// @notice logged when investor funds/obligations moved to different address
+    /// @param oldInvestor current address
+    /// @param newInvestor destination address
+    /// @dev see move function for comments
+    event LogInvestorMoved(
+        address indexed oldInvestor,
+        address indexed newInvestor
     );
 
     /// @notice logged when funds are locked as a refund by commitment contract
@@ -250,6 +262,10 @@ contract LockedAccount is
         account.balance = subBalance(account.balance, amount);
         // will not overflow as amount < account.balance so unlockedNmkUlps must be >= account.neumarksDue
         account.neumarksDue -= unlockedNmkUlps;
+        // track investment
+        Account storage investment = _investments[address(commitment)][msg.sender];
+        investment.balance += amount;
+        investment.neumarksDue += unlockedNmkUlps;
         // invest via ERC223 interface
         assert(PAYMENT_TOKEN.transfer(commitment, amount, addressToBytes(msg.sender)));
         LogFundsCommitted(msg.sender, commitment, amount, unlockedNmkUlps);
@@ -282,29 +298,52 @@ contract LockedAccount is
         return true;
     }
 
+    /// @notice moves funds and obligations to another wallet
+    /// @param newInvestor where to move funds and obligations
+    /// @dev destination account must be empty. method intended for easy migration or way out of unsuccessful migration
+    /// @dev receiving refunds to old address will not be possible. those will remain in commitment contract
+    function move(address newInvestor)
+        public
+    {
+        Account storage newAccount = _accounts[newInvestor];
+        // only to empty accounts
+        require(newAccount.unlockDate == 0);
+        Account storage account = _accounts[msg.sender];
+        // only non empty account
+        require(account.balance > 0);
+        newAccount = account;
+        delete _accounts[msg.sender];
+        LogInvestorMoved(msg.sender, newInvestor);
+    }
+
     /// @notice refunds investor in case of failed offering
     /// @param investor funds owner
-    /// @param amount amount of funds to refund
-    /// @param neumarks amount of neumarks that needs to be returned by investor to unlock funds
-    /// @dev callable only by ETO contract
-    ///   this method does not check if investment to this eto was made earlier so it may be used to "top up" existing account
-    ///   cannot be used to create new accounts
-    ///   TODO: consider storing investments so we can validate refunds. this however will cost gas
+    /// @dev callable only by ETO contract, bookkeeping in LockedAccount::_investments
     /// @dev expected that ETO makes allowance for transferFrom
-    function refund(address investor, uint112 amount, uint112 neumarks)
+    function refund(address investor)
         public
-        onlyIfCommitment(msg.sender)
     {
-        require(amount > 0);
-        // transfer to itself from Commitment contract allowance
-        assert(PAYMENT_TOKEN.transferFrom(msg.sender, address(this), amount));
+        Account memory investment = _investments[msg.sender][investor];
+        // return silently when there is no refund (so commitment contracts can blank-call, less gas used)
+        if (investment.balance == 0)
+            return;
+        // free gas here
+        delete _investments[msg.sender][investor];
         Account storage account = _accounts[investor];
-        // account must exist. no refunds to new investors
-        require(account.unlockDate > 0);
+        // account must exist
+        assert(account.unlockDate > 0);
         // add refunded amount
-        account.balance = addBalance(account.balance, amount);
-        account.neumarksDue = add112(account.neumarksDue, neumarks);
-        LogFundsRefunded(investor, msg.sender, amount, neumarks);
+        account.balance = addBalance(account.balance, investment.balance);
+        account.neumarksDue = add112(account.neumarksDue, investment.neumarksDue);
+        // transfer to itself from Commitment contract allowance
+        assert(PAYMENT_TOKEN.transferFrom(msg.sender, address(this), investment.balance));
+        LogFundsRefunded(investor, msg.sender, investment.balance, investment.neumarksDue);
+    }
+
+    /// @notice may be used by commitment contract to refund gas for commitment bookkeeping
+    /// @dev https://gastoken.io/ (15000 - 900 for a call)
+    function claim(address investor) public {
+        delete _investments[msg.sender][investor];
     }
 
     /// sets address to which tokens from unlock penalty are sent

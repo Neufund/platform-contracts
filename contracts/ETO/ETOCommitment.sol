@@ -46,6 +46,7 @@ contract ETOCommitment is
         // claimed or refunded
         bool claimedOrRefunded;
         // uint31 reserved // still some bits free
+        // we can easily track investments and refunds with new LockedAccount implementation
     }
 
     ////////////////////////
