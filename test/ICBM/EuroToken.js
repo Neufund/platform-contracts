@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
-import createAccessPolicy from "../helpers/createAccessPolicy";
+import { deployAccessControl } from "../helpers/deployContracts";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -23,7 +23,7 @@ contract("ICBMEuroToken", ([_, depositManager, other, broker, reclaimer, ...inve
   let euroToken;
 
   beforeEach(async () => {
-    rbap = await createAccessPolicy([
+    rbap = await deployAccessControl([
       { subject: depositManager, role: roles.eurtDepositManager },
       { subject: reclaimer, role: roles.reclaimer },
     ]);
