@@ -62,6 +62,18 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
         EvmError,
       );
     });
+
+    it("should deposit and transfer");
+    it("should deposit 0 wei and transfer");
+    it("should deposit and transfer if initial balance 0");
+    it("should deposit and transfer to itself");
+    it("should reject to deposit and transfer more than balance");
+
+    it("should withdraw and send");
+    it("should withdraw and send with 0 wei payable");
+    it("should withdraw and send with 0 initial balance");
+    it("should reject withdraw and send over balance");
+    it("should reject when withdraw amount less than payable");
   });
 
   describe("IBasicToken tests", () => {
