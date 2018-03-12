@@ -403,4 +403,6 @@ export function testWithdrawal(token, investor, initialBalance) {
       EvmError,
     );
   });
+
+  it("should reject withdraw to address not rejecting payable");
 }
