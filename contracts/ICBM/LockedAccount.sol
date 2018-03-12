@@ -305,6 +305,9 @@ contract LockedAccount is
     function move(address newInvestor)
         public
     {
+        // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
+        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(newInvestor));
+        require(claims.hasKyc);
         Account storage newAccount = _accounts[newInvestor];
         // only to empty accounts
         require(newAccount.unlockDate == 0);
