@@ -107,7 +107,7 @@ contract EuroToken is
     /// @dev which in this implementation is an off-chain responsibility of EURT_DEPOSIT_MANAGER
     function deposit(address to, uint256 amount)
         public
-        only(ROLE_EURT_DEPOSIT_MANAGER)
+        // only(ROLE_EURT_DEPOSIT_MANAGER)
         returns (bool)
     {
         require(to != address(0));

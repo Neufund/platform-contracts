@@ -1,5 +1,5 @@
 {
-  "name": "contracts",
+  "name": "neufund-contracts",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
@@ -12,6 +12,7 @@
     "babel-polyfill": "^6.23.0",
     "babel-preset-env": "^1.6.0",
     "babel-register": "^6.24.1",
+    "bignumber.js": "^6.0.0",
     "bluebird": "^3.5.1",
     "chai": "^4.1.0",
     "chai-as-promised": "^7.1.1",
@@ -30,6 +31,7 @@
     "invariant": "^2.2.2",
     "ipfs-api": "Neufund/js-ipfs-api",
     "istanbul": "next",
+    "ledger-wallet-provider": "Neufund/ledger-wallet-provider.git#moe/admintool",
     "lodash": "^4.17.4",
     "mocha": "^3.3.0",
     "moment": "^2.18.1",
@@ -39,7 +41,6 @@
     "swarm-js": "^0.1.35",
     "truffle": "Neufund/truffle#neufund",
     "truffle-flattener": "Neufund/truffle-flattener",
-    "ledger-wallet-provider": "Neufund/ledger-wallet-provider.git#moe/admintool",
     "web3": "0.20.1",
     "web3-provider-engine": "^13.3.2"
   },
@@ -54,6 +55,7 @@
     "build": "rm -rf ./build && truffle compile --all",
     "deploy": "truffle migrate --reset --compile-all --network localhost",
     "deploy:fast": "truffle migrate --reset --network localhost",
+    "fixture": "ts-node ./typechain-scripts/loadFixtures.ts",
     "solctruffle": "./scripts/solctruffle.sh",
     "prefillAgreements": "yarn truffle exec ./scripts/prefillAgreements.js",
     "uploadWhitelist": "yarn truffle exec ./scripts/uploadWhitelist.js",
@@ -62,8 +64,13 @@
     "uploadAgreements": "node ./scripts/uploadAgreements.js"
   },
   "devDependencies": {
+    "@types/bignumber.js": "^5.0.0",
+    "@types/bluebird": "^3.5.20",
     "eslint-plugin-mocha": "^4.11.0",
     "prettier": "^1.5.3",
-    "solidity-coverage": "Neufund/solidity-coverage#neufund"
+    "solidity-coverage": "Neufund/solidity-coverage#neufund",
+    "ts-node": "^5.0.1",
+    "typechain": "^0.1.3",
+    "typescript": "^2.7.2"
   }
 }

@@ -35,9 +35,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     if (network.endsWith("_live")) {
       console.log("LIVE DEPLOYMENT");
     }
-    if (!await confirm("Are you sure you want to deploy? [y/n] ")) {
-      throw new Error("Aborting!");
-    }
+    // if (!await confirm("Are you sure you want to deploy? [y/n] ")) {
+    //   throw new Error("Aborting!");
+    // }
 
     console.log("AccessPolicy deployment...");
     await deployer.deploy(RoleBasedAccessPolicy);
