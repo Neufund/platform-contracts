@@ -6,8 +6,8 @@
 # in platform frontend, run fresh ganache instance (you need to restart it everytime you redeploy contracts)
 yarn ganache
 
-# in this project
-yarn deploy && yarn fixture
+# in this project (make sure you have running ganache)
+yarn fixture
 
 # you need to restart ganache everytime you want to redeploy contracts
 ```

@@ -55,7 +55,7 @@
     "build": "rm -rf ./build && truffle compile --all",
     "deploy": "truffle migrate --reset --compile-all --network localhost",
     "deploy:fast": "truffle migrate --reset --network localhost",
-    "fixture": "ts-node ./typechain-scripts/loadFixtures.ts",
+    "fixture": "yarn deploy && ts-node ./typechain-scripts/loadFixtures.ts",
     "solctruffle": "./scripts/solctruffle.sh",
     "prefillAgreements": "yarn truffle exec ./scripts/prefillAgreements.js",
     "uploadWhitelist": "yarn truffle exec ./scripts/uploadWhitelist.js",
