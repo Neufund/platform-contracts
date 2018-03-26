@@ -14,13 +14,14 @@
     "build": "rm -rf ./build && truffle compile --all",
     "deploy": "truffle migrate --reset --compile-all --network localhost",
     "deploy:fast": "truffle migrate --reset --network localhost",
-    "fixture": "yarn deploy && ts-node ./typechain-scripts/loadFixtures.ts",
+    "fixture": "yarn deploy && yarn generate:contractsWrappers && ts-node ./typechain-scripts/loadFixtures.ts",
     "solctruffle": "./scripts/solctruffle.sh",
     "prefillAgreements": "yarn truffle exec ./scripts/prefillAgreements.js",
     "uploadWhitelist": "yarn truffle exec ./scripts/uploadWhitelist.js",
     "ledgeraddress": "node ./scripts/getAddressFromLedger.js",
     "flatten": "./scripts/flatten.sh",
-    "uploadAgreements": "node ./scripts/uploadAgreements.js"
+    "uploadAgreements": "node ./scripts/uploadAgreements.js",
+    "generate:contractsWrappers": "typechain --outDir ./typechain-scripts/contractWrappers \"./build/contracts/*.json\""
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
