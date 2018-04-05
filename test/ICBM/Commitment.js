@@ -13,7 +13,7 @@ import { promisify } from "../helpers/evmCommands";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("Neumark");
-const EtherToken = artifacts.require("EtherToken");
+const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
 const ICBMCommitment = artifacts.require("ICBMCommitment");
@@ -73,7 +73,7 @@ contract(
       rbap = await deployAccessControl();
       forkArbiter = await EthereumForkArbiter.new(rbap.address);
       neumark = await Neumark.new(rbap.address, forkArbiter.address);
-      etherToken = await EtherToken.new(rbap.address);
+      etherToken = await ICBMEtherToken.new(rbap.address);
       euroToken = await ICBMEuroToken.new(rbap.address);
       etherLock = await ICBMLockedAccount.new(
         rbap.address,
@@ -721,7 +721,7 @@ contract(
         );
       });
 
-      it("should commit during Public with partial approve on EtherToken", async () => {
+      it("should commit during Public with partial approve on ICBMEtherToken", async () => {
         await increaseTime(PUBLIC_START);
         const part1 = amountEth.mul(0.181278);
         const part2 = amountEth.sub(part1);
@@ -743,7 +743,7 @@ contract(
         );
       });
 
-      it("should commit during Public with full approve on EtherToken", async () => {
+      it("should commit during Public with full approve on ICBMEtherToken", async () => {
         await increaseTime(PUBLIC_START);
         await etherToken.deposit({ from: investor, value: amountEth });
         await etherToken.approve(commitment.address, amountEth, {
@@ -764,7 +764,7 @@ contract(
         );
       });
 
-      it("should reject commit if EtherToken balance 1 wei below approve", async () => {
+      it("should reject commit if ICBMEtherToken balance 1 wei below approve", async () => {
         await increaseTime(PUBLIC_START);
         // remove .sub(1) for this test to fail
         await etherToken.deposit({ from: investor, value: amountEth.sub(1) });
@@ -857,7 +857,7 @@ contract(
         expect(investorNmk).to.be.bignumber.eq(expectedInvestorNmk);
       });
 
-      it("should lock EtherToken", async () => {
+      it("should lock ICBMEtherToken", async () => {
         await increaseTime(PUBLIC_START);
         // await mineBlock();
         const now = await latestTimestamp();
@@ -877,7 +877,7 @@ contract(
         expect(lockEth).to.be.bignumber.eq(amountEth);
       });
 
-      it("should commit EtherToken", async () => {
+      it("should commit ICBMEtherToken", async () => {
         await increaseTime(PUBLIC_START);
 
         await etherToken.deposit({
@@ -895,7 +895,7 @@ contract(
         expect(platformNmk).to.be.bignumber.eq(expectedPlatformNmk);
       });
 
-      it("should commit Ether and EtherToken", async () => {
+      it("should commit Ether and ICBMEtherToken", async () => {
         const lessAmount = amountEth.divToInt(3);
         const remainder = amountEth.sub(lessAmount);
         await increaseTime(PUBLIC_START);

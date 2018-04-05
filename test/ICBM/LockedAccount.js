@@ -18,7 +18,7 @@ import roles from "../helpers/roles";
 import { promisify } from "../helpers/evmCommands";
 
 const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
-const EtherToken = artifacts.require("EtherToken");
+const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 const TestNullContract = artifacts.require("TestNullContract");
@@ -51,9 +51,9 @@ contract(
       neumark = await deployNeumark(accessPolicy, forkArbiter);
     });
 
-    describe("EtherToken", () => {
+    describe("ICBMEtherToken", () => {
       async function deployEtherToken() {
-        assetToken = await EtherToken.new(accessPolicy.address);
+        assetToken = await ICBMEtherToken.new(accessPolicy.address);
       }
 
       async function makeDepositEth(from, to, amount) {

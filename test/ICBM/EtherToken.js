@@ -18,7 +18,7 @@ import forceEther from "../helpers/forceEther";
 import roles from "../helpers/roles";
 import EvmError from "../helpers/EVMThrow";
 
-const EtherToken = artifacts.require("ICBMEtherToken");
+const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 
 contract("ICBMEtherToken", ([broker, reclaimer, ...investors]) => {
   let etherToken;
@@ -26,7 +26,7 @@ contract("ICBMEtherToken", ([broker, reclaimer, ...investors]) => {
 
   beforeEach(async () => {
     const rbap = await deployAccessControl([{ subject: reclaimer, role: roles.reclaimer }]);
-    etherToken = await EtherToken.new(rbap.address);
+    etherToken = await ICBMEtherToken.new(rbap.address);
   });
 
   describe("specific tests", () => {
