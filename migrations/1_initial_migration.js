@@ -1,7 +1,10 @@
+require("babel-register");
+const getConfig = require("./config").getConfig;
 const Migrations = artifacts.require("./Migrations.sol");
 
-module.exports = function deployMigration(deployer, network) {
+module.exports = function deployMigration(deployer, network, accounts) {
+  const CONFIG = getConfig(web3, network, accounts);
   // do not deploy testing network
-  if (network.endsWith("_test") || network === "coverage") return;
+  if (CONFIG.shouldSkipDeployment) return;
   deployer.deploy(Migrations);
 };

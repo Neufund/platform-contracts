@@ -1,16 +1,14 @@
 require("babel-register");
-const getConfig = require("./config").default;
-
-const Neumark = artifacts.require("Neumark");
-const Commitment = artifacts.require("ICBMCommitment");
+const getConfig = require("./config").getConfig;
 
 module.exports = function deployContracts(deployer, network, accounts) {
-  // do not deploy testing network
-  if (network.endsWith("_test") || network === "coverage") return;
-
   const CONFIG = getConfig(web3, network, accounts);
+  if (CONFIG.shouldSkipDeployment) return;
 
-  if (network.endsWith("_live")) {
+  const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
+  const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
+
+  if (CONFIG.isLiveDeployment) {
     console.log("---------------------------------------------");
     console.log(
       `Must use ${

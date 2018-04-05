@@ -1,25 +1,24 @@
 require("babel-register");
-const getConfig = require("./config").default;
+const getConfig = require("./config").getConfig;
+const getDeployerAccount = require("./config").getDeployerAccount;
 const { TriState, EVERYONE, GLOBAL } = require("../test/helpers/triState");
 
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const Neumark = artifacts.require("Neumark");
-const LockedAccount = artifacts.require("ICBMLockedAccount");
-const EuroToken = artifacts.require("ICBMEuroToken");
-const Commitment = artifacts.require("ICBMCommitment");
-
 module.exports = function deployContracts(deployer, network, accounts) {
-  // do not deploy testing network
-  if (network.endsWith("_test") || network === "coverage") return;
-
   const CONFIG = getConfig(web3, network, accounts);
-  const DEPLOYER = accounts[0];
+  if (CONFIG.shouldSkipDeployment) return;
+
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
+  const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
+  const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
+  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
+  const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
+  const DEPLOYER = getDeployerAccount(network, accounts);
 
   deployer.then(async () => {
     const accessPolicy = await RoleBasedAccessPolicy.deployed();
     const neumark = await Neumark.deployed();
-    const euroToken = await EuroToken.deployed();
-    const euroLock = await LockedAccount.deployed();
+    const euroToken = await ICBMEuroToken.deployed();
+    const euroLock = await ICBMLockedAccount.deployed();
     const commitment = await Commitment.deployed();
 
     console.log("Seting permissions");
@@ -78,18 +77,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       TriState.Allow,
     );
 
-    console.log("EuroToken deposit permissions");
-    await euroToken.setAllowedTransferFrom(commitment.address, true, {
-      from: DEPLOYER,
-    });
-    await euroToken.setAllowedTransferTo(commitment.address, true, {
-      from: DEPLOYER,
-    });
-    await euroToken.setAllowedTransferTo(euroLock.address, true, {
-      from: DEPLOYER,
-    });
-    await euroToken.setAllowedTransferFrom(euroLock.address, true, {
-      from: DEPLOYER,
-    });
+    console.log("ICBMEuroToken deposit permissions");
+    await euroToken.setAllowedTransferFrom(commitment.address, true);
+    await euroToken.setAllowedTransferTo(commitment.address, true);
+    await euroToken.setAllowedTransferTo(euroLock.address, true);
+    await euroToken.setAllowedTransferFrom(euroLock.address, true);
   });
 };

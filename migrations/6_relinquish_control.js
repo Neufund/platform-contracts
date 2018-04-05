@@ -1,21 +1,20 @@
 require("babel-register");
-const getConfig = require("./config").default;
+const getConfig = require("./config").getConfig;
+const getDeployerAccount = require("./config").getDeployerAccount;
+
 const { TriState, GLOBAL } = require("../test/helpers/triState");
 
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const EuroToken = artifacts.require("ICBMEuroToken");
-
 module.exports = function deployContracts(deployer, network, accounts) {
-  // do not deploy testing network
-  if (network.endsWith("_test") || network === "coverage") return;
-
   const CONFIG = getConfig(web3, network, accounts);
+  if (CONFIG.shouldSkipDeployment) return;
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
+  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
+  const DEPLOYER = getDeployerAccount(network, accounts);
 
   deployer.then(async () => {
-    if (network.endsWith("_live")) {
+    if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.deployed();
-      const euroToken = await EuroToken.deployed();
-      const DEPLOYER = accounts[0];
+      const euroToken = await ICBMEuroToken.deployed();
 
       console.log("Dropping temporary permissions");
       await accessPolicy.setUserRole(
