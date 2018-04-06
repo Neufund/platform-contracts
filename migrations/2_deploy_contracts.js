@@ -95,8 +95,5 @@ module.exports = function deployContracts(deployer, network, accounts) {
       CONFIG.MIN_TICKET_EUR,
       CONFIG.ETH_EUR_FRACTION,
     );
-    const commitment = await Commitment.deployed();
-
-    console.log("Contracts deployed!");
   });
 };

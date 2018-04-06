@@ -2,6 +2,7 @@ require("babel-register");
 const getConfig = require("./config").getConfig;
 const { TriState, GLOBAL } = require("../test/helpers/triState");
 const getDeployerAccount = require("./config").getDeployerAccount;
+const roles = require("../test/helpers/roles").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const DEPLOYER = getDeployerAccount(network, accounts);
@@ -21,7 +22,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // locked account admin role to yourself during deployment and relinquish control later
     await accessPolicy.setUserRole(
       DEPLOYER,
-      web3.sha3("LockedAccountAdmin"),
+      roles.lockedAccountAdmin,
       GLOBAL,
       TriState.Allow,
     );

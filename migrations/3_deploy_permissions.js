@@ -2,6 +2,7 @@ require("babel-register");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const { TriState, EVERYONE, GLOBAL } = require("../test/helpers/triState");
+const roles = require("../test/helpers/roles").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -22,49 +23,50 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const commitment = await Commitment.deployed();
 
     console.log("Seting permissions");
+    console.log(roles);
     // allow commitment contract to issue Neumarks
     await accessPolicy.setUserRole(
       commitment.address,
-      web3.sha3("NeumarkIssuer"),
+      roles.neumarkIssuer,
       neumark.address,
       TriState.Allow,
     );
     // allow commitment contract to enable Neumark trading after ICBM
     await accessPolicy.setUserRole(
       commitment.address,
-      web3.sha3("TransferAdmin"),
+      roles.transferAdmin,
       neumark.address,
       TriState.Allow,
     );
     // allow anyone to burn their neumarks
     await accessPolicy.setUserRole(
       EVERYONE,
-      web3.sha3("NeumarkBurner"),
+      roles.neumarkBurner,
       neumark.address,
       TriState.Allow,
     );
 
     await accessPolicy.setUserRole(
       CONFIG.addresses.LOCKED_ACCOUNT_ADMIN,
-      web3.sha3("LockedAccountAdmin"),
+      roles.lockedAccountAdmin,
       GLOBAL,
       TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.WHITELIST_ADMIN,
-      web3.sha3("WhitelistAdmin"),
+      roles.whitelistAdmin,
       commitment.address,
       TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE,
-      web3.sha3("PlatformOperatorRepresentative"),
+      roles.platformOperatorRepresentative,
       GLOBAL,
       TriState.Allow,
     );
     await accessPolicy.setUserRole(
       CONFIG.addresses.EURT_DEPOSIT_MANAGER,
-      web3.sha3("EurtDepositManager"),
+      roles.eurtDepositManager,
       euroToken.address,
       TriState.Allow,
     );
@@ -72,7 +74,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // deposit role to yourself during deployment and relinquish control later
     await accessPolicy.setUserRole(
       DEPLOYER,
-      web3.sha3("EurtDepositManager"),
+      roles.eurtDepositManager,
       euroToken.address,
       TriState.Allow,
     );

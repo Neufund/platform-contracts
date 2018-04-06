@@ -1,7 +1,7 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
-
+const roles = require("../test/helpers/roles").default;
 const { TriState, GLOBAL } = require("../test/helpers/triState");
 
 module.exports = function deployContracts(deployer, network, accounts) {
@@ -19,13 +19,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log("Dropping temporary permissions");
       await accessPolicy.setUserRole(
         DEPLOYER,
-        web3.sha3("EurtDepositManager"),
+        roles.eurtDepositManager,
         euroToken.address,
         TriState.Unset,
       );
       await accessPolicy.setUserRole(
         DEPLOYER,
-        web3.sha3("LockedAccountAdmin"),
+        roles.lockedAccountAdmin,
         GLOBAL,
         TriState.Unset,
       );
@@ -33,19 +33,19 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log(`Adding new ACCESS_CONTROLLER to ${CONFIG.addresses.ACCESS_CONTROLLER}`);
       await accessPolicy.setUserRole(
         CONFIG.addresses.ACCESS_CONTROLLER,
-        web3.sha3("AccessController"),
+        roles.accessController,
         GLOBAL,
         TriState.Allow,
       );
       await accessPolicy.setUserRole(
         CONFIG.addresses.ACCESS_CONTROLLER,
-        web3.sha3("AccessController"),
+        roles.accessController,
         accessPolicy.address,
         TriState.Allow,
       );
       await accessPolicy.setUserRole(
         DEPLOYER,
-        web3.sha3("AccessController"),
+        roles.accessController,
         GLOBAL,
         TriState.Unset,
       );
