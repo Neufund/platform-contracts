@@ -1,16 +1,22 @@
+const sha3Web3 = require("web3/lib/utils/sha3");
+
+function sha3(s) {
+  return "0x" + sha3Web3(s);
+}
+
 export default {
-  accessController: web3.sha3("AccessController"),
-  example: web3.sha3("Example"),
-  platformOperatorRepresentative: web3.sha3("PlatformOperatorRepresentative"),
-  lockedAccountAdmin: web3.sha3("LockedAccountAdmin"),
-  neumarkBurner: web3.sha3("NeumarkBurner"),
-  neumarkIssuer: web3.sha3("NeumarkIssuer"),
-  reclaimer: web3.sha3("Reclaimer"),
-  snapshotCreator: web3.sha3("SnapshotCreator"),
-  transferAdmin: web3.sha3("TransferAdmin"),
-  whitelistAdmin: web3.sha3("WhitelistAdmin"),
-  eurtDepositManager: web3.sha3("EurtDepositManager"),
-  universeManager: web3.sha3("UniverseManager"),
-  identityManager: web3.sha3("IdentityManager"),
-  eurtLegalManager: web3.sha3("EurtLegalManager"),
+  accessController: sha3("AccessController", ),
+  example: sha3("Example"),
+  platformOperatorRepresentative: sha3("PlatformOperatorRepresentative"),
+  lockedAccountAdmin: sha3("LockedAccountAdmin"),
+  neumarkBurner: sha3("NeumarkBurner"),
+  neumarkIssuer: sha3("NeumarkIssuer"),
+  reclaimer: sha3("Reclaimer"),
+  snapshotCreator: sha3("SnapshotCreator"),
+  transferAdmin: sha3("TransferAdmin"),
+  whitelistAdmin: sha3("WhitelistAdmin"),
+  eurtDepositManager: sha3("EurtDepositManager"),
+  universeManager: sha3("UniverseManager"),
+  identityManager: sha3("IdentityManager"),
+  eurtLegalManager: sha3("EurtLegalManager"),
 };
