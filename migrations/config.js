@@ -13,6 +13,7 @@ export function getConfig(web3, network, accounts) {
   // DO NOT EDIT THESE VALUES
   // EDIT BELOW
   const config = {
+    Q18: Q18,
     // ICBMLockedAccount
     LOCK_DURATION: 18 * 30 * 24 * 60 * 60,
     PENALTY_FRACTION: web3.toBigNumber("0.1").mul(Q18),
@@ -86,6 +87,7 @@ export function getConfig(web3, network, accounts) {
 
     // use mocked artifacts when necessary
     // artifactMapping.ICBM_EURO_TOKEN = "MockedICBMEuroToken";
+    artifactMapping.ICBM_COMMITMENT = "MockICBMCommitment";
   }
 
   return config;
