@@ -128,7 +128,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
     const getTestErc223cb = () => erc223cb;
 
     beforeEach(async () => {
-      erc223cb = await deployTestErc223Callback(false);
+      erc223cb = await deployTestErc223Callback(true);
       await etherToken.deposit({
         from: investors[1],
         value: initialBalance,
