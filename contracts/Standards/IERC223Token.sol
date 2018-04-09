@@ -4,7 +4,7 @@ import './IERC20Token.sol';
 import './ITokenMetadata.sol';
 
 
-contract IERC223Token is IERC20Token {
+contract IERC223Token is IERC20Token, ITokenMetadata {
 
     /// @dev Departure: We do not log data, it has no advantage over a standard
     ///     log event. By sticking to the standard log event we
