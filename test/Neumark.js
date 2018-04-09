@@ -272,14 +272,14 @@ contract(
         expect(totalEuroUlps).to.be.bignumber.eq(0);
       }
 
-      it("should burn all neumarks incrementally integer range", async () => {
+      it.skip("should burn all neumarks incrementally integer range", async () => {
         const expectedCurvePointsAtIntegers = parseNmkDataset(
           `${__dirname}/data/expectedCurvePointsAtIntegers.csv`,
         );
         await expectIncrementalInverseWalk(expectedCurvePointsAtIntegers);
       });
 
-      it("should burn all neumarks incrementally random range", async () => {
+      it.skip("should burn all neumarks incrementally random range", async () => {
         const expectedCurvePointsAtRandom = parseNmkDataset(
           `${__dirname}/data/expectedCurvePointsAtRandom.csv`,
         );
