@@ -3,7 +3,7 @@ pragma solidity 0.4.15;
 import "./AccessControl/AccessControlled.sol";
 import "./Standards/ITokenExchangeRateOracle.sol";
 import "./Standards/IERC223Token.sol";
-import "./AccessRoles.sol";
+import "./Reclaimable.sol";
 import "./Math.sol";
 
 
@@ -11,8 +11,7 @@ import "./Math.sol";
 /// see below discussion on oracle type used
 contract SimpleExchange is
     ITokenExchangeRateOracle,
-    AccessControlled,
-    AccessRoles,
+    Reclaimable,
     Math
 {
     ////////////////////////
@@ -58,6 +57,24 @@ contract SimpleExchange is
     uint32 private _rateLastUpdatedTimestamp;
 
     ////////////////////////
+    // Constructor
+    ////////////////////////
+
+    function SimpleExchange(
+        IAccessPolicy accessPolicy,
+        IERC223Token numeratorToken,
+        IERC223Token denominatorToken
+    )
+        AccessControlled(accessPolicy)
+        Reclaimable()
+        public
+    {
+        require(denominatorToken.decimals() == numeratorToken.decimals());
+        EURO_TOKEN = numeratorToken;
+        ETHER_TOKEN = denominatorToken;
+    }
+
+    ////////////////////////
     // Public methods
     ////////////////////////
 
@@ -66,9 +83,9 @@ contract SimpleExchange is
         public
         only(ROLE_GAS_EXCHANGE)
     {
-        var (rate, rate_timestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
+        var (rate, rateTimestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 4 hours
-        require(block.timestamp - rate_timestamp < 6 hours);
+        require(block.timestamp - rateTimestamp < 6 hours);
         gasExchangePrivate(gasRecipient, amountEurUlps, exchangeFeeEurUlps, rate);
     }
 
@@ -82,9 +99,9 @@ contract SimpleExchange is
     {
         require(gasRecipients.length == amountsEurUlps.length);
         require(gasRecipients.length == exchangeFeesEurUlps.length);
-        var (rate, rate_timestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
+        var (rate, rateTimestamp) = getExchangeRate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 4 hours
-        require(block.timestamp - rate_timestamp < 6 hours);
+        require(block.timestamp - rateTimestamp < 6 hours);
         uint256 idx;
         while(idx < gasRecipients.length) {
             gasExchangePrivate(gasRecipients[idx], amountsEurUlps[idx], exchangeFeesEurUlps[idx], rate);
@@ -96,7 +113,7 @@ contract SimpleExchange is
     /// ROLE_TOKEN_RATE_ORACLE is allowed to provide rates. we do not implement decentralized oracle here
     /// there is no so actual working decentralized oracle ecosystem
     /// the closes is MakerDao Medianizer at https://etherscan.io/address/0x729D19f657BD0614b4985Cf1D82531c67569197B#code but it's still centralized and only USD/ETH
-    /// Oraclize is centralized and you still need to trust fees.
+    /// Oraclize is centralized and you still need to pay fees.
     /// Gnosis does not seem to be working
     /// it seems that for Neufund investor it's best to trust Platform Operator to provide correct information, Platform is aligned via NEU and has no incentive to lie
     /// SimpleExchange is replaceable via Universe. when proper oracle is available we'll move to it
