@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
-import createAccessPolicy from "./helpers/createAccessPolicy";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -14,14 +13,17 @@ import {
 } from "./helpers/tokenTestCases";
 import { eventValue } from "./helpers/events";
 import { etherToWei } from "./helpers/unitConverter";
-import roles from "./helpers/roles";
 import knownInterfaces from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
-import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
+import {
+  deployUniverse,
+  deployIdentityRegistry,
+  toBytes32,
+  deployEuroTokenUniverse,
+} from "./helpers/deployContracts";
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
-const EuroTokenController = artifacts.require("EuroTokenController");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 const Q18 = web3.toBigNumber("10").pow(18);
 const minDepositAmountEurUlps = Q18.mul(500);
@@ -47,25 +49,17 @@ contract(
       let tokenController;
       let identityRegistry;
 
-      before(async () => {
-        await createAccessPolicy(accessControl, [
-          { subject: depositManager, role: roles.eurtDepositManager },
-          { subject: eurtLegalManager, role: roles.eurtLegalManager },
-        ]);
-      });
-
       beforeEach(async () => {
         identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
-        tokenController = await EuroTokenController.new(
-          universe.address,
+        [euroToken, tokenController] = await deployEuroTokenUniverse(
+          universe,
+          masterManager,
+          eurtLegalManager,
+          depositManager,
           minDepositAmountEurUlps,
           minWithdrawAmountEurUlps,
           maxSimpleExchangeAllowanceEurUlps,
         );
-        euroToken = await EuroToken.new(accessControl.address, tokenController.address);
-        await universe.setSingleton(knownInterfaces.euroToken, euroToken.address, {
-          from: masterManager,
-        });
       });
 
       function expectDepositEvent(tx, owner, amount) {
@@ -229,20 +223,16 @@ contract(
     describe("euro token controller emulating ICBM Euro Token", () => {
       let tokenController;
 
-      before(async () => {
-        await createAccessPolicy(accessControl, [
-          { subject: depositManager, role: roles.eurtDepositManager },
-          { subject: eurtLegalManager, role: roles.eurtLegalManager },
-        ]);
-      });
-
       beforeEach(async () => {
-        // set no limits, block infinite allowance
-        tokenController = await EuroTokenController.new(universe.address, 0, 0, 0);
-        euroToken = await EuroToken.new(accessControl.address, tokenController.address);
-        await universe.setSingleton(knownInterfaces.euroToken, euroToken.address, {
-          from: masterManager,
-        });
+        [euroToken, tokenController] = await deployEuroTokenUniverse(
+          universe,
+          masterManager,
+          eurtLegalManager,
+          depositManager,
+          0,
+          0,
+          0,
+        );
       });
 
       describe("IBasicToken tests", () => {
