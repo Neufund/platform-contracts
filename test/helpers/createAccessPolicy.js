@@ -1,4 +1,4 @@
-import { TriState, EVERYONE, GLOBAL } from "./triState";
+const { TriState, EVERYONE, GLOBAL } = require("./triState");
 
 export default async (rbap, rules) => {
   if (!rules || rules.length === 0) {
