@@ -3,7 +3,9 @@ pragma solidity 0.4.15;
 import './AccessControl/AccessControlled.sol';
 import './AccessRoles.sol';
 import './Agreement.sol';
+import './Standards/IERC223Token.sol';
 import './Standards/IERC223LegacyCallback.sol';
+import './IsContract.sol';
 import './Snapshot/DailyAndSnapshotable.sol';
 import './SnapshotToken/Helpers/TokenMetadata.sol';
 import './SnapshotToken/StandardSnapshotToken.sol';
@@ -18,8 +20,10 @@ contract Neumark is
     DailyAndSnapshotable,
     StandardSnapshotToken,
     TokenMetadata,
+    IERC223Token,
     NeumarkIssuanceCurve,
-    Reclaimable
+    Reclaimable,
+    IsContract
 {
 
     ////////////////////////

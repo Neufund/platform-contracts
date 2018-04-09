@@ -1,9 +1,6 @@
 pragma solidity 0.4.15;
 
 import '../Standards/IERC20Token.sol';
-import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223Callback.sol';
-import '../IsContract.sol';
 import './Helpers/TokenAllowance.sol';
 import './MintableSnapshotToken.sol';
 import './Helpers/MTokenController.sol';
@@ -46,9 +43,7 @@ import './Helpers/MTokenTransfer.sol';
 contract StandardSnapshotToken is
     IERC20Token,
     MintableSnapshotToken,
-    TokenAllowance,
-    IERC223Token,
-    IsContract
+    TokenAllowance
 {
     ////////////////////////
     // Constructor
@@ -67,26 +62,4 @@ contract StandardSnapshotToken is
         TokenAllowance()
         internal
     {}
-
-    ////////////////////////
-    // Public functions
-    ////////////////////////
-
-    //
-    // Implements IERC223Token
-    //
-
-    function transfer(address to, uint256 amount, bytes data)
-        public
-        returns (bool)
-    {
-        // it is necessary to point out implementation to be called
-        BasicSnapshotToken.mTransfer(msg.sender, to, amount);
-
-        // Notify the receiving contract.
-        if (isContract(to)) {
-            IERC223Callback(to).tokenFallback(msg.sender, amount, data);
-        }
-        return true;
-    }
 }
