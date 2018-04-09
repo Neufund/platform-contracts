@@ -1,11 +1,11 @@
 const sha3Web3 = require("web3/lib/utils/sha3");
 
 function sha3(s) {
-  return "0x" + sha3Web3(s);
+  return `0x${sha3Web3(s)}`;
 }
 
 export default {
-  accessController: sha3("AccessController", ),
+  accessController: sha3("AccessController"),
   example: sha3("Example"),
   platformOperatorRepresentative: sha3("PlatformOperatorRepresentative"),
   lockedAccountAdmin: sha3("LockedAccountAdmin"),
@@ -19,4 +19,6 @@ export default {
   universeManager: sha3("UniverseManager"),
   identityManager: sha3("IdentityManager"),
   eurtLegalManager: sha3("EurtLegalManager"),
+  gasExchange: sha3("GasExchange"),
+  tokenRateOracle: sha3("TokenRateOracle"),
 };
