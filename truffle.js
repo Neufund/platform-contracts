@@ -51,11 +51,6 @@ module.exports = {
       gas: 4300000, // close to current mainnet limit
       gasPrice: 30000000000, // 10 gwei /shannon
     },
-    kovan: {
-      host: "localhost", // local parity kovan node
-      port: 8545,
-      network_id: "42",
-    },
     ropsten_live: {
       host: "localhost", // local parity ropsten
       port: 8544,
@@ -80,12 +75,33 @@ module.exports = {
       host: "localhost",
       port: 8545,
       gas: 4600000,
+      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
+      gasPrice: 21000000000,
+    },
+    nf_dev: {
+      host: "localhost",
+      port: 8545,
+      network_id: "17",
+      gas: 4600000,
+      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
+      // gasPrice: 11904761856
+      gasPrice: 21000000000,
     },
     nf_private: {
       host: "localhost",
       port: 8545,
       network_id: "16",
       gas: 4600000,
+      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
+      // gasPrice: 11904761856
+      gasPrice: 21000000000,
+    },
+    nf_private_remote: {
+      host: "159.65.112.121",
+      port: 8545,
+      network_id: "16",
+      gas: 4600000,
+      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
       // gasPrice: 11904761856
       gasPrice: 21000000000,
     },
