@@ -7,7 +7,6 @@ import '../EuroToken.sol';
 import '../MigrationSource.sol';
 import './ICBMLockedAccount.sol';
 import './ICBMLockedAccountMigration.sol';
-import '../Neumark.sol';
 import '../Standards/IERC677Callback.sol';
 import '../Reclaimable.sol';
 import '../KnownInterfaces.sol';
@@ -221,6 +220,7 @@ contract LockedAccount is
     /// @param migrationSource old locked account
     function LockedAccount(
         Universe universe,
+        Neumark neumark,
         IERC223Token paymentToken,
         ICBMLockedAccount migrationSource
     )
@@ -231,7 +231,8 @@ contract LockedAccount is
     {
         PAYMENT_TOKEN = paymentToken;
         MIGRATION_SOURCE = migrationSource;
-        NEUMARK = universe.neumark();
+        UNIVERSE = universe;
+        NEUMARK = neumark;
         LOCK_PERIOD = migrationSource.lockPeriod();
         PENALTY_FRACTION = migrationSource.penaltyFraction();
         _penaltyDisbursalAddress = migrationSource.penaltyDisbursalAddress();
@@ -254,11 +255,13 @@ contract LockedAccount is
         Account storage account = _accounts[msg.sender];
         require(account.balance >= amount);
         // calculate unlocked NEU as proportion of invested amount to account balance
-        uint112 unlockedNmkUlps = uint112(proportion(
-            account.neumarksDue,
-            amount,
-            account.balance
-        ));
+        uint112 unlockedNmkUlps = uint112(
+            proportion(
+                account.neumarksDue,
+                amount,
+                account.balance
+            )
+        );
         account.balance = subBalance(account.balance, amount);
         // will not overflow as amount < account.balance so unlockedNmkUlps must be >= account.neumarksDue
         account.neumarksDue -= unlockedNmkUlps;
@@ -317,6 +320,7 @@ contract LockedAccount is
         newAccount = account;
         delete _accounts[msg.sender];
         LogInvestorMoved(msg.sender, newInvestor);
+        LogFundsLocked(newInvestor, newAccount.balance, newAccount.neumarksDue);
     }
 
     /// @notice refunds investor in case of failed offering
@@ -409,11 +413,13 @@ contract LockedAccount is
                 uint112 partialAmount = destination.amount == 0 ? balance : destination.amount;
                 require(partialAmount <= balance);
                 // compute corresponding NEU proportionally, result < 10**18 as partialAmount <= balance
-                uint112 partialNmkUlps = uint112(proportion(
-                    neumarksDue,
-                    partialAmount,
-                    balance
-                ));
+                uint112 partialNmkUlps = uint112(
+                    proportion(
+                        neumarksDue,
+                        partialAmount,
+                        balance
+                    )
+                );
                 // no overflow see above
                 balance -= partialAmount;
                 // no overflow partialNmkUlps <= neumarksDue as as partialAmount <= balance, see proportion
@@ -711,7 +717,7 @@ contract LockedAccount is
         account.neumarksDue = add112(account.neumarksDue, neumarks);
         // overwrite unlockDate if it is earler. we do not supporting joining tickets from different investors
         // this will discourage sending 1 wei to move unlock date
-        if (unlockDate >  account.unlockDate) {
+        if (unlockDate > account.unlockDate) {
             account.unlockDate = unlockDate;
         }
 
