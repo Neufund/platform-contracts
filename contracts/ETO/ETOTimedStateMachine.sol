@@ -3,6 +3,7 @@ pragma solidity 0.4.15;
 import "./ETODurationTerms.sol";
 import "./IETOCommitment.sol";
 
+
 /// @title state machine for Commitment contract
 /// @notice implements ETO state machine per documentation in README
 /// @dev state switching via 'transitionTo' function

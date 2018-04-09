@@ -368,7 +368,7 @@ contract ETOCommitment is
     {
         if (oldState == State.Whitelist || oldState == State.Public) {
             // if within min ticket of max cap then move state
-            if (_totalEquivEurUlps + ETO_TERMS.MIN_TICKET_EUR_ULPS()  >= MAX_CAP_EUR_ULPS) {
+            if (_totalEquivEurUlps + ETO_TERMS.MIN_TICKET_EUR_ULPS() >= MAX_CAP_EUR_ULPS) {
                 transitionTo(oldState == State.Whitelist ? State.Public : State.Signing);
             }
         }
@@ -422,13 +422,17 @@ contract ETOCommitment is
         assert(NEUMARK.transfer(PLATFORM_WALLET, platformNmk));
         // additional equity tokens are issued and sent to platform operator (temporarily)
         // (_totalEquivEurUlps/TOKEN_EUR_PRICE_ULPS) * TOKEN_PARTICIPATION_FEE_FRACTION
-        uint256 tokenParticipationFee = proportion(_totalEquivEurUlps,
-            ETO_TERMS.PLATFORM_TERMS().TOKEN_PARTICIPATION_FEE_FRACTION(), TOKEN_EUR_PRICE_ULPS);
+        uint256 tokenParticipationFee = proportion(
+            _totalEquivEurUlps,
+            ETO_TERMS.PLATFORM_TERMS().TOKEN_PARTICIPATION_FEE_FRACTION(),
+            TOKEN_EUR_PRICE_ULPS
+        );
         COMPANY.issueTokens(PLATFORM_WALLET, tokenParticipationFee);
         // company contract has new token, new eto and new SHA (transfers are enabled on equity token if requested -> company is a controller so in call below)
         COMPANY.registerEquityToken(
             EQUITY_TOKEN.balanceOf(this),
-            ETO_TERMS.ENABLE_TRANSFERS_ON_SUCCESS());
+            ETO_TERMS.ENABLE_TRANSFERS_ON_SUCCESS()
+        );
         // company legal rep receives funds
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         if (etherBalance > 0) {
@@ -451,12 +455,12 @@ contract ETOCommitment is
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         if (etherBalance > 0) {
             // disburse via ETC223
-            assert(ETHER_TOKEN.transfer(address(disbursal), etherBalance, ''));
+            assert(ETHER_TOKEN.transfer(address(disbursal), etherBalance, ""));
         }
         uint256 euroBalance = EURO_TOKEN.balanceOf(this);
         if (euroBalance > 0) {
             // disburse via ETC223
-            assert(EURO_TOKEN.transfer(address(disbursal), euroBalance, ''));
+            assert(EURO_TOKEN.transfer(address(disbursal), euroBalance, ""));
         }
     }
 
@@ -473,9 +477,9 @@ contract ETOCommitment is
         bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
         // compute EUR eurEquivalent via oracle if ether
         if (isEuroInvestment) {
-            var (rate, rate_timestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
+            var (rate, rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
             // require if rate older than 4 hours
-            require(block.timestamp - rate_timestamp < 6 hours);
+            require(block.timestamp - rateTimestamp < 6 hours);
             equivEurUlps = decimalFraction(equivEurUlps, rate);
         }
         // kick on minimum ticket

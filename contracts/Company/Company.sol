@@ -10,6 +10,7 @@ contract ShareholderResolution {
     // executes methods on Company on Yes if outcome defined
 }
 
+
 contract Company is
     Agreement,
     ICompanyManagement

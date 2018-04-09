@@ -5,6 +5,7 @@ import "./ETOPlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
 
+
 /// @title set terms of the ETO public offer
 contract ETOTerms is Math {
 
@@ -74,22 +75,22 @@ contract ETOTerms is Math {
     ////////////////////////
 
     function ETOTerms(
-            ETOPlatformTerms platformTerms,
-            ETODurationTerms durationTerms,
-            uint256 totalCompanyShares,
-            uint256 minNumberOfTokens,
-            uint256 maxNumberOfTokens,
-            uint256 tokenEurPriceUlps,
-            uint256 minTicketEurUlps,
-            uint256 maxTicketEurUlps,
-            uint256 maxTicketSimpleEurUlps,
-            bool enableTransfersOnSuccess,
-            bool isCrowdfunding,
-            string investmentAgreementUrl,
-            string shaTemplateUrl,
-            ShareholderRights shareHolderRights
-        )
-        public
+        ETOPlatformTerms platformTerms,
+        ETODurationTerms durationTerms,
+        uint256 totalCompanyShares,
+        uint256 minNumberOfTokens,
+        uint256 maxNumberOfTokens,
+        uint256 tokenEurPriceUlps,
+        uint256 minTicketEurUlps,
+        uint256 maxTicketEurUlps,
+        uint256 maxTicketSimpleEurUlps,
+        bool enableTransfersOnSuccess,
+        bool isCrowdfunding,
+        string investmentAgreementUrl,
+        string shaTemplateUrl,
+        ShareholderRights shareHolderRights
+    )
+    public
     {
         PLATFORM_TERMS = platformTerms;
         DURATION_TERMS = durationTerms;
