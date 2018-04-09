@@ -5,7 +5,6 @@ import roles from "./helpers/roles";
 import knownInterfaces from "./helpers/knownInterfaces";
 import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
 import registerSingletons from "./helpers/registerSingletons";
-import { promisify } from "./helpers/evmCommands";
 
 const EuroTokenController = artifacts.require("EuroTokenController");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
@@ -58,19 +57,22 @@ contract(
     ) {
       identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
       // set no limits, block infinite allowance
-      tokenController = await EuroTokenController.new(
-        universe.address,
+      tokenController = await EuroTokenController.new(universe.address);
+      await tokenController.applySettings(
         _minDepositAmountEurUlps,
         _minWithdrawAmountEurUlps,
         _maxSimpleExchangeAllowanceEurUlps,
+        { from: eurtLegalManager },
       );
     }
 
+    // eslint-disable-next-line no-unused-vars
     function expectUniverseReloadedEvent(tx) {
       const event = eventValue(tx, "LogUniverseReloaded");
       expect(event).to.exist;
     }
 
+    // eslint-disable-next-line no-unused-vars
     function expectAllowedToEvent(tx, to, allowed) {
       const event = eventValue(tx, "LogAllowedToAddress");
       expect(event).to.exist;
@@ -78,6 +80,7 @@ contract(
       expect(event.args.allowed).to.eq(allowed);
     }
 
+    // eslint-disable-next-line no-unused-vars
     function expectAllowedFromEvent(tx, from, allowed) {
       const event = eventValue(tx, "LogAllowedFromAddress");
       expect(event).to.exist;
