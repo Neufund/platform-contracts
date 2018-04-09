@@ -2,27 +2,27 @@
 
 Order within contracts:
 
-1. Type declarations
-2. Constants
-3. Immutable state variables (Set only in constructor)
-4. State variables
-5. Events
-6. Modifiers
-7. Constructor
-8. Fallback function
-9. External functions (constant functions last)
+1.  Type declarations
+2.  Constants
+3.  Immutable state variables (Set only in constructor)
+4.  State variables
+5.  Events
+6.  Modifiers
+7.  Constructor
+8.  Fallback function
+9.  External functions (constant functions last)
 10. Public funcions (constant functions last)
 11. Internal functions (constant functions last)
 12. Private functions (constant functions last)
 
 Order of operations within an external or public function:
 
-1. `pure` Validate input (`require`)
-2. `constant` Read state, compute and validate more (`require` and `assert`)
-3. Write state (from here only `pure` operations allowed) (no `require` or `assert`)
-4. Call external functions (`assert` allowed again)
-5. Write logs
-6. Return
+1.  `pure` Validate input (`require`)
+2.  `constant` Read state, compute and validate more (`require` and `assert`)
+3.  Write state (from here only `pure` operations allowed) (no `require` or `assert`)
+4.  Call external functions (`assert` allowed again)
+5.  Write logs
+6.  Return
 
 The critical section is between the first read and the last write. In this region the control flow
 needs to be extremely reliable.

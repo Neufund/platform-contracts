@@ -105,24 +105,25 @@ The verification processes can be done [here](https://etherscan.io/verifyContrac
 In order to give an in-depth walkthrough, this section will explain the processes of verifying the
 Neumark smart contract
 
-1. Run `yarn flatten` in order to flatten all smart contracts up for deployment and output to
-   `./build/flatten`
-2. Run the [Smart-Contract-Watch](https://github.com/Neufund/smart-contract-watch) from
-   `moe/coded-constructor`
-   [branch](https://github.com/Neufund/smart-contract-watch/tree/moe/coded-constructor) and start
-   from the contract creation block. If done correctly this will return the used constructor
-   arguments needed. In the case of Neumark it was
-   `00000000000000000000000088144fa49c6b97b845c4eb7a1f61c52f49303210`
-   `00000000000000000000000038e0e54c1c7c405cec81c6ad66aff65700be5951` Currently, this processes
-   works only if all variables were static.
-3. Open [etherscan](https://etherscan.io/verifyContract)
-4. Enter smart-contract address for the case of Neumark `0xd8f36d2de608987a8b6e19016a20645032ae6647`
-5. Enter smart contract name as written in the `.sol` file in this case `Neumark`
-6. Choose the correct compiler in our case `solc 0.4.15+commit` with Optimization enabled
-7. Copy the flattened source code from `./build/flatten/Neumark.sol` and paste in the source code
-   section.
-8. Copy the constructor arguments and paste in the relative sections
-9. Verify and Publish
+1.  Run `yarn flatten` in order to flatten all smart contracts up for deployment and output to
+    `./build/flatten`
+2.  Run the [Smart-Contract-Watch](https://github.com/Neufund/smart-contract-watch) from
+    `moe/coded-constructor`
+    [branch](https://github.com/Neufund/smart-contract-watch/tree/moe/coded-constructor) and start
+    from the contract creation block. If done correctly this will return the used constructor
+    arguments needed. In the case of Neumark it was
+    `00000000000000000000000088144fa49c6b97b845c4eb7a1f61c52f49303210`
+    `00000000000000000000000038e0e54c1c7c405cec81c6ad66aff65700be5951` Currently, this processes
+    works only if all variables were static.
+3.  Open [etherscan](https://etherscan.io/verifyContract)
+4.  Enter smart-contract address for the case of Neumark
+    `0xd8f36d2de608987a8b6e19016a20645032ae6647`
+5.  Enter smart contract name as written in the `.sol` file in this case `Neumark`
+6.  Choose the correct compiler in our case `solc 0.4.15+commit` with Optimization enabled
+7.  Copy the flattened source code from `./build/flatten/Neumark.sol` and paste in the source code
+    section.
+8.  Copy the constructor arguments and paste in the relative sections
+9.  Verify and Publish
 
 ### Prefill Agreements
 
@@ -194,9 +195,9 @@ prevents test that check balances to run properly.
 
 Custom version fixes two other bugs:
 
-1. For large trace files, `readFileSync` will fail silently, stream is used to read lines instead
-2. `exec` on child process will kill child if stdout buffer overflows, buffer was increased to 10MB
-3. It refers to testrpc `4.0.1` that has stipend not modified.
+1.  For large trace files, `readFileSync` will fail silently, stream is used to read lines instead
+2.  `exec` on child process will kill child if stdout buffer overflows, buffer was increased to 10MB
+3.  It refers to testrpc `4.0.1` that has stipend not modified.
 
 Solidity code coverage runs own testrpc node (modified). You can run this node via
 
@@ -263,12 +264,12 @@ https://github.com/Neufund/parity-instant-seal-byzantium-enabled
 
 Modified version of truffle is referenced for running test cases.
 
-1. Revert and snapshot are removed from `truffle-core`
-   (https://github.com/Neufund/truffle-core/commit/83404a758a684e8d3d4806f24bc40a25c0817b79)
-2. https://github.com/trufflesuite/truffle/issues/569 is fixed as testing overloaded `transfer` is
-   impossible
-   (https://github.com/Neufund/truffle-contract/commit/ecae09942db60039f2dc4768ceeb88776226f0ca)
-3. Works with byzantium enabled Parity nodes
+1.  Revert and snapshot are removed from `truffle-core`
+    (https://github.com/Neufund/truffle-core/commit/83404a758a684e8d3d4806f24bc40a25c0817b79)
+2.  https://github.com/trufflesuite/truffle/issues/569 is fixed as testing overloaded `transfer` is
+    impossible
+    (https://github.com/Neufund/truffle-contract/commit/ecae09942db60039f2dc4768ceeb88776226f0ca)
+3.  Works with byzantium enabled Parity nodes
 
 ## Deployment
 
@@ -276,18 +277,18 @@ Modified version of truffle is referenced for running test cases.
 
 Contracts are deployed in following order
 
-1. **RoleBasedAccessControl** - used to set up access permissions in other contracts, see below
-2. **EthereumForkArbiter** - used to indicate fork that is actually supported (legally and
-   technically),
-3. **Neumark** - ERC20/223 and snapshotable token representing Neumark reward to investors,
-4. **EtherToken** - encapsulates Ether as a token
-5. **EuroToken** - represents Euro as a token (EUR-T), see below,
-6. **LockedAccount(EtherToken)** - represents investor's individual investment account with unlock
-   date, for Ether investment,
-7. **LockedAccount(EuroToken)** - represents investor's individual investment account with unlock
-   date, for EUR-T investment,
-8. **Commitment** - represents ICBM process with pre-ICO, and ICO stages, whitelisting, possibility
-   to invest in Ether/EUR-T and other features.
+1.  **RoleBasedAccessControl** - used to set up access permissions in other contracts, see below
+2.  **EthereumForkArbiter** - used to indicate fork that is actually supported (legally and
+    technically),
+3.  **Neumark** - ERC20/223 and snapshotable token representing Neumark reward to investors,
+4.  **EtherToken** - encapsulates Ether as a token
+5.  **EuroToken** - represents Euro as a token (EUR-T), see below,
+6.  **LockedAccount(EtherToken)** - represents investor's individual investment account with unlock
+    date, for Ether investment,
+7.  **LockedAccount(EuroToken)** - represents investor's individual investment account with unlock
+    date, for EUR-T investment,
+8.  **Commitment** - represents ICBM process with pre-ICO, and ICO stages, whitelisting, possibility
+    to invest in Ether/EUR-T and other features.
 
 Commitment contracts currently serves as a 'Universe'. All contracts, agreements and parameters we
 officially support during ICBM may be found in it or in other aggregated contracts.
@@ -299,26 +300,27 @@ parameters cannot be changed.
 
 **LockedAccount**
 
-1. **LOCK_DURATION** - duration of lock after which `unlock` comes without penalty, in seconds
-2. **PENALTY_FRACTION** - unlock penalty as fraction of investment amount, where 10\*\*18 is 100%,
-   10\*\*17 is 10% etc.
+1.  **LOCK_DURATION** - duration of lock after which `unlock` comes without penalty, in seconds
+2.  **PENALTY_FRACTION** - unlock penalty as fraction of investment amount, where 10\*\*18 is 100%,
+    10\*\*17 is 10% etc.
 
 **Commitment**
 
-1. **START_DATE** - start date of ICBM (see `StateMachine` contract for process details), as
-   Unix/Ethereum timestamp (UTC),
-2. **CAP_EUR** - safety cap (in EUR-T) which corresponds to maximum number of Neumarks that may be
-   issued during ICBM, in "wei" (10\*\*-18 parts of EUR-T).
-3. **MIN_TICKET_EUR** - minimum ticket in EUR-T, represented as above
-4. **ETH_EUR_FRACTION** - EUR-T to ETH rate used during whole ICBM. we use constant rate to compute
-   Neumark reward, there's no oracle.
-5. **PLATFORM_OPERATOR_WALLET** - see below.
+1.  **START_DATE** - start date of ICBM (see `StateMachine` contract for process details), as
+    Unix/Ethereum timestamp (UTC),
+2.  **CAP_EUR** - safety cap (in EUR-T) which corresponds to maximum number of Neumarks that may be
+    issued during ICBM, in "wei" (10\*\*-18 parts of EUR-T).
+3.  **MIN_TICKET_EUR** - minimum ticket in EUR-T, represented as above
+4.  **ETH_EUR_FRACTION** - EUR-T to ETH rate used during whole ICBM. we use constant rate to compute
+    Neumark reward, there's no oracle.
+5.  **PLATFORM_OPERATOR_WALLET** - see below.
 
 **Agreements**
 
-1. **RESERVATION_AGREEMENT** - ipfs link to Reservation Agreement, attached to `Commitment` contract
-2. **NEUMARK_HOLDER_AGREEMENT** - ipfs link to Neumark Token Holder Agreeement attached to `Neumark`
-   contract
+1.  **RESERVATION_AGREEMENT** - ipfs link to Reservation Agreement, attached to `Commitment`
+    contract
+2.  **NEUMARK_HOLDER_AGREEMENT** - ipfs link to Neumark Token Holder Agreeement attached to
+    `Neumark` contract
 
 Please note that several ICBM duration parameters are encoded in `StateMachine` contract. You may
 choose to change them form test deployments.
@@ -392,24 +394,24 @@ script in this repo. Setting whitelist requires `WHITELIST ADMIN` role.
 There are several conventions in naming truffle networks used for deployment. **Network with names
 ending with `_live`** will be deployed in production mode which means that:
 
-1. Live accounts addresses as specified in `config.js` will be assigned to roles.
-2. Live smart contracts parameters as specified in `config.js` will be deployed
-3. Agreements will not be attached.
-4. Deployer will set ACCESS_CONTROLLER as secondary access control admin address and will remove
-   itself as global ACCESS_CONTROLLER (see `6_relinquish_control.js`)
+1.  Live accounts addresses as specified in `config.js` will be assigned to roles.
+2.  Live smart contracts parameters as specified in `config.js` will be deployed
+3.  Agreements will not be attached.
+4.  Deployer will set ACCESS_CONTROLLER as secondary access control admin address and will remove
+    itself as global ACCESS_CONTROLLER (see `6_relinquish_control.js`)
 
 **Other networks** will be deployed in test mode which means that:
 
-1. All roles are assigned to accounts[0], which is also deployer. This account controls everything.
-2. Modify `config.js` as you wish to deploy with custom smart contract parameters.
-3. Everything is deployed and set up. Commitment contract should be ready to go after deployment.
+1.  All roles are assigned to accounts[0], which is also deployer. This account controls everything.
+2.  Modify `config.js` as you wish to deploy with custom smart contract parameters.
+3.  Everything is deployed and set up. Commitment contract should be ready to go after deployment.
 
 **Special networks**
 
-1. _simulated_live_ will be deployed as live network but is intended to be used against testrpc.
-   Roles will be assigned to testrpc provided accounts. It is intended to test various
-   administrative operations (like enabling/disabling transfers) before live deployment.
-2. _inprocess_test_ and _coverage_ will not deploy anything.
+1.  _simulated_live_ will be deployed as live network but is intended to be used against testrpc.
+    Roles will be assigned to testrpc provided accounts. It is intended to test various
+    administrative operations (like enabling/disabling transfers) before live deployment.
+2.  _inprocess_test_ and _coverage_ will not deploy anything.
 
 ```
 yarn truffle migrate --reset --network simulated_live

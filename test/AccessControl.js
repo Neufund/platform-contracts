@@ -20,6 +20,9 @@ contract(
       accessPolicy = await deployAccessControl();
       accessControlled = await TestAccessControl.new(accessPolicy.address);
       exampleRole = roles.example;
+      expect(exampleRole).to.eq(
+        "0xb01f6215887f913abe74277c39da2c7de51baf17958191658f84959dfddab970",
+      );
     });
 
     function expectAccessChangedEvent(tx, subject, role, object, oldValue, newValue) {
