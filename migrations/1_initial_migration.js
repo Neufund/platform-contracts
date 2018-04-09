@@ -1,5 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
+
 const Migrations = artifacts.require("./Migrations.sol");
 
 module.exports = function deployMigration(deployer, network, accounts) {

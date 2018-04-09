@@ -23,7 +23,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const commitment = await Commitment.deployed();
 
     console.log("Seting permissions");
-    console.log(roles);
     // allow commitment contract to issue Neumarks
     await accessPolicy.setUserRole(
       commitment.address,
@@ -39,12 +38,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       TriState.Allow,
     );
     // allow anyone to burn their neumarks
-    await accessPolicy.setUserRole(
-      EVERYONE,
-      roles.neumarkBurner,
-      neumark.address,
-      TriState.Allow,
-    );
+    await accessPolicy.setUserRole(EVERYONE, roles.neumarkBurner, neumark.address, TriState.Allow);
 
     await accessPolicy.setUserRole(
       CONFIG.addresses.LOCKED_ACCOUNT_ADMIN,

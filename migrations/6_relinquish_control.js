@@ -23,12 +23,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         euroToken.address,
         TriState.Unset,
       );
-      await accessPolicy.setUserRole(
-        DEPLOYER,
-        roles.lockedAccountAdmin,
-        GLOBAL,
-        TriState.Unset,
-      );
+      await accessPolicy.setUserRole(DEPLOYER, roles.lockedAccountAdmin, GLOBAL, TriState.Unset);
 
       console.log(`Adding new ACCESS_CONTROLLER to ${CONFIG.addresses.ACCESS_CONTROLLER}`);
       await accessPolicy.setUserRole(
@@ -43,12 +38,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         accessPolicy.address,
         TriState.Allow,
       );
-      await accessPolicy.setUserRole(
-        DEPLOYER,
-        roles.accessController,
-        GLOBAL,
-        TriState.Unset,
-      );
+      await accessPolicy.setUserRole(DEPLOYER, roles.accessController, GLOBAL, TriState.Unset);
       console.log("---------------------------------------------");
       console.log(
         `New ACCESS_CONTROLLER ${

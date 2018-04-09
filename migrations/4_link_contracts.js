@@ -20,12 +20,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const euroLock = await ICBMLockedAccount.at(await commitment.euroLock());
 
     // locked account admin role to yourself during deployment and relinquish control later
-    await accessPolicy.setUserRole(
-      DEPLOYER,
-      roles.lockedAccountAdmin,
-      GLOBAL,
-      TriState.Allow,
-    );
+    await accessPolicy.setUserRole(DEPLOYER, roles.lockedAccountAdmin, GLOBAL, TriState.Allow);
 
     console.log("Attaching Commitment to LockedAccounts");
     await euroLock.setController(commitment.address);
