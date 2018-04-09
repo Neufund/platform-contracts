@@ -68,22 +68,13 @@ contract EuroTokenController is
     ////////////////////////
 
     function EuroTokenController(
-        Universe universe,
-        uint256 minDepositAmountEurUlps,
-        uint256 minWithdrawAmountEurUlps,
-        uint256 maxSimpleExchangeAllowanceEurUlps
+        Universe universe
     )
         AccessControlled(universe.accessPolicy())
         public
     {
         UNIVERSE = universe;
-        applySettingsPrivate(
-            minDepositAmountEurUlps,
-            minWithdrawAmountEurUlps,
-            maxSimpleExchangeAllowanceEurUlps
-        );
     }
-
 
     ////////////////////////
     // Public Functions
