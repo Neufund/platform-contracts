@@ -94,9 +94,6 @@ contract LockedAccount is
     // current state of the locking contract
     LockState private _lockState;
 
-    // fee distribution pool
-    address private _penaltyDisbursalAddress;
-
     // all accounts
     mapping(address => Account) internal _accounts;
 
@@ -235,7 +232,6 @@ contract LockedAccount is
         NEUMARK = neumark;
         LOCK_PERIOD = migrationSource.lockPeriod();
         PENALTY_FRACTION = migrationSource.penaltyFraction();
-        _penaltyDisbursalAddress = migrationSource.penaltyDisbursalAddress();
     }
 
     ////////////////////////
@@ -351,19 +347,6 @@ contract LockedAccount is
     /// @dev https://gastoken.io/ (15000 - 900 for a call)
     function claim(address investor) public {
         delete _investments[msg.sender][investor];
-    }
-
-    /// sets address to which tokens from unlock penalty are sent
-    /// both simple addresses and contracts are allowed
-    /// contract needs to implement tokenFallback interface
-    function setPenaltyDisbursal(address penaltyDisbursalAddress)
-        public
-        only(ROLE_LOCKED_ACCOUNT_ADMIN)
-    {
-        require(penaltyDisbursalAddress != address(0));
-
-        // can be changed at any moment by admin
-        _penaltyDisbursalAddress = penaltyDisbursalAddress;
     }
 
     //
@@ -601,14 +584,6 @@ contract LockedAccount is
         return _totalInvestors;
     }
 
-    function penaltyDisbursalAddress()
-        public
-        constant
-        returns (address)
-    {
-        return _penaltyDisbursalAddress;
-    }
-
     ////////////////////////
     // Internal functions
     ////////////////////////
@@ -680,11 +655,12 @@ contract LockedAccount is
 
             // take the penalty if before unlockDate
             if (block.timestamp < accountInMem.unlockDate) {
-                require(_penaltyDisbursalAddress != address(0));
+                address penaltyDisbursalAddress = UNIVERSE.feeDisbursal();
+                require(penaltyDisbursalAddress != address(0));
                 uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
                 // distribution via ERC223 to contract or simple address
-                assert(PAYMENT_TOKEN.transfer(_penaltyDisbursalAddress, penalty, ""));
-                LogPenaltyDisbursed(_penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
+                assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, ""));
+                LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
                 accountInMem.balance -= penalty;
             }
         }
