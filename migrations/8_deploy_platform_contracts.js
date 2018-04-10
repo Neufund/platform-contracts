@@ -132,6 +132,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
         ki: knownInterfaces.tokenExchangeRateOracle,
         addr: simpleExchange.address,
       },
+      {
+        ki: knownInterfaces.feeDisbursal,
+        addr: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
+      },
     ];
     await registerSingletons(universe, CONFIG.addresses.UNIVERSE_MANAGER, interfaces);
   });
