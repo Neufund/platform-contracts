@@ -1,5 +1,5 @@
 {
-  "name": "contracts",
+  "name": "platform-contracts",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "invariant": "^2.2.2",
     "ipfs-api": "Neufund/js-ipfs-api",
     "istanbul": "next",
-    "ledger-wallet-provider": "Neufund/ledger-wallet-provider.git#moe/admintool",
+
     "lodash": "^4.17.4",
     "mocha": "^3.3.0",
     "moment": "^2.18.1",
