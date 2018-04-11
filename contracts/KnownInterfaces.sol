@@ -55,6 +55,15 @@ contract KnownInterfaces {
     // ether lock account (upgraded) keccak256("ICBMLockedAccount:Ether")
     bytes4 internal constant KNOWN_INTERFACE_ICBM_ETHER_LOCK = 0x0b58f006;
 
+    // ether token interface and singleton keccak256("ICBMEtherToken")
+    bytes4 internal constant KNOWN_INTERFACE_ICBM_ETHER_TOKEN = 0xae8b50b9;
+
+    // euro token interface and singleton keccak256("ICBMEuroToken")
+    bytes4 internal constant KNOWN_INTERFACE_ICBM_EURO_TOKEN = 0xc2c6cd72;
+
+    // ETO commitment interface interface and singleton keccak256("ICBMCommitment")
+    bytes4 internal constant KNOWN_INTERFACE_ICBM_COMMITMENT = 0x7f2795ef;
+
     // ethereum fork arbiter interface and singleton keccak256("IEthereumForkArbiter")
     bytes4 internal constant KNOWN_INTERFACE_FORK_ARBITER = 0x2fe7778c;
 
