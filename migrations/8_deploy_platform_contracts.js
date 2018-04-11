@@ -136,6 +136,18 @@ module.exports = function deployContracts(deployer, network, accounts) {
         ki: knownInterfaces.feeDisbursal,
         addr: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       },
+      {
+        ki: knownInterfaces.icbmEuroToken,
+        addr: await icbmEuroLock.assetToken(),
+      },
+      {
+        ki: knownInterfaces.icbmEtherToken,
+        addr: await icbmEtherLock.assetToken(),
+      },
+      {
+        ki: knownInterfaces.icbmCommitment,
+        addr: commitment.address,
+      },
     ];
     await registerSingletons(universe, CONFIG.addresses.UNIVERSE_MANAGER, interfaces);
   });

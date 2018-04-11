@@ -1,9 +1,14 @@
 const moment = require("moment");
+const deployableArtifacts = require("../test/helpers/artifacts").default;
 const networks = require("../truffle.js").networks;
 
 export function getDeployerAccount(network, accounts) {
   const netDefinitions = networks[network];
   return netDefinitions.from || accounts[0];
+}
+
+export function getNetworkDefinition(network) {
+  return networks[network];
 }
 
 export function getConfig(web3, network, accounts) {
@@ -44,22 +49,7 @@ export function getConfig(web3, network, accounts) {
       TOKEN_RATE_ORACLE: "??",
     },
     // deployed artifacts (may be mocked below)
-    artifacts: {
-      ROLE_BASED_ACCESS_POLICY: "RoleBasedAccessPolicy",
-      ETHEREUM_FORK_ARBITER: "EthereumForkArbiter",
-      NEUMARK: "Neumark",
-      ICBM_LOCKED_ACCOUNT: "ICBMLockedAccount",
-      ICBM_ETHER_TOKEN: "ICBMEtherToken",
-      ICBM_EURO_TOKEN: "ICBMEuroToken",
-      ICBM_COMMITMENT: "ICBMCommitment",
-      UNIVERSE: "Universe",
-      LOCKED_ACCOUNT: "LockedAccount",
-      ETHER_TOKEN: "EtherToken",
-      EURO_TOKEN: "EuroToken",
-      EURO_TOKEN_CONTROLLER: "EuroTokenController",
-      IDENTITY_REGISTRY: "IdentityRegistry",
-      SIMPLE_EXCHANGE: "SimpleExchange",
-    },
+    artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
     isLiveDeployment: network.endsWith("_live"),
   };
