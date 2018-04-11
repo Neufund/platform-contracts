@@ -11,9 +11,11 @@ if [ -z "$NETWORK" ]; then
   exit -1
 fi
 
-git submodule update --recursive --remote
+if [ ! -d ./platform-contracts-artifacts ]; then
+  git clone https://github.com/Neufund/platform-contracts-artifacts.git
+fi
 if [ ! -d ./platform-contracts-artifacts/build ]; then
-  echo "please provide build artifacts in ./platform-contracts-artifacts/build"
+  echo "please provide build artifacts in ./platform-contracts-artifacts/build via build.sh"
 fi
 rm -r ./build
 cp -r ./platform-contracts-artifacts/build ./build

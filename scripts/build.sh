@@ -4,7 +4,10 @@ set -e
 set -u
 
 yarn build
-git submodule update --recursive --remote
+if [ -d ./platform-contracts-artifacts ]; then
+  rm -rf ./platform-contracts-artifacts
+fi
+git clone https://github.com/Neufund/platform-contracts-artifacts.git
 if [ -d ./platform-contracts-artifacts/build ]; then
   rm -r ./platform-contracts-artifacts/build
 fi
