@@ -1,8 +1,8 @@
 pragma solidity 0.4.15;
 
-import './Standards/IBasicToken.sol';
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
+import "./Standards/IBasicToken.sol";
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
 
 
 /// @title allows deriving contract to recover any token or ether that it has balance of

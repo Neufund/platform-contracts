@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import '../NeumarkIssuanceCurve.sol';
+import "../NeumarkIssuanceCurve.sol";
 
 
 contract CurveGas is NeumarkIssuanceCurve {

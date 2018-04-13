@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import './IAccessPolicy.sol';
-import './IAccessControlled.sol';
-import './AccessControlled.sol';
-import '../Reclaimable.sol';
+import "./IAccessPolicy.sol";
+import "./IAccessControlled.sol";
+import "./AccessControlled.sol";
+import "../Reclaimable.sol";
 
 
 /// @title access policy based on Access Control Lists concept

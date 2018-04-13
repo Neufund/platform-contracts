@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../Standards/ISnapshotable.sol';
-import './MSnapshotPolicy.sol';
+import "../Standards/ISnapshotable.sol";
+import "./MSnapshotPolicy.sol";
 
 
 /// @title creates snapshot id on each day boundary and allows to create additional snapshots within a given day

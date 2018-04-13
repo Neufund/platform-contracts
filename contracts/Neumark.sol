@@ -1,16 +1,16 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
-import './Agreement.sol';
-import './Standards/IERC223Token.sol';
-import './Standards/IERC223LegacyCallback.sol';
-import './IsContract.sol';
-import './Snapshot/DailyAndSnapshotable.sol';
-import './SnapshotToken/Helpers/TokenMetadata.sol';
-import './SnapshotToken/StandardSnapshotToken.sol';
-import './NeumarkIssuanceCurve.sol';
-import './Reclaimable.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
+import "./Agreement.sol";
+import "./Standards/IERC223Token.sol";
+import "./Standards/IERC223LegacyCallback.sol";
+import "./IsContract.sol";
+import "./Snapshot/DailyAndSnapshotable.sol";
+import "./SnapshotToken/Helpers/TokenMetadata.sol";
+import "./SnapshotToken/StandardSnapshotToken.sol";
+import "./NeumarkIssuanceCurve.sol";
+import "./Reclaimable.sol";
 
 
 contract Neumark is

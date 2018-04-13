@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
 import "./Standards/ITokenController.sol";
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
-import './KnownInterfaces.sol';
-import './Universe.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
+import "./KnownInterfaces.sol";
+import "./Universe.sol";
 import "./Identity/IIdentityRegistry.sol";
 
 

@@ -1,12 +1,12 @@
 pragma solidity 0.4.15;
 
-import '../../EtherToken.sol';
-import '../ICBMEuroToken.sol';
-import '../ICBMLockedAccount.sol';
-import '../../Math.sol';
-import '../../Neumark.sol';
-import '../ICBMRoles.sol';
-import './ICBMTimedStateMachine.sol';
+import "../../EtherToken.sol";
+import "../ICBMEuroToken.sol";
+import "../ICBMLockedAccount.sol";
+import "../../Math.sol";
+import "../../Neumark.sol";
+import "../ICBMRoles.sol";
+import "./ICBMTimedStateMachine.sol";
 import "../../AccessControl/AccessControlled.sol";
 import "../../Agreement.sol";
 import "../../Reclaimable.sol";

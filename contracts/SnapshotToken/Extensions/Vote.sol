@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './ISnapshotableToken.sol';
+import "./ISnapshotableToken.sol";
 
 
 // https://en.wikipedia.org/wiki/Comparison_of_electoral_systems
@@ -67,7 +67,7 @@ contract Vote {
     ////////////////////////
 
     function initChoice(uint256 index, string choice)
-    {
+     public {
         require(index < CHOICE_HASHES.length);
         require(keccak256(choice) == CHOICE_HASHES[index]);
         _choices[index] = choice;

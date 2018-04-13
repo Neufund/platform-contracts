@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
 import "../../Zeppelin/StandardToken.sol";
-import '../../Standards/IMigrationSource.sol';
+import "../../Standards/IMigrationSource.sol";
 import "../../ICBM/ICBMEuroTokenMigrationTarget.sol";
 
 

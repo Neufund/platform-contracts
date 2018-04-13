@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './IMigrationTarget.sol';
+import "./IMigrationTarget.sol";
 
 
 /// @notice implemented in the contract that stores state to be migrated

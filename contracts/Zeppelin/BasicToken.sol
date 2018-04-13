@@ -1,8 +1,8 @@
 pragma solidity 0.4.15;
 
 
-import '../Standards/IBasicToken.sol';
-import '../Math.sol';
+import "../Standards/IBasicToken.sol";
+import "../Math.sol";
 
 
 /**

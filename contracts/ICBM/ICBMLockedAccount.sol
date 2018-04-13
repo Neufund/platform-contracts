@@ -1,16 +1,16 @@
 pragma solidity 0.4.15;
 
-import '../AccessControl/AccessControlled.sol';
-import './ICBMRoles.sol';
-import '../AccessRoles.sol';
-import '../IsContract.sol';
-import '../MigrationSource.sol';
-import './ICBMLockedAccountMigration.sol';
-import '../Neumark.sol';
-import '../Standards/IERC677Token.sol';
-import '../Standards/IERC677Callback.sol';
-import '../Reclaimable.sol';
-import '../TimeSource.sol';
+import "../AccessControl/AccessControlled.sol";
+import "./ICBMRoles.sol";
+import "../AccessRoles.sol";
+import "../IsContract.sol";
+import "../MigrationSource.sol";
+import "./ICBMLockedAccountMigration.sol";
+import "../Neumark.sol";
+import "../Standards/IERC677Token.sol";
+import "../Standards/IERC677Callback.sol";
+import "../Reclaimable.sol";
+import "../TimeSource.sol";
 import "../Math.sol";
 
 

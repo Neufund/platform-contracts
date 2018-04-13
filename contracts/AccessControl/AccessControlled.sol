@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import './IAccessControlled.sol';
-import './StandardRoles.sol';
+import "./IAccessControlled.sol";
+import "./StandardRoles.sol";
 
 
 /// @title Granular code execution permissions

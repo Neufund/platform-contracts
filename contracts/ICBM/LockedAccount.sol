@@ -1,18 +1,18 @@
 pragma solidity 0.4.15;
 
-import '../Universe.sol';
-import './ICBMRoles.sol';
-import '../EtherToken.sol';
-import '../EuroToken.sol';
-import '../MigrationSource.sol';
-import './ICBMLockedAccount.sol';
-import './ICBMLockedAccountMigration.sol';
-import '../Standards/IERC677Callback.sol';
-import '../Reclaimable.sol';
-import '../KnownInterfaces.sol';
-import '../Serialization.sol';
-import '../Identity/IIdentityRegistry.sol';
-import '../ETO/ICommitment.sol';
+import "../Universe.sol";
+import "./ICBMRoles.sol";
+import "../EtherToken.sol";
+import "../EuroToken.sol";
+import "../MigrationSource.sol";
+import "./ICBMLockedAccount.sol";
+import "./ICBMLockedAccountMigration.sol";
+import "../Standards/IERC677Callback.sol";
+import "../Reclaimable.sol";
+import "../KnownInterfaces.sol";
+import "../Serialization.sol";
+import "../Identity/IIdentityRegistry.sol";
+import "../ETO/ICommitment.sol";
 
 
 contract LockedAccount is

@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
-import '../Standards/IERC20Token.sol';
-import './Helpers/TokenAllowance.sol';
-import './MintableSnapshotToken.sol';
-import './Helpers/MTokenController.sol';
-import './Helpers/MTokenTransfer.sol';
+import "../Standards/IERC20Token.sol";
+import "./Helpers/TokenAllowance.sol";
+import "./MintableSnapshotToken.sol";
+import "./Helpers/MTokenController.sol";
+import "./Helpers/MTokenTransfer.sol";
 
 
 /*

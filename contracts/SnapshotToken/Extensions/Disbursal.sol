@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import './ISnapshotableToken.sol';
-import '../../Standards/IBasicToken.sol';
-import '../../Standards/IERC20Token.sol';
-import '../../Standards/IERC677Callback.sol';
+import "./ISnapshotableToken.sol";
+import "../../Standards/IBasicToken.sol";
+import "../../Standards/IERC20Token.sol";
+import "../../Standards/IERC677Callback.sol";
 
 
 // TODO: Anyone can create a token and disburse it, but then everyone

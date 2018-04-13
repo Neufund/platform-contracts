@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import './IERC20Token.sol';
-import './ITokenMetadata.sol';
+import "./IERC20Token.sol";
+import "./ITokenMetadata.sol";
 
 
 contract IERC223Token is IERC20Token, ITokenMetadata {

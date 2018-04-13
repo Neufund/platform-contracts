@@ -1,12 +1,12 @@
 pragma solidity 0.4.15;
 
-import '../AccessControl/AccessControlled.sol';
-import '..//Reclaimable.sol';
-import '../SnapshotToken/Helpers/TokenMetadata.sol';
-import '../Zeppelin/StandardToken.sol';
-import '../MigrationSource.sol';
-import './ICBMEuroTokenMigrationTarget.sol';
-import './ICBMRoles.sol';
+import "../AccessControl/AccessControlled.sol";
+import "..//Reclaimable.sol";
+import "../SnapshotToken/Helpers/TokenMetadata.sol";
+import "../Zeppelin/StandardToken.sol";
+import "../MigrationSource.sol";
+import "./ICBMEuroTokenMigrationTarget.sol";
+import "./ICBMRoles.sol";
 
 
 /// Simple implementation of EuroToken which is pegged 1:1 to certain off-chain

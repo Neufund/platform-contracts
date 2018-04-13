@@ -1,8 +1,8 @@
 pragma solidity 0.4.15;
 
-import '../AccessControl/AccessControlled.sol';
-import '../AccessRoles.sol';
-import '../Universe.sol';
+import "../AccessControl/AccessControlled.sol";
+import "../AccessRoles.sol";
+import "../Universe.sol";
 import "./IIdentityRegistry.sol";
 
 

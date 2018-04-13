@@ -1,11 +1,11 @@
 pragma solidity 0.4.15;
 
-import '../Snapshot/DailyAndSnapshotable.sol';
-import '../SnapshotToken/Helpers/TokenMetadata.sol';
-import '../SnapshotToken/StandardSnapshotToken.sol';
-import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223Callback.sol';
-import '../IsContract.sol';
+import "../Snapshot/DailyAndSnapshotable.sol";
+import "../SnapshotToken/Helpers/TokenMetadata.sol";
+import "../SnapshotToken/StandardSnapshotToken.sol";
+import "../Standards/IERC223Token.sol";
+import "../Standards/IERC223Callback.sol";
+import "../IsContract.sol";
 
 
 contract TestSnapshotToken is

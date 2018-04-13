@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../../Standards/IERC677Callback.sol';
-import '../../Standards/IERC677Token.sol';
+import "../../Standards/IERC677Callback.sol";
+import "../../Standards/IERC677Token.sol";
 
 
 contract TestFeeDistributionPool is IERC677Callback {

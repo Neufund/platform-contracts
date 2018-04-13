@@ -1,12 +1,12 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './SnapshotToken/Helpers/TokenMetadata.sol';
-import './Zeppelin/StandardToken.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./SnapshotToken/Helpers/TokenMetadata.sol";
+import "./Zeppelin/StandardToken.sol";
 import "./Standards/IERC223Token.sol";
 import "./Standards/IERC223Callback.sol";
 import "./Standards/ITokenController.sol";
-import './IsContract.sol';
+import "./IsContract.sol";
 import "./AccessRoles.sol";
 
 

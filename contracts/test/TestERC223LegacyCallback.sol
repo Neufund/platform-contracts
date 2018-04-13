@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223LegacyCallback.sol';
+import "../Standards/IERC223Token.sol";
+import "../Standards/IERC223LegacyCallback.sol";
 
 
 contract TestERC223LegacyCallback is IERC223LegacyCallback {
@@ -19,7 +19,7 @@ contract TestERC223LegacyCallback is IERC223LegacyCallback {
     ////////////////////////
     function TestERC223Callback() public {
         // some "random" hash
-        _dataKeccak = sha3(address(this));
+        _dataKeccak = keccak256(address(this));
     }
 
     ////////////////////////
@@ -34,7 +34,7 @@ contract TestERC223LegacyCallback is IERC223LegacyCallback {
     {
         _from = from;
         _amount = amount;
-        _dataKeccak = sha3(data);
+        _dataKeccak = keccak256(data);
     }
 
     function amount() constant public returns (uint256) {

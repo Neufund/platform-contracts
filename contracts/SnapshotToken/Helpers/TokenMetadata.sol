@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import '../../Standards/ITokenMetadata.sol';
+import "../../Standards/ITokenMetadata.sol";
 
 
 /// @title adds token metadata to token contract

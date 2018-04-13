@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../AccessControl/AccessControlled.sol';
-import '../Reclaimable.sol';
+import "../AccessControl/AccessControlled.sol";
+import "../Reclaimable.sol";
 
 
 contract TestReclaimable is

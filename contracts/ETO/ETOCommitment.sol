@@ -2,15 +2,15 @@ pragma solidity 0.4.15;
 
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
-import '../Universe.sol';
-import '../KnownInterfaces.sol';
+import "../Universe.sol";
+import "../KnownInterfaces.sol";
 import "../Company/ICompanyManagement.sol";
 import "../Company/IEquityToken.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../Reclaimable.sol";
-import '../Math.sol';
-import '../Serialization.sol';
+import "../Math.sol";
+import "../Serialization.sol";
 
 
 /// @title capital commitment into Company and share increase

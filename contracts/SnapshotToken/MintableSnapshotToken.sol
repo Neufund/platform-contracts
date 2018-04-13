@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import './BasicSnapshotToken.sol';
-import './Helpers/MTokenMint.sol';
+import "./BasicSnapshotToken.sol";
+import "./Helpers/MTokenMint.sol";
 
 
 /// @title basic snapshot token with facitilites to generate and destroy tokens

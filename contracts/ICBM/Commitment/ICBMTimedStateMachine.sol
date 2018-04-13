@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './ICBMStateMachine.sol';
+import "./ICBMStateMachine.sol";
 
 
 /// @title time induced state machine
