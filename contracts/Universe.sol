@@ -45,7 +45,8 @@ contract Universe is
     mapping(bytes4 => address) private _singletons;
 
     // mapping of known interfaces to collections of contracts
-    mapping(bytes4 => mapping(address => bool)) private _collections;
+    mapping(bytes4 =>
+        mapping(address => bool)) private _collections; // solium-disable-line indentation
 
     // known instances
     mapping(address => bytes4[]) private _instances;

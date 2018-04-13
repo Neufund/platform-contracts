@@ -226,10 +226,10 @@ contract ETOTimedStateMachine is IETOCommitment {
         returns (bool valid)
     {
         // TODO: think about disabling it before production deployment
+        // (oldState == State.Setup && newState == State.Public) ||
+        // (oldState == State.Setup && newState == State.Refund) ||
         return
             (oldState == State.Setup && newState == State.Whitelist) ||
-            // (oldState == State.Setup && newState == State.Public) ||
-            // (oldState == State.Setup && newState == State.Refund) ||
             (oldState == State.Whitelist && newState == State.Public) ||
             (oldState == State.Whitelist && newState == State.Signing) ||
             (oldState == State.Public && newState == State.Signing) ||

@@ -17,9 +17,7 @@ contract Daily is MSnapshotPolicy {
         returns (uint256)
     {
         // Round down to the start of the day (00:00 UTC)
-        timestamp -= timestamp % 1 days;
-
-        return timestamp;
+        return timestamp - (timestamp % 1 days);
     }
 
     ////////////////////////

@@ -233,7 +233,7 @@ contract ETOCommitment is
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @dev data in case of LockedAccount contains investor address and investor is LockedAccount address
-    function tokenFallback(address investor, uint256 amount, bytes data)
+    function tokenFallback(address investorOrProxy, uint256 amount, bytes data)
         public
         withStateTransition()
         onlyStates(State.Whitelist, State.Public)
@@ -242,10 +242,11 @@ contract ETOCommitment is
         // we trust only tokens below
         require(msg.sender == address(ETHER_TOKEN) || msg.sender == address(EURO_TOKEN));
         // check if LockedAccount
-        bool isLockedAccount = (investor == address(ETHER_LOCK) || investor == address(EURO_LOCK));
+        bool isLockedAccount = (investorOrProxy == address(ETHER_LOCK) || investorOrProxy == address(EURO_LOCK));
+        address investor = investorOrProxy;
         if (isLockedAccount) {
             // data contains investor address
-            investor = addressFromBytes(data);
+            investor = addressFromBytes(data); // solium-disable-line security/no-assign-params
         }
         // kick out not whitelist or not LockedAccount
         if (state() == State.Whitelist) {
