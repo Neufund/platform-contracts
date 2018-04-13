@@ -49,7 +49,7 @@
     "lint:eslint": "eslint --ignore-path .gitignore .",
     "lint:solium": "solium --dir contracts --reporter=pretty",
     "testrpc": "./scripts/testrpc.sh",
-    "test": "truffle compile && truffle test --network inprocess_test",
+    "test": "truffle test --network inprocess_test",
     "test:coverage": "SKIP_GAS_CHECKS=true solidity-coverage && codecov",
     "build": "./scripts/build.sh",
     "deploy": "./scripts/deploy.sh",
