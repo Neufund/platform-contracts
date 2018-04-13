@@ -15,6 +15,8 @@ module.exports = {
       host: "localhost",
       port: 8545,
       gas: 4600000,
+      gasPrice: 21000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
     },
     inprocess: {
       network_id: "*",
@@ -22,20 +24,14 @@ module.exports = {
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
     },
-    inprocess_test: {
-      network_id: "*",
-      provider: TestRPC.provider({
-        accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
-      }),
-    },
-    inprocess_massive_test: {
-      network_id: "*",
-      gas: 0xffffffff,
-      provider: TestRPC.provider({
-        deterministic: true,
-        gasLimit: 0xffffffff,
-        accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
-      }),
+    nf_private: {
+      host: "159.65.112.121",
+      port: 8545,
+      network_id: "16",
+      gas: 4600000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      // gasPrice: 11904761856
+      gasPrice: 21000000000,
     },
     coverage: {
       network_id: "*",
@@ -50,6 +46,19 @@ module.exports = {
       network_id: "3",
       gas: 4300000, // close to current mainnet limit
       gasPrice: 30000000000, // 10 gwei /shannon
+    },
+    live: {
+      network_id: 1, // Ethereum public network
+      host: "localhost",
+      port: 8543,
+      gas: 6300000, // close to current mainnet limit
+      gasPrice: 50000000000, // 21 gwei /shannon
+      // optional config values
+      // host - defaults to "localhost"
+      // port - defaults to 8545
+      // gas
+      // gasPrice
+      // from - default address to use for any transaction Truffle makes during migrations
     },
     ropsten_live: {
       host: "localhost", // local parity ropsten
@@ -78,61 +87,20 @@ module.exports = {
       from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
       gasPrice: 21000000000,
     },
-    nf_dev: {
-      host: "localhost",
-      port: 8545,
-      network_id: "17",
-      gas: 4600000,
-      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
-      // gasPrice: 11904761856
-      gasPrice: 21000000000,
+    inprocess_test: {
+      network_id: "*",
+      provider: TestRPC.provider({
+        accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
+      }),
     },
-    nf_private: {
-      host: "localhost",
-      port: 8545,
-      network_id: "16",
-      gas: 4600000,
-      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
-      // gasPrice: 11904761856
-      gasPrice: 21000000000,
-    },
-    nf_private_remote: {
-      host: "159.65.112.121",
-      port: 8545,
-      network_id: "16",
-      gas: 4600000,
-      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
-      // gasPrice: 11904761856
-      gasPrice: 21000000000,
-    },
-    nf_private_test: {
-      host: "localhost",
-      port: 8545,
-      network_id: "16",
-      gas: 4600000,
-      // gasPrice: 11904761856
-      gasPrice: 21000000000,
-    },
-    nf_dev_test: {
-      host: "localhost",
-      port: 8545,
-      network_id: "17",
-      gas: 4600000,
-      // gasPrice: 11904761856
-      gasPrice: 21000000000,
-    },
-    live: {
-      network_id: 1, // Ethereum public network
-      host: "localhost",
-      port: 8543,
-      gas: 6300000, // close to current mainnet limit
-      gasPrice: 50000000000, // 21 gwei /shannon
-      // optional config values
-      // host - defaults to "localhost"
-      // port - defaults to 8545
-      // gas
-      // gasPrice
-      // from - default address to use for any transaction Truffle makes during migrations
+    inprocess_massive_test: {
+      network_id: "*",
+      gas: 0xffffffff,
+      provider: TestRPC.provider({
+        deterministic: true,
+        gasLimit: 0xffffffff,
+        accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
+      }),
     },
   },
 };

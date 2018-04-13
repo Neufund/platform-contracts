@@ -13,11 +13,15 @@ fi
 
 if [ ! -d ./platform-contracts-artifacts ]; then
   git clone https://github.com/Neufund/platform-contracts-artifacts.git
+else
+  cd ./platform-contracts-artifacts && git reset --hard origin/master && git pull && cd ..
 fi
 if [ ! -d ./platform-contracts-artifacts/build ]; then
   echo "please provide build artifacts in ./platform-contracts-artifacts/build via build.sh"
 fi
-rm -r ./build
+if [ -d ./build ]; then
+  rm -r ./build
+fi
 cp -r ./platform-contracts-artifacts/build ./build
 yarn truffle deploy --reset --network $NETWORK
 # copy deployed artifacts
