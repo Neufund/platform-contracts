@@ -51,15 +51,21 @@ docker exec platform-contracts yarn deploy localhost
 
 ### Global deployments
 
-We keep current artifacts here: https://github.com/Neufund/platform-contracts-artifacts. Artifacts are updated on each merge to master and
-deployed to Neufund private network (see networks below.). For each deployed network we preserve Truffle build artifacts and provide additional deployment metadata file (see artifacts repo above for details).
+We keep current artifacts here: https://github.com/Neufund/platform-contracts-artifacts. Artifacts
+are updated on each merge to master and deployed to Neufund private network (see networks below.).
+For each deployed network we preserve Truffle build artifacts and provide additional deployment
+metadata file (see artifacts repo above for details).
 
 ### Local deployments
 
-You can easily export build artifacts for your local deployment (like you want to test platform-frontend).
-1. select a directory for artifacts. Easiest way is to use `platform-contracts-artifacts` folder by issuing `git clone https://github.com/Neufund/platform-contracts-artifacts.git` 
-2. run deploy script in the container mapping chosen host folder
-3. you have your artifacts `platform-contracts-artifacts/<network name>` when deploy command completes
+You can easily export build artifacts for your local deployment (like you want to test
+platform-frontend).
+
+1.  select a directory for artifacts. Easiest way is to use `platform-contracts-artifacts` folder by
+    issuing `git clone https://github.com/Neufund/platform-contracts-artifacts.git`
+2.  run deploy script in the container mapping chosen host folder
+3.  you have your artifacts `platform-contracts-artifacts/<network name>` when deploy command
+    completes
 
 ```
 docker build . -t neufund/platform-contracts
@@ -70,8 +76,10 @@ docker exec --user $(id -u):$(id -g) platform-contracts yarn deploy localhost
 ## Predefined accounts
 
 `yarn testrpc` will launch testrpc with 9 pre-defined Ethereum accounts. We keep the same set of
-accounts for our parity dev and parity test networks. You can find our parity dev node here (https://github.com/Neufund/parity-instant-seal-byzantium-enabled) and use it as alternative to testrpc.
-See description of Truffle networks below. We have BIP32 restore codes for those accounts (see below).
+accounts for our parity dev and parity test networks. You can find our parity dev node here
+(https://github.com/Neufund/parity-instant-seal-byzantium-enabled) and use it as alternative to
+testrpc. See description of Truffle networks below. We have BIP32 restore codes for those accounts
+(see below).
 
 ## Developing
 
@@ -270,8 +278,8 @@ To run single test case from a test use following syntax
 it.only('test case', ...
 ```
 
-There are simulated commitments in ICBM/Commitment.js which are very long. Execute those with special
-truffle network `inprocess_massive_test`
+There are simulated commitments in ICBM/Commitment.js which are very long. Execute those with
+special truffle network `inprocess_massive_test`
 
 ```
 yarn truffle test test/Commitment.js test/setup.js --network inprocess_massive_test
@@ -327,30 +335,32 @@ ending with `_live`** will be deployed in production mode which means that:
 4.  Deployer will set ACCESS_CONTROLLER as secondary access control admin address and will remove
     itself as global ACCESS_CONTROLLER (see `6_relinquish_control.js`)
 
-**Other networks** will be deployed in *test mode* which means that:
+**Other networks** will be deployed in _test mode_ which means that:
 
-1.  All roles are assigned to accounts[0] or `from` (if specified in truffle network), which is also deployer. This account controls everything.
+1.  All roles are assigned to accounts[0] or `from` (if specified in truffle network), which is also
+    deployer. This account controls everything.
 2.  Modify `config.js` as you wish to deploy with custom smart contract parameters.
 3.  Everything is deployed and set up. Commitment contract should be ready to go after deployment.
-4. Fixtures will be deployed in test mode.
+4.  Fixtures will be deployed in test mode.
 
 **Special networks**
 
-1.  *simulated_live* will be deployed as live network but is intended to be used against testrpc.
+1.  _simulated_live_ will be deployed as live network but is intended to be used against testrpc.
     Roles will be assigned to testrpc provided accounts. It is intended to test various
     administrative operations (like enabling/disabling transfers) before live deployment.
-2.  all networks ending with _test and _coverage_ will not deploy anything. They are intended to be used by test runner
+2.  all networks ending with _test and \_coverage_ will not deploy anything. They are intended to be
+    used by test runner
 
 ```
 yarn truffle migrate --reset --network simulated_live
 ```
 
-Below are important networks from `truffle.js`
-|Network|Mode|Description|
-|-------|----|-----------|
-|localhost|test|will attach to anything at port 8545 and set deployer to `0x8a194c13308326173423119f8dcb785ce14c732b`, intended to run with `yarn testrpc` or with parity instant seal|
-|inprocess|test|will use in-process `testrpc` so you do not have to run anything|
-|nf_private|test|will deploy to neufund private network where `0x8a194c13308326173423119f8dcb785ce14c732b` is the deployer|
+Below are important networks from `truffle.js` |Network|Mode|Description| |-------|----|-----------|
+|localhost|test|will attach to anything at port 8545 and set deployer to
+`0x8a194c13308326173423119f8dcb785ce14c732b`, intended to run with `yarn testrpc` or with parity
+instant seal| |inprocess|test|will use in-process `testrpc` so you do not have to run anything|
+|nf_private|test|will deploy to neufund private network where
+`0x8a194c13308326173423119f8dcb785ce14c732b` is the deployer|
 
 ### Deployed contracts (2_deploy_contracts.js)
 
@@ -467,4 +477,3 @@ immediately attached.
 
 Whitelist may be set during `Before` state of `Commitment` contract. This is not part of deployment
 script in this repo. Setting whitelist requires `WHITELIST ADMIN` role.
-

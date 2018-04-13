@@ -20,4 +20,4 @@ export default {
   [knownInterfaces.icbmEtherToken]: deployableArtifacts.ICBM_ETHER_TOKEN,
   [knownInterfaces.icbmCommitment]: deployableArtifacts.ICBM_COMMITMENT,
   [knownInterfaces.commitmentInterface]: "",
-}
+};

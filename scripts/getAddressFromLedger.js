@@ -3,7 +3,7 @@
  * Simple script to get address from ledger using different derivation paths
  * usage: yarn ledgeraddresss "44'/60'/0'/1" if you leave it empty you will get default path
  */
-// eslint-disable-next-line import/no-extraneous-dependencies
+// eslint-disable-next-line
 const ledger = require("ledgerco");
 
 const TIMEOUT = 5 * 1000;

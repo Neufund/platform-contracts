@@ -51,9 +51,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     };
     const path = join(__dirname, "../build/meta.json");
     fs.writeFile(path, JSON.stringify(meta), err => {
-        if (err) throw new Error(err)
-      }
-    );
+      if (err) throw new Error(err);
+    });
 
     console.log("---------------------------------------------");
     console.log(`Universe is ${universe.address}`);

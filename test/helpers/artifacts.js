@@ -13,4 +13,4 @@ export default {
   EURO_TOKEN_CONTROLLER: "EuroTokenController",
   IDENTITY_REGISTRY: "IdentityRegistry",
   SIMPLE_EXCHANGE: "SimpleExchange",
-}
+};

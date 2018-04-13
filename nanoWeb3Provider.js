@@ -1,5 +1,6 @@
 const Web3 = require("web3");
 const ProviderEngine = require("web3-provider-engine");
+// eslint-disable-next-line
 const LedgerWalletSubproviderFactory = require("ledger-wallet-provider");
 const Web3Subprovider = require("web3-provider-engine/subproviders/web3.js");
 const FilterSubprovider = require("web3-provider-engine/subproviders/filters.js");
