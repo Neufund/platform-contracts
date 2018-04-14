@@ -98,12 +98,16 @@ contract EtherToken is
     /// @param sendTo address to which send total amount
     /// @param amount total amount to withdraw and send
     /// @dev function is payable and is meant to withdraw funds on accounts balance and token in single transaction
+    /// @dev BEWARE that msg.sender of the funds is Ether Token contract not, simple account calling it.
+    /// @dev  when sent to smart conctract funds may be lost, so this is prevented below
     function withdrawAndSend(address sendTo, uint256 amount)
         payable
         public
     {
         // must send at least what is in msg.value to being another deposit function
         require(amount >= msg.value);
+        // must send to simple address
+        require(!isContract(sendTo));
         if (amount > msg.value) {
             uint256 withdrawRemainder = amount - msg.value;
             withdrawPrivate(withdrawRemainder);
