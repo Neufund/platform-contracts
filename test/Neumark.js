@@ -3,16 +3,17 @@ import EvmError from "./helpers/EVMThrow";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { EVERYONE } from "./helpers/triState";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 import {
   basicTokenTests,
   standardTokenTests,
   erc677TokenTests,
   deployTestErc677Callback,
+  deployTestErc223Callback,
   erc223TokenTests,
   expectTransferEvent,
-  ZERO_ADDRESS
+  ZERO_ADDRESS,
 } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
 import { parseNmkDataset } from "./helpers/dataset";
@@ -29,21 +30,13 @@ const NMK_DECIMALS = new BigNumber(10).toPower(18);
 
 contract(
   "Neumark",
-  ([
-    deployer,
-    other,
-    platformRepresentative,
-    transferAdmin,
-    issuer1,
-    issuer2,
-    ...accounts
-  ]) => {
+  ([deployer, other, platformRepresentative, transferAdmin, issuer1, issuer2, ...accounts]) => {
     let rbap;
     let forkArbiter;
     let neumark;
 
     beforeEach(async () => {
-      rbap = await createAccessPolicy([
+      rbap = await deployAccessControl([
         { subject: transferAdmin, role: roles.transferAdmin },
         { subject: deployer, role: roles.snapshotCreator },
         { subject: issuer1, role: roles.neumarkIssuer },
@@ -52,14 +45,14 @@ contract(
         // { subject: issuer2, role: roles.neumarkBurner },
         {
           subject: platformRepresentative,
-          role: roles.platformOperatorRepresentative
-        }
+          role: roles.platformOperatorRepresentative,
+        },
       ]);
       forkArbiter = await EthereumForkArbiter.new(rbap.address, {
-        from: deployer
+        from: deployer,
       });
       neumark = await Neumark.new(rbap.address, forkArbiter.address, {
-        from: deployer
+        from: deployer,
       });
       await neumark.amendAgreement(AGREEMENT, { from: platformRepresentative });
     });
@@ -92,17 +85,17 @@ contract(
     async function initNeumarkBalance(initialBalanceNmk, distributeTo) {
       // crude way to get exact Nmk balance
       await neumark.issueForEuro(initialBalanceNmk.mul(6.5).round(), {
-        from: issuer1
+        from: issuer1,
       });
       const balance = await neumark.balanceOf.call(issuer1);
       await neumark.burn.uint256(balance.sub(initialBalanceNmk), {
-        from: issuer1
+        from: issuer1,
       });
       // every ulp counts
       const finalBalance = await neumark.balanceOf.call(issuer1);
       expect(finalBalance).to.be.bignumber.eq(initialBalanceNmk);
       await neumark.distribute(distributeTo, initialBalanceNmk, {
-        from: issuer1
+        from: issuer1,
       });
     }
 
@@ -126,11 +119,9 @@ contract(
       });
 
       it("should have curve parameters", async () => {
-        expect(await neumark.neumarkCap.call()).to.be.bignumber.eq(
-          NMK_DECIMALS.mul(1500000000)
-        );
+        expect(await neumark.neumarkCap.call()).to.be.bignumber.eq(NMK_DECIMALS.mul(1500000000));
         expect(await neumark.initialRewardFraction.call()).to.be.bignumber.eq(
-          NMK_DECIMALS.mul(6.5)
+          NMK_DECIMALS.mul(6.5),
         );
       });
 
@@ -139,16 +130,11 @@ contract(
       });
 
       it("should have transfers enabled for NEUMARK_ISSUER after deployment", async () => {
-        assert.equal(
-          await neumark.transferEnabled.call({ from: issuer1 }),
-          false
-        );
+        assert.equal(await neumark.transferEnabled.call({ from: issuer1 }), false);
       });
 
       it("should reject to enable transfer without permission", async () => {
-        await expect(
-          neumark.enableTransfer(true, { from: other })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.enableTransfer(true, { from: other })).to.be.rejectedWith(EvmError);
       });
 
       it("should start at zero", async () => {
@@ -162,7 +148,7 @@ contract(
 
         const expectedr1EUR = EUR_DECIMALS.mul(100);
         const r1 = await neumark.issueForEuro(expectedr1EUR, {
-          from: issuer1
+          from: issuer1,
         });
         await prettyPrintGasCost("Issue", r1);
         const expectedr1NMK = new web3.BigNumber("649999859166687009257");
@@ -170,15 +156,13 @@ contract(
         expect(r1NMK.sub(expectedr1NMK).abs()).to.be.bignumber.lessThan(2);
         expectTransferEvent(r1, ZERO_ADDRESS, issuer1, r1NMK);
         expectNeumarksIssuedEvent(r1, issuer1, expectedr1EUR, r1NMK);
-        expect(await neumark.totalEuroUlps.call()).to.be.bignumber.eq(
-          expectedr1EUR
-        );
+        expect(await neumark.totalEuroUlps.call()).to.be.bignumber.eq(expectedr1EUR);
         expect(await neumark.totalSupply.call()).to.be.bignumber.eq(r1NMK);
         expect(await neumark.balanceOf.call(issuer1)).to.be.bignumber.eq(r1NMK);
 
         const expectedr2EUR = EUR_DECIMALS.mul(900);
         const r2 = await neumark.issueForEuro(expectedr2EUR, {
-          from: issuer2
+          from: issuer2,
         });
         const expectedr2NMK = new web3.BigNumber("5849986057520322227964");
         const expectedTotalNMK = new web3.BigNumber("6499985916687009237221");
@@ -187,11 +171,9 @@ contract(
         expectTransferEvent(r2, ZERO_ADDRESS, issuer2, r2NMK);
         expectNeumarksIssuedEvent(r2, issuer2, expectedr2EUR, r2NMK);
         expect(await neumark.totalEuroUlps.call()).to.be.bignumber.eq(
-          expectedr2EUR.add(expectedr1EUR)
+          expectedr2EUR.add(expectedr1EUR),
         );
-        expect(await neumark.totalSupply.call()).to.be.bignumber.eq(
-          expectedTotalNMK
-        );
+        expect(await neumark.totalSupply.call()).to.be.bignumber.eq(expectedTotalNMK);
         expect(await neumark.balanceOf.call(issuer2)).to.be.bignumber.eq(r2NMK);
       });
 
@@ -208,24 +190,15 @@ contract(
         const toBurn = neumarks.div(3).round();
         const toBurnUlps = NMK_DECIMALS.mul(toBurn);
         const burned = await neumark.burn.uint256(toBurnUlps, {
-          from: issuer1
+          from: issuer1,
         });
         await prettyPrintGasCost("Burn", burned);
         expect(
-          (await neumark.balanceOf.call(issuer1)).div(NMK_DECIMALS).floor()
+          (await neumark.balanceOf.call(issuer1)).div(NMK_DECIMALS).floor(),
         ).to.be.bignumber.eq(neumarks.sub(toBurn));
-        const rollbackedEurUlps = eventValue(
-          burned,
-          "LogNeumarksBurned",
-          "euroUlps"
-        );
+        const rollbackedEurUlps = eventValue(burned, "LogNeumarksBurned", "euroUlps");
         expectTransferEvent(burned, issuer1, ZERO_ADDRESS, toBurnUlps);
-        expectNeumarksBurnedEvent(
-          burned,
-          issuer1,
-          rollbackedEurUlps,
-          toBurnUlps
-        );
+        expectNeumarksBurnedEvent(burned, issuer1, rollbackedEurUlps, toBurnUlps);
       });
 
       it("should issue same amount in multiple issuances", async () => {
@@ -241,7 +214,7 @@ contract(
         const p1NMK = eventValue(tx, "LogNeumarksIssued", "neumarkUlps");
         // issue for 100 wei
         tx = await neumark.issueForEuro(new BigNumber(100).mul(eurRate), {
-          from: issuer1
+          from: issuer1,
         });
         const p2NMK = eventValue(tx, "LogNeumarksIssued", "neumarkUlps");
         expect(totNMK).to.be.bignumber.equal(p1NMK.plus(p2NMK));
@@ -249,9 +222,7 @@ contract(
 
       async function expectIncrementalInverseWalk(expectedPoints) {
         // eslint-disable-next-line no-console
-        console.log(
-          `will compute ${expectedPoints.length} inverses. stand by...`
-        );
+        console.log(`will compute ${expectedPoints.length} inverses. stand by...`);
 
         const initialEurUlps = new BigNumber("100000000000").mul(EUR_DECIMALS);
         await neumark.issueForEuro(initialEurUlps, { from: issuer1 });
@@ -264,13 +235,9 @@ contract(
             // if anything to burn
             const expectedEurDeltaUlps = totalEuroUlps.sub(EUR_DECIMALS.mul(e));
             const burnTx = await neumark.burn.uint256(burnNmk, {
-              from: issuer1
+              from: issuer1,
             });
-            const actualEurDeltaUlps = eventValue(
-              burnTx,
-              "LogNeumarksBurned",
-              "euroUlps"
-            );
+            const actualEurDeltaUlps = eventValue(burnTx, "LogNeumarksBurned", "euroUlps");
             const expectedEurDelta = expectedEurDeltaUlps.div(EUR_DECIMALS);
             const actualEurDelta = actualEurDeltaUlps.div(EUR_DECIMALS);
             const roundingPrecision = e.gte("900000000") ? 4 : 10;
@@ -278,14 +245,14 @@ contract(
             // console.log(`should burn ${burnNmk.toNumber()} with expected Euro delta ${expectedEurDelta.toNumber()}, got ${actualEurDelta.toNumber()} diff ${expectedEurDelta.sub(actualEurDelta).toNumber()}`);
             expect(
               actualEurDelta.round(roundingPrecision, 4),
-              `Invalid inverse at NEU ${n} burning NEU ${burnNmk} at ${e.toNumber()}`
+              `Invalid inverse at NEU ${n} burning NEU ${burnNmk} at ${e.toNumber()}`,
             ).to.be.bignumber.eq(expectedEurDelta.round(roundingPrecision, 4));
 
             const newTotalEuroUlps = await neumark.totalEuroUlps.call();
             // const newTotalNmk = await neumark.totalSupply.call();
             const totalEuro = newTotalEuroUlps.div(EUR_DECIMALS);
             expect(totalEuro.round(roundingPrecision, 4)).to.be.bignumber.eq(
-              e.round(roundingPrecision, 4)
+              e.round(roundingPrecision, 4),
             );
 
             // check inverse against curve
@@ -305,16 +272,16 @@ contract(
         expect(totalEuroUlps).to.be.bignumber.eq(0);
       }
 
-      it("should burn all neumarks incrementally integer range", async () => {
+      it.skip("should burn all neumarks incrementally integer range", async () => {
         const expectedCurvePointsAtIntegers = parseNmkDataset(
-          `${__dirname}/data/expectedCurvePointsAtIntegers.csv`
+          `${__dirname}/data/expectedCurvePointsAtIntegers.csv`,
         );
         await expectIncrementalInverseWalk(expectedCurvePointsAtIntegers);
       });
 
-      it("should burn all neumarks incrementally random range", async () => {
+      it.skip("should burn all neumarks incrementally random range", async () => {
         const expectedCurvePointsAtRandom = parseNmkDataset(
-          `${__dirname}/data/expectedCurvePointsAtRandom.csv`
+          `${__dirname}/data/expectedCurvePointsAtRandom.csv`,
         );
         await expectIncrementalInverseWalk(expectedCurvePointsAtRandom);
       });
@@ -342,24 +309,16 @@ contract(
       });
 
       it("should reject to burn if above balance", async () => {
-        await expect(
-          neumark.burn.uint256(1, { from: issuer1 })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.burn.uint256(1, { from: issuer1 })).to.be.rejectedWith(EvmError);
         await neumark.issueForEuro(2, { from: issuer1 });
-        await expect(
-          neumark.burn.uint256(13, { from: issuer1 })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.burn.uint256(13, { from: issuer1 })).to.be.rejectedWith(EvmError);
         await neumark.burn.uint256(12, { from: issuer1 });
       });
 
       it("should reject to burn with range if above balance", async () => {
-        await expect(
-          neumark.burn(1, 0, 2, { from: issuer1 })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.burn(1, 0, 2, { from: issuer1 })).to.be.rejectedWith(EvmError);
         await neumark.issueForEuro(2, { from: issuer1 });
-        await expect(
-          neumark.burn(13, 0, 3, { from: issuer1 })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.burn(13, 0, 3, { from: issuer1 })).to.be.rejectedWith(EvmError);
         await neumark.burn(12, 0, 3, { from: issuer1 });
       });
 
@@ -368,56 +327,44 @@ contract(
         // 5000000,3.21504457765812047556165399769811884e7
         const totalEuroUlps = EUR_DECIMALS.mul(5000000);
         const expectedInverseEurDeltaUlps = EUR_DECIMALS.mul(5000000 - 4000000);
-        const afterBurnNmk = new BigNumber(
-          "2.57759629704150400556252848464617472e7"
-        );
+        const afterBurnNmk = new BigNumber("2.57759629704150400556252848464617472e7");
         await neumark.issueForEuro(totalEuroUlps, { from: issuer1 });
         const expectedInverseEurUlps = await neumark.cumulativeInverse(
           afterBurnNmk.mul(NMK_DECIMALS),
           0,
-          totalEuroUlps
+          totalEuroUlps,
         );
         // calculate incremental nmk burn
-        const burnNmk = new BigNumber(
-          "3.21504457765812047556165399769811884e7"
-        ).sub(afterBurnNmk);
+        const burnNmk = new BigNumber("3.21504457765812047556165399769811884e7").sub(afterBurnNmk);
         const burnNmkUlps = NMK_DECIMALS.mul(burnNmk);
         const burnTx = await neumark.burn(
           burnNmkUlps,
           expectedInverseEurUlps.sub(1),
           expectedInverseEurUlps.add(1),
-          { from: issuer1 }
+          { from: issuer1 },
         );
-        const actualInverseEurDeltaUlps = totalEuroUlps.sub(
-          await neumark.totalEuroUlps.call()
+        const actualInverseEurDeltaUlps = totalEuroUlps.sub(await neumark.totalEuroUlps.call());
+        expect(actualInverseEurDeltaUlps.sub(expectedInverseEurDeltaUlps).abs()).to.be.bignumber.lt(
+          2,
         );
-        expect(
-          actualInverseEurDeltaUlps.sub(expectedInverseEurDeltaUlps).abs()
-        ).to.be.bignumber.lt(2);
         await prettyPrintGasCost("Burned gas", burnTx);
       });
 
       it("should reject to issue Neumark on non-monotonic expansion", async () => {
-        const inverseEurUlps = new BigNumber(
-          "1.999999999999999999999000000e+27"
-        );
+        const inverseEurUlps = new BigNumber("1.999999999999999999999000000e+27");
         await neumark.issueForEuro(inverseEurUlps, { from: issuer1 });
         const delta = 50;
-        await expect(
-          neumark.issueForEuro(delta, { from: issuer1 })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.issueForEuro(delta, { from: issuer1 })).to.be.rejectedWith(EvmError);
       });
 
       it("should reject to burn Neumark on non-monotonic inverse", async () => {
-        const inverseEurUlps = new BigNumber(
-          "1.999999999999999999999000000e+27"
-        );
+        const inverseEurUlps = new BigNumber("1.999999999999999999999000000e+27");
         await neumark.issueForEuro(inverseEurUlps, { from: issuer1 });
         const newEurUlps = new BigNumber("1.999999999999999999999000050e+27");
         const deltaNmk = 3;
         // here we point to non-monotonic point
         await expect(
-          neumark.burn(deltaNmk, newEurUlps, newEurUlps, { from: issuer1 })
+          neumark.burn(deltaNmk, newEurUlps, newEurUlps, { from: issuer1 }),
         ).to.be.rejectedWith(EvmError);
         // for wide binary search, it is much less probable to hit such point, below will pass
         await neumark.burn.uint256(deltaNmk, { from: issuer1 });
@@ -426,9 +373,7 @@ contract(
       it("should reject to issue Neumark for not allowed address", async () => {
         const euroUlps = EUR_DECIMALS.mul(1000000);
         // replace 'other' with 'issuer1' for this test to fails
-        await expect(
-          neumark.issueForEuro(euroUlps, { from: other })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.issueForEuro(euroUlps, { from: other })).to.be.rejectedWith(EvmError);
       });
 
       it("should reject to distribute Neumark when called without permission", async () => {
@@ -438,9 +383,9 @@ contract(
         // comment this line for this test to fail ....
         await neumark.distribute(other, totNMK, { from: issuer1 });
         // and replace 'other' with 'issuer1' for this test to fail
-        await expect(
-          neumark.distribute(accounts[0], totNMK, { from: other })
-        ).to.be.rejectedWith(EvmError);
+        await expect(neumark.distribute(accounts[0], totNMK, { from: other })).to.be.rejectedWith(
+          EvmError,
+        );
       });
 
       it("should transfer Neumarks", async () => {
@@ -452,7 +397,7 @@ contract(
         await neumark.enableTransfer(true, { from: transferAdmin });
 
         const tx = await neumark.transfer(accounts[1], amount, {
-          from: accounts[0]
+          from: accounts[0],
         });
         await prettyPrintGasCost("Transfer", tx);
 
@@ -465,7 +410,7 @@ contract(
 
       it("should accept agreement on issue Neumarks", async () => {
         const tx = await neumark.issueForEuro(EUR_DECIMALS.mul(100), {
-          from: issuer1
+          from: issuer1,
         });
 
         const agreements = tx.logs
@@ -508,7 +453,7 @@ contract(
 
         // 'from' address should be signed up here, this is how distribute differs from transfer
         const tx = await neumark.distribute(from, amount, {
-          from: issuer1
+          from: issuer1,
         });
         const agreements = tx.logs
           .filter(e => e.event === "LogAgreementAccepted")
@@ -584,13 +529,7 @@ contract(
         await neumark.enableTransfer(true, { from: transferAdmin });
       });
 
-      standardTokenTests(
-        getToken,
-        accounts[0],
-        accounts[1],
-        accounts[2],
-        initialBalanceNmk
-      );
+      standardTokenTests(getToken, accounts[0], accounts[1], accounts[2], initialBalanceNmk);
     });
 
     describe("IERC677Token tests", () => {
@@ -606,25 +545,23 @@ contract(
         await neumark.enableTransfer(true, { from: transferAdmin });
       });
 
-      erc677TokenTests(
-        getToken,
-        getTestErc667cb,
-        accounts[0],
-        initialBalanceNmk
-      );
+      erc677TokenTests(getToken, getTestErc667cb, accounts[0], initialBalanceNmk);
     });
 
     describe("IERC223Token tests", () => {
       const initialBalanceNmk = NMK_DECIMALS.mul(91279837.398827).round();
       const getToken = () => neumark;
+      let erc223cb;
+      const getTestErc223cb = () => erc223cb;
 
       beforeEach(async () => {
+        erc223cb = await deployTestErc223Callback(false);
         await initNeumarkBalance(initialBalanceNmk, accounts[0]);
         // enable transfers for token tests
         await neumark.enableTransfer(true, { from: transferAdmin });
       });
 
-      erc223TokenTests(getToken, accounts[0], accounts[1], initialBalanceNmk);
+      erc223TokenTests(getToken, getTestErc223cb, accounts[0], accounts[1], initialBalanceNmk);
     });
 
     describe("ITokenSnapshots tests", () => {
@@ -649,8 +586,8 @@ contract(
         advanceSnapshotId,
         accounts[0],
         accounts[1],
-        accounts[2]
+        accounts[2],
       );
     });
-  }
+  },
 );

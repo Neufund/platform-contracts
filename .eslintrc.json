@@ -7,15 +7,11 @@
     "no-await-in-loop": ["off"],
     "no-use-before-define": ["error", { "functions": false }],
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_$" }],
-    "no-restricted-syntax": [
-      "error",
-      "ForInStatement",
-      "LabeledStatement",
-      "WithStatement"
-    ],
+    "no-restricted-syntax": ["error", "ForInStatement", "LabeledStatement", "WithStatement"],
     "no-underscore-dangle": ["off"],
     "import/prefer-default-export": ["off"],
-    "mocha/no-exclusive-tests": "error"
+    "mocha/no-exclusive-tests": "error",
+    "max-len": ["error", { "code": 100, "ignoreComments": true, "ignoreStrings": true }]
   },
   "env": {
     "node": true,

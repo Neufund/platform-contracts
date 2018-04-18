@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './IAccessPolicy.sol';
+import "./IAccessPolicy.sol";
 
 
 /// @title enables access control in implementing contract

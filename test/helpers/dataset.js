@@ -10,9 +10,6 @@ export function parseNmkDataset(fileName) {
 
   return lines.map(line => {
     const eurNmk = line.split(",");
-    return [
-      new web3.BigNumber(eurNmk[0]).round(18, 4),
-      new web3.BigNumber(eurNmk[1]).round(18, 4)
-    ];
+    return [new web3.BigNumber(eurNmk[0]).round(18, 4), new web3.BigNumber(eurNmk[1]).round(18, 4)];
   });
 }

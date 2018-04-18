@@ -1,29 +1,26 @@
 require("babel-register");
-const getConfig = require("./config").default;
+const getConfig = require("./config").getConfig;
 const confirm = require("node-ask").confirm;
 const moment = require("moment");
 
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
-const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
-const Neumark = artifacts.require("Neumark");
-const LockedAccount = artifacts.require("LockedAccount");
-const EtherToken = artifacts.require("EtherToken");
-const EuroToken = artifacts.require("EuroToken");
-const Commitment = artifacts.require("Commitment");
-
 module.exports = function deployContracts(deployer, network, accounts) {
-  // do not deploy testing network
-  if (network.endsWith("_test") || network === "coverage") return;
   const CONFIG = getConfig(web3, network, accounts);
+  // do not deploy testing network
+  if (CONFIG.shouldSkipDeployment) return;
+
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
+  const EthereumForkArbiter = artifacts.require(CONFIG.artifacts.ETHEREUM_FORK_ARBITER);
+  const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
+  const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
+  const ICBMEtherToken = artifacts.require(CONFIG.artifacts.ICBM_ETHER_TOKEN);
+  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
+  const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
+
   console.log("----------------------------------");
   console.log("Deployment parameters:");
   console.log(CONFIG);
   const startDate = moment.unix(CONFIG.START_DATE);
-  console.log(
-    `START_DATE is ${startDate.format()} (local) ${startDate
-      .utc()
-      .format()} (UTC)`
-  );
+  console.log(`START_DATE is ${startDate.format()} (local) ${startDate.utc().format()} (UTC)`);
   console.log("----------------------------------");
 
   deployer.then(async () => {
@@ -32,13 +29,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log(`Commitment will start in less then 24h. `);
     }
     console.log(`network is ${network}`);
-    if (network.endsWith("_live")) {
+    if (CONFIG.isLiveDeployment) {
       console.log("LIVE DEPLOYMENT");
+      if (!await confirm("Are you sure you want to deploy? [y/n] ")) {
+        throw new Error("Aborting!");
+      }
     }
-    if (!await confirm("Are you sure you want to deploy? [y/n] ")) {
-      throw new Error("Aborting!");
-    }
-
     console.log("AccessPolicy deployment...");
     await deployer.deploy(RoleBasedAccessPolicy);
     const accessPolicy = await RoleBasedAccessPolicy.deployed();
@@ -48,44 +44,40 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const ethereumForkArbiter = await EthereumForkArbiter.deployed();
 
     console.log("Neumark deploying...");
-    await deployer.deploy(
-      Neumark,
-      accessPolicy.address,
-      ethereumForkArbiter.address
-    );
+    await deployer.deploy(Neumark, accessPolicy.address, ethereumForkArbiter.address);
     const neumark = await Neumark.deployed();
 
-    console.log("EtherToken deploying...");
-    await deployer.deploy(EtherToken, accessPolicy.address);
-    const etherToken = await EtherToken.deployed();
+    console.log("ICBMEtherToken deploying...");
+    await deployer.deploy(ICBMEtherToken, accessPolicy.address);
+    const etherToken = await ICBMEtherToken.deployed();
 
-    console.log("EuroToken deploying...");
-    await deployer.deploy(EuroToken, accessPolicy.address);
-    const euroToken = await EuroToken.deployed();
+    console.log("ICBMEuroToken deploying...");
+    await deployer.deploy(ICBMEuroToken, accessPolicy.address);
+    const euroToken = await ICBMEuroToken.deployed();
 
-    console.log("LockedAccount(EtherToken) deploying...");
+    console.log("ICBMLockedAccount(ICBMEtherToken) deploying...");
     await deployer.deploy(
-      LockedAccount,
+      ICBMLockedAccount,
       accessPolicy.address,
       etherToken.address,
       neumark.address,
       CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       CONFIG.LOCK_DURATION,
-      CONFIG.PENALTY_FRACTION
+      CONFIG.PENALTY_FRACTION,
     );
-    const etherLock = await LockedAccount.deployed();
+    const etherLock = await ICBMLockedAccount.deployed();
 
-    console.log("LockedAccount(EuroToken) deploying...");
+    console.log("ICBMLockedAccount(ICBMEuroToken) deploying...");
     await deployer.deploy(
-      LockedAccount,
+      ICBMLockedAccount,
       accessPolicy.address,
       euroToken.address,
       neumark.address,
       CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       CONFIG.LOCK_DURATION,
-      CONFIG.PENALTY_FRACTION
+      CONFIG.PENALTY_FRACTION,
     );
-    const euroLock = await LockedAccount.deployed();
+    const euroLock = await ICBMLockedAccount.deployed();
 
     console.log("Commitment deploying...");
     await deployer.deploy(
@@ -101,14 +93,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       euroLock.address,
       CONFIG.CAP_EUR,
       CONFIG.MIN_TICKET_EUR,
-      CONFIG.ETH_EUR_FRACTION
+      CONFIG.ETH_EUR_FRACTION,
     );
-    const commitment = await Commitment.deployed();
-
-    console.log("Contracts deployed!");
-
-    console.log("----------------------------------");
-    console.log(`ICO contract: ${commitment.address}`);
-    console.log("----------------------------------");
   });
 };

@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import '../Neumark.sol';
+import "../Neumark.sol";
 
 
 contract TestNeumark is Neumark

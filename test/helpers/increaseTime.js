@@ -9,10 +9,8 @@ async function increaseTime(duration) {
       {
         jsonrpc: "2.0",
         method: "evm_increaseTime",
-        params: [
-          typeof duration === "object" ? duration.asSeconds() : duration
-        ],
-        id
+        params: [typeof duration === "object" ? duration.asSeconds() : duration],
+        id,
       },
       (err1, result) => {
         if (err1) {
@@ -26,11 +24,11 @@ async function increaseTime(duration) {
           {
             jsonrpc: "2.0",
             method: "evm_mine",
-            id: id + 1
+            id: id + 1,
           },
-          (err2, res) => (err2 ? reject(err2) : resolve(res))
+          (err2, res) => (err2 ? reject(err2) : resolve(res)),
         );
-      }
+      },
     );
   });
 }

@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../AccessControl/AccessControlled.sol';
-import '../AccessControl/RoleBasedAccessPolicy.sol';
+import "../AccessControl/AccessControlled.sol";
+import "../AccessControl/RoleBasedAccessPolicy.sol";
 
 
 contract TestAccessControlExampleRoles {

@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './ITokenSnapshots.sol';
+import "./ITokenSnapshots.sol";
 
 
 /// @title represents link between cloned and parent token

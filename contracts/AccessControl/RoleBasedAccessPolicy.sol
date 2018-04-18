@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import './IAccessPolicy.sol';
-import './IAccessControlled.sol';
-import './AccessControlled.sol';
-import '../Reclaimable.sol';
+import "./IAccessPolicy.sol";
+import "./IAccessControlled.sol";
+import "./AccessControlled.sol";
+import "../Reclaimable.sol";
 
 
 /// @title access policy based on Access Control Lists concept
@@ -52,12 +52,12 @@ contract RoleBasedAccessPolicy is
     /// @dev subject → role → object → allowed
     mapping (address =>
         mapping(bytes32 =>
-            mapping(address => TriState))) private _access;
+            mapping(address => TriState))) private _access; // solium-disable-line indentation
 
     /// @notice used to enumerate all users assigned to given role in object context
     /// @dev object → role → addresses
     mapping (address =>
-        mapping(bytes32 => address[])) private _accessList;
+        mapping(bytes32 => address[])) private _accessList; // solium-disable-line indentation
 
     ////////////////////////
     // Events

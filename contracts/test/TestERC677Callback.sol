@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../Standards/IERC677Token.sol';
-import '../Standards/IERC677Callback.sol';
+import "../Standards/IERC677Token.sol";
+import "../Standards/IERC677Callback.sol";
 
 
 contract TestERC677Callback is IERC677Callback {
@@ -16,7 +16,7 @@ contract TestERC677Callback is IERC677Callback {
     // Constructor
     ////////////////////////
     function TestERC677Callback() public {
-        _acceptedExtraData = sha3("");
+        _acceptedExtraData = keccak256("");
     }
 
     ////////////////////////
@@ -32,7 +32,7 @@ contract TestERC677Callback is IERC677Callback {
         returns (bool)
     {
         require(token == msg.sender);
-        require(sha3(data) == _acceptedExtraData);
+        require(keccak256(data) == _acceptedExtraData);
         bool success = IERC677Token(token).transferFrom(from, address(this), amount);
         require(success);
         return _returnOnCallback;
@@ -47,6 +47,6 @@ contract TestERC677Callback is IERC677Callback {
     function setAcceptedExtraData(bytes acceptedExtraData)
         public
     {
-        _acceptedExtraData = sha3(acceptedExtraData);
+        _acceptedExtraData = keccak256(acceptedExtraData);
     }
 }

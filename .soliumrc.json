@@ -1,22 +1,12 @@
 {
-  "custom-rules-filename": null,
+  "extends": "solium:recommended",
+  "plugins": ["security"],
   "rules": {
-    "imports-on-top": true,
-    "variable-declarations": true,
-    "array-declarations": true,
-    "operator-whitespace": true,
-    "lbrace": false,
-    "mixedcase": true,
-    "camelcase": true,
-    "uppercase": true,
-    "no-with": true,
-    "no-empty-blocks": false,
-    "no-unused-vars": true,
-    "double-quotes": true,
-    "blank-lines": true,
-    "indentation": true,
-    "whitespace": true,
-    "deprecated-suicide": true,
-    "pragma-on-top": true
+    "quotes": ["error", "double"],
+    "indentation": ["error", 4],
+    "emit": "off",
+    "security/no-inline-assembly": "off",
+    "security/no-block-members": "off",
+    "no-empty-blocks": "off"
   }
 }

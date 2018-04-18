@@ -1,7 +1,7 @@
 pragma solidity 0.4.15;
 
-import '../Standards/IERC223Token.sol';
-import '../Standards/IERC223Callback.sol';
+import "../Standards/IERC223Token.sol";
+import "../Standards/IERC223Callback.sol";
 
 
 contract TestERC223Callback is IERC223Callback {
@@ -17,24 +17,20 @@ contract TestERC223Callback is IERC223Callback {
     ////////////////////////
     // Constructor
     ////////////////////////
-    function TestERC223Callback() public {
+    function TestERC223FallbackCallback() public {
         // some "random" hash
-        _dataKeccak = sha3(address(this));
+        _dataKeccak = keccak256(address(this));
     }
 
     ////////////////////////
     // Public functions
     ////////////////////////
-    function onTokenTransfer(
-        address from,
-        uint256 amount,
-        bytes data
-    )
+    function tokenFallback(address from, uint256 amount, bytes data)
         public
     {
         _from = from;
         _amount = amount;
-        _dataKeccak = sha3(data);
+        _dataKeccak = keccak256(data);
     }
 
     function amount() constant public returns (uint256) {

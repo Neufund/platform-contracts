@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
-import './MTokenTransfer.sol';
-import './MTokenAllowanceController.sol';
-import '../../Standards/IERC20Allowance.sol';
-import '../../Standards/IERC677Token.sol';
-import '../../Standards/IERC677Callback.sol';
+import "./MTokenTransfer.sol";
+import "./MTokenAllowanceController.sol";
+import "../../Standards/IERC20Allowance.sol";
+import "../../Standards/IERC677Token.sol";
+import "../../Standards/IERC677Callback.sol";
 
 
 /// @title token spending approval and transfer

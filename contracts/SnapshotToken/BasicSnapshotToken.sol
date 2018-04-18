@@ -1,10 +1,10 @@
 pragma solidity 0.4.15;
 
-import '../Standards/IBasicToken.sol';
-import '../Standards/IClonedTokenParent.sol';
-import '../Snapshot/Snapshot.sol';
-import './Helpers/MTokenTransfer.sol';
-import './Helpers/MTokenTransferController.sol';
+import "../Standards/IBasicToken.sol";
+import "../Standards/IClonedTokenParent.sol";
+import "../Snapshot/Snapshot.sol";
+import "./Helpers/MTokenTransfer.sol";
+import "./Helpers/MTokenTransferController.sol";
 
 
 /// @title token with snapshots and transfer functionality

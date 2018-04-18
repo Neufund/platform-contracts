@@ -13,8 +13,7 @@ const day = 24 * 3600;
 contract("Snapshot", () => {
   let snapshotTest;
 
-  const getSnapshotIdFromEvent = tx =>
-    eventValue(tx, "LogSnapshotCreated", "snapshotId");
+  const getSnapshotIdFromEvent = tx => eventValue(tx, "LogSnapshotCreated", "snapshotId");
 
   const createSnapshot = async () => {
     const r = await snapshotTest.createSnapshot();
@@ -64,9 +63,7 @@ contract("Snapshot", () => {
   });
 
   it("should initially return default when queried by snapshot id", async () => {
-    const day0 = await snapshotTest.snapshotAt.call(
-      (await latestTimestamp()) + 0 * day
-    );
+    const day0 = await snapshotTest.snapshotAt.call((await latestTimestamp()) + 0 * day);
     expect(await snapshotTest.getValueAt.call(day0, 41)).to.be.bignumber.eq(41);
   });
 
@@ -109,21 +106,11 @@ contract("Snapshot", () => {
     assert.isTrue(await snapshotTest.hasValueAt.call(middle.sub(1)));
     assert.isTrue(await snapshotTest.hasValueAt.call(middle));
     assert.isTrue(await snapshotTest.hasValueAt.call(after.sub(1)));
-    expect(
-      await snapshotTest.getValueAt.call(before.sub(1), 41)
-    ).to.be.bignumber.eq(41);
-    expect(await snapshotTest.getValueAt.call(before, 41)).to.be.bignumber.eq(
-      100
-    );
-    expect(
-      await snapshotTest.getValueAt.call(middle.sub(1), 41)
-    ).to.be.bignumber.eq(100);
-    expect(await snapshotTest.getValueAt.call(middle, 41)).to.be.bignumber.eq(
-      200
-    );
-    expect(
-      await snapshotTest.getValueAt.call(after.sub(1), 41)
-    ).to.be.bignumber.eq(200);
+    expect(await snapshotTest.getValueAt.call(before.sub(1), 41)).to.be.bignumber.eq(41);
+    expect(await snapshotTest.getValueAt.call(before, 41)).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(middle.sub(1), 41)).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(middle, 41)).to.be.bignumber.eq(200);
+    expect(await snapshotTest.getValueAt.call(after.sub(1), 41)).to.be.bignumber.eq(200);
   });
 
   it("should create daily snapshots", async () => {
@@ -148,33 +135,19 @@ contract("Snapshot", () => {
 
     const day3 = await snapshotTest.snapshotAt.call(currentTimestamp + 3 * day);
 
-    expect(
-      await snapshotTest.getValueAt.call(day0.sub(1), 41)
-    ).to.be.bignumber.eq(41);
-    expect(await snapshotTest.getValueAt.call(day0, 41)).to.be.bignumber.eq(
-      100
-    );
-    expect(await snapshotTest.getValueAt.call(day1, 41)).to.be.bignumber.eq(
-      200
-    );
-    expect(await snapshotTest.getValueAt.call(day2, 41)).to.be.bignumber.eq(
-      300
-    );
+    expect(await snapshotTest.getValueAt.call(day0.sub(1), 41)).to.be.bignumber.eq(41);
+    expect(await snapshotTest.getValueAt.call(day0, 41)).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(day1, 41)).to.be.bignumber.eq(200);
+    expect(await snapshotTest.getValueAt.call(day2, 41)).to.be.bignumber.eq(300);
     expect(await snapshotTest.getValue.call(41)).to.be.bignumber.eq(300);
-    await expect(snapshotTest.getValueAt.call(day3, 41)).to.be.rejectedWith(
-      EvmError
-    );
+    await expect(snapshotTest.getValueAt.call(day3, 41)).to.be.rejectedWith(EvmError);
   });
 
   it("should throw when queried in the future", async () => {
     const ct = await latestTimestamp();
     const day1 = await snapshotTest.snapshotAt.call(ct + 1 * day);
-    await expect(snapshotTest.getValueAt.call(day1, 41)).to.be.rejectedWith(
-      EvmError
-    );
-    await expect(snapshotTest.hasValueAt.call(day1)).to.be.rejectedWith(
-      EvmError
-    );
+    await expect(snapshotTest.getValueAt.call(day1, 41)).to.be.rejectedWith(EvmError);
+    await expect(snapshotTest.hasValueAt.call(day1)).to.be.rejectedWith(EvmError);
   });
 
   it("should not delete interim value when set to previous value", async () => {
@@ -231,10 +204,9 @@ contract("Snapshot", () => {
     }
     // eslint-disable-next-line no-console
     console.log(
-      `\tAverage searches ${avgIters /
-        (days.length * 2 ** 4)} vs theoretical O(log N) ${Math.log2(
-        days.length
-      )}`
+      `\tAverage searches ${avgIters / (days.length * 2 ** 4)} vs theoretical O(log N) ${Math.log2(
+        days.length,
+      )}`,
     );
   });
 
@@ -248,43 +220,29 @@ contract("Snapshot", () => {
     const daysMsb = new web3.BigNumber(2).pow(128);
     // make sure all boundaries crossed
     const expectedSnapshotId = day0.add(daysMsb.mul(simulatedDays));
-    expect(await snapshotTest.currentSnapshotId()).to.be.bignumber.eq(
-      expectedSnapshotId
-    );
+    expect(await snapshotTest.currentSnapshotId()).to.be.bignumber.eq(expectedSnapshotId);
   });
 
   it("should return value read between non consecutive snapshot ids", async () => {
-    const day0 = await snapshotTest.snapshotAt.call(
-      (await latestTimestamp()) + 0 * day
-    );
-    const day1 = await snapshotTest.snapshotAt.call(
-      (await latestTimestamp()) + 1 * day
-    );
+    const day0 = await snapshotTest.snapshotAt.call((await latestTimestamp()) + 0 * day);
+    const day1 = await snapshotTest.snapshotAt.call((await latestTimestamp()) + 1 * day);
 
     await snapshotTest.setValue(100);
     await increaseTime(moment.duration({ days: 1 }));
     await snapshotTest.setValue(200);
 
+    expect(await snapshotTest.getValueAt.call(day0.add(1), 41)).to.be.bignumber.eq(100);
     expect(
-      await snapshotTest.getValueAt.call(day0.add(1), 41)
+      await snapshotTest.getValueAt.call(day0.add(day1.sub(day0).div(2)), 41),
     ).to.be.bignumber.eq(100);
-    expect(
-      await snapshotTest.getValueAt.call(day0.add(day1.sub(day0).div(2)), 41)
-    ).to.be.bignumber.eq(100);
-    expect(
-      await snapshotTest.getValueAt.call(day1.sub(1), 41)
-    ).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(day1.sub(1), 41)).to.be.bignumber.eq(100);
   });
 
   it("should return value for snapshot ids after last physical entry was created", async () => {
-    const day0 = await snapshotTest.snapshotAt.call(
-      (await latestTimestamp()) + 0 * day
-    );
+    const day0 = await snapshotTest.snapshotAt.call((await latestTimestamp()) + 0 * day);
     await snapshotTest.setValue(100);
     await snapshotTest.createSnapshot();
-    expect(
-      await snapshotTest.getValueAt.call(day0.add(1), 41)
-    ).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(day0.add(1), 41)).to.be.bignumber.eq(100);
   });
 
   it("should correctly create snapshots around day boundary", async () => {
@@ -299,9 +257,7 @@ contract("Snapshot", () => {
     const befSnapshotId = getSnapshotIdFromEvent(befTx);
     const aftSnapshotId = getSnapshotIdFromEvent(aftTx);
     // should have 1 day difference
-    expect(aftSnapshotId.sub(befSnapshotId)).to.be.bignumber.eq(
-      new web3.BigNumber(2).pow(128)
-    );
+    expect(aftSnapshotId.sub(befSnapshotId)).to.be.bignumber.eq(new web3.BigNumber(2).pow(128));
   });
 
   it("should clone snapshot id", async () => {
@@ -321,17 +277,13 @@ contract("Snapshot", () => {
     const timestamp = Math.floor(new Date().getTime() / 1000);
     // remove day below for test to fail
     const prevDaySnapshotId = await snapshotTest.snapshotAt(timestamp - day);
-    await expect(TestSnapshot.new(prevDaySnapshotId)).to.be.rejectedWith(
-      EvmError
-    );
+    await expect(TestSnapshot.new(prevDaySnapshotId)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject clone for future day", async () => {
     const timestamp = Math.floor(new Date().getTime() / 1000);
     // remove day below for test to fail
     const nextDaySnapshotId = await snapshotTest.snapshotAt(timestamp + day);
-    await expect(TestSnapshot.new(nextDaySnapshotId)).to.be.rejectedWith(
-      EvmError
-    );
+    await expect(TestSnapshot.new(nextDaySnapshotId)).to.be.rejectedWith(EvmError);
   });
 });

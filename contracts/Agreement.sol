@@ -1,8 +1,8 @@
 pragma solidity 0.4.15;
 
-import './Standards/IEthereumForkArbiter.sol';
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
+import "./Standards/IEthereumForkArbiter.sol";
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
 
 
 /**

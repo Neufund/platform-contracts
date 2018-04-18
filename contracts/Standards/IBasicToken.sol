@@ -10,7 +10,8 @@ contract IBasicToken {
     event Transfer(
         address indexed from,
         address indexed to,
-        uint256 amount);
+        uint256 amount
+    );
 
     ////////////////////////
     // Public functions

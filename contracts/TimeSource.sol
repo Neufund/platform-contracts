@@ -4,7 +4,7 @@ pragma solidity 0.4.15;
 contract TimeSource {
 
     ////////////////////////
-    // Public functions
+    // Internal functions
     ////////////////////////
 
     function currentTime() internal constant returns (uint256) {

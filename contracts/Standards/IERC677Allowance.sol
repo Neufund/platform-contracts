@@ -1,6 +1,6 @@
 pragma solidity 0.4.15;
 
-import './IERC20Allowance.sol';
+import "./IERC20Allowance.sol";
 
 
 contract IERC677Allowance is IERC20Allowance {

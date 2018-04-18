@@ -1,9 +1,9 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
-import './Reclaimable.sol';
-import './Standards/IEthereumForkArbiter.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
+import "./Reclaimable.sol";
+import "./Standards/IEthereumForkArbiter.sol";
 
 
 contract EthereumForkArbiter is

@@ -1,13 +1,16 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './AccessRoles.sol';
-import './Agreement.sol';
-import './Snapshot/DailyAndSnapshotable.sol';
-import './SnapshotToken/Helpers/TokenMetadata.sol';
-import './SnapshotToken/StandardSnapshotToken.sol';
-import './NeumarkIssuanceCurve.sol';
-import './Reclaimable.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./AccessRoles.sol";
+import "./Agreement.sol";
+import "./Standards/IERC223Token.sol";
+import "./Standards/IERC223LegacyCallback.sol";
+import "./IsContract.sol";
+import "./Snapshot/DailyAndSnapshotable.sol";
+import "./SnapshotToken/Helpers/TokenMetadata.sol";
+import "./SnapshotToken/StandardSnapshotToken.sol";
+import "./NeumarkIssuanceCurve.sol";
+import "./Reclaimable.sol";
 
 
 contract Neumark is
@@ -17,8 +20,10 @@ contract Neumark is
     DailyAndSnapshotable,
     StandardSnapshotToken,
     TokenMetadata,
+    IERC223Token,
     NeumarkIssuanceCurve,
-    Reclaimable
+    Reclaimable,
+    IsContract
 {
 
     ////////////////////////
@@ -172,6 +177,26 @@ contract Neumark is
         returns (uint256 neumarkUlps)
     {
         return incremental(_totalEurUlps, euroUlps);
+    }
+
+    //
+    // Implements IERC223Token with IERC223Callback (onTokenTransfer) callback
+    //
+
+    // old implementation of ERC223 that was actual when ICBM was deployed
+    // as Neumark is already deployed this function keeps old behavior for testing
+    function transfer(address to, uint256 amount, bytes data)
+        public
+        returns (bool)
+    {
+        // it is necessary to point out implementation to be called
+        BasicSnapshotToken.mTransfer(msg.sender, to, amount);
+
+        // Notify the receiving contract.
+        if (isContract(to)) {
+            IERC223LegacyCallback(to).onTokenTransfer(msg.sender, amount, data);
+        }
+        return true;
     }
 
     ////////////////////////

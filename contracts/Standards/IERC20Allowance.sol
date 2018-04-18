@@ -10,7 +10,8 @@ contract IERC20Allowance {
     event Approval(
         address indexed owner,
         address indexed spender,
-        uint256 amount);
+        uint256 amount
+    );
 
     ////////////////////////
     // Public functions

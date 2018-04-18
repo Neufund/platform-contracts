@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import createAccessPolicy from "./helpers/createAccessPolicy";
+import { deployAccessControl } from "./helpers/deployContracts";
 import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
 import { promisify } from "./helpers/evmCommands";
@@ -12,9 +12,7 @@ contract("Reclaimable", ([deployer, reclaimer, other]) => {
   const RECLAIM_ETHER = "0x0";
 
   beforeEach(async () => {
-    const accessPolicy = await createAccessPolicy([
-      { subject: reclaimer, role: roles.reclaimer }
-    ]);
+    const accessPolicy = await deployAccessControl([{ subject: reclaimer, role: roles.reclaimer }]);
     reclaimable = await TestReclaimable.new(accessPolicy.address);
   });
 
@@ -54,9 +52,7 @@ contract("Reclaimable", ([deployer, reclaimer, other]) => {
     const amount = web3.toWei(1, "ether");
     await forceEther(reclaimable.address, amount, deployer);
     await expect(reclaimable.reclaim(RECLAIM_ETHER, { from: other })).to.revert;
-    await expect(reclaimable.reclaim(RECLAIM_ETHER, { from: deployer })).to
-      .revert;
-    await expect(reclaimable.reclaim(RECLAIM_ETHER, { from: reclaimer })).to.not
-      .revert;
+    await expect(reclaimable.reclaim(RECLAIM_ETHER, { from: deployer })).to.revert;
+    await expect(reclaimable.reclaim(RECLAIM_ETHER, { from: reclaimer })).to.not.revert;
   });
 });

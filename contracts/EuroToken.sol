@@ -1,23 +1,23 @@
 pragma solidity 0.4.15;
 
-import './AccessControl/AccessControlled.sol';
-import './Reclaimable.sol';
-import './SnapshotToken/Helpers/TokenMetadata.sol';
-import './Zeppelin/StandardToken.sol';
-import './MigrationSource.sol';
-import './EuroTokenMigrationTarget.sol';
+import "./AccessControl/AccessControlled.sol";
+import "./SnapshotToken/Helpers/TokenMetadata.sol";
+import "./Zeppelin/StandardToken.sol";
+import "./Standards/IERC223Token.sol";
+import "./Standards/IERC223Callback.sol";
+import "./Standards/ITokenController.sol";
+import "./IsContract.sol";
+import "./AccessRoles.sol";
 
 
-/// Simple implementation of EuroToken which is pegged 1:1 to certain off-chain
-/// pool of Euro. Balances of this token are intended to be migrated to final
-/// implementation that will be available later
 contract EuroToken is
     IERC677Token,
     AccessControlled,
     StandardToken,
     TokenMetadata,
-    MigrationSource,
-    Reclaimable
+    IERC223Token,
+    AccessRoles,
+    IsContract
 {
     ////////////////////////
     // Constants
@@ -33,18 +33,17 @@ contract EuroToken is
     // Mutable state
     ////////////////////////
 
-    // a list of addresses that are allowed to receive EUR-T
-    mapping(address => bool) private _allowedTransferTo;
-
-    // a list of of addresses that are allowed to send EUR-T
-    mapping(address => bool) private _allowedTransferFrom;
+    ITokenController private _tokenController;
 
     ////////////////////////
     // Events
     ////////////////////////
 
+    /// on each deposit (increase of supply) of EUR-T
+    /// 'by' indicates account that executed the deposit function for 'to' (typically bank connector)
     event LogDeposit(
         address indexed to,
+        address by,
         uint256 amount
     );
 
@@ -53,33 +52,34 @@ contract EuroToken is
         uint256 amount
     );
 
-    event LogAllowedFromAddress(
+    /// on destroying the tokens without withdraw (see `destroyTokens` function below)
+    event LogDestroy(
         address indexed from,
-        bool allowed
-    );
-
-    event LogAllowedToAddress(
-        address indexed to,
-        bool allowed
-    );
-
-    /// @notice migration was successful
-    event LogEuroTokenOwnerMigrated(
-        address indexed owner,
+        address by,
         uint256 amount
+    );
+
+    event ChangeTokenController(
+        address oldController,
+        address newController
     );
 
     ////////////////////////
     // Modifiers
     ////////////////////////
 
-    modifier onlyAllowedTransferFrom(address from) {
-        require(_allowedTransferFrom[from]);
+    modifier onlyIfTransferAllowed(address from, address to, uint256 amount) {
+        require(_tokenController.onTransfer(from, to, amount));
         _;
     }
 
-    modifier onlyAllowedTransferTo(address to) {
-        require(_allowedTransferTo[to]);
+    modifier onlyIfDepositAllowed(address to, uint256 amount) {
+        require(_tokenController.onGenerateTokens(to, amount));
+        _;
+    }
+
+    modifier onlyIfWithdrawAllowed(address from, uint256 amount) {
+        require(_tokenController.onDestroyTokens(from, amount));
         _;
     }
 
@@ -87,14 +87,17 @@ contract EuroToken is
     // Constructor
     ////////////////////////
 
-    function EuroToken(IAccessPolicy accessPolicy)
+    function EuroToken(
+        IAccessPolicy accessPolicy,
+        ITokenController tokenController
+    )
         AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
-        MigrationSource(accessPolicy, ROLE_EURT_DEPOSIT_MANAGER)
-        Reclaimable()
         public
     {
+        require(tokenController != ITokenController(0x0));
+        _tokenController = tokenController;
     }
 
     ////////////////////////
@@ -102,68 +105,62 @@ contract EuroToken is
     ////////////////////////
 
     /// @notice deposit 'amount' of EUR-T to address 'to'
-    /// @dev address 'to' is whitelisted as recipient of future transfers
-    /// @dev deposit may happen only in case of succesful KYC of recipient and validation of banking data
-    /// @dev which in this implementation is an off-chain responsibility of EURT_DEPOSIT_MANAGER
+    /// @dev deposit may happen only in case 'to' can receive transfer in token controller
+    ///     by default KYC is required to receive deposits
     function deposit(address to, uint256 amount)
         public
         only(ROLE_EURT_DEPOSIT_MANAGER)
-        returns (bool)
+        onlyIfDepositAllowed(to, amount)
     {
         require(to != address(0));
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
-        setAllowedTransferTo(to, true);
-        LogDeposit(to, amount);
+        LogDeposit(to, msg.sender, amount);
         Transfer(address(0), to, amount);
-        return true;
     }
 
     /// @notice withdraws 'amount' of EUR-T by burning required amount and providing a proof of whithdrawal
-    /// @dev proof is provided in form of log entry on which EURT_DEPOSIT_MANAGER
-    /// @dev will act off-chain to return required Euro amount to EUR-T holder
+    /// @dev proof is provided in form of log entry. based on that proof backend will make a bank transfer
+    ///     by default controller will check the following: KYC and existence of working bank account
     function withdraw(uint256 amount)
+        onlyIfWithdrawAllowed(msg.sender, amount)
         public
     {
-        require(_balances[msg.sender] >= amount);
-        _balances[msg.sender] = sub(_balances[msg.sender], amount);
-        _totalSupply = sub(_totalSupply, amount);
+        destroyTokensPrivate(msg.sender, amount);
         LogWithdrawal(msg.sender, amount);
-        Transfer(msg.sender, address(0), amount);
     }
 
-    /// @notice enables or disables address to be receipient of EUR-T
-    function setAllowedTransferTo(address to, bool allowed)
+    /// @notice this method allows to destroy EUR-T belonging to any account
+    ///     note that EURO is fiat currency and is not trustless, EUR-T is also
+    ///     just internal currency of Neufund platform, not general purpose stable coin
+    ///     we need to be able to destroy EUR-T if ordered by authorities
+    function destroy(address owner, uint256 amount)
+        only(ROLE_EURT_LEGAL_MANAGER)
         public
-        only(ROLE_EURT_DEPOSIT_MANAGER)
     {
-        _allowedTransferTo[to] = allowed;
-        LogAllowedToAddress(to, allowed);
+        destroyTokensPrivate(owner, amount);
+        LogDestroy(owner, msg.sender, amount);
     }
 
-    /// @notice enables or disables address to be sender of EUR-T
-    function setAllowedTransferFrom(address from, bool allowed)
+    //
+    // Controlls the controller
+    //
+
+    function changeTokenController(ITokenController newController)
+        only(ROLE_EURT_LEGAL_MANAGER)
         public
-        only(ROLE_EURT_DEPOSIT_MANAGER)
     {
-        _allowedTransferFrom[from] = allowed;
-        LogAllowedFromAddress(from, allowed);
+        require(newController != ITokenController(0x0));
+        _tokenController = newController;
+        ChangeTokenController(_tokenController, newController);
     }
 
-    function allowedTransferTo(address to)
-        public
-        constant
-        returns (bool)
-    {
-        return _allowedTransferTo[to];
-    }
-
-    function allowedTransferFrom(address from)
+    function tokenController()
         public
         constant
-        returns (bool)
+        returns (ITokenController)
     {
-        return _allowedTransferFrom[from];
+        return _tokenController;
     }
 
     //
@@ -172,8 +169,7 @@ contract EuroToken is
 
     function transfer(address to, uint256 amount)
         public
-        onlyAllowedTransferFrom(msg.sender)
-        onlyAllowedTransferTo(to)
+        onlyIfTransferAllowed(msg.sender, to, amount)
         returns (bool success)
     {
         return BasicToken.transfer(to, amount);
@@ -184,34 +180,47 @@ contract EuroToken is
     ///  to transfer. 'to' address requires standard transfer to permission
     function transferFrom(address from, address to, uint256 amount)
         public
-        onlyAllowedTransferFrom(msg.sender)
-        onlyAllowedTransferTo(to)
+        onlyIfTransferAllowed(msg.sender, to, amount)
         returns (bool success)
     {
+        // this is a kind of hack that allows special brokers to always have allowance to transfer
+        // we'll use it to purchase small amount of ether by simple exchange
+        if (_tokenController.hasPermanentAllowance(msg.sender, amount)) {
+            transferInternal(from, to, amount);
+            return true;
+        }
         return StandardToken.transferFrom(from, to, amount);
     }
 
     //
-    // Overrides migration source
+    // Implements IERC223Token
     //
 
-    function migrate()
+    function transfer(address to, uint256 amount, bytes data)
         public
-        onlyMigrationEnabled()
-        onlyAllowedTransferTo(msg.sender)
+        onlyIfTransferAllowed(msg.sender, to, amount)
+        returns (bool success)
     {
-        // burn deposit
-        uint256 amount = _balances[msg.sender];
-        if (amount > 0) {
-            _balances[msg.sender] = 0;
-            _totalSupply = sub(_totalSupply, amount);
+        transferInternal(msg.sender, to, amount);
+
+        // Notify the receiving contract.
+        if (isContract(to)) {
+            // in case of re-entry (1) transfer is done (2) msg.sender is different
+            IERC223Callback(to).tokenFallback(msg.sender, amount, data);
         }
-        // remove all transfer permissions
-        _allowedTransferTo[msg.sender] = false;
-        _allowedTransferFrom[msg.sender] = false;
-        // migrate to
-        EuroTokenMigrationTarget(_migration).migrateEuroTokenOwner(msg.sender, amount);
-        // set event
-        LogEuroTokenOwnerMigrated(msg.sender, amount);
+        return true;
+    }
+
+    ////////////////////////
+    // Public functions
+    ////////////////////////
+
+    function destroyTokensPrivate(address owner, uint256 amount)
+        private
+    {
+        require(_balances[msg.sender] >= amount);
+        _balances[owner] = sub(_balances[owner], amount);
+        _totalSupply = sub(_totalSupply, amount);
+        Transfer(owner, address(0), amount);
     }
 }
