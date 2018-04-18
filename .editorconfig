@@ -19,3 +19,8 @@ indent_size = 2
 # Solidity requires four spaces
 [**.sol]
 indent_size = 4
+
+[{Makefile,**.mk}]
+# Use tabs for indentation (Makefiles require tabs)
+indent_style = tab
+
