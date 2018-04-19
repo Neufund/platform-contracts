@@ -1,4 +1,4 @@
-FROM node
+FROM node:8-alpine
 
 # Metadata
 LABEL org.label-schema.vendor="Neufund" \
@@ -9,6 +9,9 @@ LABEL org.label-schema.vendor="Neufund" \
       org.label-schema.vcs-url="https://github.com/Neufund/platform-contracts" \
       org.label-schema.docker.schema-version="1.0"
 
+RUN apk --update add git openssh make gcc g++ python bash && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm /var/cache/apk/*
 # add full permissions to anyone as we intend to run commands on host users
 RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contracts
 WORKDIR /usr/src/platform-contracts
