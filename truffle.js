@@ -96,7 +96,7 @@ module.exports = {
     localhost_test: {
       network_id: "*",
       host: "localhost",
-      port: 8545
+      port: 8545,
     },
     inprocess_massive_test: {
       network_id: "*",

@@ -19,7 +19,7 @@ const addFiletoIpfs = async (ipfs, file, name) => {
   console.log("Adding new file to IPFS and pinning");
   fileHash = (await ipfs.files.add(file, { pin: true }))[0].hash;
   console.log(`checking if file was pinned..`);
-  if (!await isFilePinned(ipfs, fileHash)) throw new Error("File not succsseffully pinned");
+  if (!(await isFilePinned(ipfs, fileHash))) throw new Error("File not succsseffully pinned");
   console.log("Done");
   return fileHash;
 };
