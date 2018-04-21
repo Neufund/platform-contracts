@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 
 /// @title state machine for Commitment contract
@@ -86,7 +86,7 @@ contract ICBMStateMachine {
         require(validTransition(oldState, newState));
 
         _state = newState;
-        LogStateTransition(oldState, newState);
+        emit LogStateTransition(oldState, newState);
 
         // should not change state and it is required here.
         mAfterTransition(oldState, newState);

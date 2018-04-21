@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./AccessControl/AccessControlled.sol";
 import "./SnapshotToken/Helpers/TokenMetadata.sol";
@@ -115,7 +115,7 @@ contract EuroToken is
         require(to != address(0));
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
-        LogDeposit(to, msg.sender, amount);
+        emit LogDeposit(to, msg.sender, amount);
         Transfer(address(0), to, amount);
     }
 
@@ -127,7 +127,7 @@ contract EuroToken is
         public
     {
         destroyTokensPrivate(msg.sender, amount);
-        LogWithdrawal(msg.sender, amount);
+        emit LogWithdrawal(msg.sender, amount);
     }
 
     /// @notice this method allows to destroy EUR-T belonging to any account
@@ -139,7 +139,7 @@ contract EuroToken is
         public
     {
         destroyTokensPrivate(owner, amount);
-        LogDestroy(owner, msg.sender, amount);
+        emit LogDestroy(owner, msg.sender, amount);
     }
 
     //
@@ -152,7 +152,7 @@ contract EuroToken is
     {
         require(newController != ITokenController(0x0));
         _tokenController = newController;
-        ChangeTokenController(_tokenController, newController);
+        emit ChangeTokenController(_tokenController, newController);
     }
 
     function tokenController()

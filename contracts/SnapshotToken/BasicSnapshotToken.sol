@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../Standards/IBasicToken.sol";
 import "../Standards/IClonedTokenParent.sol";
@@ -266,7 +266,7 @@ contract BasicSnapshotToken is
 
         // If the amount being transfered is more than the balance of the
         //  account the transfer reverts
-        var previousBalanceFrom = balanceOf(from);
+        uint256 previousBalanceFrom = balanceOf(from);
         require(previousBalanceFrom >= amount);
 
         // First update the balance array with the new value for the address

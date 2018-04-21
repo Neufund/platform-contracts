@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./Standards/ITokenController.sol";
 import "./AccessControl/AccessControlled.sol";
@@ -290,20 +290,20 @@ contract EuroTokenController is
         // euro lock may receive refunds
         setAllowedTransferToPrivate(UNIVERSE.euroLock(), true);
 
-        LogUniverseReloaded();
+        emit LogUniverseReloaded();
     }
 
     function setAllowedTransferToPrivate(address to, bool allowed)
         private
     {
         _allowedTransferTo[to] = allowed;
-        LogAllowedToAddress(to, allowed);
+        emit LogAllowedToAddress(to, allowed);
     }
 
     function setAllowedTransferFromPrivate(address from, bool allowed)
         private
     {
         _allowedTransferFrom[from] = allowed;
-        LogAllowedFromAddress(from, allowed);
+        emit LogAllowedFromAddress(from, allowed);
     }
 }

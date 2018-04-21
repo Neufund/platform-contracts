@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./IAccessPolicy.sol";
 import "./IAccessControlled.sol";
@@ -152,7 +152,7 @@ contract RoleBasedAccessPolicy is
         }
 
         // Log and return
-        LogAccess(subject, role, object, verb, allow);
+        emit LogAccess(subject, role, object, verb, allow);
         return allow;
     }
 
@@ -241,7 +241,7 @@ contract RoleBasedAccessPolicy is
         updatePermissionEnumerator(subject, role, object, oldValue, newValue);
 
         // Log
-        LogAccessChanged(msg.sender, subject, role, object, oldValue, newValue);
+        emit LogAccessChanged(msg.sender, subject, role, object, oldValue, newValue);
     }
 
     function updatePermissionEnumerator(

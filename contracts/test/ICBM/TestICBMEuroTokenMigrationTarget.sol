@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../../Zeppelin/StandardToken.sol";
 import "../../Standards/IMigrationSource.sol";

@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../AccessControl/AccessControlled.sol";
 import "../Reclaimable.sol";
@@ -65,7 +65,7 @@ contract ICBMEtherToken is
     {
         _balances[msg.sender] = add(_balances[msg.sender], msg.value);
         _totalSupply = add(_totalSupply, msg.value);
-        LogDeposit(msg.sender, msg.value);
+        emit LogDeposit(msg.sender, msg.value);
         Transfer(address(0), msg.sender, msg.value);
     }
 
@@ -77,7 +77,7 @@ contract ICBMEtherToken is
         _balances[msg.sender] = sub(_balances[msg.sender], amount);
         _totalSupply = sub(_totalSupply, amount);
         msg.sender.transfer(amount);
-        LogWithdrawal(msg.sender, amount);
+        emit LogWithdrawal(msg.sender, amount);
         Transfer(msg.sender, address(0), amount);
     }
 

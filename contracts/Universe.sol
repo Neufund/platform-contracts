@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 import "./Neumark.sol";
 import "./KnownInterfaces.sol";
 import "./AccessRoles.sol";
@@ -235,7 +235,7 @@ contract Universe is
         dropInstance(_singletons[interfaceId], interfaceId);
         addInstance(instance, interfaceId);
         _singletons[interfaceId] = instance;
-        LogSetSingleton(interfaceId, instance);
+        emit LogSetSingleton(interfaceId, instance);
     }
 
     function setCollectionPrivate(bytes4 interfaceId, address instance, bool set)
@@ -251,7 +251,7 @@ contract Universe is
         } else {
             dropInstance(instance, interfaceId);
         }
-        LogSetCollectionInterface(interfaceId, instance, set);
+        emit LogSetCollectionInterface(interfaceId, instance, set);
     }
 
     function addInstance(address instance, bytes4 interfaceId)

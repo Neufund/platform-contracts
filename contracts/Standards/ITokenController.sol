@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 
 /// @title granular token controller based on MSnapshotToken observer pattern

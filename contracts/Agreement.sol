@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./Standards/IEthereumForkArbiter.sol";
 import "./AccessControl/AccessControlled.sol";
@@ -79,7 +79,7 @@ contract Agreement is
         if(_signatories[accepter] == 0) {
             require(_amendments.length > 0);
             _signatories[accepter] = block.number;
-            LogAgreementAccepted(accepter);
+            emit LogAgreementAccepted(accepter);
         }
         _;
     }
@@ -110,7 +110,7 @@ contract Agreement is
             agreementUri: agreementUri
         });
         _amendments.push(amendment);
-        LogAgreementAmended(msg.sender, agreementUri);
+        emit LogAgreementAmended(msg.sender, agreementUri);
     }
 
     function ethereumForkArbiter()

@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../Snapshot/Snapshot.sol";
 import "../Snapshot/DailyAndSnapshotable.sol";

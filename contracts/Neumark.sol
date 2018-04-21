@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./AccessControl/AccessControlled.sol";
 import "./AccessRoles.sol";
@@ -109,7 +109,7 @@ contract Neumark is
         uint256 neumarkUlps = incremental(_totalEurUlps, euroUlps);
         _totalEurUlps += euroUlps;
         mGenerateTokens(msg.sender, neumarkUlps);
-        LogNeumarksIssued(msg.sender, euroUlps, neumarkUlps);
+        emit LogNeumarksIssued(msg.sender, euroUlps, neumarkUlps);
         return neumarkUlps;
     }
 
@@ -246,6 +246,6 @@ contract Neumark is
         // actually may overflow on non-monotonic inverse
         assert(prevEuroUlps >= _totalEurUlps);
         uint256 euroUlps = prevEuroUlps - _totalEurUlps;
-        LogNeumarksBurned(msg.sender, euroUlps, burnNeumarkUlps);
+        emit LogNeumarksBurned(msg.sender, euroUlps, burnNeumarkUlps);
     }
 }

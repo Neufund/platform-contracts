@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../../EtherToken.sol";
 import "../ICBMEuroToken.sol";
@@ -249,7 +249,7 @@ contract ICBMCommitment is
         ETHER_LOCK.lock(msg.sender, committedAmount, investorNmk);
 
         // Log successful commitment
-        LogFundsCommitted(
+        emit LogFundsCommitted(
             msg.sender,
             ETHER_TOKEN,
             committedAmount,
@@ -280,7 +280,7 @@ contract ICBMCommitment is
         EURO_LOCK.lock(msg.sender, committedEurUlps, investorNmk);
 
         // Log successful commitment
-        LogFundsCommitted(
+        emit LogFundsCommitted(
             msg.sender,
             EURO_TOKEN,
             committedEurUlps,

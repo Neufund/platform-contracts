@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./ISnapshotableToken.sol";
 import "../../Standards/IBasicToken.sol";
@@ -169,7 +169,7 @@ contract Disbursal is IERC677Callback {
         require(success);
 
         // Log and return
-        LogClaimed(beneficiary, index, token, amount);
+        emit LogClaimed(beneficiary, index, token, amount);
     }
 
     function disburseAllowance(IERC20Token token)
@@ -252,7 +252,7 @@ contract Disbursal is IERC677Callback {
         );
 
         // Log
-        LogDisbursed(index, token, amount, snapshot, totalShares);
+        emit LogDisbursed(index, token, amount, snapshot, totalShares);
     }
 
     function mulDiv(

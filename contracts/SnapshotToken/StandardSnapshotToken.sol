@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../Standards/IERC20Token.sol";
 import "./Helpers/TokenAllowance.sol";
