@@ -1,7 +1,7 @@
 /* eslint-disable global-require */
 require("babel-register");
 require("babel-polyfill");
-const TestRPC = require("ethereumjs-testrpc");
+const Ganache = require("ganache-core");
 
 const nanoProvider = (providerUrl, nanoPath, network) =>
   process.argv.some(arg => arg === network)
@@ -20,7 +20,7 @@ module.exports = {
     },
     inprocess: {
       network_id: "*",
-      provider: TestRPC.provider({
+      provider: Ganache.provider({
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
     },
@@ -89,14 +89,19 @@ module.exports = {
     },
     inprocess_test: {
       network_id: "*",
-      provider: TestRPC.provider({
+      provider: Ganache.provider({
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
+    },
+    localhost_test: {
+      network_id: "*",
+      host: "localhost",
+      port: 8545
     },
     inprocess_massive_test: {
       network_id: "*",
       gas: 0xffffffff,
-      provider: TestRPC.provider({
+      provider: Ganache.provider({
         deterministic: true,
         gasLimit: 0xffffffff,
         accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
