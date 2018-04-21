@@ -4,7 +4,6 @@
   "rules": {
     "quotes": ["error", "double"],
     "indentation": ["error", 4],
-    "emit": "off",
     "security/no-inline-assembly": "off",
     "security/no-block-members": "off",
     "no-empty-blocks": "off"
