@@ -73,7 +73,6 @@ contract Neumark is
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter
     )
-        AccessControlled(accessPolicy)
         AccessRoles()
         Agreement(accessPolicy, forkArbiter)
         StandardSnapshotToken(
