@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./AccessControl/AccessControlled.sol";
 import "./AccessRoles.sol";
@@ -60,7 +60,7 @@ contract EthereumForkArbiter is
         _nextForkBlockNumber = blockNumber;
 
         // Log
-        LogForkAnnounced(_nextForkName, _nextForkUrl, _nextForkBlockNumber);
+        emit LogForkAnnounced(_nextForkName, _nextForkUrl, _nextForkBlockNumber);
     }
 
     /// @notice Declare that the current fork (as identified by a blockhash) is the valid fork. The valid fork is always the one with the most recent signature.
@@ -81,7 +81,7 @@ contract EthereumForkArbiter is
         _lastSignedTimestamp = block.timestamp;
 
         // Log
-        LogForkSigned(_lastSignedBlockNumber, _lastSignedBlockHash);
+        emit LogForkSigned(_lastSignedBlockNumber, _lastSignedBlockHash);
     }
 
     function nextForkName()

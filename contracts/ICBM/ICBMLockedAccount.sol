@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../AccessControl/AccessControlled.sol";
 import "./ICBMRoles.sol";
@@ -219,7 +219,7 @@ contract ICBMLockedAccount is
             _totalInvestors += 1;
             account.unlockDate = currentTime() + LOCK_PERIOD;
         }
-        LogFundsLocked(investor, amount, neumarks);
+        emit LogFundsLocked(investor, amount, neumarks);
     }
 
     /// @notice unlocks investors funds, see unlockInvestor for details
@@ -424,7 +424,7 @@ contract ICBMLockedAccount is
             account.neumarksDue,
             account.unlockDate
         );
-        LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
+        emit LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
     }
 
     //
@@ -479,7 +479,7 @@ contract ICBMLockedAccount is
         private
     {
         assert(newState != _lockState);
-        LogLockStateTransition(_lockState, newState);
+        emit LogLockStateTransition(_lockState, newState);
         _lockState = newState;
     }
 
@@ -525,7 +525,7 @@ contract ICBMLockedAccount is
                     // transfer to simple address
                     assert(ASSET_TOKEN.transfer(_penaltyDisbursalAddress, penalty));
                 }
-                LogPenaltyDisbursed(_penaltyDisbursalAddress, penalty, ASSET_TOKEN, investor);
+                emit LogPenaltyDisbursed(_penaltyDisbursalAddress, penalty, ASSET_TOKEN, investor);
                 accountInMem.balance -= penalty;
             }
         }
@@ -534,6 +534,6 @@ contract ICBMLockedAccount is
         }
         // transfer amount back to investor - now it can withdraw
         assert(ASSET_TOKEN.transfer(investor, accountInMem.balance));
-        LogFundsUnlocked(investor, accountInMem.balance, accountInMem.neumarksDue);
+        emit LogFundsUnlocked(investor, accountInMem.balance, accountInMem.neumarksDue);
     }
 }

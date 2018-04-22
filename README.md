@@ -75,20 +75,20 @@ docker exec --user $(id -u):$(id -g) platform-contracts yarn deploy localhost
 
 ## Predefined accounts
 
-`yarn testrpc` will launch testrpc with 9 pre-defined Ethereum accounts. We keep the same set of
-accounts for our parity dev and parity test networks. You can find our parity dev node here
+`yarn testrpc` will launch `ganache-cli` with 9 pre-defined Ethereum accounts. We keep the same set
+of accounts for our parity dev and parity test networks. You can find our parity dev node here
 (https://github.com/Neufund/parity-instant-seal-byzantium-enabled) and use it as alternative to
-testrpc. See description of Truffle networks below. We have BIP32 restore codes for those accounts
-(see below).
+`ganache-cli`. See description of Truffle networks below. We have BIP32 restore codes for those
+accounts (see below).
 
 ## Developing
 
 **Please do not develop inside container!**
 
-Supported compiler: `Version: 0.4.15+commit.bbb8e64f.Linux.g++` Always use
+Supported compiler: `Version: 0.4.23+commit.124ca40d.Linux.g++` Always use
 
 ```
-truffle compile --all
+yarn truffle compile --all
 ```
 
 or
@@ -100,15 +100,19 @@ yarn build
 Truffle is not able to track dependencies correctly and will not recompile files that import other
 files
 
+### Use cpp colc instead of ECMA for 10x speedup.
+
 You should consider replacing javascript compiler with `solc`, this will increase your turnover
 several times. Use following patches over cli.bundle.js (into which truffle is packed)
 
 ```
---- var result = solc.compileStandard(JSON.stringify(solcStandardInput));
-+++ var result = require('child_process').execSync('solc --standard-json', {input: JSON.stringify(solcStandardInput)});
+curl -L --fail -o solc4.23 https://github.com/ethereum/solidity/releases/download/v0.4.23/solc-static-linux
+chmod +x solc4.23
+sudo cp solc4.23 /usr/bin/
+yarn solctruffle
 ```
 
-or just issue `yarn solctruffle`
+### More tips
 
 you can count current LOC with sloc
 
@@ -220,6 +224,8 @@ Currently default files are
   address), some types will just succeed so **BEWARE**
 * `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
   JSON-RPC response
+* `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
+  JSON-RPC response
 
 **Executing transactions that revert**
 
@@ -231,8 +237,17 @@ Currently default files are
   `neufund` branch.
 * `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
   JSON-RPC response
+* `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
+  JSON-RPC response
 
-### Test coverage
+**Executing transactions that revert with status string**
+
+In solidity 0.4.22 it is now possible to return a status string. this is not supported by tooling
+yet. keep an eye on: https://github.com/ethereum/solidity/issues/1686
+https://github.com/ethereum/solidity/pull/3364 https://github.com/ethereum/remix/pull/760 (remix
+provides those codes)
+
+### Test coverage -to be fixed soon-
 
 ```
 yarn test:coverage
@@ -287,11 +302,11 @@ yarn truffle test test/Commitment.js test/setup.js --network inprocess_massive_t
 
 _Remarks on current state of tests in truffle and testrpc_
 
-Applies to `truffle 3.4.9` with `testrpc 4.0.1`.
+Applies to `truffle 3.4.9` with `ganache 2.1.0`.
 
 Truffle uses snapshotting mechanism (`evm_snapshot` and `evm_revert`) to revert to clean state
-between test suites. Current version of testrpc does not handle it correctly and will fail on revert
-with some probability. This makes running large test suites hard as there is high chance of testrpc
+between test suites. Current version of ganache does not handle it correctly and will fail on revert
+with some probability. This makes running large test suites hard as there is high chance of ganache
 to crash.
 
 As snapshotting is used to recover blockchain state after deployment scripts, we have no use of that
@@ -307,7 +322,7 @@ TestRunner.prototype.resetState = function(callback) {
 Snapshotting has other problems that also makes it useless for state management in our tests.
 https://github.com/trufflesuite/ganache-core/issues/7 Hopefully PRs solving this are pending.
 
-_Remarks on non-testrpc testing_ You are able to run test on parity nodes, evm_increaseTime is not
+_Remarks on non-ganache testing_ You are able to run test on parity nodes, evm_increaseTime is not
 supported so those tests will fail. Here is dockerized node that works.
 https://github.com/Neufund/parity-instant-seal-byzantium-enabled
 
@@ -345,8 +360,8 @@ ending with `_live`** will be deployed in production mode which means that:
 
 **Special networks**
 
-1.  _simulated_live_ will be deployed as live network but is intended to be used against testrpc.
-    Roles will be assigned to testrpc provided accounts. It is intended to test various
+1.  _simulated_live_ will be deployed as live network but is intended to be used against ganache.
+    Roles will be assigned to ganache provided accounts. It is intended to test various
     administrative operations (like enabling/disabling transfers) before live deployment.
 2.  all networks ending with _test and \_coverage_ will not deploy anything. They are intended to be
     used by test runner
@@ -358,7 +373,7 @@ yarn truffle migrate --reset --network simulated_live
 Below are important networks from `truffle.js` |Network|Mode|Description| |-------|----|-----------|
 |localhost|test|will attach to anything at port 8545 and set deployer to
 `0x8a194c13308326173423119f8dcb785ce14c732b`, intended to run with `yarn testrpc` or with parity
-instant seal| |inprocess|test|will use in-process `testrpc` so you do not have to run anything|
+instant seal| |inprocess|test|will use in-process `ganache` so you do not have to run anything|
 |nf_private|test|will deploy to neufund private network where
 `0x8a194c13308326173423119f8dcb785ce14c732b` is the deployer|
 

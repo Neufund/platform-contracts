@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./AccessControl/AccessControlled.sol";
 import "./Standards/ITokenExchangeRateOracle.sol";
@@ -126,8 +126,8 @@ contract SimpleExchange is
         _eurEthRateFraction = rateFraction;
         _ethEurRateFraction = 10**18 / rateFraction;
         _rateLastUpdatedTimestamp = uint32(block.timestamp);
-        LogSetExchangeRate(numeratorToken, denominatorToken, rateFraction);
-        LogSetExchangeRate(denominatorToken, numeratorToken, _ethEurRateFraction);
+        emit LogSetExchangeRate(numeratorToken, denominatorToken, rateFraction);
+        emit LogSetExchangeRate(denominatorToken, numeratorToken, _ethEurRateFraction);
     }
 
     //
@@ -168,6 +168,6 @@ contract SimpleExchange is
         assert(EURO_TOKEN.transferFrom(gasRecipient, PLATFORM_WALLET, amountEurUlps + exchangeFeeEurUlps));
         // transfer ether to gasRecipient
         gasRecipient.transfer(amountEthWei);
-        LogGasExchange(gasRecipient, amountEurUlps, exchangeFeeEurUlps, amountEthWei, rate);
+        emit LogGasExchange(gasRecipient, amountEurUlps, exchangeFeeEurUlps, amountEthWei, rate);
     }
 }

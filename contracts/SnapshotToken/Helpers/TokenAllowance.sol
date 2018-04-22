@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./MTokenTransfer.sol";
 import "./MTokenAllowanceController.sol";
@@ -76,7 +76,7 @@ contract TokenAllowance is
         require((amount == 0) || (_allowed[msg.sender][spender] == 0));
 
         _allowed[msg.sender][spender] = amount;
-        Approval(msg.sender, spender, amount);
+        emit Approval(msg.sender, spender, amount);
         return true;
     }
 

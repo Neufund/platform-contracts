@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../Universe.sol";
 import "./ICBMRoles.sol";
@@ -267,7 +267,7 @@ contract LockedAccount is
         investment.neumarksDue += unlockedNmkUlps;
         // invest via ERC223 interface
         assert(PAYMENT_TOKEN.transfer(commitment, amount, addressToBytes(msg.sender)));
-        LogFundsCommitted(msg.sender, commitment, amount, unlockedNmkUlps);
+        emit LogFundsCommitted(msg.sender, commitment, amount, unlockedNmkUlps);
     }
 
     /// @notice unlocks investors funds, see unlockInvestor for details
@@ -315,8 +315,8 @@ contract LockedAccount is
         require(account.balance > 0);
         newAccount = account;
         delete _accounts[msg.sender];
-        LogInvestorMoved(msg.sender, newInvestor);
-        LogFundsLocked(newInvestor, newAccount.balance, newAccount.neumarksDue);
+        emit LogInvestorMoved(msg.sender, newInvestor);
+        emit LogFundsLocked(newInvestor, newAccount.balance, newAccount.neumarksDue);
     }
 
     /// @notice refunds investor in case of failed offering
@@ -340,7 +340,7 @@ contract LockedAccount is
         account.neumarksDue = add112(account.neumarksDue, investment.neumarksDue);
         // transfer to itself from Commitment contract allowance
         assert(PAYMENT_TOKEN.transferFrom(msg.sender, address(this), investment.balance));
-        LogFundsRefunded(investor, msg.sender, investment.balance, investment.neumarksDue);
+        emit LogFundsRefunded(investor, msg.sender, investment.balance, investment.neumarksDue);
     }
 
     /// @notice may be used by commitment contract to refund gas for commitment bookkeeping
@@ -415,7 +415,7 @@ contract LockedAccount is
             assert(balance == 0);
             assert(neumarksDue == 0);
         }
-        LogInvestorMigrated(investor, balance, neumarksDue, unlockDate);
+        emit LogInvestorMigrated(investor, balance, neumarksDue, unlockDate);
     }
 
     function setInvestorMigrationWallet(address wallet)
@@ -497,7 +497,7 @@ contract LockedAccount is
             account.neumarksDue,
             account.unlockDate
         );
-        LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
+        emit LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
     }*/
 
     //
@@ -621,7 +621,7 @@ contract LockedAccount is
         private
     {
         assert(newState != _lockState);
-        LogLockStateTransition(_lockState, newState);
+        emit LogLockStateTransition(_lockState, newState);
         _lockState = newState;
     }
 
@@ -660,7 +660,7 @@ contract LockedAccount is
                 uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
                 // distribution via ERC223 to contract or simple address
                 assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, ""));
-                LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
+                emit LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
                 accountInMem.balance -= penalty;
             }
         }
@@ -669,7 +669,7 @@ contract LockedAccount is
         }
         // transfer amount back to investor - now it can withdraw
         assert(PAYMENT_TOKEN.transfer(investor, accountInMem.balance));
-        LogFundsUnlocked(investor, accountInMem.balance, accountInMem.neumarksDue);
+        emit LogFundsUnlocked(investor, accountInMem.balance, accountInMem.neumarksDue);
     }
 
     /// @notice locks funds of investors for a period of time, called by migration
@@ -697,7 +697,7 @@ contract LockedAccount is
             account.unlockDate = unlockDate;
         }
 
-        LogFundsLocked(investor, amount, neumarks);
+        emit LogFundsLocked(investor, amount, neumarks);
     }
 
     function addDestination(Destination[] storage destinations, address wallet, uint112 amount)
@@ -709,7 +709,7 @@ contract LockedAccount is
         destinations.push(
             Destination({investor: wallet, amount: amount})
         );
-        LogMigrationDestination(msg.sender, wallet, amount);
+        emit LogMigrationDestination(msg.sender, wallet, amount);
     }
 
     function sub112(uint112 a, uint112 b) internal constant returns (uint112)

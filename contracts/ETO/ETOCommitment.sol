@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
@@ -262,7 +262,7 @@ contract ETOCommitment is
         // update total investment
         _totalEquivEurUlps += equivEurUlps;
         // log successful commitment
-        LogFundsCommitted(
+        emit LogFundsCommitted(
             investor,
             msg.sender,
             amount,

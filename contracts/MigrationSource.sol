@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./Standards/IMigrationSource.sol";
 import "./AccessControl/AccessControlled.sol";
@@ -74,7 +74,7 @@ contract MigrationSource is
         // this must be the source
         require(migration.currentMigrationSource() == address(this));
         _migration = migration;
-        LogMigrationEnabled(_migration);
+        emit LogMigrationEnabled(_migration);
     }
 
     /// @notice returns current migration target

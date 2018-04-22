@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./IAccessControlled.sol";
 import "./StandardRoles.sol";
@@ -59,7 +59,7 @@ contract AccessControlled is IAccessControlled, StandardRoles {
         _accessPolicy = newPolicy;
 
         // Log event
-        LogAccessPolicyChanged(msg.sender, oldPolicy, newPolicy);
+        emit LogAccessPolicyChanged(msg.sender, oldPolicy, newPolicy);
     }
 
     function accessPolicy()

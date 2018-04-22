@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../AccessControl/AccessControlled.sol";
 import "..//Reclaimable.sol";
@@ -116,7 +116,7 @@ contract ICBMEuroToken is
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
         setAllowedTransferTo(to, true);
-        LogDeposit(to, amount);
+        emit LogDeposit(to, amount);
         Transfer(address(0), to, amount);
         return true;
     }
@@ -130,7 +130,7 @@ contract ICBMEuroToken is
         require(_balances[msg.sender] >= amount);
         _balances[msg.sender] = sub(_balances[msg.sender], amount);
         _totalSupply = sub(_totalSupply, amount);
-        LogWithdrawal(msg.sender, amount);
+        emit LogWithdrawal(msg.sender, amount);
         Transfer(msg.sender, address(0), amount);
     }
 
@@ -140,7 +140,7 @@ contract ICBMEuroToken is
         only(ROLE_EURT_DEPOSIT_MANAGER)
     {
         _allowedTransferTo[to] = allowed;
-        LogAllowedToAddress(to, allowed);
+        emit LogAllowedToAddress(to, allowed);
     }
 
     /// @notice enables or disables address to be sender of EUR-T
@@ -149,7 +149,7 @@ contract ICBMEuroToken is
         only(ROLE_EURT_DEPOSIT_MANAGER)
     {
         _allowedTransferFrom[from] = allowed;
-        LogAllowedFromAddress(from, allowed);
+        emit LogAllowedFromAddress(from, allowed);
     }
 
     function allowedTransferTo(address to)
@@ -214,6 +214,6 @@ contract ICBMEuroToken is
         // migrate to
         ICBMEuroTokenMigrationTarget(_migration).migrateEuroTokenOwner(msg.sender, amount);
         // set event
-        LogEuroTokenOwnerMigrated(msg.sender, amount);
+        emit LogEuroTokenOwnerMigrated(msg.sender, amount);
     }
 }

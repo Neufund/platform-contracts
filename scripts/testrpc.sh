@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-exec ./node_modules/ethereumjs-testrpc/build/cli.node.js \
+yarn ganache-cli \
 --deterministic --gasLimit 0xFFFFFFFF \
 --account="0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1, 1000000000000000000000000" \
 --account="0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93, 1000000000000000000000000" \

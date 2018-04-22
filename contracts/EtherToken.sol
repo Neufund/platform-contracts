@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./AccessControl/AccessControlled.sol";
 import "./Reclaimable.sol";
@@ -112,7 +112,7 @@ contract EtherToken is
             uint256 withdrawRemainder = amount - msg.value;
             withdrawPrivate(withdrawRemainder);
         }
-        LogWithdrawAndSend(msg.sender, sendTo, amount);
+        emit LogWithdrawAndSend(msg.sender, sendTo, amount);
         sendTo.transfer(amount);
     }
 
@@ -158,7 +158,7 @@ contract EtherToken is
     {
         _balances[msg.sender] = add(_balances[msg.sender], msg.value);
         _totalSupply = add(_totalSupply, msg.value);
-        LogDeposit(msg.sender, msg.value);
+        emit LogDeposit(msg.sender, msg.value);
     }
 
     function withdrawPrivate(uint256 amount)
@@ -167,7 +167,7 @@ contract EtherToken is
         require(_balances[msg.sender] >= amount);
         _balances[msg.sender] = sub(_balances[msg.sender], amount);
         _totalSupply = sub(_totalSupply, amount);
-        LogWithdrawal(msg.sender, amount);
+        emit LogWithdrawal(msg.sender, amount);
         Transfer(msg.sender, address(0), amount);
     }
 }

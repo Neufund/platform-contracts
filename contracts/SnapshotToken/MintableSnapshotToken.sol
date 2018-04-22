@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "./BasicSnapshotToken.sol";
 import "./Helpers/MTokenMint.sol";
@@ -48,7 +48,7 @@ contract MintableSnapshotToken is
         setValue(_totalSupplyValues, newTotalSupply);
         setValue(_balances[owner], newBalanceTo);
 
-        Transfer(0, owner, amount);
+        emit Transfer(0, owner, amount);
     }
 
     /// @notice Burns `amount` tokens from `owner`
@@ -71,6 +71,6 @@ contract MintableSnapshotToken is
         setValue(_totalSupplyValues, newTotalSupply);
         setValue(_balances[owner], newBalanceFrom);
 
-        Transfer(owner, 0, amount);
+        emit Transfer(owner, 0, amount);
     }
 }

@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../AccessControl/AccessControlled.sol";
 import "../AccessRoles.sol";
@@ -60,7 +60,7 @@ contract IdentityRegistry is
     {
         require(_claims[identity] == oldClaims);
         _claims[identity] = newClaims;
-        LogSetClaims(identity, oldClaims, newClaims);
+        emit LogSetClaims(identity, oldClaims, newClaims);
     }
 
     /// sets multiple claims in single transaction to save on gas
@@ -75,7 +75,7 @@ contract IdentityRegistry is
         while(idx < identities.length) {
             require(_claims[identities[idx]] == oldClaims[idx]);
             _claims[identities[idx]] = newClaims[idx];
-            LogSetClaims(identities[idx], oldClaims[idx], newClaims[idx]);
+            emit LogSetClaims(identities[idx], oldClaims[idx], newClaims[idx]);
             idx += 1;
         }
     }

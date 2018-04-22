@@ -1,4 +1,5 @@
 import invariant from "invariant";
+import EvmError from "./EVMThrow";
 
 const web3Utils = require("web3/lib/utils/utils");
 
@@ -64,7 +65,7 @@ export default function(chai) {
       await this._obj;
       this.assert(false, "Transaction did not revert.");
     } catch (error) {
-      const invalidOpcode = error.message.search("invalid opcode") >= 0;
+      const invalidOpcode = error.message.search(EvmError) >= 0;
       this.assert(
         invalidOpcode,
         `Transaction did not revert with the right error. Error message was: ${error.message}`,

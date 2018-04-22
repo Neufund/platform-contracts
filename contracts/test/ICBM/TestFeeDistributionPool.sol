@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../../Standards/IERC677Callback.sol";
 import "../../Standards/IERC677Token.sol";
@@ -34,7 +34,7 @@ contract TestFeeDistributionPool is IERC677Callback {
     {
         require(msg.sender == _token);
         require(IERC677Token(_token).transferFrom(from, address(this), _amount));
-        LogTestReceiveApproval(from, _amount);
+        emit LogTestReceiveApproval(from, _amount);
         return true;
     }
 }

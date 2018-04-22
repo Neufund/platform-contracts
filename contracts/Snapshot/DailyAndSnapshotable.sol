@@ -1,4 +1,4 @@
-pragma solidity 0.4.15;
+pragma solidity 0.4.23;
 
 import "../Standards/ISnapshotable.sol";
 import "./MSnapshotPolicy.sol";
@@ -74,7 +74,7 @@ contract DailyAndSnapshotable is
         }
 
         // Log and return
-        LogSnapshotCreated(_currentSnapshotId);
+        emit LogSnapshotCreated(_currentSnapshotId);
         return _currentSnapshotId;
     }
 
@@ -94,7 +94,7 @@ contract DailyAndSnapshotable is
     // Implements MSnapshotPolicy
     //
 
-    function mCurrentSnapshotId()
+    function mAdvanceSnapshotId()
         internal
         returns (uint256)
     {
@@ -103,9 +103,19 @@ contract DailyAndSnapshotable is
         // New day has started
         if (dayBase > _currentSnapshotId) {
             _currentSnapshotId = dayBase;
-            LogSnapshotCreated(dayBase);
+            emit LogSnapshotCreated(dayBase);
         }
 
         return _currentSnapshotId;
+    }
+
+    function mCurrentSnapshotId()
+        internal
+        constant
+        returns (uint256)
+    {
+        uint256 dayBase = 2**128 * (block.timestamp / 1 days);
+
+        return dayBase > _currentSnapshotId ? dayBase : _currentSnapshotId;
     }
 }
