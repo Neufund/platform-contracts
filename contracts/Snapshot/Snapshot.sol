@@ -126,7 +126,7 @@ contract Snapshot is MSnapshotPolicy {
     {
         // TODO: simplify or break into smaller functions
 
-        uint256 currentSnapshotId = mCurrentSnapshotId();
+        uint256 currentSnapshotId = mAdvanceSnapshotId();
         // Always create a new entry if there currently is no value
         bool empty = values.length == 0;
         if (empty) {

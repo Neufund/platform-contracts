@@ -16,7 +16,15 @@ contract MSnapshotPolicy {
     //
     // Values passed to `hasValueAt` and `valuteAt` are required
     // to be less or equal to `mCurrentSnapshotId()`.
-    function mCurrentSnapshotId()
+    function mAdvanceSnapshotId()
         internal
         returns (uint256);
+
+    // this is a version of mAdvanceSnapshotId that does not modify state but MUST return the same value
+    // it is required to implement ITokenSnapshots interface cleanly
+    function mCurrentSnapshotId()
+        internal
+        constant
+        returns (uint256);
+
 }

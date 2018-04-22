@@ -28,8 +28,16 @@ contract Daily is MSnapshotPolicy {
     // Implements MSnapshotPolicy
     //
 
+    function mAdvanceSnapshotId()
+        internal
+        returns (uint256)
+    {
+        return mCurrentSnapshotId();
+    }
+
     function mCurrentSnapshotId()
         internal
+        constant
         returns (uint256)
     {
         // Take the current time in UTC
