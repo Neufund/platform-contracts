@@ -497,7 +497,7 @@ contract LockedAccount is
             account.neumarksDue,
             account.unlockDate
         );
-        LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
+        emit LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
     }*/
 
     //

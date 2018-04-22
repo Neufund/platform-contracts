@@ -282,6 +282,6 @@ contract BasicSnapshotToken is
         setValue(_balances[to], newBalanceTo);
 
         // An event to make the transfer easy to find on the blockchain
-        Transfer(from, to, amount);
+        emit Transfer(from, to, amount);
     }
 }

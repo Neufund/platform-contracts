@@ -59,7 +59,7 @@ contract AccessControlled is IAccessControlled, StandardRoles {
         _accessPolicy = newPolicy;
 
         // Log event
-        LogAccessPolicyChanged(msg.sender, oldPolicy, newPolicy);
+        emit LogAccessPolicyChanged(msg.sender, oldPolicy, newPolicy);
     }
 
     function accessPolicy()

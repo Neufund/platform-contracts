@@ -181,7 +181,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         // we have 60+ years for 2^32 overflow on epoch so disregard
         _pastStateTransitionTimes[uint32(oldState)] = uint32(block.timestamp);
         _pastStateTransitionTimes[uint32(newState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint32(newState)];
-        LogStateTransition(uint32(oldState), uint32(newState));
+        emit LogStateTransition(uint32(oldState), uint32(newState));
 
         // should not change state and it is required here.
         mAfterTransition(oldState, newState);

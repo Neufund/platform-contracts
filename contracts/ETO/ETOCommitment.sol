@@ -262,7 +262,7 @@ contract ETOCommitment is
         // update total investment
         _totalEquivEurUlps += equivEurUlps;
         // log successful commitment
-        LogFundsCommitted(
+        emit LogFundsCommitted(
             investor,
             msg.sender,
             amount,
