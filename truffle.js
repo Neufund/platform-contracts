@@ -14,7 +14,7 @@ module.exports = {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 4600000,
+      gas: 6500000,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
     },
@@ -25,10 +25,10 @@ module.exports = {
       }),
     },
     nf_private: {
-      host: "159.65.112.121",
+      host: "parity-instant-seal-byzantium-enabled",
       port: 8545,
-      network_id: "16",
-      gas: 4600000,
+      network_id: "17",
+      gas: 6500000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       // gasPrice: 11904761856
       gasPrice: 21000000000,
