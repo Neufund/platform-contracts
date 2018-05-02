@@ -48,6 +48,8 @@ export function getConfig(web3, network, accounts) {
       GAS_EXCHANGE: "??",
       TOKEN_RATE_ORACLE: "??",
     },
+    // set it to Commitment contract address to continue deployment over it
+    ICBM_COMMITMENT_ADDRESS: null,
     // deployed artifacts (may be mocked below)
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",

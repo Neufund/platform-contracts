@@ -428,12 +428,14 @@ contract ETOCommitment is
             ETO_TERMS.PLATFORM_TERMS().TOKEN_PARTICIPATION_FEE_FRACTION(),
             TOKEN_EUR_PRICE_ULPS
         );
+        // TODO: issue in a way we have integer number of shares!
         COMPANY.issueTokens(PLATFORM_WALLET, tokenParticipationFee);
         // company contract has new token, new eto and new SHA (transfers are enabled on equity token if requested -> company is a controller so in call below)
         COMPANY.registerEquityToken(
             EQUITY_TOKEN.balanceOf(this),
             ETO_TERMS.ENABLE_TRANSFERS_ON_SUCCESS()
         );
+        // TODO: nominal value goes to NOMINEE first
         // company legal rep receives funds
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         if (etherBalance > 0) {

@@ -14,8 +14,8 @@ const getFixtureAccounts = require("./config").getFixtureAccounts;
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipDeployment) return;
-  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const DEPLOYER = getDeployerAccount(network, accounts);
   const fas = getFixtureAccounts(accounts);
 
@@ -23,7 +23,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const universe = await Universe.deployed();
 
     if (CONFIG.isLiveDeployment) {
-      const accessPolicy = await RoleBasedAccessPolicy.deployed();
+      const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
 
       console.log("Dropping temporary permissions");
       await createAccessPolicy(accessPolicy, [

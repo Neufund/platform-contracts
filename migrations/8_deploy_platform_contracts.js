@@ -26,7 +26,16 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
   deployer.then(async () => {
     // take all ICBM addresses from commitment contract
-    const commitment = await Commitment.deployed();
+    if (CONFIG.isLiveDeployment && !CONFIG.ICBM_COMMITMENT_ADDRESS) {
+      throw Error("On live deployment ICBM_COMMITMENT_ADDRESS must be set");
+    }
+    let commitment;
+    if (CONFIG.ICBM_COMMITMENT_ADDRESS) {
+      console.log(`Deploying over ICBM contracts: Commitment ${CONFIG.ICBM_COMMITMENT_ADDRESS} `);
+      commitment = await Commitment.at(CONFIG.ICBM_COMMITMENT_ADDRESS);
+    } else {
+      commitment = await Commitment.deployed();
+    }
     const accessPolicy = await RoleBasedAccessPolicy.at(await commitment.accessPolicy());
     const forkArbiter = await EthereumForkArbiter.at(await commitment.ethereumForkArbiter());
     const icbmEtherLock = await ICBMLockedAccount.at(await commitment.etherLock());
@@ -96,6 +105,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("Add singletons to Universe");
     const interfaces = [
+      {
+        ki: knownInterfaces.neumark,
+        addr: neumark.address,
+      },
       {
         ki: knownInterfaces.etherToken,
         addr: etherToken.address,
