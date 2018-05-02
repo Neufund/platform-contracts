@@ -84,7 +84,7 @@ module.exports = {
       host: "localhost",
       port: 8545,
       gas: 4600000,
-      from: "0x00b1da87C22608F90f1E34759Cd1291c8A4E4b25",
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       gasPrice: 21000000000,
     },
     inprocess_test: {
