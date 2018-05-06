@@ -13,7 +13,12 @@ import "../Math.sol";
 import "../Serialization.sol";
 
 
-/// @title capital commitment into Company and share increase
+/// @title represents token offering organized by Company
+///  token offering goes through states as defined in ETOTimedStateMachine
+///  setup phase requires several parties to provide documents and information
+///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> prospectus (Company) -> adding to universe (platform) -> start date (company))
+///   whitelist may be added when RAAA and eto terms are present
+/// todo: review all divisions for rounding errors
 contract ETOCommitment is
     AccessControlled,
     Agreement,
@@ -385,6 +390,7 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(State.Setup)
     {
+        // todo: check if in universe
         assert(startDate < 0xFFFFFFFF);
         // must be less than 3 days (platform terms!)
         require(startDate < block.timestamp && block.timestamp - startDate < PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_EARLY");
@@ -622,10 +628,16 @@ contract ETOCommitment is
     constant
     returns (State)
     {
-        // force refund if Claim criteria are not met
-        if (newState == State.Claim && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
+        // force refund if floor criteria are not met
+        if (newState == State.Signing && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
             return State.Refund;
         }
+        // todo: consider refund if nominal value is not raised in Euro
+        // go to refund if attempt to go to Claim without nominee agreement confirmation
+        if (newState == State.Claim && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
+            return State.Refund;
+        }
+
         // this is impossible: stateMachine cannot be run without all necessary terms
         /* if (newState == State.Whitelist && !setupComplete()) {
             return State.Refund;
