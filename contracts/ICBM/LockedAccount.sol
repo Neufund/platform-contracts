@@ -305,7 +305,8 @@ contract LockedAccount is
         public
     {
         // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
-        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(newInvestor));
+        IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
+        IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(newInvestor));
         require(claims.hasKyc);
         Account storage newAccount = _accounts[newInvestor];
         // only to empty accounts
@@ -323,7 +324,7 @@ contract LockedAccount is
     /// @param investor funds owner
     /// @dev callable only by ETO contract, bookkeeping in LockedAccount::_investments
     /// @dev expected that ETO makes allowance for transferFrom
-    function refund(address investor)
+    function refunded(address investor)
         public
     {
         Account memory investment = _investments[msg.sender][investor];
@@ -345,8 +346,19 @@ contract LockedAccount is
 
     /// @notice may be used by commitment contract to refund gas for commitment bookkeeping
     /// @dev https://gastoken.io/ (15000 - 900 for a call)
-    function claim(address investor) public {
+    function claimed(address investor) public {
         delete _investments[msg.sender][investor];
+    }
+
+    /// checks the amount of investment made from locked account
+    /// @dev caller is an ETO
+    function investment(address commitment, address investor)
+        public
+        constant
+        returns (uint256 balance, uint256 neumarkDue)
+    {
+        Account storage i = _investments[commitment][investor];
+        return (i.balance, i.neumarksDue);
     }
 
     //
@@ -703,7 +715,8 @@ contract LockedAccount is
     function addDestination(Destination[] storage destinations, address wallet, uint112 amount)
         private
     {
-        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(wallet));
+        IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
+        IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
         require(claims.hasKyc);
 
         destinations.push(
@@ -712,13 +725,13 @@ contract LockedAccount is
         emit LogMigrationDestination(msg.sender, wallet, amount);
     }
 
-    function sub112(uint112 a, uint112 b) internal constant returns (uint112)
+    function sub112(uint112 a, uint112 b) internal pure returns (uint112)
     {
         assert(b <= a);
         return a - b;
     }
 
-    function add112(uint112 a, uint112 b) internal constant returns (uint112)
+    function add112(uint112 a, uint112 b) internal pure returns (uint112)
     {
         uint112 c = a + b;
         assert(c >= a);

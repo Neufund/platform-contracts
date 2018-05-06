@@ -117,7 +117,7 @@ contract ICBMEuroToken is
         _totalSupply = add(_totalSupply, amount);
         setAllowedTransferTo(to, true);
         emit LogDeposit(to, amount);
-        Transfer(address(0), to, amount);
+        emit Transfer(address(0), to, amount);
         return true;
     }
 
@@ -131,7 +131,7 @@ contract ICBMEuroToken is
         _balances[msg.sender] = sub(_balances[msg.sender], amount);
         _totalSupply = sub(_totalSupply, amount);
         emit LogWithdrawal(msg.sender, amount);
-        Transfer(msg.sender, address(0), amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 
     /// @notice enables or disables address to be receipient of EUR-T

@@ -24,7 +24,7 @@ contract IdentityRecord {
     ////////////////////////
 
     /// translates uint256 to struct
-    function deserializeClaims(bytes32 data) internal constant returns (IdentityClaims memory claims) {
+    function deserializeClaims(bytes32 data) internal pure returns (IdentityClaims memory claims) {
         // for memory layout of struct, each field below word length occupies whole word
         assembly {
             mstore(claims, and(data, 0x1))

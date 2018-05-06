@@ -29,7 +29,7 @@ contract ETODurationTerms {
         uint32 publicDuration,
         uint32 signingDuration,
         uint32 claimDuration
-        )
+    )
         public
     {
         WHITELIST_DURATION = whitelistDuration;

@@ -66,7 +66,7 @@ contract ICBMEtherToken is
         _balances[msg.sender] = add(_balances[msg.sender], msg.value);
         _totalSupply = add(_totalSupply, msg.value);
         emit LogDeposit(msg.sender, msg.value);
-        Transfer(address(0), msg.sender, msg.value);
+        emit Transfer(address(0), msg.sender, msg.value);
     }
 
     /// withdraws and sends 'amount' of ether to msg.sender
@@ -78,7 +78,7 @@ contract ICBMEtherToken is
         _totalSupply = sub(_totalSupply, amount);
         msg.sender.transfer(amount);
         emit LogWithdrawal(msg.sender, amount);
-        Transfer(msg.sender, address(0), amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 
     //

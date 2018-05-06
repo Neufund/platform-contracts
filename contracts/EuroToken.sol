@@ -116,7 +116,7 @@ contract EuroToken is
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
         emit LogDeposit(to, msg.sender, amount);
-        Transfer(address(0), to, amount);
+        emit Transfer(address(0), to, amount);
     }
 
     /// @notice withdraws 'amount' of EUR-T by burning required amount and providing a proof of whithdrawal
@@ -221,6 +221,6 @@ contract EuroToken is
         require(_balances[msg.sender] >= amount);
         _balances[owner] = sub(_balances[owner], amount);
         _totalSupply = sub(_totalSupply, amount);
-        Transfer(owner, address(0), amount);
+        emit Transfer(owner, address(0), amount);
     }
 }

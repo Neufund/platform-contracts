@@ -32,7 +32,7 @@ contract NeumarkIssuanceCurve {
     /// @param euroUlps amount against which neumarks will be issued
     function incremental(uint256 totalEuroUlps, uint256 euroUlps)
         public
-        constant
+        pure
         returns (uint256 neumarkUlps)
     {
         require(totalEuroUlps + euroUlps >= totalEuroUlps);
@@ -49,7 +49,7 @@ contract NeumarkIssuanceCurve {
     /// @param burnNeumarkUlps amount of neumarks to burn
     function incrementalInverse(uint256 totalEuroUlps, uint256 burnNeumarkUlps)
         public
-        constant
+        pure
         returns (uint256 euroUlps)
     {
         uint256 totalNeumarkUlps = cumulative(totalEuroUlps);
@@ -68,7 +68,7 @@ contract NeumarkIssuanceCurve {
     /// @param maxEurUlps euro amount to end inverse search to, inclusive
     function incrementalInverse(uint256 totalEuroUlps, uint256 burnNeumarkUlps, uint256 minEurUlps, uint256 maxEurUlps)
         public
-        constant
+        pure
         returns (uint256 euroUlps)
     {
         uint256 totalNeumarkUlps = cumulative(totalEuroUlps);
@@ -85,7 +85,7 @@ contract NeumarkIssuanceCurve {
     ///     function below is not monotonic
     function cumulative(uint256 euroUlps)
         public
-        constant
+        pure
         returns(uint256 neumarkUlps)
     {
         // Return the cap if euroUlps is above the limit.
@@ -132,7 +132,7 @@ contract NeumarkIssuanceCurve {
     /// @dev corresponds to a linear search that returns first euroUlp value that has cumulative() equal or greater than neumarkUlps
     function cumulativeInverse(uint256 neumarkUlps, uint256 minEurUlps, uint256 maxEurUlps)
         public
-        constant
+        pure
         returns (uint256 euroUlps)
     {
         require(maxEurUlps >= minEurUlps);
@@ -176,7 +176,7 @@ contract NeumarkIssuanceCurve {
 
     function neumarkCap()
         public
-        constant
+        pure
         returns (uint256)
     {
         return NEUMARK_CAP;
@@ -184,7 +184,7 @@ contract NeumarkIssuanceCurve {
 
     function initialRewardFraction()
         public
-        constant
+        pure
         returns (uint256)
     {
         return INITIAL_REWARD_FRACTION;

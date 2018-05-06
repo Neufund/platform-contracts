@@ -41,7 +41,6 @@ import "./Helpers/MTokenTransfer.sol";
 ///     see Neumark as an example
 /// @dev implements ERC223 token transfer
 contract StandardSnapshotToken is
-    IERC20Token,
     MintableSnapshotToken,
     TokenAllowance
 {

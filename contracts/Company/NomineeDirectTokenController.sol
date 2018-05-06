@@ -1,6 +1,6 @@
 pragma solidity 0.4.23;
 
-import "./ICompanyManagement.sol";
+import "./IEquityTokenController.sol";
 import "../Agreement.sol";
 
 
@@ -11,9 +11,9 @@ contract ShareholderResolution {
 }
 
 
-contract Company is
+contract NomineeDirectTokenController is
     Agreement,
-    ICompanyManagement
+    IEquityTokenController
 {
     // is every EquityToken controller!
     // uint256 totalShares;
