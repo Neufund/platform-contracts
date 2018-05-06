@@ -8,7 +8,7 @@ import "./AccessRoles.sol";
 /**
  * @title legally binding smart contract
  * @dev General approach to paring legal and smart contracts:
- * 1. All terms and agreement are between two parties: here between legal representation of platform operator representative and platform investor.
+ * 1. All terms and agreement are between two parties: here between smart conctract legal representation and platform investor.
  * 2. Parties are represented by public Ethereum addresses. Platform investor is and address that holds and controls funds and receives and controls Neumark token
  * 3. Legal agreement has immutable part that corresponds to smart contract code and mutable part that may change for example due to changing regulations or other externalities that smart contract does not control.
  * 4. There should be a provision in legal document that future changes in mutable part cannot change terms of immutable part.
@@ -19,7 +19,7 @@ import "./AccessRoles.sol";
  *  c. Migration provision (bilateral code update mechanism)
  *
  * Details on Agreement base class:
- * 1. We bind smart contract to legal contract by storing uri (preferably ipfs or hash) of the legal contract in the smart contract. It is however crucial that such binding is done by platform operator representation so transaction establishing the link must be signed by respective wallet ('amendAgreement')
+ * 1. We bind smart contract to legal contract by storing uri (preferably ipfs or hash) of the legal contract in the smart contract. It is however crucial that such binding is done by smart contract legal representation so transaction establishing the link must be signed by respective wallet ('amendAgreement')
  * 2. Mutable part of agreement may change. We should be able to amend the uri later. Previous amendments should not be lost and should be retrievable (`amendAgreement` and 'pastAgreement' functions).
  * 3. It is up to deriving contract to decide where to put 'acceptAgreement' modifier. However situation where there is no cryptographic proof that given address was really acting in the transaction should be avoided, simplest example being 'to' address in `transfer` function of ERC20.
  *
@@ -35,7 +35,7 @@ contract Agreement is
 
     /// @notice agreement with signature of the platform operator representative
     struct SignedAgreement {
-        address platformOperatorRepresentative;
+        address contractLegalRepresentative;
         uint256 signedBlockTimestamp;
         string agreementUri;
     }
@@ -65,7 +65,7 @@ contract Agreement is
     );
 
     event LogAgreementAmended(
-        address platformOperatorRepresentative,
+        address contractLegalRepresentative,
         string agreementUri
     );
 
@@ -76,11 +76,12 @@ contract Agreement is
     /// @notice logs that agreement was accepted by platform user
     /// @dev intended to be added to functions that if used make 'accepter' origin to enter legally binding agreement
     modifier acceptAgreement(address accepter) {
-        if(_signatories[accepter] == 0) {
-            require(_amendments.length > 0);
-            _signatories[accepter] = block.number;
-            emit LogAgreementAccepted(accepter);
-        }
+        acceptAgreementInternal(accepter);
+        _;
+    }
+
+    modifier onlyLegalRepresentative(address legalRepresentative) {
+        require(canAmend(legalRepresentative));
         _;
     }
 
@@ -102,10 +103,10 @@ contract Agreement is
 
     function amendAgreement(string agreementUri)
         public
-        only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
+        onlyLegalRepresentative(msg.sender)
     {
         SignedAgreement memory amendment = SignedAgreement({
-            platformOperatorRepresentative: msg.sender,
+            contractLegalRepresentative: msg.sender,
             signedBlockTimestamp: block.timestamp,
             agreementUri: agreementUri
         });
@@ -126,7 +127,7 @@ contract Agreement is
         constant
         returns
         (
-            address platformOperatorRepresentative,
+            address contractLegalRepresentative,
             uint256 signedBlockTimestamp,
             string agreementUri,
             uint256 index
@@ -136,7 +137,7 @@ contract Agreement is
         uint256 last = _amendments.length - 1;
         SignedAgreement storage amendment = _amendments[last];
         return (
-            amendment.platformOperatorRepresentative,
+            amendment.contractLegalRepresentative,
             amendment.signedBlockTimestamp,
             amendment.agreementUri,
             last
@@ -148,7 +149,7 @@ contract Agreement is
         constant
         returns
         (
-            address platformOperatorRepresentative,
+            address contractLegalRepresentative,
             uint256 signedBlockTimestamp,
             string agreementUri,
             uint256 index
@@ -156,7 +157,7 @@ contract Agreement is
     {
         SignedAgreement storage amendment = _amendments[amendmentIndex];
         return (
-            amendment.platformOperatorRepresentative,
+            amendment.contractLegalRepresentative,
             amendment.signedBlockTimestamp,
             amendment.agreementUri,
             amendmentIndex
@@ -169,5 +170,36 @@ contract Agreement is
         returns (uint256)
     {
         return _signatories[signatory];
+    }
+
+    function amendmentsCount()
+        public
+        constant
+        returns (uint256)
+    {
+        return _amendments.length;
+    }
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    /// default amend permission goes to ROLE_PLATFORM_OPERATOR_REPRESENTATIVE
+    function canAmend(address legalRepresentative)
+        internal
+        returns (bool)
+    {
+        return accessPolicy().allowed(legalRepresentative, ROLE_PLATFORM_OPERATOR_REPRESENTATIVE, this, msg.sig);
+    }
+
+    /// provides direct access to derived contract
+    function acceptAgreementInternal(address accepter)
+        internal
+    {
+        if(_signatories[accepter] == 0) {
+            require(_amendments.length > 0);
+            _signatories[accepter] = block.number;
+            emit LogAgreementAccepted(accepter);
+        }
     }
 }

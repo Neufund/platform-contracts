@@ -34,7 +34,7 @@ contract("Agreement", ([_, platformOperatorRepresentative, signer1, signer2]) =>
   function expectAgreementAmendedEvent(tx, agreementUri) {
     const event = eventValue(tx, "LogAgreementAmended");
     expect(event).to.exist;
-    expect(event.args.platformOperatorRepresentative).to.eq(platformOperatorRepresentative);
+    expect(event.args.contractLegalRepresentative).to.eq(platformOperatorRepresentative);
     expect(event.args.agreementUri).to.eq(agreementUri);
   }
 
@@ -96,6 +96,7 @@ contract("Agreement", ([_, platformOperatorRepresentative, signer1, signer2]) =>
     await expectCurrentAgreement(agreementUri2, txBlock2.timestamp);
     const txBlock1 = await promisify(web3.eth.getBlock)(tx1.receipt.blockNumber);
     await expectPastAgreement(agreementUri1, txBlock1.timestamp, 0);
+    expect(await agreement.amendmentsCount()).to.be.bignumber.eq(2);
   });
 
   it("should sign agreement", async () => {
@@ -150,4 +151,6 @@ contract("Agreement", ([_, platformOperatorRepresentative, signer1, signer2]) =>
   it("should revert when get agreement past last index", async () => {
     await expect(agreement.pastAgreement.call(0)).to.be.rejectedWith(EvmError);
   });
+
+  it("should do all above test on TestOtherLegalRepAgreement where canAmend is overridden, also test if current ROLE cannot change");
 });
