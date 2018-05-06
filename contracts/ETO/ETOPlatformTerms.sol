@@ -43,9 +43,9 @@ contract ETOPlatformTerms is Math {
 
     // calculates investor's and platform operator's neumarks from total reward
     function calculateNeumarkDistribution(uint256 rewardNmk)
-    public
-    constant
-    returns (uint256 platformNmk, uint256 investorNmk)
+        public
+        constant
+        returns (uint256 platformNmk, uint256 investorNmk)
     {
         // round down - platform may get 1 wei less than investor
         platformNmk = rewardNmk / PLATFORM_NEUMARK_SHARE;
@@ -54,9 +54,9 @@ contract ETOPlatformTerms is Math {
     }
 
     function calculatePlatformTokenFee(uint256 tokenAmount)
-    public
-    constant
-    returns (uint256)
+        public
+        constant
+        returns (uint256)
     {
         return decimalFraction(
             tokenAmount,
@@ -65,9 +65,9 @@ contract ETOPlatformTerms is Math {
     }
 
     function calculatePlatformFee(uint256 amount)
-    public
-    constant
-    returns (uint256)
+        public
+        constant
+        returns (uint256)
     {
         return decimalFraction(amount, PLATFORM_FEE_FRACTION);
     }

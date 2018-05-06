@@ -10,7 +10,7 @@ contract Math {
     // absolute difference: |v1 - v2|
     function absDiff(uint256 v1, uint256 v2)
         internal
-    pure
+        pure
         returns(uint256)
     {
         return v1 > v2 ? v1 - v2 : v2 - v1;
@@ -19,7 +19,7 @@ contract Math {
     // divide v by d, round up if remainder is 0.5 or more
     function divRound(uint256 v, uint256 d)
         internal
-    pure
+        pure
         returns(uint256)
     {
         return add(v, d/2) / d;
@@ -31,7 +31,7 @@ contract Math {
     // do not use instead of division
     function decimalFraction(uint256 amount, uint256 frac)
         internal
-    pure
+        pure
         returns(uint256)
     {
         // it's like 1 ether is 100% proportion
@@ -42,7 +42,7 @@ contract Math {
     // part and total must have the same units
     function proportion(uint256 amount, uint256 part, uint256 total)
         internal
-    pure
+        pure
         returns(uint256)
     {
         return divRound(mul(amount, part), total);
@@ -54,7 +54,7 @@ contract Math {
 
     function mul(uint256 a, uint256 b)
         internal
-    pure
+        pure
         returns (uint256)
     {
         uint256 c = a * b;
@@ -64,7 +64,7 @@ contract Math {
 
     function sub(uint256 a, uint256 b)
         internal
-    pure
+        pure
         returns (uint256)
     {
         assert(b <= a);
@@ -73,7 +73,7 @@ contract Math {
 
     function add(uint256 a, uint256 b)
         internal
-    pure
+        pure
         returns (uint256)
     {
         uint256 c = a + b;
@@ -83,7 +83,7 @@ contract Math {
 
     function min(uint256 a, uint256 b)
         internal
-    pure
+        pure
         returns (uint256)
     {
         return a < b ? a : b;
@@ -91,7 +91,7 @@ contract Math {
 
     function max(uint256 a, uint256 b)
         internal
-    pure
+        pure
         returns (uint256)
     {
         return a > b ? a : b;

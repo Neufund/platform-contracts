@@ -105,11 +105,11 @@ contract IETOCommitment is ICommitment {
     /// financial outcome of token offering set on Signing state transition
     /// @dev in preceding states 0 is returned
     function signedOfferingResults()
-    public
-    constant
-    returns (
-        uint256 newShares, uint256 capitalIncreaseEurUlps,
-        uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
-        uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps);
-
+        public
+        constant
+        returns (
+            uint256 newShares, uint256 capitalIncreaseEurUlps,
+            uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
+            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps
+        );
 }

@@ -8,7 +8,7 @@ contract Serialization {
     ////////////////////////
     function addressToBytes(address a)
         internal
-    pure
+        pure
         returns (bytes b)
     {
         assembly {
@@ -23,7 +23,7 @@ contract Serialization {
 
     function addressFromBytes(bytes b)
         internal
-    pure
+        pure
         returns (address a)
     {
         require(b.length == 20);

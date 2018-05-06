@@ -353,9 +353,9 @@ contract LockedAccount is
     /// checks the amount of investment made from locked account
     /// @dev caller is an ETO
     function investment(address commitment, address investor)
-    public
-    constant
-    returns (uint256 balance, uint256 neumarkDue)
+        public
+        constant
+        returns (uint256 balance, uint256 neumarkDue)
     {
         Account storage i = _investments[commitment][investor];
         return (i.balance, i.neumarksDue);

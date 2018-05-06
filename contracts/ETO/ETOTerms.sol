@@ -52,9 +52,9 @@ contract ETOTerms is Math {
     // calculates token amount for a given commitment at a position of the curve
     // we require that equity token precision is 0
     function calculateTokenAmount(uint256 totalEurUlps, uint256 committedEurUlps)
-    public
-    constant
-    returns (uint256 tokenAmountInt)
+        public
+        constant
+        returns (uint256 tokenAmountInt)
     {
         // we may disregard totalEurUlps as curve is flat
         return divRound(committedEurUlps, TOKEN_PRICE_EUR_ULPS);
@@ -63,9 +63,9 @@ contract ETOTerms is Math {
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
     // we require that equity token precision is 0
     function calculateEurUlpsAmount(uint256 totalTokensInt, uint256 tokenAmountInt)
-    public
-    constant
-    returns (uint256 committedEurUlps)
+        public
+        constant
+        returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokensInt as curve is flat
         return mul(tokenAmountInt, TOKEN_PRICE_EUR_ULPS);
@@ -106,7 +106,7 @@ contract ETOTerms is Math {
         string shaTemplateUrl,
         ShareholderRights shareHolderRights
     )
-    public
+        public
     {
         DURATION_TERMS = durationTerms;
         TOTAL_COMPANY_SHARES = totalCompanyShares;
@@ -130,8 +130,8 @@ contract ETOTerms is Math {
 
     /// @notice checks terms against platform terms, reverts on invalid
     function requireValidTerms(ETOPlatformTerms platformTerms)
-    public
-    constant
+        public
+        constant
     {
         // TODO: write checks
         // TODO: compute ticket size per regulations and settings in platform terms

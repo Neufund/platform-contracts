@@ -98,7 +98,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     function finalized()
         public
         constant
-    returns (bool)
+        returns (bool)
     {
         return (_state == State.Refund || _state == State.Payout);
     }
@@ -107,7 +107,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     function success()
         public
         constant
-    returns (bool)
+        returns (bool)
     {
         return (_state == State.Claim || _state == State.Payout);
     }
@@ -116,7 +116,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     function failed()
         public
         constant
-    returns (bool)
+        returns (bool)
     {
         return _state == State.Refund;
     }
@@ -126,17 +126,17 @@ contract ETOTimedStateMachine is IETOCommitment {
     //
 
     function state()
-    public
-    constant
-    returns (State)
+        public
+        constant
+        returns (State)
     {
         return _state;
     }
 
     function startOf(State s)
-    public
-    constant
-    returns (uint256)
+        public
+        constant
+        returns (uint256)
     {
         return startOfInternal(s);
     }
@@ -149,9 +149,9 @@ contract ETOTimedStateMachine is IETOCommitment {
     /// @dev advance due to time implemented in advanceTimedState, here implement other conditions like
     ///     max cap reached -> we go to signing
     function mBeforeStateTransition(State oldState, State newState)
-    internal
-    constant
-    returns (State newStateOverride);
+        internal
+        constant
+        returns (State newStateOverride);
 
     /// @notice gets called after every state transition.
     function mAfterTransition(State oldState, State newState)
@@ -159,9 +159,9 @@ contract ETOTimedStateMachine is IETOCommitment {
 
     /// @notice gets called after business logic, may induce state transition
     function mAdavanceLogicState(State oldState)
-    internal
-    constant
-    returns (State);
+        internal
+        constant
+        returns (State);
 
 
 
@@ -181,17 +181,16 @@ contract ETOTimedStateMachine is IETOCommitment {
     }
 
     function runTimedStateMachine(uint32 startDate)
-    internal
-    onlyState(State.Setup)
+        internal
     {
         // this sets expiration of setup state
         _pastStateTransitionTimes[uint32(State.Setup)] = startDate;
     }
 
     function startOfInternal(State s)
-    internal
-    constant
-    returns (uint256)
+        internal
+        constant
+        returns (uint256)
     {
         // initial state does not have start time
         if (s == State.Setup) {
@@ -260,7 +259,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     // @notice transitions due to business logic
     // @dev called after logic
     function advanceLogicState()
-    private
+        private
     {
         State newState = mAdavanceLogicState(_state);
         if (_state != newState) {
@@ -270,7 +269,7 @@ contract ETOTimedStateMachine is IETOCommitment {
 
     /// @notice executes transition state function
     function transitionTo(State newState)
-    private
+        private
     {
         State oldState = _state;
         State effectiveNewState = mBeforeStateTransition(oldState, newState);
@@ -289,7 +288,7 @@ contract ETOTimedStateMachine is IETOCommitment {
 
     function validTransition(State oldState, State newState)
         private
-    pure
+        pure
         returns (bool valid)
     {
         // TODO: think about disabling it before production deployment

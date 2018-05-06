@@ -284,7 +284,7 @@ contract ETOCommitment is
     )
         AccessControlled(universe.accessPolicy())
         Agreement(universe.accessPolicy(), universe.forkArbiter())
-    ETOTimedStateMachine()
+        ETOTimedStateMachine()
         public
     {
         UNIVERSE = universe;
@@ -313,10 +313,10 @@ contract ETOCommitment is
         ETOTerms etoTerms,
         IEquityToken equityToken
     )
-    external
-    onlyCompany
-    withStateTransition()
-    onlyState(State.Setup)
+        external
+        onlyCompany
+        withStateTransition()
+        onlyState(State.Setup)
     {
         // must be integer precision
         require(equityToken.decimals() == 0, "ETO_ET_DECIMALS");
@@ -340,8 +340,8 @@ contract ETOCommitment is
 
     function addWhitelisted(address[] investors)
         external
-    onlyCompany
-    onlyWithTerms
+        onlyCompany
+        onlyWithTerms
         withStateTransition()
         onlyState(State.Setup)
     {
@@ -350,8 +350,8 @@ contract ETOCommitment is
 
     function removeWhitelisted(address[] investors)
         external
-    onlyCompany
-    onlyWithTerms
+        onlyCompany
+        onlyWithTerms
         withStateTransition()
         onlyState(State.Setup)
     {
@@ -362,7 +362,7 @@ contract ETOCommitment is
     /// @dev selfdestruct is executed
     function abort()
         external
-    only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
+        only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
         withStateTransition()
         onlyState(State.Setup)
     {
@@ -371,8 +371,8 @@ contract ETOCommitment is
 
     function setProspectus(string prospectusUrl)
         external
-    onlyCompany
-    onlyWithTerms
+        onlyCompany
+        onlyWithTerms
         withStateTransition()
         onlyState(State.Setup)
     {
@@ -383,10 +383,10 @@ contract ETOCommitment is
     /// @dev sets timed state machine in motion,
     function setStartDate(uint256 startDate)
         external
-    onlyCompany
-    onlyWithTerms
-    onlyWithProspectus
-    onlyWithAgreement
+        onlyCompany
+        onlyWithTerms
+        onlyWithProspectus
+        onlyWithAgreement
         withStateTransition()
         onlyState(State.Setup)
     {
@@ -402,9 +402,9 @@ contract ETOCommitment is
     }
 
     function companySignsInvestmentAgreement(string signedInvestmentAgreementUrl)
-    external
-    withStateTransition()
-    onlyState(State.Signing)
+        external
+        withStateTransition()
+        onlyState(State.Signing)
         onlyCompany
     {
         _signedInvestmentAgreementUrl = signedInvestmentAgreementUrl;
@@ -412,10 +412,10 @@ contract ETOCommitment is
     }
 
     function nomineeConfirmsInvestmentAgreement(string signedInvestmentAgreementUrl)
-    external
-    withStateTransition()
-    onlyState(State.Signing)
-    onlyNominee
+        external
+        withStateTransition()
+        onlyState(State.Signing)
+        onlyNominee
     {
         bytes32 nomineeHash = keccak256(signedInvestmentAgreementUrl);
         require(keccak256(_signedInvestmentAgreementUrl) == nomineeHash, "INV_HASH");
@@ -467,7 +467,7 @@ contract ETOCommitment is
             msg.sender,
             amount,
             equivEurUlps,
-        equityTokenInt,
+            equityTokenInt,
             EQUITY_TOKEN,
             rewardNmkUlps
         );
@@ -480,16 +480,16 @@ contract ETOCommitment is
     function claim()
         external
         withStateTransition()
-    onlyStates(State.Claim, State.Payout)
+        onlyStates(State.Claim, State.Payout)
 
     {
         claimTokensPrivate(msg.sender);
     }
 
     function claimMany(address[] investors)
-    external
-    withStateTransition()
-    onlyStates(State.Claim, State.Payout)
+        external
+        withStateTransition()
+        onlyStates(State.Claim, State.Payout)
     {
         // todo: claim in a loop
     }
@@ -524,9 +524,9 @@ contract ETOCommitment is
     //
 
     function estimateTokensAndNmkReward(uint256 amountEurUlps)
-    public
-    constant
-    returns (uint256 tokenAmountInt, uint256 rewardNmkUlps)
+        public
+        constant
+        returns (uint256 tokenAmountInt, uint256 rewardNmkUlps)
     {
         uint256 rewardNmk = NEUMARK.incremental(amountEurUlps);
         (, rewardNmkUlps) = calculateNeumarkDistribution(rewardNmk);
@@ -534,9 +534,9 @@ contract ETOCommitment is
     }
 
     function investorTicket(address investor)
-    public
-    constant
-    returns (uint256 maxTicket, uint256 discountFrac)
+        public
+        constant
+        returns (uint256 maxTicket, uint256 discountFrac)
     {
         // TODO: implement ticket size depending in KYC (0, soph, normal)
         // check whitelist and provide overrides
@@ -547,35 +547,35 @@ contract ETOCommitment is
     //
 
     function signedInvestmentAgreementUrl()
-    public
-    constant
-    returns (string)
+        public
+        constant
+        returns (string)
     {
         require(_nomineeSignedInvestmentAgreementUrlHash != bytes32(0));
         return _signedInvestmentAgreementUrl;
     }
 
     function prospectusUrl()
-    public
-    constant
-    returns (string)
+        public
+        constant
+        returns (string)
     {
         return _prospectusUrl;
     }
 
     function signedOfferingResults()
-    public
-    constant
-    returns (
-        uint256 newShares, uint256 capitalIncreaseEurUlps,
-        uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
-        uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps
-    )
+        public
+        constant
+        returns (
+            uint256 newShares, uint256 capitalIncreaseEurUlps,
+            uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
+            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps
+        )
     {
         return (
-        _newShares, _newShares * EQUITY_TOKEN.shareNominalValueEurUlps(),
-        _additionalContributionEth, _additionalContributionEurUlps,
-        _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps
+            _newShares, _newShares * EQUITY_TOKEN.shareNominalValueEurUlps(),
+            _additionalContributionEth, _additionalContributionEurUlps,
+            _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps
         );
     }
 
@@ -601,8 +601,8 @@ contract ETOCommitment is
 
     function mAdavanceLogicState(State oldState)
         internal
-    constant
-    returns (State)
+        constant
+        returns (State)
     {
         if (oldState == State.Whitelist || oldState == State.Public) {
             // if within min ticket of max cap then move state
@@ -624,9 +624,9 @@ contract ETOCommitment is
     }
 
     function mBeforeStateTransition(State oldState, State newState)
-    internal
-    constant
-    returns (State)
+        internal
+        constant
+        returns (State)
     {
         // force refund if floor criteria are not met
         if (newState == State.Signing && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
@@ -668,8 +668,8 @@ contract ETOCommitment is
     //
 
     function canAmend(address legalRepresentative)
-    internal
-    returns (bool)
+        internal
+        returns (bool)
     {
         return legalRepresentative == NOMINEE;
     }
@@ -680,8 +680,8 @@ contract ETOCommitment is
 
     // a copy of ETOPlatformTerms working on local storage
     function calculateNeumarkDistribution(uint256 rewardNmk)
-    public
-    constant
+        public
+        constant
         returns (uint256 platformNmk, uint256 investorNmk)
     {
         // round down - platform may get 1 wei less than investor
@@ -692,7 +692,7 @@ contract ETOCommitment is
 
     /// called on transition to Signong
     function onSigningTransition()
-    private
+        private
     {
         // get final balances
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
@@ -754,7 +754,7 @@ contract ETOCommitment is
 
     /// called on transtion to State.Refund
     function onRefundTransition()
-    private
+        private
     {
         // burn all neumark generated in this ETO
         uint256 balanceNmk = NEUMARK.balanceOf(this);
@@ -801,7 +801,7 @@ contract ETOCommitment is
         bool isLockedAccount
     )
         private
-    returns (uint96 equityTokenInt, uint96 rewardNmkUlps, uint256 equivEurUlps)
+        returns (uint96 equityTokenInt, uint96 rewardNmkUlps, uint256 equivEurUlps)
     {
         bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
         // compute EUR eurEquivalent via oracle if ether
@@ -855,7 +855,9 @@ contract ETOCommitment is
         return (equityTokenInt, rewardNmkUlps, equivEurUlps);
     }
 
-    function claimTokensPrivate(address investor) private {
+    function claimTokensPrivate(address investor)
+        private
+    {
         InvestmentTicket storage ticket = _tickets[investor];
         if (ticket.claimOrRefundSettled) {
             return;
@@ -875,7 +877,9 @@ contract ETOCommitment is
         emit LogTokensClaimed(investor, EQUITY_TOKEN, ticket.equityTokenInt, ticket.rewardNmkUlps);
     }
 
-    function refundTokensPrivate(address investor) private {
+    function refundTokensPrivate(address investor)
+        private
+    {
         InvestmentTicket storage ticket = _tickets[investor];
         if (ticket.claimOrRefundSettled) {
             return;
@@ -895,7 +899,7 @@ contract ETOCommitment is
         LockedAccount lockedAccount,
         IERC223Token token
     )
-    private
+        private
     {
         if (amount == 0) {
             return;

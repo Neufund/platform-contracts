@@ -8,10 +8,10 @@ import "../SnapshotToken/StandardSnapshotToken.sol";
 
 
 contract EquityToken is
-IEquityToken,
+    IEquityToken,
     // StandardSnapshotToken,
-DailyAndSnapshotable,
-TokenMetadata
+    DailyAndSnapshotable,
+    TokenMetadata
 {
     // TODO: implement
     //Company contract is token controller
