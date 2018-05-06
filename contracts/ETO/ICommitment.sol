@@ -34,13 +34,13 @@ contract ICommitment is
     ////////////////////////
 
     // says if state is final
-    function finalized() public constant returns (bool isFinal);
+    function finalized() public constant returns (bool);
 
     // says if state is success
-    function success() public constant returns (bool isSuccess);
+    function success() public constant returns (bool);
 
-    // says if state is filure
-    function fail() public constant returns (bool failed);
+    // says if state is failure
+    function failed() public constant returns (bool);
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @param investor address of the investor
