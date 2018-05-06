@@ -201,15 +201,15 @@ contract Universe is
         return _singletons[KNOWN_INTERFACE_ICBM_EURO_LOCK];
     }
 
-    function identityRegistry() public constant returns (IIdentityRegistry) {
+    function identityRegistry() public constant returns (address) {
         return IIdentityRegistry(_singletons[KNOWN_INTERFACE_IDENTITY_REGISTRY]);
     }
 
-    function tokenExchangeRateOracle() public constant returns (ITokenExchangeRateOracle) {
+    function tokenExchangeRateOracle() public constant returns (address) {
         return ITokenExchangeRateOracle(_singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE_RATE_ORACLE]);
     }
 
-    function feeDisbursal() public constant returns (IFeeDisbursal) {
+    function feeDisbursal() public constant returns (address) {
         return IFeeDisbursal(_singletons[KNOWN_INTERFACE_FEE_DISBURSAL]);
     }
 

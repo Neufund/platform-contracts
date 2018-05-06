@@ -63,6 +63,9 @@ contract EuroTokenController is
     // max token exchange can make for gas purchase
     uint256 private _maxSimpleExchangeAllowanceEurUlps;
 
+    // identity registry
+    IIdentityRegistry private _identityRegistry;
+
     ////////////////////////
     // Constructor
     ////////////////////////
@@ -176,7 +179,7 @@ contract EuroTokenController is
         }
         // try to resolve 'from'
         if (!explicitFrom) {
-            IdentityClaims memory claimsFrom = deserializeClaims(UNIVERSE.identityRegistry().getClaims(from));
+            IdentityClaims memory claimsFrom = deserializeClaims(_identityRegistry.getClaims(from));
             explicitFrom = claimsFrom.hasKyc;
         }
         if (!explicitFrom) {
@@ -193,7 +196,7 @@ contract EuroTokenController is
         }
         if (!explicitTo) {
             // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
-            IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(to));
+            IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(to));
             explicitTo = claims.hasKyc;
         }
         if(claims.hasKyc && claimsFrom.hasKyc) {
@@ -235,7 +238,7 @@ contract EuroTokenController is
         if(_allowedTransferTo[owner]) {
             return true;
         }
-        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(owner));
+        IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.hasKyc;
     }
 
@@ -251,7 +254,7 @@ contract EuroTokenController is
         if(_allowedTransferFrom[owner]) {
             return true;
         }
-        IdentityClaims memory claims = deserializeClaims(UNIVERSE.identityRegistry().getClaims(owner));
+        IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.hasKyc && claims.hasBankAccount;
     }
 
@@ -266,6 +269,7 @@ contract EuroTokenController is
     )
         private
     {
+        _identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         allowFromUniverse();
         _minDepositAmountEurUlps = pMinDepositAmountEurUlps;
         _minWithdrawAmountEurUlps = pMinWithdrawAmountEurUlps;
