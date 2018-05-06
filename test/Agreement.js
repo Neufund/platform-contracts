@@ -152,5 +152,7 @@ contract("Agreement", ([_, platformOperatorRepresentative, signer1, signer2]) =>
     await expect(agreement.pastAgreement.call(0)).to.be.rejectedWith(EvmError);
   });
 
-  it("should do all above test on TestOtherLegalRepAgreement where canAmend is overridden, also test if current ROLE cannot change");
+  it(
+    "should do all above test on TestOtherLegalRepAgreement where canAmend is overridden, also test if current ROLE cannot change",
+  );
 });
