@@ -4,16 +4,20 @@ import "./ETODurationTerms.sol";
 import "./IETOCommitment.sol";
 
 
-/// @title state machine for Commitment contract
-/// @notice implements ETO state machine per documentation in README
-/// @dev state switching via 'transitionTo' function
-/// @dev inherited contract must implement mAfterTransition which will be called just after state transition happened
-/// @title time induced state machine
-/// @dev intended usage via 'withTimedTransitions' modifier which makes sure that state machine transitions into
-///     correct state before executing function body. note that this is contract state changing modifier so use with care
-/// @dev state change request is publicly accessible via 'handleTimedTransitions'
+/// @title time induced state machine for Equity Token Offering
+/// @notice implements ETO state machine with setup, whitelist, public, signing, claim, refund and payout phases
+/// @dev inherited contract must implement internal interface, see comments
+///  intended usage via 'withStateTransition' modifier which makes sure that state machine transitions into
+///  correct state before executing function body. note that this is contract state changing modifier so use with care
+/// @dev timed state change request is publicly accessible via 'handleTimedTransitions'
 /// @dev time is based on block.timestamp
 contract ETOTimedStateMachine is IETOCommitment {
+
+    ////////////////////////
+    // CONSTANTS
+    ////////////////////////
+
+    uint32 private constant TS_STATE_NOT_SET = 1;
 
     ////////////////////////
     // Immutable state
@@ -36,16 +40,16 @@ contract ETOTimedStateMachine is IETOCommitment {
     // Modifiers
     ////////////////////////
 
-    // @dev This modifier needs to be applied to all external non-constant
-    //     functions.
-    // @dev This modifier goes _before_ other state modifiers like `onlyState`.
+    // @dev This modifier needs to be applied to all external non-constant functions.
+    //  this modifier goes _before_ other state modifiers like `onlyState`.
+    //  after function body execution state may transition again in `advanceLogicState`
     modifier withStateTransition() {
         // switch state due to time
         advanceTimedState();
         // execute function body
         _;
-        // switch state due to other ETO factors
-        mAdvanceState(_state);
+        // switch state due to business logic
+        advanceLogicState();
     }
 
     modifier onlyState(State state) {
@@ -68,16 +72,11 @@ contract ETOTimedStateMachine is IETOCommitment {
     // Constructor
     ////////////////////////
 
-    function ETOTimedStateMachine(ETODurationTerms durationTerms)
+    function ETOTimedStateMachine()
         internal
     {
-        // map terms to states
-        ETO_STATE_DURATIONS[uint32(State.Whitelist)] = durationTerms.WHITELIST_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Public)] = durationTerms.PUBLIC_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Signing)] = durationTerms.SIGNING_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Claim)] = durationTerms.CLAIM_DURATION();
         // set values to past timed transitions to reduce future gas cost
-        _pastStateTransitionTimes = [1, 1, 1, 1, 1, 1, 1];
+        _pastStateTransitionTimes = [TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET];
     }
 
     ////////////////////////
@@ -91,48 +90,15 @@ contract ETOTimedStateMachine is IETOCommitment {
         advanceTimedState();
     }
 
-    function state()
-        public
-        constant
-        returns (State)
-    {
-        return _state;
-    }
-
-    function startOf(State s)
-        public
-        constant
-        returns (uint256)
-    {
-        if (s == State.Setup) {
-            return 0;
-        }
-        uint256 expiration = _pastStateTransitionTimes[uint32(s)];
-        // if in setup state and time to end state not set we cannot calculate anything
-        if (_state == State.Setup && expiration == 0) {
-            return 0;
-        }
-        // get past state transition timestamp
-        if (s < _state) {
-            return _pastStateTransitionTimes[uint32(s)];
-        }
-        // beginning of the current state
-        if (s == _state) {
-            return expiration - ETO_STATE_DURATIONS[uint32(s)];
-        }
-        // this trick gets start of required state by adding all durations betweend current and required states
-        // note that past and current state were handled above so required state is in the future
-        for(uint256 stateIdx = uint32(_state) + 1; stateIdx <= uint32(s); stateIdx++) {
-            expiration += ETO_STATE_DURATIONS[stateIdx];
-        }
-        return expiration;
-    }
+    //
+    // Implements ICommitment
+    //
 
     // says if state is final
     function finalized()
         public
         constant
-        returns (bool isFinal)
+    returns (bool)
     {
         return (_state == State.Refund || _state == State.Payout);
     }
@@ -141,88 +107,189 @@ contract ETOTimedStateMachine is IETOCommitment {
     function success()
         public
         constant
-        returns (bool isSuccess)
+    returns (bool)
     {
         return (_state == State.Claim || _state == State.Payout);
     }
 
     // says if state is filure
-    function fail()
+    function failed()
         public
         constant
-        returns (bool failed)
+    returns (bool)
     {
         return _state == State.Refund;
     }
 
+    //
+    // Implement IETOCommitment
+    //
+
+    function state()
+    public
+    constant
+    returns (State)
+    {
+        return _state;
+    }
+
+    function startOf(State s)
+    public
+    constant
+    returns (uint256)
+    {
+        return startOfInternal(s);
+    }
+
     ////////////////////////
-    // Internal functions
+    // Internal Interface
     ////////////////////////
 
-    /// @notice called to advance to next state
-    /// @dev should advance state with transitionTo
+    /// @notice called before state transitions, allows override transition due to additional business logic
     /// @dev advance due to time implemented in advanceTimedState, here implement other conditions like
     ///     max cap reached -> we go to signing
-    function mAdvanceState(State oldState)
-        internal;
+    function mBeforeStateTransition(State oldState, State newState)
+    internal
+    constant
+    returns (State newStateOverride);
 
     /// @notice gets called after every state transition.
     function mAfterTransition(State oldState, State newState)
         internal;
 
-    /// @notice executes transition state function
-    function transitionTo(State newState)
+    /// @notice gets called after business logic, may induce state transition
+    function mAdavanceLogicState(State oldState)
+    internal
+    constant
+    returns (State);
+
+
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    function setupDurations(ETODurationTerms durationTerms)
         internal
     {
-        State oldState = _state;
-        require(validTransition(oldState, newState));
+        require(ETO_STATE_DURATIONS[uint32(State.Signing)] != 0, "DUR_SET_ONCE");
 
-        _state = newState;
-        // we have 60+ years for 2^32 overflow on epoch so disregard
-        _pastStateTransitionTimes[uint32(oldState)] = uint32(block.timestamp);
-        _pastStateTransitionTimes[uint32(newState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint32(newState)];
-        emit LogStateTransition(uint32(oldState), uint32(newState));
+        ETO_STATE_DURATIONS[uint32(State.Whitelist)] = durationTerms.WHITELIST_DURATION();
+        ETO_STATE_DURATIONS[uint32(State.Public)] = durationTerms.PUBLIC_DURATION();
+        ETO_STATE_DURATIONS[uint32(State.Signing)] = durationTerms.SIGNING_DURATION();
+        ETO_STATE_DURATIONS[uint32(State.Claim)] = durationTerms.CLAIM_DURATION();
+    }
 
-        // should not change state and it is required here.
-        mAfterTransition(oldState, newState);
-        require(_state == newState);
+    function runTimedStateMachine(uint32 startDate)
+    internal
+    onlyState(State.Setup)
+    {
+        // this sets expiration of setup state
+        _pastStateTransitionTimes[uint32(State.Setup)] = startDate;
+    }
+
+    function startOfInternal(State s)
+    internal
+    constant
+    returns (uint256)
+    {
+        // initial state does not have start time
+        if (s == State.Setup) {
+            return 0;
+        }
+
+        // if timed state machine was not run, the next state will never come
+        // if (_pastStateTransitionTimes[uint32(State.Setup)] == 0) {
+        //    return 0xFFFFFFFF;
+        // }
+
+        // special case for Refund
+        if (s == State.Refund) {
+            return _state == s ? _pastStateTransitionTimes[uint32(_state)] : 0;
+        }
+        // current and previous states: just take s - 1 which is the end of previous state
+        if (uint32(s) - 1 <= uint32(_state)) {
+            return _pastStateTransitionTimes[uint32(s) - 1];
+        }
+        // for future states
+        uint256 currStateExpiration = _pastStateTransitionTimes[uint32(_state)];
+        // this trick gets start of required state by adding all durations between current and required states
+        // note that past and current state were handled above so required state is in the future
+        // we also rely on terminal states having duration of 0
+        for (uint256 stateIdx = uint32(_state) + 1; stateIdx <= uint32(s); stateIdx++) {
+            currStateExpiration += ETO_STATE_DURATIONS[stateIdx];
+        }
+        return currStateExpiration;
     }
 
     ////////////////////////
     // Private functions
     ////////////////////////
 
-    // @notice time induced state transitions.
+    // @notice time induced state transitions, called before logic
     // @dev don't use `else if` and keep sorted by time and call `state()`
     //     or else multiple transitions won't cascade properly.
     function advanceTimedState()
         private
     {
-        uint256 t = block.timestamp;
+        // if timed state machine was not run, the next state will never come
+        if (_pastStateTransitionTimes[uint32(State.Setup)] == 0) {
+            return;
+        }
 
-        // from setup to refund
-        if (_state == State.Setup && t >= startOf(State.Whitelist)) {
+        uint256 t = block.timestamp;
+        if (_state == State.Setup && t >= startOfInternal(State.Whitelist)) {
             transitionTo(State.Whitelist);
         }
-        if (_state == State.Whitelist && t >= startOf(State.Public)) {
+        if (_state == State.Whitelist && t >= startOfInternal(State.Public)) {
             transitionTo(State.Public);
         }
-        if (_state == State.Public && t >= startOf(State.Refund)) {
-            transitionTo(State.Refund);
+        if (_state == State.Public && t >= startOfInternal(State.Claim)) {
+            transitionTo(State.Claim);
         }
         // signing to refund
-        if (_state == State.Signing && t >= startOf(State.Refund)) {
+        if (_state == State.Signing && t >= startOfInternal(State.Refund)) {
             transitionTo(State.Refund);
         }
         // claim to payout
-        if (_state == State.Claim && t >= startOf(State.Payout)) {
+        if (_state == State.Claim && t >= startOfInternal(State.Payout)) {
             transitionTo(State.Payout);
         }
     }
 
+    // @notice transitions due to business logic
+    // @dev called after logic
+    function advanceLogicState()
+    private
+    {
+        State newState = mAdavanceLogicState(_state);
+        if (_state != newState) {
+            transitionTo(newState);
+        }
+    }
+
+    /// @notice executes transition state function
+    function transitionTo(State newState)
+    private
+    {
+        State oldState = _state;
+        State effectiveNewState = mBeforeStateTransition(oldState, newState);
+        require(validTransition(oldState, effectiveNewState));
+
+        _state = effectiveNewState;
+        // we have 60+ years for 2^32 overflow on epoch so disregard
+        _pastStateTransitionTimes[uint32(oldState)] = uint32(block.timestamp);
+        _pastStateTransitionTimes[uint32(effectiveNewState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint32(effectiveNewState)];
+        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState));
+
+        // should not change _state
+        mAfterTransition(oldState, effectiveNewState);
+        assert(_state == effectiveNewState);
+    }
+
     function validTransition(State oldState, State newState)
         private
-        constant
+    pure
         returns (bool valid)
     {
         // TODO: think about disabling it before production deployment
