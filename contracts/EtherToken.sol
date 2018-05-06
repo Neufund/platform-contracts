@@ -70,7 +70,7 @@ contract EtherToken is
         public
     {
         depositPrivate();
-        Transfer(address(0), msg.sender, msg.value);
+        emit Transfer(address(0), msg.sender, msg.value);
     }
 
     /// @notice convenience function to deposit and immediately transfer amount
@@ -168,6 +168,6 @@ contract EtherToken is
         _balances[msg.sender] = sub(_balances[msg.sender], amount);
         _totalSupply = sub(_totalSupply, amount);
         emit LogWithdrawal(msg.sender, amount);
-        Transfer(msg.sender, address(0), amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 }

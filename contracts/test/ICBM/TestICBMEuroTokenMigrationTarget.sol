@@ -59,6 +59,6 @@ contract TestICBMEuroTokenMigrationTarget is
         require(to != address(0));
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
-        Transfer(address(0), to, amount);
+        emit Transfer(address(0), to, amount);
     }
 }

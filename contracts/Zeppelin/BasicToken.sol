@@ -71,6 +71,6 @@ contract BasicToken is IBasicToken, Math {
 
         _balances[from] = sub(_balances[from], amount);
         _balances[to] = add(_balances[to], amount);
-        Transfer(from, to, amount);
+        emit Transfer(from, to, amount);
     }
 }
