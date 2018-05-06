@@ -1,8 +1,10 @@
 pragma solidity 0.4.23;
 
+import "../Math.sol";
+
 
 /// @title set terms of Platform (investor's network) of the ETO
-contract ETOPlatformTerms {
+contract ETOPlatformTerms is Math {
 
     ////////////////////////
     // Constants
@@ -19,8 +21,6 @@ contract ETOPlatformTerms {
     // ICBM investors whitelisted by default
     bool public IS_ICBM_INVESTOR_WHITELISTED = true;
 
-    // various constaints on ETOTerms by company
-
     // minimum ticket size Platform accepts in EUR ULPS
     uint256 public constant MIN_TICKET_EUR_ULPS = 500 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
@@ -31,4 +31,44 @@ contract ETOPlatformTerms {
     uint256 public constant MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS = 10000 * 10**18;
     // maximum raised amount for crowdfunding regulation
     uint256 public constant MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS = 2500000 * 10**18;
+
+    // min duration from setting the date to ETO start
+    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 3 days;
+
+    // todo: add other duration constraints
+
+    ////////////////////////
+    // Public Function
+    ////////////////////////
+
+    // calculates investor's and platform operator's neumarks from total reward
+    function calculateNeumarkDistribution(uint256 rewardNmk)
+    public
+    constant
+    returns (uint256 platformNmk, uint256 investorNmk)
+    {
+        // round down - platform may get 1 wei less than investor
+        platformNmk = rewardNmk / PLATFORM_NEUMARK_SHARE;
+        // rewardNmk > platformNmk always
+        return (platformNmk, rewardNmk - platformNmk);
+    }
+
+    function calculatePlatformTokenFee(uint256 tokenAmount)
+    public
+    constant
+    returns (uint256)
+    {
+        return decimalFraction(
+            tokenAmount,
+            TOKEN_PARTICIPATION_FEE_FRACTION
+        );
+    }
+
+    function calculatePlatformFee(uint256 amount)
+    public
+    constant
+    returns (uint256)
+    {
+        return decimalFraction(amount, PLATFORM_FEE_FRACTION);
+    }
 }
