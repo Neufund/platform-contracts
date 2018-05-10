@@ -19,7 +19,11 @@ contract ETOPlatformTerms is Math {
     // the results of division belongs to platform operator, the remaining reward part belongs to investor
     uint256 public constant PLATFORM_NEUMARK_SHARE = 2; // 50:50 division
     // ICBM investors whitelisted by default
-    bool public IS_ICBM_INVESTOR_WHITELISTED = true;
+    bool public constant IS_ICBM_INVESTOR_WHITELISTED = true;
+    // equity tokens per share
+    uint256 public constant EQUITY_TOKENS_PER_SHARE = 1000000; // move it to platform
+    // equity tokens decimals (precision)
+    uint256 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
     // minimum ticket size Platform accepts in EUR ULPS
     uint256 public constant MIN_TICKET_EUR_ULPS = 500 * 10**18;
@@ -44,7 +48,7 @@ contract ETOPlatformTerms is Math {
     // calculates investor's and platform operator's neumarks from total reward
     function calculateNeumarkDistribution(uint256 rewardNmk)
         public
-        constant
+        pure
         returns (uint256 platformNmk, uint256 investorNmk)
     {
         // round down - platform may get 1 wei less than investor
@@ -55,7 +59,7 @@ contract ETOPlatformTerms is Math {
 
     function calculatePlatformTokenFee(uint256 tokenAmount)
         public
-        constant
+        pure
         returns (uint256)
     {
         return decimalFraction(
@@ -66,7 +70,7 @@ contract ETOPlatformTerms is Math {
 
     function calculatePlatformFee(uint256 amount)
         public
-        constant
+        pure
         returns (uint256)
     {
         return decimalFraction(amount, PLATFORM_FEE_FRACTION);
