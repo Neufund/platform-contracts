@@ -134,7 +134,7 @@ contract ICBMCommitment is
     /// @param capEurUlps maxium amount of euro tokens committed
     /// @param minTicketEurUlps minimum ticket size
     /// @param ethEurFraction Ether to Euro rate, fixed during commitment
-    function ICBMCommitment(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
         int256 startDate,
@@ -148,7 +148,6 @@ contract ICBMCommitment is
         uint256 minTicketEurUlps,
         uint256 ethEurFraction
     )
-        AccessControlled(accessPolicy)
         Agreement(accessPolicy, forkArbiter)
         ICBMTimedStateMachine(startDate)
         public
@@ -379,7 +378,7 @@ contract ICBMCommitment is
 
     function platformOperatorNeumarkRewardShare()
         public
-        constant
+        pure
         returns (uint256)
     {
         return PLATFORM_NEUMARK_SHARE;
@@ -559,6 +558,7 @@ contract ICBMCommitment is
     // calculates investor's and platform operator's neumarks from total reward
     function calculateNeumarkDistribtion(uint256 rewardNmk)
         private
+        pure
         returns (uint256 platformNmk, uint256 investorNmk)
     {
         // round down - platform may get 1 wei less than investor

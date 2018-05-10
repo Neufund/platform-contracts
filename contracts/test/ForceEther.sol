@@ -7,7 +7,7 @@ contract ForceEther {
     // Constructor
     ////////////////////////
 
-    function ForceEther()
+    constructor()
         payable
         public
     {}

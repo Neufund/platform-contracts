@@ -14,8 +14,8 @@ import "./Helpers/MTokenTransferController.sol";
 contract BasicSnapshotToken is
     MTokenTransfer,
     MTokenTransferController,
-    IBasicToken,
     IClonedTokenParent,
+    IBasicToken,
     Snapshot
 {
     ////////////////////////
@@ -54,7 +54,7 @@ contract BasicSnapshotToken is
     ///     to parent token at which this snapshot still may change until snapshot id increases. for that time tokens are coupled
     ///     this is prevented by parentSnapshotId value of parentToken.currentSnapshotId() - 1 being the maxiumum
     ///     see SnapshotToken.js test to learn consequences coupling has.
-    function BasicSnapshotToken(
+    constructor(
         IClonedTokenParent parentToken,
         uint256 parentSnapshotId
     )

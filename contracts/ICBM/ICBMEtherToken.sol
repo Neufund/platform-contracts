@@ -45,7 +45,7 @@ contract ICBMEtherToken is
     // Constructor
     ////////////////////////
 
-    function ICBMEtherToken(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")

@@ -69,7 +69,7 @@ contract Neumark is
     // Constructor
     ////////////////////////
 
-    function Neumark(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter
     )

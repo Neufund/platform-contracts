@@ -18,8 +18,8 @@ contract ETOTerms is Math {
     ETODurationTerms public DURATION_TERMS;
     // total number of shares in the company (incl. Authorized Shares) at moment of sale
     uint256 public TOTAL_COMPANY_SHARES;
-    // tokens per share
-    uint256 public TOKENS_PER_SHARE;
+    // sets nominal value of a share
+    uint256 public SHARE_NOMINAL_VALUE;
     // minimum number of tokens being offered. will set min cap
     uint256 public MIN_NUMBER_OF_TOKENS;
     // maximum number of tokens being offered. will set max cap
@@ -40,10 +40,11 @@ contract ETOTerms is Math {
     // paperwork
     // url (typically IPFS hash) to investment agreement between nominee and company
     string public INVESTMENT_AGREEMENT_TEMPLATE_URL;
-    // url (typically IPFS hash) to new shareholder agreement between nominee (and other shareholders) and company
-    string public SHA_TEMPLATE_URL;
+    // prospectus url
+    string public PROSPECTUS_URL;
     // settings for shareholder rights
     ShareholderRights public SHAREHOLDER_RIGHTS;
+
 
     ////////////////////////
     // Public methods
@@ -51,7 +52,7 @@ contract ETOTerms is Math {
 
     // calculates token amount for a given commitment at a position of the curve
     // we require that equity token precision is 0
-    function calculateTokenAmount(uint256 totalEurUlps, uint256 committedEurUlps)
+    function calculateTokenAmount(uint256 /*totalEurUlps*/, uint256 committedEurUlps)
         public
         constant
         returns (uint256 tokenAmountInt)
@@ -62,7 +63,7 @@ contract ETOTerms is Math {
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
     // we require that equity token precision is 0
-    function calculateEurUlpsAmount(uint256 totalTokensInt, uint256 tokenAmountInt)
+    function calculateEurUlpsAmount(uint256 /*totalTokensInt*/, uint256 tokenAmountInt)
         public
         constant
         returns (uint256 committedEurUlps)
@@ -72,9 +73,9 @@ contract ETOTerms is Math {
     }
 
     // gets company valuation
-    function COMPANY_VALUATION_EUR_ULPS() public constant returns(uint256) {
+    /*function COMPANY_VALUATION_EUR_ULPS() public constant returns(uint256) {
         return calculateEurUlpsAmount(0, mul(TOTAL_COMPANY_SHARES, TOKENS_PER_SHARE));
-    }
+    }*/
 
     // get mincap in EUR
     function MIN_CAP_EUR_ULPS() public constant returns(uint256) {
@@ -86,14 +87,16 @@ contract ETOTerms is Math {
         return calculateEurUlpsAmount(0, MAX_NUMBER_OF_TOKENS);
     }
 
+    // gets number of shares for an amount of tokens
+    // function calculateNumberOfShares(uint256 )
+
     ////////////////////////
     // Constructor
     ////////////////////////
 
-    function ETOTerms(
+    constructor(
         ETODurationTerms durationTerms,
         uint256 totalCompanyShares,
-        uint256 tokensPerShare,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
         uint256 tokenEurPriceUlps,
@@ -103,14 +106,12 @@ contract ETOTerms is Math {
         bool enableTransfersOnSuccess,
         bool isCrowdfunding,
         string investmentAgreementUrl,
-        string shaTemplateUrl,
         ShareholderRights shareHolderRights
     )
         public
     {
         DURATION_TERMS = durationTerms;
         TOTAL_COMPANY_SHARES = totalCompanyShares;
-        TOKENS_PER_SHARE = tokensPerShare;
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
         TOKEN_PRICE_EUR_ULPS = tokenEurPriceUlps;
@@ -120,7 +121,6 @@ contract ETOTerms is Math {
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         IS_CROWDFUNDING = isCrowdfunding;
         INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementUrl;
-        SHA_TEMPLATE_URL = shaTemplateUrl;
         SHAREHOLDER_RIGHTS = shareHolderRights;
     }
 

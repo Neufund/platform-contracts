@@ -6,7 +6,7 @@ set -u
 if [ -d ./build ]; then
   rm -rf ./build
 fi
-truffle compile --all
+yarn truffle compile --all
 if [ ! -d ./platform-contracts-artifacts ]; then
   git clone https://github.com/Neufund/platform-contracts-artifacts.git
 else

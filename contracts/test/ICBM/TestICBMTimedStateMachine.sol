@@ -10,7 +10,7 @@ contract TestICBMTimedStateMachine is
     // Constructor
     ////////////////////////
 
-    function TestICBMTimedStateMachine(int256 whitelistStart)
+    constructor(int256 whitelistStart)
         ICBMTimedStateMachine(whitelistStart)
         public
     {
@@ -22,6 +22,7 @@ contract TestICBMTimedStateMachine is
 
     function testStateOrdering()
         public
+        pure
     {
         assert(State.Before == State.Before);
         assert(State.Before < State.Whitelist);

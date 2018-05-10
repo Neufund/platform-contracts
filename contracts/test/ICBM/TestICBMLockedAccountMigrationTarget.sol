@@ -25,7 +25,7 @@ contract TestICBMLockedAccountMigrationTarget is
     // Constructor
     ////////////////////////
 
-    function TestICBMLockedAccountMigrationTarget(
+    constructor(
         IAccessPolicy _policy,
         IERC677Token _assetToken,
         Neumark _neumark,

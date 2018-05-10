@@ -30,7 +30,7 @@ contract Reclaimable is AccessControlled, AccessRoles {
     {
         address reclaimer = msg.sender;
         if(token == RECLAIM_ETHER) {
-            reclaimer.transfer(this.balance);
+            reclaimer.transfer(address(this).balance);
         } else {
             uint256 balance = token.balanceOf(this);
             require(token.transfer(reclaimer, balance));

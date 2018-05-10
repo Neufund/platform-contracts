@@ -32,7 +32,7 @@ contract EthereumForkArbiter is
     // Constructor
     ////////////////////////
 
-    function EthereumForkArbiter(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         Reclaimable()
         public
@@ -68,7 +68,7 @@ contract EthereumForkArbiter is
         public
         only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
     {
-        require(block.blockhash(number) == hash);
+        require(blockhash(number) == hash);
 
         // Reset announcement
         delete _nextForkName;

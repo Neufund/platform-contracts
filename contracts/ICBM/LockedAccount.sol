@@ -215,7 +215,7 @@ contract LockedAccount is
     /// @param universe provides interface and identity registries
     /// @param paymentToken token contract representing funds locked
     /// @param migrationSource old locked account
-    function LockedAccount(
+    constructor(
         Universe universe,
         Neumark neumark,
         IERC223Token paymentToken,

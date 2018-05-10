@@ -9,7 +9,7 @@ contract TestToken is StandardToken {
     // Constructor
     ////////////////////////
 
-    function TestToken(uint256 initialBalance)
+    constructor(uint256 initialBalance)
         StandardToken()
         public
     {

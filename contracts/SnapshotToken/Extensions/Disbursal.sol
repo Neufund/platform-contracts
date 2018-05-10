@@ -61,7 +61,7 @@ contract Disbursal is IERC677Callback {
     // Constructor
     ////////////////////////
 
-    function Disbursal(
+    constructor(
         ISnapshotableToken shareToken
     )
         public
@@ -261,7 +261,7 @@ contract Disbursal is IERC677Callback {
         uint256 denominator
     )
         internal
-        constant
+        pure
         returns (uint256)
     {
         require(value < 2**128);

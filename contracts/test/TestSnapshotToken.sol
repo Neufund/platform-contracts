@@ -27,7 +27,7 @@ contract TestSnapshotToken is
     // Constructor
     ////////////////////////
 
-    function TestSnapshotToken(
+    constructor(
         IClonedTokenParent parentToken,
         uint256 parentSnapshotId
     )

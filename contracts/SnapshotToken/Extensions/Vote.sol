@@ -50,7 +50,7 @@ contract Vote {
 
     // Note: we use hashes because Solidity currently does not support passing
     //     string[] as an argument for external functions.
-    function Vote(
+    constructor(
         ISnapshotableToken token,
         bytes32[] choiceHashes
     )
@@ -76,7 +76,5 @@ contract Vote {
     function vote(
         uint256[] // votes
     )
-        public
-    {
-    }
+        public;
 }

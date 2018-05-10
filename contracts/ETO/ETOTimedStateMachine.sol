@@ -72,11 +72,13 @@ contract ETOTimedStateMachine is IETOCommitment {
     // Constructor
     ////////////////////////
 
-    function ETOTimedStateMachine()
+    constructor()
         internal
     {
         // set values to past timed transitions to reduce future gas cost
-        _pastStateTransitionTimes = [TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET];
+        _pastStateTransitionTimes = [
+            TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET
+            ];
     }
 
     ////////////////////////

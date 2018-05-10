@@ -15,7 +15,7 @@ contract TestERC677Callback is IERC677Callback {
     ////////////////////////
     // Constructor
     ////////////////////////
-    function TestERC677Callback() public {
+    constructor() public {
         _acceptedExtraData = keccak256("");
     }
 

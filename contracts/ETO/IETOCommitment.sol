@@ -95,9 +95,6 @@ contract IETOCommitment is ICommitment {
     // equity token
     function equityToken() public constant returns (IEquityToken);
 
-    // url to prospectus
-    function prospectusUrl() public constant returns (string);
-
     /// signed agreement as provided by company and nominee
     /// @dev available on Claim state transition
     function signedInvestmentAgreementUrl() public constant returns (string);

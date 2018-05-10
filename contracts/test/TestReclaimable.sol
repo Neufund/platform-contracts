@@ -12,7 +12,7 @@ contract TestReclaimable is
     // Constructor
     ////////////////////////
 
-    function TestReclaimable(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         Reclaimable()
         public

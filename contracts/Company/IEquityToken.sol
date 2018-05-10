@@ -7,8 +7,8 @@ import "./IEquityTokenController.sol";
 
 
 contract IEquityToken is
-    IERC223Token,
-    IClonedTokenParent
+    IClonedTokenParent,
+    IERC223Token
 {
     /// @dev equity token is not divisible (Decimals == 0) but single share is represented by
     ///  tokensPerShare tokens

@@ -19,7 +19,7 @@ contract TestICBMEuroTokenMigrationTarget is
     // Constructor
     ////////////////////////
 
-    function TestICBMEuroTokenMigrationTarget(address migrationSource)
+    constructor(address migrationSource)
         public
     {
         MIGRATION_SOURCE = migrationSource;

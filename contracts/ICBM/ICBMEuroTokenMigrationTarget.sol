@@ -11,8 +11,7 @@ contract ICBMEuroTokenMigrationTarget is
     ////////////////////////
 
     /// @notice accepts migration of single eur-t token holder
-    /// @dev allowed to be called only from migration source, do not forget to add accessor modifier in implementation
+    /// @dev allowed to be called only from migration source, do not forget to add accessor modifier `onlyMigrationSource` in implementation
     function migrateEuroTokenOwner(address owner, uint256 amount)
-        public
-        onlyMigrationSource();
+        public;
 }

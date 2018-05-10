@@ -53,7 +53,7 @@ contract StandardSnapshotToken is
     /// param tokenName Name of the new token
     /// param decimalUnits Number of decimals of the new token
     /// param tokenSymbol Token Symbol for the new token
-    function StandardSnapshotToken(
+    constructor(
         IClonedTokenParent parentToken,
         uint256 parentSnapshotId
     )

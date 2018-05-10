@@ -26,7 +26,7 @@ contract TestICBMLockedAccountController {
     // Constructor
     ////////////////////////
 
-    function TestICBMLockedAccountController(ICBMLockedAccount lockedAccount) public {
+    constructor(ICBMLockedAccount lockedAccount) public {
         LOCKED_ACCOUNT = lockedAccount;
     }
 

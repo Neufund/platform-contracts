@@ -54,7 +54,7 @@ contract TestAccessControl is AccessControlled, TestAccessControlExampleRoles {
     // Constructor
     ////////////////////////
 
-    function TestAccessControl(IAccessPolicy policy)
+    constructor(IAccessPolicy policy)
         AccessControlled(policy)
         public
     {

@@ -12,8 +12,7 @@ contract TestAgreement is
     // Constructor
     ////////////////////////
 
-    function TestAgreement(IAccessPolicy accessPolicy, IEthereumForkArbiter forkArbiter)
-        AccessControlled(accessPolicy)
+    constructor(IAccessPolicy accessPolicy, IEthereumForkArbiter forkArbiter)
         Agreement(accessPolicy, forkArbiter)
         public
     {

@@ -44,7 +44,7 @@ contract MigrationSource is
     // Constructor
     ////////////////////////
 
-    function MigrationSource(
+    constructor(
         IAccessPolicy policy,
         bytes32 migrationAdminRole
     )
@@ -59,9 +59,8 @@ contract MigrationSource is
     ////////////////////////
 
     /// @notice should migrate state that belongs to msg.sender
-    /// @dev do not forget to add accessor modifier in implementation
+    /// @dev do not forget to add accessor `onlyMigrationEnabled` modifier in implementation
     function migrate()
-        onlyMigrationEnabled()
         public;
 
     /// @notice should enable migration to migration target

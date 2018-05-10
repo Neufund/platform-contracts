@@ -13,13 +13,13 @@ contract ICBMLockedAccountMigration is
     // Public functions
     ////////////////////////
 
-    // implemented in migration target, yes modifiers are inherited from base class
+    // implemented in migration target, apply `onlyMigrationSource()` modifier, modifiers are not inherited
     function migrateInvestor(
         address investor,
         uint256 balance,
         uint256 neumarksDue,
         uint256 unlockDate
     )
-        public
-        onlyMigrationSource();
+        public;
+
 }

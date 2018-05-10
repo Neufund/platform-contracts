@@ -11,7 +11,7 @@ contract TestMath is Math {
 
     function _absDiff(uint256 v1, uint256 v2)
         public
-        constant
+        pure
         returns(uint256)
     {
         return absDiff(v1, v2);
@@ -19,7 +19,7 @@ contract TestMath is Math {
 
     function _divRound(uint256 v, uint256 d)
         public
-        constant
+        pure
         returns(uint256)
     {
 
@@ -28,7 +28,7 @@ contract TestMath is Math {
 
     function _decimalFraction(uint256 amount, uint256 frac)
         public
-        constant
+        pure
         returns(uint256)
     {
         return decimalFraction(amount, frac);
@@ -36,7 +36,7 @@ contract TestMath is Math {
 
     function _proportion(uint256 amount, uint256 part, uint256 total)
         public
-        constant
+        pure
         returns(uint256)
     {
         return proportion(amount, part, total);
@@ -44,7 +44,7 @@ contract TestMath is Math {
 
     function _min(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (uint256)
     {
         return min(a, b);
@@ -52,7 +52,7 @@ contract TestMath is Math {
 
     function _max(uint256 a, uint256 b)
         public
-        constant
+        pure
         returns (uint256)
     {
         return max(a, b);

@@ -87,7 +87,7 @@ contract EuroToken is
     // Constructor
     ////////////////////////
 
-    function EuroToken(
+    constructor(
         IAccessPolicy accessPolicy,
         ITokenController tokenController
     )

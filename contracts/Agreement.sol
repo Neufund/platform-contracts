@@ -89,7 +89,7 @@ contract Agreement is
     // Constructor
     ////////////////////////
 
-    function Agreement(IAccessPolicy accessPolicy, IEthereumForkArbiter forkArbiter)
+    constructor(IAccessPolicy accessPolicy, IEthereumForkArbiter forkArbiter)
         AccessControlled(accessPolicy)
         internal
     {

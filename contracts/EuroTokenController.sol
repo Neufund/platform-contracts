@@ -70,7 +70,7 @@ contract EuroTokenController is
     // Constructor
     ////////////////////////
 
-    function EuroTokenController(
+    constructor(
         Universe universe
     )
         AccessControlled(universe.accessPolicy())

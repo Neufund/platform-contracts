@@ -58,7 +58,7 @@ contract ICBMStateMachine {
     // Constructor
     ////////////////////////
 
-    function ICBMStateMachine() internal {
+    constructor() internal {
     }
 
     ////////////////////////
@@ -95,7 +95,7 @@ contract ICBMStateMachine {
 
     function validTransition(State oldState, State newState)
         private
-        constant
+        pure
         returns (bool valid)
     {
         return (

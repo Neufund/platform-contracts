@@ -2,15 +2,15 @@ pragma solidity 0.4.23;
 
 
 import "./IEquityToken.sol";
-import "../Snapshot/DailyAndSnapshotable.sol";
+import "../Snapshot/Daily.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardSnapshotToken.sol";
 
 
 contract EquityToken is
     IEquityToken,
-    // StandardSnapshotToken,
-    DailyAndSnapshotable,
+    StandardSnapshotToken,
+    Daily,
     TokenMetadata
 {
     // TODO: implement
@@ -24,4 +24,5 @@ contract EquityToken is
 
     // transfers to 0 must be blocked
     // should we have way to recover balance?
+    // todo: constructor should take PLATFORM_TERMS and ETO_TERMS, however IEquityToken does not expose them
 }
