@@ -6,6 +6,7 @@
     "indentation": ["error", 4],
     "security/no-inline-assembly": "off",
     "security/no-block-members": "off",
-    "no-empty-blocks": "off"
+    "no-empty-blocks": "off",
+    "no-constant": "off"
   }
 }
