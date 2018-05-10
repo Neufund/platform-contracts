@@ -24,4 +24,5 @@ contract EquityToken is
 
     // transfers to 0 must be blocked
     // should we have way to recover balance?
+    // todo: constructor should take PLATFORM_TERMS and ETO_TERMS, however IEquityToken does not expose them
 }
