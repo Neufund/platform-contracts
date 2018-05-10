@@ -2,15 +2,15 @@ pragma solidity 0.4.23;
 
 
 import "./IEquityToken.sol";
-import "../Snapshot/DailyAndSnapshotable.sol";
+import "../Snapshot/Daily.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardSnapshotToken.sol";
 
 
 contract EquityToken is
     IEquityToken,
-    // StandardSnapshotToken,
-    DailyAndSnapshotable,
+    StandardSnapshotToken,
+    Daily,
     TokenMetadata
 {
     // TODO: implement

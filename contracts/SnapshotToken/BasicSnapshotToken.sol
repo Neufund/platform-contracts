@@ -14,8 +14,8 @@ import "./Helpers/MTokenTransferController.sol";
 contract BasicSnapshotToken is
     MTokenTransfer,
     MTokenTransferController,
-    IBasicToken,
     IClonedTokenParent,
+    IBasicToken,
     Snapshot
 {
     ////////////////////////
