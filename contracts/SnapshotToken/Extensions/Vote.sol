@@ -76,7 +76,5 @@ contract Vote {
     function vote(
         uint256[] // votes
     )
-        public
-    {
-    }
+        public;
 }

@@ -14,9 +14,9 @@ contract CurveGas is NeumarkIssuanceCurve {
         constant
         returns (uint256, uint256)
     {
-        uint256 start = msg.gas;
+        uint256 start = gasleft();
         uint256 result = cumulative(n);
-        uint256 finish = msg.gas;
+        uint256 finish = gasleft();
         return (result, start - finish);
     }
 
@@ -25,9 +25,9 @@ contract CurveGas is NeumarkIssuanceCurve {
         constant
         returns (uint256, uint256)
     {
-        uint256 start = msg.gas;
+        uint256 start = gasleft();
         uint256 result = incrementalInverse(totalEuroUlps, neumarkUlps);
-        uint256 finish = msg.gas;
+        uint256 finish = gasleft();
         return (result, start - finish);
     }
 
@@ -36,9 +36,9 @@ contract CurveGas is NeumarkIssuanceCurve {
         constant
         returns (uint256, uint256)
     {
-        uint256 start = msg.gas;
+        uint256 start = gasleft();
         uint256 result = incrementalInverse(totalEuroUlps, neumarkUlps, minEurUlps, maxEurUlps);
-        uint256 finish = msg.gas;
+        uint256 finish = gasleft();
         return (result, start - finish);
     }
 
@@ -47,9 +47,9 @@ contract CurveGas is NeumarkIssuanceCurve {
         constant
         returns (uint256, uint256)
     {
-        uint256 start = msg.gas;
+        uint256 start = gasleft();
         uint256 result = cumulativeInverse(neumarkUlps, minEurUlps, maxEurUlps);
-        uint256 finish = msg.gas;
+        uint256 finish = gasleft();
         return (result, start - finish);
     }
 }

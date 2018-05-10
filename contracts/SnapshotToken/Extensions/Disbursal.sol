@@ -261,7 +261,7 @@ contract Disbursal is IERC677Callback {
         uint256 denominator
     )
         internal
-        constant
+        pure
         returns (uint256)
     {
         require(value < 2**128);

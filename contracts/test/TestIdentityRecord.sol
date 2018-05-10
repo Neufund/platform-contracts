@@ -9,7 +9,7 @@ contract TestIdentityRecord is IdentityRecord {
     // Public functions
     ////////////////////////
 
-    function getIdentityRecord(bytes32 claims) public constant returns (bool[3] deserializedClaims){
+    function getIdentityRecord(bytes32 claims) public pure returns (bool[3] deserializedClaims){
         IdentityClaims memory ds = deserializeClaims(claims);
         assembly {
             deserializedClaims := ds

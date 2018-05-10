@@ -22,6 +22,7 @@ contract TestICBMTimedStateMachine is
 
     function testStateOrdering()
         public
+        pure
     {
         assert(State.Before == State.Before);
         assert(State.Before < State.Whitelist);

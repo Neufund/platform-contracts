@@ -95,7 +95,7 @@ contract ICBMStateMachine {
 
     function validTransition(State oldState, State newState)
         private
-        constant
+        pure
         returns (bool valid)
     {
         return (

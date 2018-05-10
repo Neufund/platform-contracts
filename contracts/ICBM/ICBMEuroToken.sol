@@ -90,7 +90,6 @@ contract ICBMEuroToken is
     ////////////////////////
 
     function ICBMEuroToken(IAccessPolicy accessPolicy)
-        AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         MigrationSource(accessPolicy, ROLE_EURT_DEPOSIT_MANAGER)

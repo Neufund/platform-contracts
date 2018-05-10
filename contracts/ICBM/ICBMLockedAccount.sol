@@ -180,7 +180,6 @@ contract ICBMLockedAccount is
         uint256 lockPeriod,
         uint256 penaltyFraction
     )
-        AccessControlled(policy)
         MigrationSource(policy, ROLE_LOCKED_ACCOUNT_ADMIN)
         Reclaimable()
         public
