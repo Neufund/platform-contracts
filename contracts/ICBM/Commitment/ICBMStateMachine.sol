@@ -58,7 +58,7 @@ contract ICBMStateMachine {
     // Constructor
     ////////////////////////
 
-    function ICBMStateMachine() internal {
+    constructor() internal {
     }
 
     ////////////////////////

@@ -32,7 +32,7 @@ contract TokenMetadata is ITokenMetadata {
     /// @param decimalUnits Number of decimals of the new token
     /// @param tokenSymbol Token Symbol for the new token
     /// @param version Token version ie. when cloning is used
-    function TokenMetadata(
+    constructor(
         string tokenName,
         uint8 decimalUnits,
         string tokenSymbol,

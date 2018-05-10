@@ -85,7 +85,7 @@ contract RoleBasedAccessPolicy is
     // Constructor
     ////////////////////////
 
-    function RoleBasedAccessPolicy()
+    constructor()
         AccessControlled(this) // We are our own policy. This is immutable.
         public
     {

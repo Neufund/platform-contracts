@@ -18,7 +18,7 @@ contract MintableSnapshotToken is
     /// @notice Constructor to create a MintableSnapshotToken
     /// @param parentToken Address of the parent token, set to 0x0 if it is a
     ///  new token
-    function MintableSnapshotToken(
+    constructor(
         IClonedTokenParent parentToken,
         uint256 parentSnapshotId
     )

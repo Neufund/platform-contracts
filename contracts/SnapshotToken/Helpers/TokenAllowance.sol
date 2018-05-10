@@ -30,7 +30,7 @@ contract TokenAllowance is
     // Constructor
     ////////////////////////
 
-    function TokenAllowance()
+    constructor()
         internal
     {
     }

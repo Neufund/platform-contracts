@@ -50,7 +50,7 @@ contract ICBMTimedStateMachine is ICBMStateMachine {
     // Constructor
     ////////////////////////
 
-    function ICBMTimedStateMachine(int256 whitelistStart)
+    constructor(int256 whitelistStart)
         internal
     {
         WHITELIST_START = whitelistStart;

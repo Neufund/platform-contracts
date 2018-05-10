@@ -134,7 +134,7 @@ contract ICBMCommitment is
     /// @param capEurUlps maxium amount of euro tokens committed
     /// @param minTicketEurUlps minimum ticket size
     /// @param ethEurFraction Ether to Euro rate, fixed during commitment
-    function ICBMCommitment(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
         int256 startDate,

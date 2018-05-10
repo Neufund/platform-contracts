@@ -22,7 +22,7 @@ contract IdentityRegistry is
     // Constructor functions
     ////////////////////////
 
-    function IdentityRegistry(Universe universe)
+    constructor(Universe universe)
         AccessControlled(universe.accessPolicy())
         public
     {}

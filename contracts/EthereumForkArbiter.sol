@@ -32,7 +32,7 @@ contract EthereumForkArbiter is
     // Constructor
     ////////////////////////
 
-    function EthereumForkArbiter(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         Reclaimable()
         public

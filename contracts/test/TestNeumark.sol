@@ -10,7 +10,7 @@ contract TestNeumark is Neumark
     // Constructor
     ////////////////////////
 
-    function TestNeumark(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter
     )

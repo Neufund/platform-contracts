@@ -172,7 +172,7 @@ contract ICBMLockedAccount is
     ///     if unlocked before lockPeriod is over
     /// @dev this implementation does not allow spending funds on ICOs but provides
     ///     a migration mechanism to final LockedAccount with such functionality
-    function ICBMLockedAccount(
+    constructor(
         IAccessPolicy policy,
         IERC677Token assetToken,
         Neumark neumark,

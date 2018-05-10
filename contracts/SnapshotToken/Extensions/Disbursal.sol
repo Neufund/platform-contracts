@@ -61,7 +61,7 @@ contract Disbursal is IERC677Callback {
     // Constructor
     ////////////////////////
 
-    function Disbursal(
+    constructor(
         ISnapshotableToken shareToken
     )
         public

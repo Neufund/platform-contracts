@@ -89,7 +89,7 @@ contract ICBMEuroToken is
     // Constructor
     ////////////////////////
 
-    function ICBMEuroToken(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         MigrationSource(accessPolicy, ROLE_EURT_DEPOSIT_MANAGER)

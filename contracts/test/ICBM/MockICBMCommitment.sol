@@ -10,7 +10,7 @@ contract MockICBMCommitment is
     // Constructor
     ////////////////////////
 
-    function MockICBMCommitment(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
         int256 startDate,

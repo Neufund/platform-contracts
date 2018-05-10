@@ -261,7 +261,7 @@ contract ETOCommitment is
     ////////////////////////
 
     /// anyone may be a deployer, the platform acknowledges the contract by adding it to Universe Commitment collection
-    function ETOCommitment(
+    constructor(
         Universe universe,
         ETOPlatformTerms platformTerms,
         address platformWallet,
@@ -369,7 +369,9 @@ contract ETOCommitment is
         // todo: check if can issue neumark
         assert(startDate < 0xFFFFFFFF);
         // must be less than 3 days (platform terms!)
-        require(startDate < block.timestamp && block.timestamp - startDate < PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_EARLY");
+        require(
+            startDate < block.timestamp && block.timestamp - startDate < PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
+            "ETO_DATE_TOO_EARLY");
         // prevent re-setting of old date within
         uint256 startAt = startOfInternal(State.Whitelist);
         require(startAt == 0 || block.timestamp - startAt > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_LATE");

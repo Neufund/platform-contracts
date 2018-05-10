@@ -56,7 +56,7 @@ contract Universe is
     // Constructor
     ////////////////////////
 
-    function Universe(
+    constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter
     )

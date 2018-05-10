@@ -51,7 +51,7 @@ contract EtherToken is
     // Constructor
     ////////////////////////
 
-    function EtherToken(IAccessPolicy accessPolicy)
+    constructor(IAccessPolicy accessPolicy)
         AccessControlled(accessPolicy)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")

@@ -44,7 +44,7 @@ contract MigrationSource is
     // Constructor
     ////////////////////////
 
-    function MigrationSource(
+    constructor(
         IAccessPolicy policy,
         bytes32 migrationAdminRole
     )

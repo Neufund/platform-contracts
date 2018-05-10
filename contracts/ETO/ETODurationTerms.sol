@@ -24,7 +24,7 @@ contract ETODurationTerms {
     // Constructor
     ////////////////////////
 
-    function ETODurationTerms(
+    constructor(
         uint32 whitelistDuration,
         uint32 publicDuration,
         uint32 signingDuration,

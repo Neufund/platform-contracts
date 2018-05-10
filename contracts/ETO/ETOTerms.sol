@@ -52,7 +52,7 @@ contract ETOTerms is Math {
 
     // calculates token amount for a given commitment at a position of the curve
     // we require that equity token precision is 0
-    function calculateTokenAmount(uint256 totalEurUlps, uint256 committedEurUlps)
+    function calculateTokenAmount(uint256 /*totalEurUlps*/, uint256 committedEurUlps)
         public
         constant
         returns (uint256 tokenAmountInt)
@@ -63,7 +63,7 @@ contract ETOTerms is Math {
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
     // we require that equity token precision is 0
-    function calculateEurUlpsAmount(uint256 totalTokensInt, uint256 tokenAmountInt)
+    function calculateEurUlpsAmount(uint256 /*totalTokensInt*/, uint256 tokenAmountInt)
         public
         constant
         returns (uint256 committedEurUlps)
@@ -94,7 +94,7 @@ contract ETOTerms is Math {
     // Constructor
     ////////////////////////
 
-    function ETOTerms(
+    constructor(
         ETODurationTerms durationTerms,
         uint256 totalCompanyShares,
         uint256 minNumberOfTokens,

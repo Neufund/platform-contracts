@@ -60,7 +60,7 @@ contract SimpleExchange is
     // Constructor
     ////////////////////////
 
-    function SimpleExchange(
+    constructor(
         IAccessPolicy accessPolicy,
         IERC223Token numeratorToken,
         IERC223Token denominatorToken

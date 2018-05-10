@@ -19,7 +19,7 @@ contract Snapshotable is
     // Constructor
     ////////////////////////
 
-    function Snapshotable(uint256 start)
+    constructor(uint256 start)
         internal
     {
         _currentSnapshotId = start;

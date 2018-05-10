@@ -10,7 +10,7 @@ contract TestICBMTimedStateMachine is
     // Constructor
     ////////////////////////
 
-    function TestICBMTimedStateMachine(int256 whitelistStart)
+    constructor(int256 whitelistStart)
         ICBMTimedStateMachine(whitelistStart)
         public
     {

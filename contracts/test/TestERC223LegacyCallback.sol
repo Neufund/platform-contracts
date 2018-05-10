@@ -17,7 +17,7 @@ contract TestERC223LegacyCallback is IERC223LegacyCallback {
     ////////////////////////
     // Constructor
     ////////////////////////
-    function TestERC223Callback() public {
+    constructor() public {
         // some "random" hash
         _dataKeccak = keccak256(address(this));
     }
