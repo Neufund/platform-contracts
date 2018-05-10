@@ -16,7 +16,7 @@ import "../Serialization.sol";
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
 ///  setup phase requires several parties to provide documents and information
-///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> prospectus (Company) -> adding to universe (platform) -> start date (company))
+///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> adding to universe (platform) -> start date (company))
 ///   whitelist may be added when RAAA and eto terms are present
 /// todo: review all divisions for rounding errors
 contract ETOCommitment is
@@ -64,7 +64,7 @@ contract ETOCommitment is
     // Constants state
     ////////////////////////
 
-    bytes32 private constant EMPTY_STRING_HASH = keccak256("");
+    // bytes32 private constant EMPTY_STRING_HASH = keccak256("");
 
     ////////////////////////
     // Immutable state
@@ -137,9 +137,6 @@ contract ETOCommitment is
     // nominee investment agreement url confirmation hash
     bytes32 private _nomineeSignedInvestmentAgreementUrlHash;
 
-    // prospectus url
-    string private _prospectusUrl;
-
     // successful ETO bookeeping
     // amount of new shares generated
     uint96 private _newShares;
@@ -173,11 +170,6 @@ contract ETOCommitment is
         _;
     }
 
-    modifier onlyWithProspectus {
-        require(hasProspectus());
-        _;
-    }
-
     modifier onlyWithAgreement {
         require(amendmentsCount() > 0);
         _;
@@ -200,12 +192,6 @@ contract ETOCommitment is
         address companyLegalRep,
         address etoTerms,
         address equityToken
-    );
-
-    // logged at the moment Company sets prospectus
-    event LogProspectusSet(
-        address companyLegalRep,
-        string prospectusUrl
     );
 
     // logged at the moment Company sets/resets Whitelisting start date
@@ -282,7 +268,6 @@ contract ETOCommitment is
         address nominee,
         address companyLegalRep
     )
-        AccessControlled(universe.accessPolicy())
         Agreement(universe.accessPolicy(), universe.forkArbiter())
         ETOTimedStateMachine()
         public
@@ -319,8 +304,9 @@ contract ETOCommitment is
         onlyState(State.Setup)
     {
         // must be integer precision
-        require(equityToken.decimals() == 0, "ETO_ET_DECIMALS");
-        require(equityToken.tokensPerShare() == etoTerms.TOKENS_PER_SHARE(), "ETO_ET_TPS_NE");
+        require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION(), "ETO_ET_DECIMALS");
+        require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE(), "ETO_ET_TPS_NE");
+        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE(), "ETO_ET_SNV");
         etoTerms.requireValidTerms(PLATFORM_TERMS);
 
         ETO_TERMS = etoTerms;
@@ -369,23 +355,11 @@ contract ETOCommitment is
         selfdestruct(msg.sender);
     }
 
-    function setProspectus(string prospectusUrl)
-        external
-        onlyCompany
-        onlyWithTerms
-        withStateTransition()
-        onlyState(State.Setup)
-    {
-        _prospectusUrl = prospectusUrl;
-        emit LogProspectusSet(msg.sender, prospectusUrl);
-    }
-
     /// @dev sets timed state machine in motion,
     function setStartDate(uint256 startDate)
         external
         onlyCompany
         onlyWithTerms
-        onlyWithProspectus
         onlyWithAgreement
         withStateTransition()
         onlyState(State.Setup)
@@ -446,6 +420,7 @@ contract ETOCommitment is
         // agreement accepted by act of reserving funds in this function
         acceptAgreementInternal(investor);
         // kick out not whitelist or not LockedAccount
+        // todo: IS_ICBM_INVESTOR_WHITELISTED
         if (state() == State.Whitelist) {
             require(_whitelist[investor] || isLockedAccount);
         }
@@ -553,14 +528,6 @@ contract ETOCommitment is
     {
         require(_nomineeSignedInvestmentAgreementUrlHash != bytes32(0));
         return _signedInvestmentAgreementUrl;
-    }
-
-    function prospectusUrl()
-        public
-        constant
-        returns (string)
-    {
-        return _prospectusUrl;
     }
 
     function signedOfferingResults()
@@ -918,9 +885,5 @@ contract ETOCommitment is
         if (a > 0) {
             assert(token.transfer(investor, a, ""));
         }
-    }
-
-    function hasProspectus() private returns (bool) {
-        return keccak256(_prospectusUrl) == EMPTY_STRING_HASH;
     }
 }
