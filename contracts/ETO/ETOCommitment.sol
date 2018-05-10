@@ -16,7 +16,7 @@ import "../Serialization.sol";
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
 ///  setup phase requires several parties to provide documents and information
-///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> adding to universe (platform) -> start date (company))
+///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> adding to universe (platform) + issue NEU -> start date (company))
 ///   whitelist may be added when RAAA and eto terms are present
 /// todo: review all divisions for rounding errors
 contract ETOCommitment is
@@ -352,6 +352,7 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(State.Setup)
     {
+        // todo: selfdestruct or forces refund in later stages
         selfdestruct(msg.sender);
     }
 
@@ -365,6 +366,7 @@ contract ETOCommitment is
         onlyState(State.Setup)
     {
         // todo: check if in universe
+        // todo: check if can issue neumark
         assert(startDate < 0xFFFFFFFF);
         // must be less than 3 days (platform terms!)
         require(startDate < block.timestamp && block.timestamp - startDate < PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_EARLY");
@@ -556,6 +558,10 @@ contract ETOCommitment is
 
     function equityToken() public constant returns (IEquityToken) {
         return EQUITY_TOKEN;
+    }
+
+    function identityRegistry() public constant returns (IIdentityRegistry) {
+        return IDENTITY_REGISTRY;
     }
 
     ////////////////////////

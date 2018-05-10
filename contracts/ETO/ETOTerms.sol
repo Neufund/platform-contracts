@@ -87,6 +87,9 @@ contract ETOTerms is Math {
         return calculateEurUlpsAmount(0, MAX_NUMBER_OF_TOKENS);
     }
 
+    // gets number of shares for an amount of tokens
+    // function calculateNumberOfShares(uint256 )
+
     ////////////////////////
     // Constructor
     ////////////////////////
