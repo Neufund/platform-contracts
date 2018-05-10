@@ -36,7 +36,7 @@
     "moment": "^2.18.1",
     "node-ask": "^1.0.1",
     "replace-string": "^1.1.0",
-    "solium": "^1.1.6",
+    "solium": "^1.1.7",
     "swarm-js": "^0.1.35",
     "truffle": "Neufund/truffle#neufund",
     "truffle-flattener": "Neufund/truffle-flattener",
