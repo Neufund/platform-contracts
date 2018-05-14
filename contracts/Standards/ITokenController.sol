@@ -31,13 +31,13 @@ contract ITokenController {
         returns (bool yes);
 
     /// @notice see MTokenMint
-    function onGenerateTokens(address owner, uint256 amount)
+    function onGenerateTokens(address sender, address owner, uint256 amount)
         public
         constant
         returns (bool allow);
 
     /// @notice see MTokenMint
-    function onDestroyTokens(address owner, uint256 amount)
+    function onDestroyTokens(address sender, address owner, uint256 amount)
         public
         constant
         returns (bool allow);
