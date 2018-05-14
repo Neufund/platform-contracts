@@ -184,6 +184,7 @@ contract EuroTokenController is
         }
         if (!explicitFrom) {
             // all ETO contracts may send funds (for example: refund)
+            // todo: use isAnyOfInterfaceCollectionInstance and include equity token controller, make this an array and make it constant
             explicitFrom = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, from);
         }
         if (!explicitFrom) {
@@ -227,7 +228,7 @@ contract EuroTokenController is
     }
 
     /// allows to deposit if user has kyc and deposit is >= minimum
-    function onGenerateTokens(address owner, uint256 amount)
+    function onGenerateTokens(address /*sender*/, address owner, uint256 amount)
         public
         constant
         returns (bool allow)
@@ -243,7 +244,7 @@ contract EuroTokenController is
     }
 
     /// allow to withdraw if user has a valid bank account, kyc and amount >= minium
-    function onDestroyTokens(address owner, uint256 amount)
+    function onDestroyTokens(address /*sender*/, address owner, uint256 amount)
         public
         constant
         returns (bool allow)

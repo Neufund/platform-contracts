@@ -59,7 +59,7 @@ contract EuroToken is
         uint256 amount
     );
 
-    event ChangeTokenController(
+    event LogChangeTokenController(
         address oldController,
         address newController
     );
@@ -74,12 +74,12 @@ contract EuroToken is
     }
 
     modifier onlyIfDepositAllowed(address to, uint256 amount) {
-        require(_tokenController.onGenerateTokens(to, amount));
+        require(_tokenController.onGenerateTokens(msg.sender, to, amount));
         _;
     }
 
     modifier onlyIfWithdrawAllowed(address from, uint256 amount) {
-        require(_tokenController.onDestroyTokens(from, amount));
+        require(_tokenController.onDestroyTokens(msg.sender, from, amount));
         _;
     }
 
@@ -152,7 +152,7 @@ contract EuroToken is
     {
         require(newController != ITokenController(0x0));
         _tokenController = newController;
-        emit ChangeTokenController(_tokenController, newController);
+        emit LogChangeTokenController(_tokenController, newController);
     }
 
     function tokenController()
