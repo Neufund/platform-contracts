@@ -107,6 +107,10 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
         ki: knownInterfaces.tokenExchangeRateOracle,
         addr: "0x20216d0d0912d0a44cec2ffbc85043da6a943fda",
       },
+      {
+        ki: knownInterfaces.platformTerms,
+        addr: "0x20216d0d0912d0a44cec2ffbc85043da6a943fdb",
+      },
     ];
     const multiRegTx = await registerSingletons(universe, universeManager, kis);
     // find if number of events matches
@@ -129,6 +133,7 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
       "identityRegistry",
       "tokenExchange",
       "tokenExchangeRateOracle",
+      "platformTerms",
     ];
     for (let ii = 0; ii < kis.length; ii += 1) {
       const loopi = await universe[getters[ii]]();
@@ -156,6 +161,9 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
     expect(await universe.isInterfaceCollectionInstance(knownInterfaces.commitmentInterface, addr))
       .to.be.true;
   });
+
+  // test isAnyOfInterfaceCollectionInstance: no match, single match (first), single match (second), all match
+  it("should set multiple interfaces in collection for single address");
 
   it("should set interface in many collections");
 
