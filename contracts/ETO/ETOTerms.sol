@@ -19,13 +19,15 @@ contract ETOTerms is Math {
     // total number of shares in the company (incl. Authorized Shares) at moment of sale
     uint256 public TOTAL_COMPANY_SHARES;
     // sets nominal value of a share
-    uint256 public SHARE_NOMINAL_VALUE;
+    uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
     // minimum number of tokens being offered. will set min cap
     uint256 public MIN_NUMBER_OF_TOKENS;
     // maximum number of tokens being offered. will set max cap
     uint256 public MAX_NUMBER_OF_TOKENS;
     // token price in EUR-T
     uint256 public TOKEN_PRICE_EUR_ULPS;
+    // maximum discount on token price that may be given to investor (as decimal fraction)
+    uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
     uint256 public MIN_TICKET_EUR_ULPS;
     // maximum ticket for sophisiticated investors
@@ -44,6 +46,10 @@ contract ETOTerms is Math {
     string public PROSPECTUS_URL;
     // settings for shareholder rights
     ShareholderRights public SHAREHOLDER_RIGHTS;
+
+    // equity token setup
+    string public EQUITY_TOKEN_NAME;
+    string public EQUITY_TOKEN_SYMBOL;
 
 
     ////////////////////////
@@ -106,7 +112,11 @@ contract ETOTerms is Math {
         bool enableTransfersOnSuccess,
         bool isCrowdfunding,
         string investmentAgreementUrl,
-        ShareholderRights shareHolderRights
+        string prospectusUrl,
+        ShareholderRights shareHolderRights,
+        string equityTokenName,
+        string equityTokenSymbol,
+        uint256 shareNominalValueEurUlps
     )
         public
     {
@@ -121,7 +131,11 @@ contract ETOTerms is Math {
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         IS_CROWDFUNDING = isCrowdfunding;
         INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementUrl;
+        PROSPECTUS_URL = prospectusUrl;
         SHAREHOLDER_RIGHTS = shareHolderRights;
+        EQUITY_TOKEN_NAME = equityTokenName;
+        EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
+        SHARE_NOMINAL_VALUE_EUR_ULPS = shareNominalValueEurUlps;
     }
 
     ////////////////////////
