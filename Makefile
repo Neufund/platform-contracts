@@ -27,3 +27,6 @@ endif
 
 container: down
 	docker build . -t neufund/platform-contracts
+
+update-artifacts:
+	yarn build
