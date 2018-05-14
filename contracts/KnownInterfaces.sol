@@ -69,4 +69,7 @@ contract KnownInterfaces {
 
     // ETO commitment interface interface and singleton keccak256("ICommitment")
     bytes4 internal constant KNOWN_INTERFACE_COMMITMENT = 0xfa0e0c60;
+
+    // Platform terms interface and singletong keccak256("PlatformTerms")
+    bytes4 internal constant KNOWN_INTERFACE_PLATFORM_TERMS = 0x75ecd7f8;
 }
