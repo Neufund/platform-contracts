@@ -112,6 +112,21 @@ contract Universe is
         return _collections[interfaceId][instance];
     }
 
+    function isAnyOfInterfaceCollectionInstance(bytes4[] interfaceIds, address instance)
+        public
+        constant
+        returns (bool)
+    {
+        uint256 idx;
+        while(idx < interfaceIds.length) {
+            if (_collections[interfaceIds[idx]][instance]) {
+                return true;
+            }
+            idx += 1;
+        }
+        return false;
+    }
+
     /// gets all interfaces of given instance
     function getInterfacesOfInstance(address instance)
         public
@@ -214,11 +229,15 @@ contract Universe is
     }
 
     function tokenExchange() public constant returns (address) {
-        return address(_singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE]);
+        return _singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE];
     }
 
     function gasExchange() public constant returns (address) {
-        return address(_singletons[KNOWN_INTERFACE_GAS_EXCHANGE]);
+        return _singletons[KNOWN_INTERFACE_GAS_EXCHANGE];
+    }
+
+    function platformTerms() public constant returns (address) {
+        return _singletons[KNOWN_INTERFACE_PLATFORM_TERMS];
     }
 
     ////////////////////////

@@ -4,18 +4,20 @@ pragma solidity 0.4.23;
 contract ShareholderRights {
 
     enum VotingRule {
-        // shareholder has no voting rights
+        // nominee has no voting rights
         NoVotingRights,
-        // shareholder votes yes if token holders do not say otherwise
+        // nominee votes yes if token holders do not say otherwise
         Positive,
-        // shareholder votes agains if token holders do not say otherwise
-        Negative
+        // nominee votes against if token holders do not say otherwise
+        Negative,
+        // nominee passes the vote as is giving yes/no split
+        Proportional
     }
 
     // a right to drag along (or be dragged) on exit
-    bool public HAS_DRAG_ALONG_RIGHTS;
+    bool public constant HAS_DRAG_ALONG_RIGHTS = true;
     // a right to tag along
-    bool public HAS_TAG_ALONG_RIGHTS;
+    bool public constant HAS_TAG_ALONG_RIGHTS = true;
     // information is fundamental right that cannot be removed
     bool public constant HAS_GENERAL_INFORMATION_RIGHTS = true;
     // voting Right
@@ -25,11 +27,13 @@ contract ShareholderRights {
     // liquidation preference multiplicator as decimal fraction
     uint256 public LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC;
     // founder's vesting
-    bool public HAS_FOUNDERS_VESTING;
+    bool public constant HAS_FOUNDERS_VESTING = true;
     // duration of general voting in days
-    uint256 public GENERAL_VOTING_DURATION_DAYS;
+    uint256 public constant GENERAL_VOTING_DURATION_DAYS = 10;
     // duration of restricted act votings (like exit etc.)
-    uint256 public RESTRICTED_ACT_VOTING_DURATION_DAYS;
+    uint256 public constant RESTRICTED_ACT_VOTING_DURATION_DAYS = 14;
+    // quorum of tokenholders for the vote to count as decimal fraction
+    uint256 public constant TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
     // {gen-general-resolutions-voting-duration-days}
     // {gen-liquidation-preference-muliplier}
     // Founders-vesting

@@ -6,22 +6,10 @@ import "../Company/IEquityToken.sol";
 
 
 /// @title default interface of commitment process
-contract IETOCommitment is ICommitment {
-
-    ////////////////////////
-    // Types
-    ////////////////////////
-
-    // order must reflect time precedence, do not change order below
-    enum State {
-        Setup, // Initial state
-        Whitelist,
-        Public,
-        Signing,
-        Claim,
-        Payout, // Terminal state
-        Refund // Terminal state
-    }
+contract IETOCommitment is
+    ICommitment,
+    IETOCommitmentStates
+{
 
     ////////////////////////
     // Events
@@ -57,14 +45,17 @@ contract IETOCommitment is ICommitment {
     ////////////////////////
 
     //
-    // State control
+    // ETOState control
     //
 
     // returns current ETO state
-    function state() public constant returns (State);
+    function state() public constant returns (ETOState);
 
     // returns start of given state
-    function startOf(State s) public constant returns (uint256);
+    function startOf(ETOState s) public constant returns (uint256);
+
+    // returns commitment observer (typically equity token controller)
+    function commitmentObserver() public constant returns (IETOCommitmentObserver);
 
     //
     // Commitment process
@@ -94,6 +85,11 @@ contract IETOCommitment is ICommitment {
 
     // equity token
     function equityToken() public constant returns (IEquityToken);
+
+    // nominee
+    function nominee() public constant returns (address);
+
+    function companyLegalRep() public constant returns (address);
 
     /// signed agreement as provided by company and nominee
     /// @dev available on Claim state transition

@@ -253,6 +253,8 @@ contract(
         expect(await tokenController.onTransfer(explicitFrom, etoAddress, 0)).to.be.true;
       });
 
+      it("should allow/disallow transfer with EquityTokenController (just like ETO)");
+
       it("should always approve");
 
       it("should have permanent allowance for gasExchange", async () => {
@@ -287,12 +289,12 @@ contract(
         await tokenController.setAllowedTransferTo(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onGenerateTokens(explicit, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps)).to.be
           .true;
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x1"), {
           from: masterManager,
         });
-        expect(await tokenController.onGenerateTokens(identity1, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
           .true;
       });
 
@@ -300,47 +302,47 @@ contract(
         await tokenController.setAllowedTransferTo(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onGenerateTokens(explicit, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps)).to.be
           .true;
-        expect(await tokenController.onGenerateTokens(explicit, minDepositAmountEurUlps.add(1))).to
-          .be.true;
-        expect(await tokenController.onGenerateTokens(explicit, minDepositAmountEurUlps.sub(1))).to
-          .be.false;
+        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps.add(1)))
+          .to.be.true;
+        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps.sub(1)))
+          .to.be.false;
       });
 
       it("should disallow deposit for non KYC", async () => {
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x1"), {
           from: masterManager,
         });
-        expect(await tokenController.onGenerateTokens(identity1, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
           .true;
         await identityRegistry.setClaims(identity1, toBytes32("0x1"), "0x0", {
           from: masterManager,
         });
-        expect(await tokenController.onGenerateTokens(identity1, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
           .false;
         // also check if explicit from disallows
         await tokenController.setAllowedTransferFrom(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onGenerateTokens(explicit, minDepositAmountEurUlps)).to.be
+        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps)).to.be
           .false;
         // also any address disallowed
-        expect(await tokenController.onGenerateTokens(nonkycIdentity, minDepositAmountEurUlps)).to
-          .be.false;
+        expect(await tokenController.onGenerateTokens(_, nonkycIdentity, minDepositAmountEurUlps))
+          .to.be.false;
       });
 
       it("should allow withdraw for KYC/bank account and explicit", async () => {
         await tokenController.setAllowedTransferFrom(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onDestroyTokens(explicit, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps)).to.be
           .true;
         // kyc and bank account required
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x5"), {
           from: masterManager,
         });
-        expect(await tokenController.onDestroyTokens(identity1, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
           .true;
       });
 
@@ -348,34 +350,34 @@ contract(
         await tokenController.setAllowedTransferFrom(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onDestroyTokens(explicit, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps)).to.be
           .true;
-        expect(await tokenController.onDestroyTokens(explicit, minWithdrawAmountEurUlps.add(1))).to
-          .be.true;
-        expect(await tokenController.onDestroyTokens(explicit, minWithdrawAmountEurUlps.sub(1))).to
-          .be.false;
+        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps.add(1)))
+          .to.be.true;
+        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps.sub(1)))
+          .to.be.false;
       });
 
       it("should disallow withdraw for non KYC", async () => {
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x5"), {
           from: masterManager,
         });
-        expect(await tokenController.onDestroyTokens(identity1, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
           .true;
         await identityRegistry.setClaims(identity1, toBytes32("0x5"), "0x0", {
           from: masterManager,
         });
-        expect(await tokenController.onDestroyTokens(identity1, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
           .false;
         // also check if explicit to disallows
         await tokenController.setAllowedTransferTo(explicit, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onDestroyTokens(explicit, minWithdrawAmountEurUlps)).to.be
+        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps)).to.be
           .false;
         // also any address disallowed
-        expect(await tokenController.onDestroyTokens(nonkycIdentity, minWithdrawAmountEurUlps)).to
-          .be.false;
+        expect(await tokenController.onDestroyTokens(_, nonkycIdentity, minWithdrawAmountEurUlps))
+          .to.be.false;
       });
     });
   },

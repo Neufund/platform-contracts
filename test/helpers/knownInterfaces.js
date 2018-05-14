@@ -23,4 +23,5 @@ export default {
   icbmEuroToken: sha3("ICBMEuroToken").slice(0, 10),
   icbmCommitment: sha3("ICBMCommitment").slice(0, 10),
   commitmentInterface: sha3("ICommitment").slice(0, 10),
+  platformTerms: sha3("PlatformTerms").slice(0, 10),
 };

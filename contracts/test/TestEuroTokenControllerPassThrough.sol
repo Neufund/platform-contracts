@@ -39,7 +39,7 @@ contract TestEuroTokenControllerPassThrough is ITokenController
         return false;
     }
 
-    function onGenerateTokens(address, uint256)
+    function onGenerateTokens(address, address, uint256)
         public
         constant
         returns (bool allow)
@@ -47,7 +47,7 @@ contract TestEuroTokenControllerPassThrough is ITokenController
         return true;
     }
 
-    function onDestroyTokens(address, uint256)
+    function onDestroyTokens(address, address, uint256)
         public
         constant
         returns (bool allow)

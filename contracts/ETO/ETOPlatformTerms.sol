@@ -23,7 +23,7 @@ contract ETOPlatformTerms is Math {
     // equity tokens per share
     uint256 public constant EQUITY_TOKENS_PER_SHARE = 1000000; // move it to platform
     // equity tokens decimals (precision)
-    uint256 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
+    uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
     // minimum ticket size Platform accepts in EUR ULPS
     uint256 public constant MIN_TICKET_EUR_ULPS = 500 * 10**18;

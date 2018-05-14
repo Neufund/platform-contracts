@@ -23,17 +23,20 @@ contract ETOTimedStateMachine is IETOCommitment {
     // Immutable state
     ////////////////////////
 
-    // maps states to durations (index is State)
+    // maps states to durations (index is ETOState)
     uint32[] private ETO_STATE_DURATIONS;
+
+    // observer receives notifications on all state changes
+    IETOCommitmentObserver private COMMITMENT_OBSERVER;
 
     ////////////////////////
     // Mutable state
     ////////////////////////
 
     // current state
-    State private _state = State.Setup;
+    ETOState private _state = ETOState.Setup;
 
-    // historical times of state transition (index is State)
+    // historical times of state transition (index is ETOState)
     uint32[] private _pastStateTransitionTimes;
 
     ////////////////////////
@@ -52,18 +55,18 @@ contract ETOTimedStateMachine is IETOCommitment {
         advanceLogicState();
     }
 
-    modifier onlyState(State state) {
+    modifier onlyState(ETOState state) {
         require(_state == state);
         _;
     }
 
-    modifier onlyStates(State state0, State state1) {
+    modifier onlyStates(ETOState state0, ETOState state1) {
         require(_state == state0 || _state == state1);
         _;
     }
 
     /// @dev Multiple states can be handled by adding more modifiers.
-    /* modifier notInState(State state) {
+    /* modifier notInState(ETOState state) {
         require(_state != state);
         _;
     }*/
@@ -102,7 +105,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         constant
         returns (bool)
     {
-        return (_state == State.Refund || _state == State.Payout);
+        return (_state == ETOState.Refund || _state == ETOState.Payout);
     }
 
     // says if state is success
@@ -111,7 +114,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         constant
         returns (bool)
     {
-        return (_state == State.Claim || _state == State.Payout);
+        return (_state == ETOState.Claim || _state == ETOState.Payout);
     }
 
     // says if state is filure
@@ -120,7 +123,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         constant
         returns (bool)
     {
-        return _state == State.Refund;
+        return _state == ETOState.Refund;
     }
 
     //
@@ -130,17 +133,21 @@ contract ETOTimedStateMachine is IETOCommitment {
     function state()
         public
         constant
-        returns (State)
+        returns (ETOState)
     {
         return _state;
     }
 
-    function startOf(State s)
+    function startOf(ETOState s)
         public
         constant
         returns (uint256)
     {
         return startOfInternal(s);
+    }
+
+    function commitmentObserver() public constant returns (IETOCommitmentObserver) {
+        return COMMITMENT_OBSERVER;
     }
 
     ////////////////////////
@@ -150,20 +157,20 @@ contract ETOTimedStateMachine is IETOCommitment {
     /// @notice called before state transitions, allows override transition due to additional business logic
     /// @dev advance due to time implemented in advanceTimedState, here implement other conditions like
     ///     max cap reached -> we go to signing
-    function mBeforeStateTransition(State oldState, State newState)
+    function mBeforeStateTransition(ETOState oldState, ETOState newState)
         internal
         constant
-        returns (State newStateOverride);
+        returns (ETOState newStateOverride);
 
     /// @notice gets called after every state transition.
-    function mAfterTransition(State oldState, State newState)
+    function mAfterTransition(ETOState oldState, ETOState newState)
         internal;
 
     /// @notice gets called after business logic, may induce state transition
-    function mAdavanceLogicState(State oldState)
+    function mAdavanceLogicState(ETOState oldState)
         internal
         constant
-        returns (State);
+        returns (ETOState);
 
 
 
@@ -171,41 +178,43 @@ contract ETOTimedStateMachine is IETOCommitment {
     // Internal functions
     ////////////////////////
 
-    function setupDurations(ETODurationTerms durationTerms)
+    function setupStateMachine(ETODurationTerms durationTerms, IETOCommitmentObserver observer)
         internal
     {
-        require(ETO_STATE_DURATIONS[uint32(State.Signing)] != 0, "DUR_SET_ONCE");
+        require(COMMITMENT_OBSERVER == address(0), "STM_SET_ONCE");
+        require(observer != address(0));
 
-        ETO_STATE_DURATIONS[uint32(State.Whitelist)] = durationTerms.WHITELIST_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Public)] = durationTerms.PUBLIC_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Signing)] = durationTerms.SIGNING_DURATION();
-        ETO_STATE_DURATIONS[uint32(State.Claim)] = durationTerms.CLAIM_DURATION();
+        COMMITMENT_OBSERVER = observer;
+        ETO_STATE_DURATIONS[uint32(ETOState.Whitelist)] = durationTerms.WHITELIST_DURATION();
+        ETO_STATE_DURATIONS[uint32(ETOState.Public)] = durationTerms.PUBLIC_DURATION();
+        ETO_STATE_DURATIONS[uint32(ETOState.Signing)] = durationTerms.SIGNING_DURATION();
+        ETO_STATE_DURATIONS[uint32(ETOState.Claim)] = durationTerms.CLAIM_DURATION();
     }
 
-    function runTimedStateMachine(uint32 startDate)
+    function runStateMachine(uint32 startDate)
         internal
     {
         // this sets expiration of setup state
-        _pastStateTransitionTimes[uint32(State.Setup)] = startDate;
+        _pastStateTransitionTimes[uint32(ETOState.Setup)] = startDate;
     }
 
-    function startOfInternal(State s)
+    function startOfInternal(ETOState s)
         internal
         constant
         returns (uint256)
     {
         // initial state does not have start time
-        if (s == State.Setup) {
+        if (s == ETOState.Setup) {
             return 0;
         }
 
         // if timed state machine was not run, the next state will never come
-        // if (_pastStateTransitionTimes[uint32(State.Setup)] == 0) {
+        // if (_pastStateTransitionTimes[uint32(ETOState.Setup)] == 0) {
         //    return 0xFFFFFFFF;
         // }
 
         // special case for Refund
-        if (s == State.Refund) {
+        if (s == ETOState.Refund) {
             return _state == s ? _pastStateTransitionTimes[uint32(_state)] : 0;
         }
         // current and previous states: just take s - 1 which is the end of previous state
@@ -234,27 +243,27 @@ contract ETOTimedStateMachine is IETOCommitment {
         private
     {
         // if timed state machine was not run, the next state will never come
-        if (_pastStateTransitionTimes[uint32(State.Setup)] == 0) {
+        if (_pastStateTransitionTimes[uint32(ETOState.Setup)] == 0) {
             return;
         }
 
         uint256 t = block.timestamp;
-        if (_state == State.Setup && t >= startOfInternal(State.Whitelist)) {
-            transitionTo(State.Whitelist);
+        if (_state == ETOState.Setup && t >= startOfInternal(ETOState.Whitelist)) {
+            transitionTo(ETOState.Whitelist);
         }
-        if (_state == State.Whitelist && t >= startOfInternal(State.Public)) {
-            transitionTo(State.Public);
+        if (_state == ETOState.Whitelist && t >= startOfInternal(ETOState.Public)) {
+            transitionTo(ETOState.Public);
         }
-        if (_state == State.Public && t >= startOfInternal(State.Claim)) {
-            transitionTo(State.Claim);
+        if (_state == ETOState.Public && t >= startOfInternal(ETOState.Claim)) {
+            transitionTo(ETOState.Claim);
         }
         // signing to refund
-        if (_state == State.Signing && t >= startOfInternal(State.Refund)) {
-            transitionTo(State.Refund);
+        if (_state == ETOState.Signing && t >= startOfInternal(ETOState.Refund)) {
+            transitionTo(ETOState.Refund);
         }
         // claim to payout
-        if (_state == State.Claim && t >= startOfInternal(State.Payout)) {
-            transitionTo(State.Payout);
+        if (_state == ETOState.Claim && t >= startOfInternal(ETOState.Payout)) {
+            transitionTo(ETOState.Payout);
         }
     }
 
@@ -263,18 +272,18 @@ contract ETOTimedStateMachine is IETOCommitment {
     function advanceLogicState()
         private
     {
-        State newState = mAdavanceLogicState(_state);
+        ETOState newState = mAdavanceLogicState(_state);
         if (_state != newState) {
             transitionTo(newState);
         }
     }
 
     /// @notice executes transition state function
-    function transitionTo(State newState)
+    function transitionTo(ETOState newState)
         private
     {
-        State oldState = _state;
-        State effectiveNewState = mBeforeStateTransition(oldState, newState);
+        ETOState oldState = _state;
+        ETOState effectiveNewState = mBeforeStateTransition(oldState, newState);
         require(validTransition(oldState, effectiveNewState));
 
         _state = effectiveNewState;
@@ -286,24 +295,26 @@ contract ETOTimedStateMachine is IETOCommitment {
         // should not change _state
         mAfterTransition(oldState, effectiveNewState);
         assert(_state == effectiveNewState);
+        // should notify observer
+        COMMITMENT_OBSERVER.onStateTransition(oldState, newState);
     }
 
-    function validTransition(State oldState, State newState)
+    function validTransition(ETOState oldState, ETOState newState)
         private
         pure
         returns (bool valid)
     {
         // TODO: think about disabling it before production deployment
-        // (oldState == State.Setup && newState == State.Public) ||
-        // (oldState == State.Setup && newState == State.Refund) ||
+        // (oldState == ETOState.Setup && newState == ETOState.Public) ||
+        // (oldState == ETOState.Setup && newState == ETOState.Refund) ||
         return
-            (oldState == State.Setup && newState == State.Whitelist) ||
-            (oldState == State.Whitelist && newState == State.Public) ||
-            (oldState == State.Whitelist && newState == State.Signing) ||
-            (oldState == State.Public && newState == State.Signing) ||
-            (oldState == State.Public && newState == State.Refund) ||
-            (oldState == State.Signing && newState == State.Refund) ||
-            (oldState == State.Signing && newState == State.Claim) ||
-            (oldState == State.Claim && newState == State.Payout);
+            (oldState == ETOState.Setup && newState == ETOState.Whitelist) ||
+            (oldState == ETOState.Whitelist && newState == ETOState.Public) ||
+            (oldState == ETOState.Whitelist && newState == ETOState.Signing) ||
+            (oldState == ETOState.Public && newState == ETOState.Signing) ||
+            (oldState == ETOState.Public && newState == ETOState.Refund) ||
+            (oldState == ETOState.Signing && newState == ETOState.Refund) ||
+            (oldState == ETOState.Signing && newState == ETOState.Claim) ||
+            (oldState == ETOState.Claim && newState == ETOState.Payout);
     }
 }
