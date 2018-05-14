@@ -3,7 +3,6 @@ pragma solidity 0.4.23;
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
 import "../Universe.sol";
-import "../Company/IEquityTokenController.sol";
 import "../Company/IEquityToken.sol";
 import "../ICBM/LockedAccount.sol";
 import "../AccessControl/AccessControlled.sol";
@@ -108,8 +107,6 @@ contract ETOCommitment is
     address private COMPANY_LEGAL_REPRESENTATIVE;
     // nominee address
     address private NOMINEE;
-    // company management contract
-    IEquityTokenController private COMPANY;
 
     // terms contracts
     ETOTerms private ETO_TERMS;
@@ -263,7 +260,6 @@ contract ETOCommitment is
     /// anyone may be a deployer, the platform acknowledges the contract by adding it to Universe Commitment collection
     constructor(
         Universe universe,
-        ETOPlatformTerms platformTerms,
         address platformWallet,
         address nominee,
         address companyLegalRep
@@ -273,11 +269,11 @@ contract ETOCommitment is
         public
     {
         UNIVERSE = universe;
-        PLATFORM_TERMS = platformTerms;
+        PLATFORM_TERMS = ETOPlatformTerms(universe.platformTerms());
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
-        PLATFORM_NEUMARK_SHARE = platformTerms.PLATFORM_NEUMARK_SHARE();
+        PLATFORM_NEUMARK_SHARE = PLATFORM_TERMS.PLATFORM_NEUMARK_SHARE();
 
         NEUMARK = universe.neumark();
         ETHER_TOKEN = universe.etherToken();
@@ -287,7 +283,7 @@ contract ETOCommitment is
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         CURRENCY_RATES = ITokenExchangeRateOracle(universe.tokenExchangeRateOracle());
 
-        emit LogETOCommitmentDeployed(msg.sender, address(platformTerms), nominee, companyLegalRep);
+        emit LogETOCommitmentDeployed(msg.sender, address(PLATFORM_TERMS), nominee, companyLegalRep);
     }
 
     ////////////////////////
@@ -300,26 +296,27 @@ contract ETOCommitment is
     )
         external
         onlyCompany
+        onlyWithAgreement
         withStateTransition()
-        onlyState(State.Setup)
+        onlyState(ETOState.Setup)
     {
-        // must be integer precision
         require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION(), "ETO_ET_DECIMALS");
         require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE(), "ETO_ET_TPS_NE");
-        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE(), "ETO_ET_SNV");
+        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS(), "ETO_ET_SNV");
+        // todo: check if signed by the same nominee
         etoTerms.requireValidTerms(PLATFORM_TERMS);
 
         ETO_TERMS = etoTerms;
         EQUITY_TOKEN = equityToken;
-        COMPANY = EQUITY_TOKEN.equityTokenController();
 
+        // todo: caps are always in tokens
         MAX_CAP_EUR_ULPS = etoTerms.MAX_CAP_EUR_ULPS();
         MIN_CAP_EUR_ULPS = etoTerms.MIN_CAP_EUR_ULPS();
         MAX_TICKET_EUR_ULPS = etoTerms.MAX_TICKET_EUR_ULPS();
         MAX_TICKET_SIMPLE_EUR_ULPS = etoTerms.MAX_TICKET_SIMPLE_EUR_ULPS();
         MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
 
-        setupDurations(ETO_TERMS.DURATION_TERMS());
+        setupStateMachine(ETO_TERMS.DURATION_TERMS(), EQUITY_TOKEN.equityTokenController());
 
         emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
     }
@@ -329,7 +326,7 @@ contract ETOCommitment is
         onlyCompany
         onlyWithTerms
         withStateTransition()
-        onlyState(State.Setup)
+        onlyState(ETOState.Setup)
     {
         // TODO: implemement
     }
@@ -339,7 +336,7 @@ contract ETOCommitment is
         onlyCompany
         onlyWithTerms
         withStateTransition()
-        onlyState(State.Setup)
+        onlyState(ETOState.Setup)
     {
         // TODO: implemement
     }
@@ -350,7 +347,7 @@ contract ETOCommitment is
         external
         only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
         withStateTransition()
-        onlyState(State.Setup)
+        onlyState(ETOState.Setup)
     {
         // todo: selfdestruct or forces refund in later stages
         selfdestruct(msg.sender);
@@ -361,9 +358,8 @@ contract ETOCommitment is
         external
         onlyCompany
         onlyWithTerms
-        onlyWithAgreement
         withStateTransition()
-        onlyState(State.Setup)
+        onlyState(ETOState.Setup)
     {
         // todo: check if in universe
         // todo: check if can issue neumark
@@ -373,16 +369,17 @@ contract ETOCommitment is
             startDate < block.timestamp && block.timestamp - startDate < PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
             "ETO_DATE_TOO_EARLY");
         // prevent re-setting of old date within
-        uint256 startAt = startOfInternal(State.Whitelist);
+        uint256 startAt = startOfInternal(ETOState.Whitelist);
         require(startAt == 0 || block.timestamp - startAt > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_LATE");
-        runTimedStateMachine(uint32(startDate));
+        runStateMachine(uint32(startDate));
+
         emit LogETOStartDateSet(msg.sender, startAt, startDate);
     }
 
     function companySignsInvestmentAgreement(string signedInvestmentAgreementUrl)
         external
         withStateTransition()
-        onlyState(State.Signing)
+        onlyState(ETOState.Signing)
         onlyCompany
     {
         _signedInvestmentAgreementUrl = signedInvestmentAgreementUrl;
@@ -392,7 +389,7 @@ contract ETOCommitment is
     function nomineeConfirmsInvestmentAgreement(string signedInvestmentAgreementUrl)
         external
         withStateTransition()
-        onlyState(State.Signing)
+        onlyState(ETOState.Signing)
         onlyNominee
     {
         bytes32 nomineeHash = keccak256(signedInvestmentAgreementUrl);
@@ -410,7 +407,7 @@ contract ETOCommitment is
     function tokenFallback(address investorOrProxy, uint256 amount, bytes data)
         public
         withStateTransition()
-        onlyStates(State.Whitelist, State.Public)
+        onlyStates(ETOState.Whitelist, ETOState.Public)
     {
         // we trust only tokens below
         require(msg.sender == address(ETHER_TOKEN) || msg.sender == address(EURO_TOKEN));
@@ -425,7 +422,7 @@ contract ETOCommitment is
         acceptAgreementInternal(investor);
         // kick out not whitelist or not LockedAccount
         // todo: IS_ICBM_INVESTOR_WHITELISTED
-        if (state() == State.Whitelist) {
+        if (state() == ETOState.Whitelist) {
             require(_whitelist[investor] || isLockedAccount);
         }
         // kick out on KYC
@@ -459,7 +456,7 @@ contract ETOCommitment is
     function claim()
         external
         withStateTransition()
-        onlyStates(State.Claim, State.Payout)
+        onlyStates(ETOState.Claim, ETOState.Payout)
 
     {
         claimTokensPrivate(msg.sender);
@@ -468,7 +465,7 @@ contract ETOCommitment is
     function claimMany(address[] investors)
         external
         withStateTransition()
-        onlyStates(State.Claim, State.Payout)
+        onlyStates(ETOState.Claim, ETOState.Payout)
     {
         // todo: claim in a loop
     }
@@ -476,7 +473,7 @@ contract ETOCommitment is
     function refund()
         external
         withStateTransition()
-        onlyState(State.Refund)
+        onlyState(ETOState.Refund)
 
     {
         refundTokensPrivate(msg.sender);
@@ -485,7 +482,7 @@ contract ETOCommitment is
     function refundMany(address[] investors)
         external
         withStateTransition()
-        onlyState(State.Refund)
+        onlyState(ETOState.Refund)
     {
         // todo: refund in a loop
     }
@@ -493,7 +490,7 @@ contract ETOCommitment is
     function payout()
         external
         withStateTransition()
-        onlyState(State.Payout)
+        onlyState(ETOState.Payout)
     {
         // does nothing - all hapens in state transition
     }
@@ -566,6 +563,14 @@ contract ETOCommitment is
         return IDENTITY_REGISTRY;
     }
 
+    function nominee() public constant returns (address) {
+        return NOMINEE;
+    }
+
+    function companyLegalRep() public constant returns (address) {
+        return COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
     ////////////////////////
     // Internal functions
     ////////////////////////
@@ -574,75 +579,77 @@ contract ETOCommitment is
     // Overrides internal interface
     //
 
-    function mAdavanceLogicState(State oldState)
+    function mAdavanceLogicState(ETOState oldState)
         internal
         constant
-        returns (State)
+        returns (ETOState)
     {
-        if (oldState == State.Whitelist || oldState == State.Public) {
+        if (oldState == ETOState.Whitelist || oldState == ETOState.Public) {
             // if within min ticket of max cap then move state
+            // todo: eliminate MAX CAP
             if (_totalEquivEurUlps + MIN_TICKET_EUR_ULPS >= MAX_CAP_EUR_ULPS) {
-                return oldState == State.Whitelist ? State.Public : State.Signing;
+                return oldState == ETOState.Whitelist ? ETOState.Public : ETOState.Signing;
             }
         }
-        if (oldState == State.Signing && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
-            return State.Claim;
+        if (oldState == ETOState.Signing && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
+            return ETOState.Claim;
         }
-        /*if (oldState == State.Claim) {
+        /*if (oldState == ETOState.Claim) {
             // we can go to payout if all assets claimed!
             if (NEUMARK.balanceOf(this) == 0 && EQUITY_TOKEN.balanceOf(this) == 0 &&
                 ETHER_TOKEN.balanceOf(this) == 0 && EURO_TOKEN.balanceOf(this) == 0) {
-                transitionTo(State.Payout);
+                transitionTo(ETOState.Payout);
             }
         }*/
         return oldState;
     }
 
-    function mBeforeStateTransition(State oldState, State newState)
+    function mBeforeStateTransition(ETOState oldState, ETOState newState)
         internal
         constant
-        returns (State)
+        returns (ETOState)
     {
         // force refund if floor criteria are not met
-        if (newState == State.Signing && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
-            return State.Refund;
+        // todo: apply min cap in tokens
+        if (newState == ETOState.Signing && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
+            return ETOState.Refund;
         }
         // todo: consider refund if nominal value is not raised in Euro
         // go to refund if attempt to go to Claim without nominee agreement confirmation
-        if (newState == State.Claim && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
-            return State.Refund;
+        if (newState == ETOState.Claim && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
+            return ETOState.Refund;
         }
 
         // this is impossible: stateMachine cannot be run without all necessary terms
-        /* if (newState == State.Whitelist && !setupComplete()) {
-            return State.Refund;
+        /* if (newState == ETOState.Whitelist && !setupComplete()) {
+            return ETOState.Refund;
         }*/
 
         return newState;
     }
 
-    function mAfterTransition(State /*oldState*/, State newState)
+    function mAfterTransition(ETOState /*oldState*/, ETOState newState)
         internal
     {
-        if (newState == State.Signing) {
+        if (newState == ETOState.Signing) {
             onSigningTransition();
         }
-        if (newState == State.Claim) {
+        if (newState == ETOState.Claim) {
             onClaimTransition();
         }
-        if (newState == State.Refund) {
+        if (newState == ETOState.Refund) {
             onRefundTransition();
         }
-        if (newState == State.Payout) {
+        if (newState == ETOState.Payout) {
             onPayoutTransition();
         }
     }
 
     //
-    // Overrides Agreement
+    // Overrides Agreement internal interface
     //
 
-    function canAmend(address legalRepresentative)
+    function mCanAmend(address legalRepresentative)
         internal
         returns (bool)
     {
@@ -665,7 +672,7 @@ contract ETOCommitment is
         return (platformNmk, rewardNmk - platformNmk);
     }
 
-    /// called on transition to Signong
+    /// called on transition to Signing
     function onSigningTransition()
         private
     {
@@ -704,7 +711,7 @@ contract ETOCommitment is
         emit LogSigningStarted(NOMINEE, COMPANY_LEGAL_REPRESENTATIVE, _newShares, capitalIncreaseEurUlps);
     }
 
-    /// called on transition to State.Claim
+    /// called on transition to ETOState.Claim
     function onClaimTransition()
         private
     {
@@ -712,8 +719,6 @@ contract ETOCommitment is
         uint256 rewardNmk = NEUMARK.balanceOf(this);
         var (platformNmk,) = calculateNeumarkDistribution(rewardNmk);
         assert(NEUMARK.transfer(PLATFORM_WALLET, platformNmk, ""));
-        // company contract has new token, new eto and new SHA (transfers are enabled on equity token if requested -> company is a controller so in call below)
-        COMPANY.approveTokenOffering();
         // company legal rep receives funds
         if (_additionalContributionEth > 0) {
             assert(ETHER_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEth, ""));
@@ -727,7 +732,7 @@ contract ETOCommitment is
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
     }
 
-    /// called on transtion to State.Refund
+    /// called on transtion to ETOState.Refund
     function onRefundTransition()
         private
     {
@@ -741,12 +746,10 @@ contract ETOCommitment is
         if (balanceTokenInt > 0) {
             EQUITY_TOKEN.destroyTokens(balanceTokenInt);
         }
-        // fail ETO in COMPANY
-        COMPANY.failTokenOffering();
         emit LogRefundStarted(EQUITY_TOKEN, balanceTokenInt, balanceNmk);
     }
 
-    /// called on transition to State.Payout
+    /// called on transition to ETOState.Payout
     function onPayoutTransition()
         private
     {
@@ -754,12 +757,12 @@ contract ETOCommitment is
         address disbursal = UNIVERSE.feeDisbursal();
         assert(disbursal != address(0));
         if (_platformFeeEth > 0) {
-            // disburse via ERC223
-            assert(ETHER_TOKEN.transfer(disbursal, _platformFeeEth, ""));
+            // disburse via ERC223, where we encode token used to provide pro-rata in `data` parameter
+            assert(ETHER_TOKEN.transfer(disbursal, _platformFeeEth, addressToBytes(NEUMARK)));
         }
         if (_platformFeeEurUlps > 0) {
             // disburse via ERC223
-            assert(EURO_TOKEN.transfer(disbursal, _platformFeeEurUlps, ""));
+            assert(EURO_TOKEN.transfer(disbursal, _platformFeeEurUlps, addressToBytes(NEUMARK)));
         }
         // add token participation fee to platfrom portfolio
         EQUITY_TOKEN.distributeTokens(PLATFORM_WALLET, _tokenParticipationFeeInt);
@@ -791,6 +794,7 @@ contract ETOCommitment is
         // kick on minimum ticket
         require(equivEurUlps < MIN_TICKET_EUR_ULPS);
         // kick on cap exceeded
+        // todo: apply cap on tokens
         require(_totalEquivEurUlps + equivEurUlps > MAX_CAP_EUR_ULPS);
         // read current ticket
         InvestmentTicket storage ticket = _tickets[investor];
