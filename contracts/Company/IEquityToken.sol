@@ -1,5 +1,6 @@
 pragma solidity 0.4.23;
 
+import "../Standards/IAgreement.sol";
 import "../Standards/IERC677Token.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IClonedTokenParent.sol";
@@ -7,6 +8,7 @@ import "./IEquityTokenController.sol";
 
 
 contract IEquityToken is
+    IAgreement,
     IClonedTokenParent,
     IERC223Token
 {
@@ -41,5 +43,5 @@ contract IEquityToken is
     /// controlled, irreversibly blocks transferable rights
     function closeToken() public;
 
-    function isClosedStopped() public constant returns (bool);
+    function isTokenClosed() public constant returns (bool);
 }
