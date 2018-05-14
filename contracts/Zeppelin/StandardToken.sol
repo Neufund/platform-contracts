@@ -45,7 +45,7 @@ contract StandardToken is
         returns (bool)
     {
         // check and reset allowance
-        var allowance = _allowed[from][msg.sender];
+        uint256 allowance = _allowed[from][msg.sender];
         _allowed[from][msg.sender] = sub(allowance, amount);
         // do the transfer
         transferInternal(from, to, amount);
