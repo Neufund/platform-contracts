@@ -10,6 +10,7 @@ const interfaceArtifacts = require("../test/helpers/interfaceArtifacts").default
 const { TriState } = require("../test/helpers/triState");
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
+const promisify = require("../test/helpers/evmCommands").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -39,6 +40,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log("---------------------------------------------");
     }
 
+    const endBlockNo = await promisify(web3.eth.getBlockNumber)();
+    console.log(`deployment finished at block ${endBlockNo}`);
+
     const meta = {
       CONFIG,
       DEPLOYER,
@@ -48,6 +52,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       INTERFACE_ARTIFACTS: interfaceArtifacts,
       NETWORK: getNetworkDefinition(network),
       FIXTURE_ACCOUNTS: fas,
+      HEAD_BLOCK_NO: endBlockNo,
     };
     const path = join(__dirname, "../build/meta.json");
     fs.writeFile(path, JSON.stringify(meta), err => {
