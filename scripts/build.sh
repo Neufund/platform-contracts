@@ -7,7 +7,7 @@ if [ -d ./build ]; then
   rm -rf ./build
 fi
 yarn truffle compile --all
-if [ ! -d ./platform-contracts-artifacts ]; then
+if [ ! -d ./platform-contracts-artifacts/.git ]; then
   git clone https://github.com/Neufund/platform-contracts-artifacts.git
 else
   cd ./platform-contracts-artifacts && git reset --hard origin/master && git pull && cd ..

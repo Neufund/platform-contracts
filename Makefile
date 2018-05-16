@@ -26,15 +26,14 @@ ifneq ($(shell docker ps -f NAME=platform-contracts -q),)
 endif
 
 container: down
+	rm -rf platform-contracts-artifacts
 	docker build . -t neufund/platform-contracts
 
-update-artifacts:
-	-kill $(shell lsof -t -i:8545)
-	yarn testrpc > /dev/null &
+update-artifacts: container
+	mkdir -p platform-contracts-artifacts
+	docker run --user $(shell id -u):$(shell id -g) --detach -it --name platform-contracts --rm -v $(shell pwd)/platform-contracts-artifacts:/usr/src/platform-contracts/platform-contracts-artifacts neufund/platform-contracts yarn testrpc
 	sleep 5
-	yarn build
-	yarn deploy localhost
-	kill $(shell lsof -t -i:8545)
-	$(eval commitid = $(shell git rev-parse HEAD))
-	echo $(commitid)
+	docker exec --user $(shell id -u):$(shell id -g) platform-contracts yarn build
+	docker exec --user $(shell id -u):$(shell id -g) platform-contracts yarn deploy localhost
+	$(MAKE) down
 	cd platform-contracts-artifacts && git remote set-url origin git@github.com:Neufund/platform-contracts-artifacts.git && git add -A && git commit -m "from platform-contracts "$(commitid) && git push origin master
