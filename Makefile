@@ -30,10 +30,11 @@ container: down
 	docker build . -t neufund/platform-contracts
 
 update-artifacts: container
-	mkdir -p platform-contracts-artifacts
-	docker run --user $(shell id -u):$(shell id -g) --detach -it --name platform-contracts --rm -v $(shell pwd)/platform-contracts-artifacts:/usr/src/platform-contracts/platform-contracts-artifacts neufund/platform-contracts yarn testrpc
+	docker run --detach -it --name platform-contracts --rm -v $(shell pwd)/platform-contracts-artifacts:/usr/src/platform-contracts/platform-contracts-artifacts neufund/platform-contracts yarn testrpc
 	sleep 5
-	docker exec --user $(shell id -u):$(shell id -g) platform-contracts yarn build
-	docker exec --user $(shell id -u):$(shell id -g) platform-contracts yarn deploy localhost
+	docker exec platform-contracts yarn build
+	docker exec platform-contracts yarn deploy localhost
 	$(MAKE) down
-	cd platform-contracts-artifacts && git remote set-url origin git@github.com:Neufund/platform-contracts-artifacts.git && git add -A && git commit -m "from platform-contracts "$(commitid) && git push origin master
+	cp -r platform-contracts-artifacts platform-contracts-artifacts-m
+	cd platform-contracts-artifacts-m && git remote set-url origin git@github.com:Neufund/platform-contracts-artifacts.git && git add -A && git commit -m "from platform-contracts "$(commitid) && git push origin master
+	rm -rf  platform-contracts-artifacts-m
