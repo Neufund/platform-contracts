@@ -36,5 +36,5 @@ update-artifacts: container
 	docker exec platform-contracts yarn deploy localhost
 	$(MAKE) down
 	cp -r platform-contracts-artifacts platform-contracts-artifacts-m
-	cd platform-contracts-artifacts-m && git remote set-url origin git@github.com:Neufund/platform-contracts-artifacts.git && git add -A && git commit -m "from platform-contracts "$(commitid) && git push origin master
+	cd platform-contracts-artifacts-m && git remote set-url origin git@github.com:Neufund/platform-contracts-artifacts.git && git add -A && git commit -m "from platform-contracts "$(commitid) && git commit --amend --author="Jenkins <jenkins@neufund.org>" --no-edit && git push origin master
 	rm -rf  platform-contracts-artifacts-m
