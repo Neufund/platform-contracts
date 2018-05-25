@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 
 /// @title describes layout of claims in 256bit records stored for identities
@@ -13,10 +13,11 @@ contract IdentityRecord {
     ///     to translate in and out of this struct. until we do not cross uint256 we
     ///     have binary compatibility
     struct IdentityClaims {
-        bool hasKyc; // 1 bit
+        bool isVerified; // 1 bit
         bool isSophisticatedInvestor; // 1 bit
         bool hasBankAccount; // 1 bit
-        // uint253 reserved
+        bool accountFrozen; // 1 bit
+        // uint252 reserved
     }
 
     ////////////////////////
@@ -30,6 +31,7 @@ contract IdentityRecord {
             mstore(claims, and(data, 0x1))
             mstore(add(claims, 0x20), div(and(data, 0x2), 0x2))
             mstore(add(claims, 0x40), div(and(data, 0x4), 0x4))
+            mstore(add(claims, 0x60), div(and(data, 0x8), 0x8))
         }
     }
 }
