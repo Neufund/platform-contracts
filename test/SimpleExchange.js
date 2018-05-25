@@ -1,8 +1,8 @@
-import {expect} from "chai";
-import {prettyPrintGasCost} from "./helpers/gasUtils";
-import {eventValue} from "./helpers/events";
-import {promisify} from "./helpers/evmCommands";
-import {latestTimestamp} from "./helpers/latestTime";
+import { expect } from "chai";
+import { prettyPrintGasCost } from "./helpers/gasUtils";
+import { eventValue } from "./helpers/events";
+import { promisify } from "./helpers/evmCommands";
+import { latestTimestamp } from "./helpers/latestTime";
 import {
   deployUniverse,
   deployEtherTokenUniverse,
@@ -30,14 +30,14 @@ const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 contract(
   "SimpleExchange",
   ([
-     _,
-     admin,
-     gasExchangeManager,
-     tokenOracleManager,
-     gasRecipient,
-     anotherGasRecipient,
-     platformWallet,
-   ]) => {
+    _,
+    admin,
+    gasExchangeManager,
+    tokenOracleManager,
+    gasRecipient,
+    anotherGasRecipient,
+    platformWallet,
+  ]) => {
     let universe;
     let accessPolicy;
     let simpleExchange;
@@ -79,7 +79,7 @@ contract(
         etherToken.address,
         euroToken.address,
         Q18.mul(100),
-        {from: tokenOracleManager},
+        { from: tokenOracleManager },
       );
       expect(tx.logs.length).to.eq(2);
       expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
@@ -100,7 +100,7 @@ contract(
         [etherToken.address, neuToken.address],
         [euroToken.address, euroToken.address],
         [Q18.mul(100), Q18.mul(0.4)],
-        {from: tokenOracleManager},
+        { from: tokenOracleManager },
       );
       expect(tx.logs.length).to.eq(4);
       expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
@@ -264,14 +264,14 @@ contract(
       await simpleExchange.setExchangeRate(etherToken.address, euroToken.address, rate, {
         from: tokenOracleManager,
       });
-      await euroTokenController.applySettings(0, 0, allowanceEurUlps, {from: admin});
+      await euroTokenController.applySettings(0, 0, allowanceEurUlps, { from: admin });
     }
 
     async function depositEuroToken(recipient, amount) {
       await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {
         from: admin,
       });
-      await euroToken.deposit(recipient, amount, {from: admin});
+      await euroToken.deposit(recipient, amount, { from: admin });
     }
 
     async function sendEtherToExchange(sender, amount) {
@@ -280,7 +280,7 @@ contract(
       //   to: simpleExchange.address,
       //   value: amount,
       // });
-      const tx = await simpleExchange.send(amount, {from: sender});
+      const tx = await simpleExchange.send(amount, { from: sender });
       expectLogReceivedEther(tx, sender, amount, amount);
       const balanceAfter = await promisify(web3.eth.getBalance)(simpleExchange.address);
       expect(balanceAfter).to.be.bignumber.eq(amount);
@@ -297,7 +297,7 @@ contract(
       await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {
         from: admin,
       });
-      return simpleExchange.reclaim(euroToken.address, {from: recipient});
+      return simpleExchange.reclaim(euroToken.address, { from: recipient });
     }
 
     function expectLogSetExchangeRate(event, numToken, denToken, rate) {

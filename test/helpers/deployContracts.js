@@ -130,12 +130,14 @@ export async function deployEuroTokenUniverse(
   return [euroToken, tokenController];
 }
 
-export async function deploySimpleExchangeUniverse(universe,
-                                                   universeManager,
-                                                   etherToken,
-                                                   euroToken,
-                                                   gasExchangeManager,
-                                                   tokenOracleManager,) {
+export async function deploySimpleExchangeUniverse(
+  universe,
+  universeManager,
+  etherToken,
+  euroToken,
+  gasExchangeManager,
+  tokenOracleManager,
+) {
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
   const simpleExchange = await SimpleExchange.new(
     accessPolicy.address,
