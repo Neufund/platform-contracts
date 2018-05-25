@@ -1,6 +1,8 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
+const roles = require("../test/helpers/roles").default;
+const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 
 function toBytes32(hex) {
   return `0x${web3.padLeft(hex.slice(2), 64)}`;
@@ -12,6 +14,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipDeployment || CONFIG.isLiveDeployment) return;
 
   const fas = getFixtureAccounts(accounts);
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const SimpleExchange = artifacts.require(CONFIG.artifacts.SIMPLE_EXCHANGE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
@@ -24,6 +27,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("set actual ETH/EUR price");
     const EUR_ETH_RATE = CONFIG.Q18.mul(new web3.BigNumber("360.9828182"));
+    const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
     const simpleExchange = await SimpleExchange.at(await universe.gasExchange());
     const euroTokenAddress = await universe.euroToken();
     const etherTokenAddress = await universe.etherToken();
@@ -77,5 +81,25 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("migrating locked accounts");
     // todo: add migrations when tested
+
+    console.log("send ether to simple exchange");
+    await simpleExchange.send(CONFIG.Q18.mul(30));
+    console.log("add platform wallet as reclaimer to simple exchange");
+    await createAccessPolicy(accessPolicy, [
+      {
+        subject: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
+        role: roles.reclaimer,
+        object: simpleExchange.address,
+      },
+    ]);
+    console.log("make KYC for platform wallet");
+    await identityRegistry.setClaims(
+      CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
+      "0",
+      toBytes32("0x5"),
+      {
+        from: CONFIG.addresses.IDENTITY_MANAGER,
+      },
+    );
   });
 };
