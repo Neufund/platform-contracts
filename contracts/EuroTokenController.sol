@@ -294,6 +294,8 @@ contract EuroTokenController is
         setAllowedTransferToPrivate(UNIVERSE.feeDisbursal(), true);
         // euro lock may receive refunds
         setAllowedTransferToPrivate(UNIVERSE.euroLock(), true);
+        // gas exchange must be able to receive euro token (as payment)
+        setAllowedTransferToPrivate(UNIVERSE.gasExchange(), true);
 
         emit LogUniverseReloaded();
     }
