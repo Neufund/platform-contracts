@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../../Standards/IERC677Callback.sol";
 import "../../Standards/IERC677Token.sol";

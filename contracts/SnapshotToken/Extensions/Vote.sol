@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./ISnapshotableToken.sol";
 
@@ -69,7 +69,7 @@ contract Vote {
     function initChoice(uint256 index, string choice)
      public {
         require(index < CHOICE_HASHES.length);
-        require(keccak256(choice) == CHOICE_HASHES[index]);
+        require(keccak256(abi.encodePacked(choice)) == CHOICE_HASHES[index]);
         _choices[index] = choice;
     }
 

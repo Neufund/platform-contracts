@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./AccessControl/AccessControlled.sol";
 import "./Standards/ITokenExchangeRateOracle.sol";
@@ -98,7 +98,7 @@ contract SimpleExchange is
     {
         // fee must be less than 100%
         assert(exchangeFeeFraction < 10**18);
-        var (rate, rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
+        (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
         require(block.timestamp - rateTimestamp < 1 hours);
         gasExchangePrivate(gasRecipient, amountEurUlps, exchangeFeeFraction, rate);
@@ -115,7 +115,7 @@ contract SimpleExchange is
         // fee must be less than 100%
         assert(exchangeFeeFraction < 10**18);
         require(gasRecipients.length == amountsEurUlps.length);
-        var (rate, rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
+        (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
         require(block.timestamp - rateTimestamp < 1 hours);
         uint256 idx;
@@ -173,7 +173,7 @@ contract SimpleExchange is
         rateFractions = new uint256[](numeratorTokens.length);
         timestamps = new uint256[](denominatorTokens.length);
         while(idx < numeratorTokens.length) {
-            var(rate, timestamp) = getExchangeRatePrivate(numeratorTokens[idx], denominatorTokens[idx]);
+            (uint256 rate, uint256 timestamp) = getExchangeRatePrivate(numeratorTokens[idx], denominatorTokens[idx]);
             rateFractions[idx] = rate;
             timestamps[idx] = timestamp;
             idx += 1;
