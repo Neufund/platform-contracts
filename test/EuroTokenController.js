@@ -120,7 +120,7 @@ contract(
         );
         // several contracts should be whitelisted for transfers
         expect(await tokenController.allowedTransferFrom(await universe.gasExchange())).to.be.true;
-        expect(await tokenController.allowedTransferTo(await universe.gasExchange())).to.be.false;
+        expect(await tokenController.allowedTransferTo(await universe.gasExchange())).to.be.true;
         expect(await tokenController.allowedTransferFrom(await universe.feeDisbursal())).to.be.true;
         expect(await tokenController.allowedTransferTo(await universe.feeDisbursal())).to.be.true;
         expect(await tokenController.allowedTransferFrom(await universe.euroLock())).to.be.true;
