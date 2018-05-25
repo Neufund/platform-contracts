@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
 import "./ETOPlatformTerms.sol";
@@ -24,7 +24,9 @@ contract ETOTerms is Math {
     uint256 public MIN_NUMBER_OF_TOKENS;
     // maximum number of tokens being offered. will set max cap
     uint256 public MAX_NUMBER_OF_TOKENS;
-    // token price in EUR-T
+    // maximum number of tokens in whitelist phase
+    uint256 public MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+    // base token price in EUR-T, without any discount scheme
     uint256 public TOKEN_PRICE_EUR_ULPS;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
@@ -36,6 +38,8 @@ contract ETOTerms is Math {
     uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
+    // additional tokens issued to company on success (founders' tokens)
+    uint256 public ADDITIONAL_COMPANY_TOKENS_ON_SUCCESS;
     // says if we work under crowdfunding regulation
     bool public IS_CROWDFUNDING;
 
