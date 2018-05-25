@@ -17,6 +17,7 @@ deploy:
 test-container: container
 	docker run --detach -it -p 8545:8545 --name platform-contracts --rm neufund/platform-contracts yarn testrpc
 	sleep 5
+	docker exec platform-contracts yarn build
 	$(MAKE) deploy
 	$(MAKE) down
 

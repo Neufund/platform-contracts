@@ -13,8 +13,8 @@ fi
 
 if [ ! -d ./platform-contracts-artifacts ]; then
   git clone https://github.com/Neufund/platform-contracts-artifacts.git
-else
-  cd ./platform-contracts-artifacts && git reset --hard origin/master && git pull && cd ..
+# else
+#   cd ./platform-contracts-artifacts && git reset --hard origin/master && git pull && cd ..
 fi
 if [ ! -d ./platform-contracts-artifacts/build ]; then
   echo "please provide build artifacts in ./platform-contracts-artifacts/build via build.sh"
