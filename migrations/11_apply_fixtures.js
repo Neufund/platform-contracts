@@ -3,6 +3,7 @@ const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
 const roles = require("../test/helpers/roles").default;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
+const getDeployerAccount = require("./config").getDeployerAccount;
 
 function toBytes32(hex) {
   return `0x${web3.padLeft(hex.slice(2), 64)}`;
@@ -14,6 +15,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipDeployment || CONFIG.isLiveDeployment) return;
 
   const fas = getFixtureAccounts(accounts);
+  const DEPLOYER = getDeployerAccount(network, accounts);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const SimpleExchange = artifacts.require(CONFIG.artifacts.SIMPLE_EXCHANGE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
@@ -83,7 +85,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // todo: add migrations when tested
 
     console.log("send ether to simple exchange");
-    await simpleExchange.send(CONFIG.Q18.mul(30));
+    await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
     console.log("add platform wallet as reclaimer to simple exchange");
     await createAccessPolicy(accessPolicy, [
       {
