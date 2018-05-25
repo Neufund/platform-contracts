@@ -8,4 +8,10 @@ contract ITokenExchangeRateOracle {
         public
         constant
         returns (uint256 rateFraction, uint256 timestamp);
+
+    /// @notice allows to retreive multiple exchange rates in once call
+    function getExchangeRates(address[] numeratorTokens, address[] denominatorTokens)
+        public
+        constant
+        returns (uint256[] rateFractions, uint256[] timestamps);
 }
