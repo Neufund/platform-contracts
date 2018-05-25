@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Universe.sol";
 import "./ICBMRoles.sol";
@@ -307,7 +307,7 @@ contract LockedAccount is
         // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(newInvestor));
-        require(claims.hasKyc);
+        require(claims.isVerified && !claims.accountFrozen);
         Account storage newAccount = _accounts[newInvestor];
         // only to empty accounts
         require(newAccount.unlockDate == 0);
@@ -717,7 +717,7 @@ contract LockedAccount is
     {
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
-        require(claims.hasKyc);
+        require(claims.isVerified && !claims.accountFrozen);
 
         destinations.push(
             Destination({investor: wallet, amount: amount})

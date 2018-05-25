@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./Standards/ITokenController.sol";
 import "./AccessControl/AccessControlled.sol";
@@ -180,7 +180,7 @@ contract EuroTokenController is
         // try to resolve 'from'
         if (!explicitFrom) {
             IdentityClaims memory claimsFrom = deserializeClaims(_identityRegistry.getClaims(from));
-            explicitFrom = claimsFrom.hasKyc;
+            explicitFrom = claimsFrom.isVerified && !claimsFrom.accountFrozen;
         }
         if (!explicitFrom) {
             // all ETO contracts may send funds (for example: refund)
@@ -198,9 +198,9 @@ contract EuroTokenController is
         if (!explicitTo) {
             // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
             IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(to));
-            explicitTo = claims.hasKyc;
+            explicitTo = claims.isVerified && !claims.accountFrozen;
         }
-        if(claims.hasKyc && claimsFrom.hasKyc) {
+        if(claims.isVerified && !claims.accountFrozen && claimsFrom.isVerified && !claimsFrom.accountFrozen) {
             // user to user transfer not allowed
             return false;
         }
@@ -240,7 +240,7 @@ contract EuroTokenController is
             return true;
         }
         IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
-        return claims.hasKyc;
+        return claims.isVerified && !claims.accountFrozen;
     }
 
     /// allow to withdraw if user has a valid bank account, kyc and amount >= minium
@@ -256,7 +256,7 @@ contract EuroTokenController is
             return true;
         }
         IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
-        return claims.hasKyc && claims.hasBankAccount;
+        return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
     }
 
     ////////////////////////
