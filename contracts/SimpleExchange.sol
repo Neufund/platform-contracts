@@ -59,8 +59,6 @@ contract SimpleExchange is
     IERC223Token private ETHER_TOKEN;
     // euro token to store and transfer euro
     IERC223Token private EURO_TOKEN;
-    // where to send euro token
-    // address private PLATFORM_WALLET;
 
     ////////////////////////
     // Mutable state
@@ -68,13 +66,6 @@ contract SimpleExchange is
 
     // rate from numerator to denominator
     mapping (address => mapping (address => TokenRate)) private _rates;
-
-    // Euro to Ether rate decimal fraction
-    // uint112 private _eurEthRateFraction;
-    // Ether to Euro rate decimal fraction
-    // uint112 private _ethEurRateFraction;
-    // block timestamp of last update
-    // uint32 private _rateLastUpdatedTimestamp;
 
     ////////////////////////
     // Constructor
