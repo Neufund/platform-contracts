@@ -11,6 +11,7 @@ const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 const EtherToken = artifacts.require("EtherToken");
 const EuroToken = artifacts.require("EuroToken");
 const EuroTokenController = artifacts.require("EuroTokenController");
+const SimpleExchange = artifacts.require("SimpleExchange");
 
 export const dayInSeconds = 24 * 60 * 60;
 export const monthInSeconds = 30 * dayInSeconds;
@@ -127,4 +128,37 @@ export async function deployEuroTokenUniverse(
     { from: eurtLegalManager },
   );
   return [euroToken, tokenController];
+}
+
+export async function deploySimpleExchangeUniverse(universe,
+                                                   universeManager,
+                                                   etherToken,
+                                                   euroToken,
+                                                   gasExchangeManager,
+                                                   tokenOracleManager,) {
+  const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+  const simpleExchange = await SimpleExchange.new(
+    accessPolicy.address,
+    euroToken.address,
+    etherToken.address,
+  );
+  await universe.setSingleton(knownInterfaces.tokenExchangeRateOracle, simpleExchange.address, {
+    from: universeManager,
+  });
+  await universe.setSingleton(knownInterfaces.gasExchange, simpleExchange.address, {
+    from: universeManager,
+  });
+  await createAccessPolicy(accessPolicy, [
+    {
+      subject: tokenOracleManager,
+      role: roles.tokenRateOracle,
+      object: simpleExchange.address,
+    },
+    {
+      subject: gasExchangeManager,
+      role: roles.gasExchange,
+      object: simpleExchange.address,
+    },
+  ]);
+  return simpleExchange;
 }
