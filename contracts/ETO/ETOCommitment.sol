@@ -416,6 +416,7 @@ contract ETOCommitment is
         address investor = investorOrProxy;
         if (isLockedAccount) {
             // data contains investor address
+            // todo: how to encode maximum price here?
             investor = addressFromBytes(data); // solium-disable-line security/no-assign-params
         }
         // agreement accepted by act of reserving funds in this function
@@ -692,7 +693,7 @@ contract ETOCommitment is
         // assert 96bit values 2**96 / 10**18 ~ 78 bln
         assert(totalTokenAmountInt + tokenParticipationFeeInt < 2 ** 96);
         assert(etherBalance < 2 ** 96 && euroBalance < 2 ** 96);
-        // we save 30k gas on 96 bit resolution, we can live 98 bln euro max investment amount
+        // we save 30k gas on 96 bit resolution, we can live with 98 bln euro max investment amount
         _newShares = uint96((totalTokenAmountInt + tokenParticipationFeeInt) / tokensPerShare);
         // preserve platform token participation fee to be send out on claim transition
         _tokenParticipationFeeInt = uint96(tokenParticipationFeeInt);
@@ -707,6 +708,7 @@ contract ETOCommitment is
         // issue missing tokens
         EQUITY_TOKEN.issueTokens(tokenParticipationFeeInt);
         // nominee gets nominal share value immediately to be added to cap table
+        // todo: limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it somehow
         assert(EURO_TOKEN.transfer(NOMINEE, capitalIncreaseEurUlps, ""));
         emit LogSigningStarted(NOMINEE, COMPANY_LEGAL_REPRESENTATIVE, _newShares, capitalIncreaseEurUlps);
     }

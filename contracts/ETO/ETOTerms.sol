@@ -17,7 +17,7 @@ contract ETOTerms is Math {
     // reference to duration terms
     ETODurationTerms public DURATION_TERMS;
     // total number of shares in the company (incl. Authorized Shares) at moment of sale
-    uint256 public TOTAL_COMPANY_SHARES;
+    uint256 public EXISTING_COMPANY_SHARES;
     // sets nominal value of a share
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
     // minimum number of tokens being offered. will set min cap
@@ -27,7 +27,7 @@ contract ETOTerms is Math {
     // token price in EUR-T
     uint256 public TOKEN_PRICE_EUR_ULPS;
     // maximum discount on token price that may be given to investor (as decimal fraction)
-    uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
+    // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
     uint256 public MIN_TICKET_EUR_ULPS;
     // maximum ticket for sophisiticated investors
@@ -80,7 +80,7 @@ contract ETOTerms is Math {
 
     // gets company valuation
     /*function COMPANY_VALUATION_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, mul(TOTAL_COMPANY_SHARES, TOKENS_PER_SHARE));
+        return calculateEurUlpsAmount(0, mul(EXISTING_COMPANY_SHARES, TOKENS_PER_SHARE));
     }*/
 
     // get mincap in EUR
@@ -121,7 +121,7 @@ contract ETOTerms is Math {
         public
     {
         DURATION_TERMS = durationTerms;
-        TOTAL_COMPANY_SHARES = totalCompanyShares;
+        EXISTING_COMPANY_SHARES = totalCompanyShares;
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
         TOKEN_PRICE_EUR_ULPS = tokenEurPriceUlps;
