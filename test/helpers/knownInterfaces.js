@@ -24,4 +24,6 @@ export default {
   icbmCommitment: sha3("ICBMCommitment").slice(0, 10),
   commitmentInterface: sha3("ICommitment").slice(0, 10),
   platformTerms: sha3("PlatformTerms").slice(0, 10),
+  equityTokenInterface: sha3("IEquityToken").slice(0, 10),
+  equityTokenControllerInterface: sha3("IEquityTokenController").slice(0, 10),
 };

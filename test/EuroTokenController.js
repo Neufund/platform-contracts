@@ -139,7 +139,9 @@ contract(
       it("should apply settings when gas exchange address changes");
 
       // set allowed from. allowed to, apply settings
-      it("should reject on settings from invalid account");
+      it("should reject on admin ops not from manager");
+
+      it("should liquidate account via eurt legal rep");
     });
 
     describe("ITokenController tests", () => {
@@ -189,7 +191,7 @@ contract(
       });
 
       it("should allow/disallow transfer with KYC", async () => {
-        const hasKyc = toBytes32("0x1");
+        const isVerified = toBytes32("0x1");
         await tokenController.setAllowedTransferTo(explicit, true, {
           from: eurtLegalManager,
         });
@@ -198,7 +200,7 @@ contract(
         await identityRegistry.setMultipleClaims(
           [identity1, identity2],
           ["0x0", "0x0"],
-          [hasKyc, hasKyc],
+          [isVerified, isVerified],
           { from: masterManager },
         );
         // when kyc identity to explicit
@@ -207,7 +209,7 @@ contract(
         expect(await tokenController.onTransfer(nonkycIdentity, explicitTo, 0)).to.be.false;
         // disallow kyc to kyc
         expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
-        // when kyc to not allowed contract
+        // when kyc to not allowed identity
         expect(await tokenController.onTransfer(identity1, nonkycIdentity, 0)).to.be.false;
         // when kyc to not allowed contract
         expect(await tokenController.onTransfer(identity1, universe.address, 0)).to.be.false;
@@ -217,17 +219,33 @@ contract(
         expect(await tokenController.onTransfer(explicitFrom, identity1, 0)).to.be.true;
         // explicit from to non kyc is blocked
         expect(await tokenController.onTransfer(explicitFrom, nonkycIdentity, 0)).to.be.false;
+        // disallow kyc to kyc via broker without transferFrom
+        expect(await tokenController.onTransferFrom(explicitTo, identity1, identity2, 0)).to.be
+          .false;
+        // allow kyc to kyc via broker
+        expect(await tokenController.onTransferFrom(explicitFrom, identity1, identity2, 0)).to.be
+          .true;
+        // disallow kyc to kyc via kyc
+        expect(await tokenController.onTransferFrom(identity1, identity1, identity2, 0)).to.be
+          .false;
+        // freeze account to disallow
+        await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
+          from: masterManager,
+        });
+        // frozen to explicit blocked
+        expect(await tokenController.onTransfer(identity1, explicitTo, 0)).to.be.false;
+        // explicit to frozen blocked
+        expect(await tokenController.onTransfer(explicitFrom, identity1, 0)).to.be.false;
+        // frozen to kyc blocked
+        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
       });
 
-      it("should allow/disallow transfer with ETO", async () => {
-        const hasKyc = toBytes32("0x1");
+      async function transferPermissionsWithInterfaces(knownInterface) {
+        const isVerified = toBytes32("0x1");
         const etoAddress = _;
-        await universe.setCollectionInterface(
-          knownInterfaces.commitmentInterface,
-          etoAddress,
-          true,
-          { from: masterManager },
-        );
+        await universe.setCollectionInterface(knownInterface, etoAddress, true, {
+          from: masterManager,
+        });
         await tokenController.setAllowedTransferTo(explicit, true, {
           from: eurtLegalManager,
         });
@@ -236,7 +254,7 @@ contract(
         await identityRegistry.setMultipleClaims(
           [identity1, identity2],
           ["0x0", "0x0"],
-          [hasKyc, hasKyc],
+          [isVerified, isVerified],
           { from: masterManager },
         );
         // kyc to eto is allowed
@@ -251,9 +269,21 @@ contract(
         expect(await tokenController.onTransfer(etoAddress, explicitTo, 0)).to.be.true;
         // explicit from to eto is allowed
         expect(await tokenController.onTransfer(explicitFrom, etoAddress, 0)).to.be.true;
+        // freeze account to disallow
+        await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
+          from: masterManager,
+        });
+        expect(await tokenController.onTransfer(identity1, etoAddress, 0)).to.be.false;
+        expect(await tokenController.onTransfer(etoAddress, identity1, 0)).to.be.false;
+      }
+
+      it("should allow/disallow transfer with ETO", async () => {
+        await transferPermissionsWithInterfaces(knownInterfaces.commitmentInterface);
       });
 
-      it("should allow/disallow transfer with EquityTokenController (just like ETO)");
+      it("should allow/disallow transfer with EquityTokenController", async () => {
+        await transferPermissionsWithInterfaces(knownInterfaces.equityTokenControllerInterface);
+      });
 
       it("should always approve");
 
@@ -310,13 +340,20 @@ contract(
           .to.be.false;
       });
 
-      it("should disallow deposit for non KYC", async () => {
+      it("should disallow deposit for non KYC/frozen", async () => {
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x1"), {
           from: masterManager,
         });
         expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
           .true;
-        await identityRegistry.setClaims(identity1, toBytes32("0x1"), "0x0", {
+        // freeze account
+        await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
+          from: masterManager,
+        });
+        expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
+          .false;
+        // remove verification
+        await identityRegistry.setClaims(identity1, toBytes32("0xe"), "0x0", {
           from: masterManager,
         });
         expect(await tokenController.onGenerateTokens(_, identity1, minDepositAmountEurUlps)).to.be
@@ -346,6 +383,9 @@ contract(
           .true;
       });
 
+      it("should disallow withdraw if no bank account", async () => {
+      });
+
       it("should disallow withdraw below minimum", async () => {
         await tokenController.setAllowedTransferFrom(explicit, true, {
           from: eurtLegalManager,
@@ -358,13 +398,20 @@ contract(
           .to.be.false;
       });
 
-      it("should disallow withdraw for non KYC", async () => {
+      it("should disallow withdraw for non KYC/frozen", async () => {
         await identityRegistry.setClaims(identity1, "0x0", toBytes32("0x5"), {
           from: masterManager,
         });
         expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
           .true;
-        await identityRegistry.setClaims(identity1, toBytes32("0x5"), "0x0", {
+        // freeze account
+        await identityRegistry.setClaims(identity1, toBytes32("0x5"), toBytes32("0xe"), {
+          from: masterManager,
+        });
+        expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
+          .false;
+        // remove verification
+        await identityRegistry.setClaims(identity1, toBytes32("0xe"), "0x0", {
           from: masterManager,
         });
         expect(await tokenController.onDestroyTokens(_, identity1, minWithdrawAmountEurUlps)).to.be
