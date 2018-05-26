@@ -95,7 +95,7 @@ contract ETOCommitment is
     // terms contracts
     ETOTerms private ETO_TERMS;
     // reference to platform terms
-    ETOPlatformTerms public PLATFORM_TERMS;
+    PlatformTerms public PLATFORM_TERMS;
 
     ////////////////////////
     // Mutable state
@@ -255,7 +255,7 @@ contract ETOCommitment is
         etoTerms.requireValidTerms(PLATFORM_TERMS);
 
         UNIVERSE = universe;
-        PLATFORM_TERMS = ETOPlatformTerms(universe.platformTerms());
+        PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
@@ -483,7 +483,7 @@ contract ETOCommitment is
         return ETO_TERMS;
     }
 
-    function platformTerms() public constant returns (ETOPlatformTerms) {
+    function platformTerms() public constant returns (PlatformTerms) {
         return PLATFORM_TERMS;
     }
 
@@ -587,7 +587,7 @@ contract ETOCommitment is
     // Private functions
     ////////////////////////
 
-    // a copy of ETOPlatformTerms working on local storage
+    // a copy of PlatformTerms working on local storage
     function calculateNeumarkDistribution(uint256 rewardNmk)
         private
         constant

@@ -1,10 +1,10 @@
 pragma solidity 0.4.24;
 
-import "../Math.sol";
+import "./Math.sol";
 
 
 /// @title set terms of Platform (investor's network) of the ETO
-contract ETOPlatformTerms is Math {
+contract PlatformTerms is Math {
 
     ////////////////////////
     // Constants

@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
-import "./ETOPlatformTerms.sol";
+import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
 
@@ -246,7 +246,7 @@ contract ETOTerms is Math {
 
 
     /// @notice checks terms against platform terms, reverts on invalid
-    function requireValidTerms(ETOPlatformTerms platformTerms)
+    function requireValidTerms(PlatformTerms platformTerms)
         public
         constant
     {

@@ -81,7 +81,7 @@ contract IETOCommitment is
 
     function etoTerms() public constant returns (ETOTerms);
 
-    function platformTerms() public constant returns (ETOPlatformTerms);
+    function platformTerms() public constant returns (PlatformTerms);
 
     // equity token
     function equityToken() public constant returns (IEquityToken);

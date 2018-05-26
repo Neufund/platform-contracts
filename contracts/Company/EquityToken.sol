@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 
 
 import "./IEquityToken.sol";
-import "../ETO/ETOPlatformTerms.sol";
+import "../PlatformTerms.sol";
 import "../ETO/ETOTerms.sol";
 import "../Agreement.sol";
 import "../Universe.sol";
@@ -29,7 +29,7 @@ contract EquityToken is
     ////////////////////////
 
     // reference to platform terms
-    ETOPlatformTerms public PLATFORM_TERMS;
+    PlatformTerms public PLATFORM_TERMS;
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
     // nominee address
@@ -114,7 +114,7 @@ contract EquityToken is
         )
         TokenMetadata(
             etoTerms.EQUITY_TOKEN_NAME(),
-            ETOPlatformTerms(universe.platformTerms()).EQUITY_TOKENS_PRECISION(),
+            PlatformTerms(universe.platformTerms()).EQUITY_TOKENS_PRECISION(),
             etoTerms.EQUITY_TOKEN_SYMBOL(),
             "1.0"
         )
@@ -122,7 +122,7 @@ contract EquityToken is
         Reclaimable()
         public
     {
-        PLATFORM_TERMS = ETOPlatformTerms(universe.platformTerms());
+        PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         SHARE_NOMINAL_VALUE_EUR_ULPS = etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
 
