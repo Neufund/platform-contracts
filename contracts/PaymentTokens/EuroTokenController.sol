@@ -1,11 +1,11 @@
 pragma solidity 0.4.24;
 
-import "./Standards/ITokenController.sol";
-import "./AccessControl/AccessControlled.sol";
-import "./AccessRoles.sol";
-import "./KnownInterfaces.sol";
-import "./Universe.sol";
-import "./Identity/IIdentityRegistry.sol";
+import "../Standards/ITokenController.sol";
+import "../AccessControl/AccessControlled.sol";
+import "../AccessRoles.sol";
+import "../KnownInterfaces.sol";
+import "../Universe.sol";
+import "../Identity/IIdentityRegistry.sol";
 
 
 /// @title token controller for EuroToken
@@ -180,7 +180,7 @@ contract EuroTokenController is
         return isTransferAllowedPrivate(from, to, false);
     }
 
-    function onTransferFrom(address broker, address from, address to, uint256 amount)
+    function onTransferFrom(address broker, address from, address to, uint256 /*amount*/)
         public
         constant
         returns (bool allow)

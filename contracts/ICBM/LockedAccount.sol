@@ -2,8 +2,8 @@ pragma solidity 0.4.24;
 
 import "../Universe.sol";
 import "./ICBMRoles.sol";
-import "../EtherToken.sol";
-import "../EuroToken.sol";
+import "../PaymentTokens/EtherToken.sol";
+import "../PaymentTokens/EuroToken.sol";
 import "../MigrationSource.sol";
 import "./ICBMLockedAccount.sol";
 import "./ICBMLockedAccountMigration.sol";
