@@ -14,6 +14,12 @@ contract ITokenController {
         constant
         returns (bool allow);
 
+    /// @notice additionally checks broker that is executing transaction between from and to
+    function onTransferFrom(address broker, address from, address to, uint256 amount)
+        public
+        constant
+        returns (bool allow);
+
     /// @notice see MTokenAllowanceController
     function onApprove(address owner, address spender, uint256 amount)
         public

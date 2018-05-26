@@ -22,6 +22,14 @@ contract TestEuroTokenControllerPassThrough is ITokenController
         return true;
     }
 
+    function onTransferFrom(address, address, address, uint256)
+        public
+        constant
+        returns (bool allow)
+    {
+        return true;
+    }
+
     /// always approve
     function onApprove(address, address, uint256)
         public
