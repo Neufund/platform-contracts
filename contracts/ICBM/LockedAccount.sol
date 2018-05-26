@@ -375,11 +375,11 @@ contract LockedAccount is
         onlyMigrationSource()
     {
         // internally we use 112 bits to store amounts
-        require(balance256 < 2*112);
+        require(balance256 < 2**112);
         uint112 balance = uint112(balance256);
-        require(neumarksDue256 < 2*112);
+        require(neumarksDue256 < 2**112);
         uint112 neumarksDue = uint112(neumarksDue256);
-        require(unlockDate256 < 2*32);
+        require(unlockDate256 < 2**32);
         uint32 unlockDate = uint32(unlockDate256);
 
         IERC677Token oldToken = MIGRATION_SOURCE.assetToken();
