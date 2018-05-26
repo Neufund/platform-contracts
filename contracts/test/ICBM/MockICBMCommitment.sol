@@ -16,7 +16,7 @@ contract MockICBMCommitment is
         int256 startDate,
         address platformWallet,
         Neumark neumark,
-        EtherToken etherToken,
+        ICBMEtherToken etherToken,
         ICBMEuroToken euroToken,
         ICBMLockedAccount etherLock,
         ICBMLockedAccount euroLock,

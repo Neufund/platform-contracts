@@ -1,6 +1,6 @@
 pragma solidity 0.4.24;
 
-import "../../EtherToken.sol";
+import "../ICBMEtherToken.sol";
 import "../ICBMEuroToken.sol";
 import "../ICBMLockedAccount.sol";
 import "../../Math.sol";
@@ -66,7 +66,7 @@ contract ICBMCommitment is
 
     Neumark private NEUMARK;
 
-    EtherToken private ETHER_TOKEN;
+    ICBMEtherToken private ETHER_TOKEN;
 
     ICBMEuroToken private EURO_TOKEN;
 
@@ -140,7 +140,7 @@ contract ICBMCommitment is
         int256 startDate,
         address platformWallet,
         Neumark neumark,
-        EtherToken etherToken,
+        ICBMEtherToken etherToken,
         ICBMEuroToken euroToken,
         ICBMLockedAccount etherLock,
         ICBMLockedAccount euroLock,
