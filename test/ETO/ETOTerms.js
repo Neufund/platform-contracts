@@ -1,7 +1,7 @@
 import {expect} from "chai";
-import {prettyPrintGasCost} from "./helpers/gasUtils";
-import {divRound} from "./helpers/unitConverter";
-import EvmError from "./helpers/EVMThrow";
+import {prettyPrintGasCost} from "../helpers/gasUtils";
+import {divRound} from "../helpers/unitConverter";
+import EvmError from "../helpers/EVMThrow";
 
 const PlatformTerms = artifacts.require("PlatformTerms");
 const ETOTerms = artifacts.require("ETOTerms");
