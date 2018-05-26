@@ -78,10 +78,8 @@ contract PlatformTerms is Math {
         pure
         returns (uint256)
     {
-        return decimalFraction(
-            tokenAmount,
-            TOKEN_PARTICIPATION_FEE_FRACTION
-        );
+        // mind tokens having 0 precision
+        return proportion(tokenAmount, TOKEN_PARTICIPATION_FEE_FRACTION, 10**18);
     }
 
     function calculatePlatformFee(uint256 amount)
