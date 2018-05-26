@@ -73,6 +73,11 @@ contract EuroToken is
         _;
     }
 
+    modifier onlyIfTransferFromAllowed(address broker, address from, address to, uint256 amount) {
+        require(_tokenController.onTransferFrom(broker, from, to, amount));
+        _;
+    }
+
     modifier onlyIfDepositAllowed(address to, uint256 amount) {
         require(_tokenController.onGenerateTokens(msg.sender, to, amount));
         _;
@@ -177,10 +182,10 @@ contract EuroToken is
 
     /// @dev broker acts in the name of 'from' address so broker needs to have permission to transfer from
     ///  this way we may give permissions to brokering smart contracts while investors do not have permissions
-    ///  to transfer. 'to' address requires standard transfer to permission
+    ///  to transfer. 'from' and 'to' address requires standard transfer to permission, broker requires explicit `from` permission
     function transferFrom(address from, address to, uint256 amount)
         public
-        onlyIfTransferAllowed(msg.sender, to, amount)
+        onlyIfTransferFromAllowed(msg.sender, from, to, amount)
         returns (bool success)
     {
         // this is a kind of hack that allows special brokers to always have allowance to transfer

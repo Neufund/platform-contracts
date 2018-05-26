@@ -39,6 +39,12 @@ contract EuroTokenController is
     event LogUniverseReloaded();
 
     ////////////////////////
+    // Constants
+    ////////////////////////
+
+    bytes4[] private TRANSFER_ALLOWED_INTERFACES = [KNOWN_INTERFACE_COMMITMENT, KNOWN_INTERFACE_EQUITY_TOKEN_CONTROLLER];
+
+    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -171,41 +177,15 @@ contract EuroTokenController is
         constant
         returns (bool allow)
     {
-        // check if both parties are explicitely allowed for transfers
-        bool explicitFrom = _allowedTransferFrom[from];
-        bool explicitTo = _allowedTransferTo[to];
-        if (explicitFrom && explicitTo) {
-            return true;
-        }
-        // try to resolve 'from'
-        if (!explicitFrom) {
-            IdentityClaims memory claimsFrom = deserializeClaims(_identityRegistry.getClaims(from));
-            explicitFrom = claimsFrom.isVerified && !claimsFrom.accountFrozen;
-        }
-        if (!explicitFrom) {
-            // all ETO contracts may send funds (for example: refund)
-            // todo: use isAnyOfInterfaceCollectionInstance and include equity token controller, make this an array and make it constant
-            explicitFrom = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, from);
-        }
-        if (!explicitFrom) {
-            // from will not be resolved, return immediately
-            return false;
-        }
-        if (!explicitTo) {
-            // all ETO contracts may receive funds
-            explicitTo = UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, to);
-        }
-        if (!explicitTo) {
-            // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
-            IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(to));
-            explicitTo = claims.isVerified && !claims.accountFrozen;
-        }
-        if(claims.isVerified && !claims.accountFrozen && claimsFrom.isVerified && !claimsFrom.accountFrozen) {
-            // user to user transfer not allowed
-            return false;
-        }
-        // we only get here if explicitFrom was true
-        return explicitTo;
+        return isTransferAllowedPrivate(from, to, false);
+    }
+
+    function onTransferFrom(address broker, address from, address to, uint256 amount)
+        public
+        constant
+        returns (bool allow)
+    {
+        return isTransferAllowedPrivate(from, to, true) && _allowedTransferFrom[broker];
     }
 
     /// always approve
@@ -312,5 +292,50 @@ contract EuroTokenController is
     {
         _allowedTransferFrom[from] = allowed;
         emit LogAllowedFromAddress(from, allowed);
+    }
+
+    // optionally allows peer to peer transfers of Verified users: for the transferFrom check
+    function isTransferAllowedPrivate(address from, address to, bool allowPeerTransfers)
+        private
+        constant
+        returns (bool)
+    {
+        // check if both parties are explicitely allowed for transfers
+        bool explicitFrom = _allowedTransferFrom[from];
+        bool explicitTo = _allowedTransferTo[to];
+        if (explicitFrom && explicitTo) {
+            return true;
+        }
+        // try to resolve 'from'
+        if (!explicitFrom) {
+            IdentityClaims memory claimsFrom = deserializeClaims(_identityRegistry.getClaims(from));
+            explicitFrom = claimsFrom.isVerified && !claimsFrom.accountFrozen;
+        }
+        if (!explicitFrom) {
+            // all ETO and ETC contracts may send funds (for example: refund)
+            explicitFrom = UNIVERSE.isAnyOfInterfaceCollectionInstance(TRANSFER_ALLOWED_INTERFACES, from);
+        }
+        if (!explicitFrom) {
+            // from will not be resolved, return immediately
+            return false;
+        }
+        if (!explicitTo) {
+            // all ETO and ETC contracts may receive funds
+            explicitTo = UNIVERSE.isAnyOfInterfaceCollectionInstance(TRANSFER_ALLOWED_INTERFACES, to);
+        }
+        if (!explicitTo) {
+            // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
+            IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(to));
+            explicitTo = claims.isVerified && !claims.accountFrozen;
+        }
+        if (allowPeerTransfers) {
+            return explicitTo;
+        }
+        if(claims.isVerified && !claims.accountFrozen && claimsFrom.isVerified && !claimsFrom.accountFrozen) {
+            // user to user transfer not allowed
+            return false;
+        }
+        // we only get here if explicitFrom was true
+        return explicitTo;
     }
 }
