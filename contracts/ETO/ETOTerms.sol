@@ -18,7 +18,7 @@ contract ETOTerms is Math {
     // @notice whitelist entry with a discount
     struct WhitelistTicket {
         // this also overrides maximum ticket
-        uint128 discountEurUlps;
+        uint128 discountAmountEurUlps;
         // fixed discount of base price, cannot be 0
         uint128 fixedDiscountFrac;
     }
@@ -100,7 +100,7 @@ contract ETOTerms is Math {
     // raised on invesor added to whitelist
     event LogInvestorWhitelisted(
         address indexed investor,
-        uint256 discountEurUlps,
+        uint256 discountAmountEurUlps,
         uint256 fixedDiscountFrac
     );
 
@@ -204,9 +204,20 @@ contract ETOTerms is Math {
         require(investors.length == discountAmountsEurUlps.length);
         require(investors.length == discountsFrac.length);
 
-        for (uint256 i = 0; i < investors.length; ++i) {
+        for (uint256 i = 0; i < investors.length; i+=1) {
             addWhitelistInvestorPrivate(investors[i], discountAmountsEurUlps[i], discountsFrac[i]);
         }
+    }
+
+    function whitelistTicket(address investor)
+        public
+        constant
+        returns (bool isWhitelisted, uint256 discountAmountEurUlps, uint256 discountFrac)
+    {
+        WhitelistTicket storage wlTicket = _whitelist[investor];
+        isWhitelisted = wlTicket.fixedDiscountFrac > 0;
+        discountAmountEurUlps = wlTicket.discountAmountEurUlps;
+        discountFrac = wlTicket.fixedDiscountFrac;
     }
 
     // calculate contribution of investor
@@ -228,16 +239,18 @@ contract ETOTerms is Math {
         WhitelistTicket storage wlTicket = _whitelist[investor];
         isWhitelisted = wlTicket.fixedDiscountFrac > 0;
         minTicketEurUlps = MIN_TICKET_EUR_ULPS;
-        maxTicketEurUlps = max(wlTicket.discountEurUlps, MAX_TICKET_EUR_ULPS);
+        maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, MAX_TICKET_EUR_ULPS);
         // check if has access to discount
         uint256 discountedAmount;
-        if (existingInvestorContributionEurUlps < wlTicket.discountEurUlps) {
-            discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountEurUlps - existingInvestorContributionEurUlps);
+        if (existingInvestorContributionEurUlps < wlTicket.discountAmountEurUlps) {
+            discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
             // discount is fixed so use base token price
-            equityTokenInt = proportion(TOKEN_PRICE_EUR_ULPS, wlTicket.fixedDiscountFrac, discountedAmount);
+            if (discountedAmount > 0) {
+                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_PRICE_EUR_ULPS));
+            }
         }
         // if any amount above discount
-        uint remainingAmount = newInvestorContributionEurUlps - discountedAmount;
+        uint256 remainingAmount = newInvestorContributionEurUlps - discountedAmount;
         if (remainingAmount > 0) {
             // use pricing along the curve
             equityTokenInt += calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
@@ -283,23 +296,23 @@ contract ETOTerms is Math {
 
     function addWhitelistInvestorPrivate(
         address investor,
-        uint256 discountEurUlps,
+        uint256 discountAmountEurUlps,
         uint256 fixedDiscountFrac
     )
         private
     {
         // Validate
         require(investor != address(0));
-        require(fixedDiscountFrac > 0 && fixedDiscountFrac < 2*128);
-        require(discountEurUlps < 2*128);
+        require(fixedDiscountFrac > 0 && fixedDiscountFrac < 2**128);
+        require(discountAmountEurUlps < 2**128);
 
 
         _whitelist[investor] = WhitelistTicket({
-            discountEurUlps: uint128(discountEurUlps),
+            discountAmountEurUlps: uint128(discountAmountEurUlps),
             fixedDiscountFrac: uint128(fixedDiscountFrac)
         });
 
-        emit LogInvestorWhitelisted(investor, discountEurUlps, fixedDiscountFrac);
+        emit LogInvestorWhitelisted(investor, discountAmountEurUlps, fixedDiscountFrac);
     }
 
 }
