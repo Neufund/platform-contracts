@@ -10,6 +10,7 @@ import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { LockState } from "./lockState";
 import { CommitmentState } from "./commitmentState";
 import { promisify } from "../helpers/evmCommands";
+import {divRound} from "../helpers/unitConverter";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("Neumark");
@@ -27,12 +28,6 @@ const PLATFORM_SHARE = web3.toBigNumber("2");
 const WHITELIST_START = BEFORE_DURATION;
 const PUBLIC_START = WHITELIST_START + WHITELIST_DURATION;
 const FINISHED_START = PUBLIC_START + PUBLIC_DURATION;
-const divRound = (v, d) =>
-  d
-    .divToInt(2)
-    .plus(v)
-    .divToInt(d);
-
 const Q18 = web3.toBigNumber("10").pow(18);
 const AGREEMENT = "ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT";
 const LOCK_DURATION = 18 * 30 * 24 * 60 * 60;
