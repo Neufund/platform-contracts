@@ -29,13 +29,9 @@ contract EquityToken is
     ////////////////////////
 
     // reference to platform terms
-    PlatformTerms public PLATFORM_TERMS;
+    uint256 private TOKENS_PER_SHARE;
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
-    // nominee address
-    address private NOMINEE;
-    // company management contract
-    IEquityTokenController private COMPANY;
     // sets nominal value of a share
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
 
@@ -55,13 +51,14 @@ contract EquityToken is
     ////////////////////////
 
     event LogTokensIssued(
-        address indexed to,
-        address by,
+        address indexed holder,
+        address controller,
         uint256 amount
     );
 
     event LogTokensDestroyed(
-        address indexed from,
+        address indexed holder,
+        address controller,
         uint256 amount
     );
 
@@ -79,6 +76,7 @@ contract EquityToken is
     event LogChangeNominee(
         address oldNominee,
         address newNominee,
+        address controller,
         address by
     );
 
@@ -118,11 +116,11 @@ contract EquityToken is
             etoTerms.EQUITY_TOKEN_SYMBOL(),
             "1.0"
         )
-        Daily()
+        Daily(0)
         Reclaimable()
         public
     {
-        PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
+        TOKENS_PER_SHARE = PlatformTerms(universe.platformTerms()).EQUITY_TOKENS_PER_SHARE();
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         SHARE_NOMINAL_VALUE_EUR_ULPS = etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
 
@@ -144,10 +142,10 @@ contract EquityToken is
         onlyIfIssueAllowed(address(this), amount)
     {
         mGenerateTokens(msg.sender, amount);
-        emit LogTokensIssued(msg.sender, address(this), amount);
+        emit LogTokensIssued(msg.sender, _tokenController, amount);
     }
 
-    /// @dev token controller will allow even if transfer disabled if ETO contract
+    /// differs from transfer only by 'to' accepting agreement
     function distributeTokens(address to, uint256 amount)
         public
         acceptAgreement(to)
@@ -161,7 +159,7 @@ contract EquityToken is
         onlyIfDestroyAllowed(msg.sender, amount)
     {
         mDestroyTokens(msg.sender, amount);
-        emit LogTokensDestroyed(msg.sender, amount);
+        emit LogTokensDestroyed(msg.sender, _tokenController, amount);
     }
 
     /// controlled, irreversibly blocks transferable rights
@@ -190,7 +188,7 @@ contract EquityToken is
         // typically requires a valid migration in the old controller
         require(_tokenController.onChangeNominee(msg.sender, _nominee, newNominee));
         _nominee = newNominee;
-        emit LogChangeNominee(_nominee, newNominee, msg.sender);
+        emit LogChangeNominee(_nominee, newNominee, _tokenController, msg.sender);
     }
 
     function isTokenClosed() public constant returns (bool) {
@@ -198,7 +196,7 @@ contract EquityToken is
     }
 
     function tokensPerShare() public constant returns (uint256) {
-        return PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE();
+        return TOKENS_PER_SHARE;
     }
 
     function shareNominalValueEurUlps() public constant returns (uint256) {
@@ -211,6 +209,10 @@ contract EquityToken is
 
     function nominee() public constant returns (address) {
         return _nominee;
+    }
+
+    function companyLegalRepresentative() public constant returns (address) {
+        return COMPANY_LEGAL_REPRESENTATIVE;
     }
 
     //
@@ -249,7 +251,7 @@ contract EquityToken is
         returns (bool allow)
     {
         // must have transfer enabled or msg.sender is Neumark issuer
-        return _tokenController.onTransfer(from, to, amount) && _isTokenClosed;
+        return _tokenController.onTransfer(from, to, amount) && !_isTokenClosed;
     }
 
     function mOnApprove(
@@ -272,6 +274,6 @@ contract EquityToken is
         internal
         returns (bool)
     {
-        return legalRepresentative == NOMINEE;
+        return legalRepresentative == _nominee;
     }
 }
