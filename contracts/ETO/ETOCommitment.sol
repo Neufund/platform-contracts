@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
@@ -16,7 +16,7 @@ import "../Serialization.sol";
 ///  token offering goes through states as defined in ETOTimedStateMachine
 ///  setup phase requires several parties to provide documents and information
 ///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> adding to universe (platform) + issue NEU -> start date (company))
-///   whitelist may be added when RAAA and eto terms are present
+///   price curves, whitelists, discounts and other offer terms are extracted to ETOTerms
 /// todo: review all divisions for rounding errors
 contract ETOCommitment is
     AccessControlled,
@@ -35,7 +35,7 @@ contract ETOCommitment is
     /// @notice state of individual investment
     /// @dev mind uint size: allows ticket to occupy two storage slots
     struct InvestmentTicket {
-        // euro equivalent of both currencies. note the following
+        // euro equivalent of both currencies.
         //  for ether equivalent is generated per ETH/EUR spot price provided by ITokenExchangeRateOracle
         uint96 equivEurUlps;
         // NEU reward issued
@@ -52,18 +52,6 @@ contract ETOCommitment is
         bool usedLockedAccount;
         // uint30 reserved // still some bits free
     }
-
-    // todo: implement whitelisting with discounts
-    /* struct WhitelistTicket {
-        uint128 maxTicketOverrideEurUlps,
-        uint128 fixedDiscountOverrideFrac
-    } */
-
-    ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    // bytes32 private constant EMPTY_STRING_HASH = keccak256("");
 
     ////////////////////////
     // Immutable state
@@ -88,15 +76,11 @@ contract ETOCommitment is
     ITokenExchangeRateOracle private CURRENCY_RATES;
 
     // max cap taken from ETOTerms for low gas costs
-    uint256 private MAX_CAP_EUR_ULPS;
+    uint256 private MIN_NUMBER_OF_TOKENS;
     // min cap taken from ETOTerms for low gas costs
-    uint256 private MIN_CAP_EUR_ULPS;
-    // maximum ticket from ETOTerms for low gas costs
-    uint256 private MAX_TICKET_EUR_ULPS;
-    // maximum ticket for simple investor from ETOTerms for low gas costs
-    uint256 private MAX_TICKET_SIMPLE_EUR_ULPS;
-    // minimum ticket from ETOTerms for low gas costs
-    uint256 private MIN_TICKET_EUR_ULPS;
+    uint256 private MAX_NUMBER_OF_TOKENS;
+    // minimum ticket in tokens with base price
+    uint256 private MIN_TICKET_TOKENS;
     // platform operator share for low gas costs
     uint256 private PLATFORM_NEUMARK_SHARE;
 
@@ -111,22 +95,20 @@ contract ETOCommitment is
     // terms contracts
     ETOTerms private ETO_TERMS;
     // reference to platform terms
-    ETOPlatformTerms public PLATFORM_TERMS;
+    PlatformTerms public PLATFORM_TERMS;
 
     ////////////////////////
     // Mutable state
     ////////////////////////
 
-    // mapping of investors allowed in whitelist
-    mapping (address => bool) private _whitelist;
-    // corresponding iterator
-    address[] private _whitelistInvestors;
-
     // investment tickets
     mapping (address => InvestmentTicket) private _tickets;
 
     // total investment in euro equivalent (ETH converted on spot prices)
-    uint256 private _totalEquivEurUlps;
+    uint128 private _totalEquivEurUlps;
+
+    // total equity tokens acquired
+    uint128 private _totalTokensInt;
 
     // signed investment agreement url
     string private _signedInvestmentAgreementUrl;
@@ -159,11 +141,6 @@ contract ETOCommitment is
 
     modifier onlyNominee() {
         require(msg.sender == NOMINEE);
-        _;
-    }
-
-    modifier onlyWithTerms() {
-        require(ETO_TERMS != address(0));
         _;
     }
 
@@ -216,7 +193,8 @@ contract ETOCommitment is
     // logged when nominee presents and verifies its copy of investment agreement
     event LogNomineeConfirmedAgreement(
         address nominee,
-        address companyLegalRep
+        address companyLegalRep,
+        bytes32 hash
     );
 
     // logged on claim state transition indicating that additional contribution was released to company
@@ -262,14 +240,22 @@ contract ETOCommitment is
         Universe universe,
         address platformWallet,
         address nominee,
-        address companyLegalRep
+        address companyLegalRep,
+        ETOTerms etoTerms,
+        IEquityToken equityToken
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
         ETOTimedStateMachine()
         public
     {
+        require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION());
+        require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE());
+        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS());
+
+        etoTerms.requireValidTerms(PLATFORM_TERMS);
+
         UNIVERSE = universe;
-        PLATFORM_TERMS = ETOPlatformTerms(universe.platformTerms());
+        PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
@@ -283,6 +269,18 @@ contract ETOCommitment is
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         CURRENCY_RATES = ITokenExchangeRateOracle(universe.tokenExchangeRateOracle());
 
+        ETO_TERMS = etoTerms;
+        EQUITY_TOKEN = equityToken;
+
+        MAX_NUMBER_OF_TOKENS = etoTerms.MAX_NUMBER_OF_TOKENS();
+        MIN_NUMBER_OF_TOKENS = etoTerms.MIN_NUMBER_OF_TOKENS();
+        MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
+
+        setupStateMachine(
+            ETO_TERMS.DURATION_TERMS(),
+            IETOCommitmentObserver(EQUITY_TOKEN.equityTokenController())
+        );
+
         emit LogETOCommitmentDeployed(msg.sender, address(PLATFORM_TERMS), nominee, companyLegalRep);
     }
 
@@ -290,9 +288,11 @@ contract ETOCommitment is
     // External functions
     ////////////////////////
 
-    function setTerms(
+    /// @dev sets timed state machine in motion,
+    function setStartDate(
         ETOTerms etoTerms,
-        IEquityToken equityToken
+        IEquityToken equityToken,
+        uint256 startDate
     )
         external
         onlyCompany
@@ -300,69 +300,8 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(ETOState.Setup)
     {
-        require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION(), "ETO_ET_DECIMALS");
-        require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE(), "ETO_ET_TPS_NE");
-        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS(), "ETO_ET_SNV");
-        // todo: check if signed by the same nominee
-        etoTerms.requireValidTerms(PLATFORM_TERMS);
-
-        ETO_TERMS = etoTerms;
-        EQUITY_TOKEN = equityToken;
-
-        // todo: caps are always in tokens
-        MAX_CAP_EUR_ULPS = etoTerms.MAX_CAP_EUR_ULPS();
-        MIN_CAP_EUR_ULPS = etoTerms.MIN_CAP_EUR_ULPS();
-        MAX_TICKET_EUR_ULPS = etoTerms.MAX_TICKET_EUR_ULPS();
-        MAX_TICKET_SIMPLE_EUR_ULPS = etoTerms.MAX_TICKET_SIMPLE_EUR_ULPS();
-        MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
-
-        setupStateMachine(ETO_TERMS.DURATION_TERMS(), EQUITY_TOKEN.equityTokenController());
-
-        emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
-    }
-
-    function addWhitelisted(address[] investors)
-        external
-        onlyCompany
-        onlyWithTerms
-        withStateTransition()
-        onlyState(ETOState.Setup)
-    {
-        // TODO: implemement
-    }
-
-    function removeWhitelisted(address[] investors)
-        external
-        onlyCompany
-        onlyWithTerms
-        withStateTransition()
-        onlyState(ETOState.Setup)
-    {
-        // TODO: implemement
-    }
-
-    /// @dev used by PLATFORM_LEGAL_REP to kill commitment process before it starts
-    /// @dev selfdestruct is executed
-    function abort()
-        external
-        only(ROLE_PLATFORM_OPERATOR_REPRESENTATIVE)
-        withStateTransition()
-        onlyState(ETOState.Setup)
-    {
-        // todo: selfdestruct or forces refund in later stages
-        selfdestruct(msg.sender);
-    }
-
-    /// @dev sets timed state machine in motion,
-    function setStartDate(uint256 startDate)
-        external
-        onlyCompany
-        onlyWithTerms
-        withStateTransition()
-        onlyState(ETOState.Setup)
-    {
-        // todo: check if in universe
-        // todo: check if can issue neumark
+        require(etoTerms == ETO_TERMS, "ETO_TERMS");
+        require(equityToken == EQUITY_TOKEN, "ETO_ET");
         assert(startDate < 0xFFFFFFFF);
         // must be less than 3 days (platform terms!)
         require(
@@ -372,7 +311,9 @@ contract ETOCommitment is
         uint256 startAt = startOfInternal(ETOState.Whitelist);
         require(startAt == 0 || block.timestamp - startAt > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_DATE_TOO_LATE");
         runStateMachine(uint32(startDate));
+        // todo: lock ETO_TERMS whitelist
 
+        emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
         emit LogETOStartDateSet(msg.sender, startAt, startDate);
     }
 
@@ -392,10 +333,10 @@ contract ETOCommitment is
         onlyState(ETOState.Signing)
         onlyNominee
     {
-        bytes32 nomineeHash = keccak256(signedInvestmentAgreementUrl);
-        require(keccak256(_signedInvestmentAgreementUrl) == nomineeHash, "INV_HASH");
+        bytes32 nomineeHash = keccak256(abi.encodePacked(signedInvestmentAgreementUrl));
+        require(keccak256(abi.encodePacked(_signedInvestmentAgreementUrl)) == nomineeHash, "INV_HASH");
         _nomineeSignedInvestmentAgreementUrlHash = nomineeHash;
-        emit LogNomineeConfirmedAgreement(msg.sender, COMPANY_LEGAL_REPRESENTATIVE);
+        emit LogNomineeConfirmedAgreement(msg.sender, COMPANY_LEGAL_REPRESENTATIVE, nomineeHash);
     }
 
     //
@@ -409,6 +350,7 @@ contract ETOCommitment is
         withStateTransition()
         onlyStates(ETOState.Whitelist, ETOState.Public)
     {
+        require(amount < 2**96);
         // we trust only tokens below
         require(msg.sender == address(ETHER_TOKEN) || msg.sender == address(EURO_TOKEN));
         // check if LockedAccount
@@ -419,25 +361,29 @@ contract ETOCommitment is
             // todo: how to encode maximum price here?
             investor = addressFromBytes(data); // solium-disable-line security/no-assign-params
         }
-        // agreement accepted by act of reserving funds in this function
-        acceptAgreementInternal(investor);
-        // kick out not whitelist or not LockedAccount
-        // todo: IS_ICBM_INVESTOR_WHITELISTED
-        if (state() == ETOState.Whitelist) {
-            require(_whitelist[investor] || isLockedAccount);
+        // kick out on KYC, EURO_TOKEN will check it during transfer, so do not repeat
+        if (msg.sender == address(ETHER_TOKEN)) {
+            IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
+            require(claims.isVerified && !claims.accountFrozen);
         }
-        // kick out on KYC
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
-        require(claims.hasKyc);
-        // calculate maximum ticket
-        uint256 maxTicketEurUlps = claims.isSophisticatedInvestor ? MAX_TICKET_EUR_ULPS : MAX_TICKET_SIMPLE_EUR_ULPS;
-        // process ticket
-        uint96 equityTokenInt;
-        uint96 rewardNmkUlps;
-        uint256 equivEurUlps;
-        (equityTokenInt, rewardNmkUlps, equivEurUlps) = processTicket(investor, amount, maxTicketEurUlps, isLockedAccount);
+        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
+        uint96 equivEurUlps;
+        // compute EUR eurEquivalent via oracle if ether
+        if (!isEuroInvestment) {
+            (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
+            // require if rate older than 4 hours
+            require(block.timestamp - rateTimestamp < 4 hours);
+            equivEurUlps = uint96(decimalFraction(amount, rate));
+        } else {
+            equivEurUlps = uint96(amount);
+        }
+        (uint96 equityTokenInt, uint96 rewardNmkUlps) = processTicket(investor, amount, equivEurUlps, isEuroInvestment, isLockedAccount);
         // update total investment
         _totalEquivEurUlps += equivEurUlps;
+        _totalTokensInt += equityTokenInt;
+        // agreement accepted by act of reserving funds in this function
+        acceptAgreementInternal(investor);
+
         // log successful commitment
         emit LogFundsCommitted(
             investor,
@@ -468,7 +414,9 @@ contract ETOCommitment is
         withStateTransition()
         onlyStates(ETOState.Claim, ETOState.Payout)
     {
-        // todo: claim in a loop
+        for(uint256 ii = 0; ii < investors.length; ii++) {
+            claimTokensPrivate(investors[ii]);
+        }
     }
 
     function refund()
@@ -485,7 +433,9 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(ETOState.Refund)
     {
-        // todo: refund in a loop
+        for(uint256 ii = 0; ii < investors.length; ii++) {
+            refundTokensPrivate(investors[ii]);
+        }
     }
 
     function payout()
@@ -499,25 +449,6 @@ contract ETOCommitment is
     //
     // Getters
     //
-
-    function estimateTokensAndNmkReward(uint256 amountEurUlps)
-        public
-        constant
-        returns (uint256 tokenAmountInt, uint256 rewardNmkUlps)
-    {
-        uint256 rewardNmk = NEUMARK.incremental(amountEurUlps);
-        (, rewardNmkUlps) = calculateNeumarkDistribution(rewardNmk);
-        tokenAmountInt = ETO_TERMS.calculateTokenAmount(_totalEquivEurUlps, amountEurUlps);
-    }
-
-    function investorTicket(address investor)
-        public
-        constant
-        returns (uint256 maxTicket, uint256 discountFrac)
-    {
-        // TODO: implement ticket size depending in KYC (0, soph, normal)
-        // check whitelist and provide overrides
-    }
 
     //
     // IETOCommitment getters
@@ -552,7 +483,7 @@ contract ETOCommitment is
         return ETO_TERMS;
     }
 
-    function platformTerms() public constant returns (ETOPlatformTerms) {
+    function platformTerms() public constant returns (PlatformTerms) {
         return PLATFORM_TERMS;
     }
 
@@ -587,8 +518,8 @@ contract ETOCommitment is
     {
         if (oldState == ETOState.Whitelist || oldState == ETOState.Public) {
             // if within min ticket of max cap then move state
-            // todo: eliminate MAX CAP
-            if (_totalEquivEurUlps + MIN_TICKET_EUR_ULPS >= MAX_CAP_EUR_ULPS) {
+            if (_totalTokensInt + MIN_TICKET_TOKENS >= MAX_NUMBER_OF_TOKENS) {
+                // todo: must write tests wl -> public and public -> signing. first one is potential problem, should we skip public in that case?
                 return oldState == ETOState.Whitelist ? ETOState.Public : ETOState.Signing;
             }
         }
@@ -605,26 +536,21 @@ contract ETOCommitment is
         return oldState;
     }
 
-    function mBeforeStateTransition(ETOState oldState, ETOState newState)
+    function mBeforeStateTransition(ETOState /*oldState*/, ETOState newState)
         internal
         constant
         returns (ETOState)
     {
+        // todo: check if in universe
+        // todo: check if can issue neumark
         // force refund if floor criteria are not met
-        // todo: apply min cap in tokens
-        if (newState == ETOState.Signing && _totalEquivEurUlps < MIN_CAP_EUR_ULPS) {
+        if (newState == ETOState.Signing && _totalTokensInt < MIN_NUMBER_OF_TOKENS) {
             return ETOState.Refund;
         }
-        // todo: consider refund if nominal value is not raised in Euro
         // go to refund if attempt to go to Claim without nominee agreement confirmation
-        if (newState == ETOState.Claim && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
+        if (newState == ETOState.Claim && _nomineeSignedInvestmentAgreementUrlHash == bytes32(0)) {
             return ETOState.Refund;
         }
-
-        // this is impossible: stateMachine cannot be run without all necessary terms
-        /* if (newState == ETOState.Whitelist && !setupComplete()) {
-            return ETOState.Refund;
-        }*/
 
         return newState;
     }
@@ -661,9 +587,9 @@ contract ETOCommitment is
     // Private functions
     ////////////////////////
 
-    // a copy of ETOPlatformTerms working on local storage
+    // a copy of PlatformTerms working on local storage
     function calculateNeumarkDistribution(uint256 rewardNmk)
-        public
+        private
         constant
         returns (uint256 platformNmk, uint256 investorNmk)
     {
@@ -681,24 +607,21 @@ contract ETOCommitment is
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         uint256 euroBalance = EURO_TOKEN.balanceOf(this);
         // additional equity tokens are issued and sent to platform operator (temporarily)
-        uint256 totalTokenAmountInt = EQUITY_TOKEN.balanceOf(this);
         uint256 tokensPerShare = EQUITY_TOKEN.tokensPerShare();
-        uint256 tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(totalTokenAmountInt);
+        uint256 tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokensInt);
         // we must have integer number of shares
-        uint256 tokensRemainder = (totalTokenAmountInt + tokenParticipationFeeInt) % tokensPerShare;
+        uint256 tokensRemainder = (_totalTokensInt + tokenParticipationFeeInt) % tokensPerShare;
         if (tokensRemainder > 0) {
             // round up to whole share
             tokenParticipationFeeInt += tokensPerShare - tokensRemainder;
         }
         // assert 96bit values 2**96 / 10**18 ~ 78 bln
-        assert(totalTokenAmountInt + tokenParticipationFeeInt < 2 ** 96);
+        assert(_totalTokensInt + tokenParticipationFeeInt < 2 ** 96);
         assert(etherBalance < 2 ** 96 && euroBalance < 2 ** 96);
         // we save 30k gas on 96 bit resolution, we can live with 98 bln euro max investment amount
-        _newShares = uint96((totalTokenAmountInt + tokenParticipationFeeInt) / tokensPerShare);
+        _newShares = uint96((_totalTokensInt + tokenParticipationFeeInt) / tokensPerShare);
         // preserve platform token participation fee to be send out on claim transition
         _tokenParticipationFeeInt = uint96(tokenParticipationFeeInt);
-        // nominal share value
-        uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
         // compute fees to be sent on payout transition
         _platformFeeEth = uint96(PLATFORM_TERMS.calculatePlatformFee(etherBalance));
         _platformFeeEurUlps = uint96(PLATFORM_TERMS.calculatePlatformFee(euroBalance));
@@ -708,8 +631,14 @@ contract ETOCommitment is
         // issue missing tokens
         EQUITY_TOKEN.issueTokens(tokenParticipationFeeInt);
         // nominee gets nominal share value immediately to be added to cap table
-        // todo: limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it somehow
-        assert(EURO_TOKEN.transfer(NOMINEE, capitalIncreaseEurUlps, ""));
+        uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
+        // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
+        // no overflow as smaller one is uint96
+        uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
+        assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
+        // decrease additional contribution by value that was sent to nominee
+        _additionalContributionEurUlps -= availableCapitalEurUlps;
+
         emit LogSigningStarted(NOMINEE, COMPANY_LEGAL_REPRESENTATIVE, _newShares, capitalIncreaseEurUlps);
     }
 
@@ -719,7 +648,7 @@ contract ETOCommitment is
     {
         // platform operator gets share of NEU
         uint256 rewardNmk = NEUMARK.balanceOf(this);
-        var (platformNmk,) = calculateNeumarkDistribution(rewardNmk);
+        (uint256 platformNmk,) = calculateNeumarkDistribution(rewardNmk);
         assert(NEUMARK.transfer(PLATFORM_WALLET, platformNmk, ""));
         // company legal rep receives funds
         if (_additionalContributionEth > 0) {
@@ -777,35 +706,37 @@ contract ETOCommitment is
     function processTicket(
         address investor,
         uint256 amount,
-        uint256 maxTicketEurUlps,
+        uint96 equivEurUlps,
+        bool isEuroInvestment,
         bool isLockedAccount
     )
         private
-        returns (uint96 equityTokenInt, uint96 rewardNmkUlps, uint256 equivEurUlps)
+        returns (uint96 equityTokenInt, uint96 rewardNmkUlps)
     {
-        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
-        // compute EUR eurEquivalent via oracle if ether
-        if (!isEuroInvestment) {
-            var (rate, rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
-            // require if rate older than 4 hours
-            require(block.timestamp - rateTimestamp < 6 hours);
-            equivEurUlps = decimalFraction(amount, rate);
-        } else {
-            equivEurUlps = amount;
-        }
-        // kick on minimum ticket
-        require(equivEurUlps < MIN_TICKET_EUR_ULPS);
-        // kick on cap exceeded
-        // todo: apply cap on tokens
-        require(_totalEquivEurUlps + equivEurUlps > MAX_CAP_EUR_ULPS);
         // read current ticket
         InvestmentTicket storage ticket = _tickets[investor];
+        // calculate contribution
+        (
+            bool isWhitelisted,
+            uint256 minTicketEurUlps,
+            uint256 maxTicketEurUlps,
+            uint256 equityTokenInt256
+        ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps);
+        assert(equityTokenInt256 < 2 ** 96);
+        // kick on minimum ticket
+        require(equivEurUlps >= minTicketEurUlps, "ETO_MIN_TICKET");
         // kick on max ticket exceeded
-        require(ticket.equivEurUlps + equivEurUlps > maxTicketEurUlps);
+        require(ticket.equivEurUlps + equivEurUlps <= maxTicketEurUlps, "ETO_MAX_TICKET");
+        // kick on cap exceeded
+        require(_totalTokensInt + equityTokenInt256 > MAX_NUMBER_OF_TOKENS, "ETO_MAX_TOK_CAP");
+        // kick out not whitelist or not LockedAccount
+        if (state() == ETOState.Whitelist) {
+            require(isWhitelisted || isLockedAccount, "ETO_NOT_ON_WL");
+        }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded
         if (!isLockedAccount) {
-            var (, investorNmk) = calculateNeumarkDistribution(NEUMARK.issueForEuro(equivEurUlps));
+            (, uint256 investorNmk) = calculateNeumarkDistribution(NEUMARK.issueForEuro(equivEurUlps));
             if (investorNmk > 0) {
                 // now there is rounding danger as we calculate the above for any investor but then just once to get platform share in onClaimTransition
                 // it is much cheaper to just round down than to book keep to a single wei which will use additional storage
@@ -815,13 +746,11 @@ contract ETOCommitment is
                 rewardNmkUlps = uint96(investorNmk);
             }
         }
+
         // issue ET
-        uint256 equityTokenInt256 = ETO_TERMS.calculateTokenAmount(_totalEquivEurUlps, equivEurUlps);
-        assert(equityTokenInt256 < 2 ** 96);
-        // equity token has 0 precision: decimals 0 that's why we divide two precision18 integers to get 0 precision integer
         equityTokenInt = uint96(equityTokenInt256);
         // write new values
-        ticket.equivEurUlps += uint96(equivEurUlps);
+        ticket.equivEurUlps += equivEurUlps;
         ticket.rewardNmkUlps += rewardNmkUlps;
         ticket.equityTokenInt += equityTokenInt;
         if (isEuroInvestment) {
@@ -832,8 +761,6 @@ contract ETOCommitment is
         ticket.usedLockedAccount = ticket.usedLockedAccount || isLockedAccount;
 
         EQUITY_TOKEN.issueTokens(equityTokenInt);
-
-        return (equityTokenInt, rewardNmkUlps, equivEurUlps);
     }
 
     function claimTokensPrivate(address investor)
@@ -888,7 +815,7 @@ contract ETOCommitment is
         uint256 a = amount;
         // possible partial refund to locked account
         if (usedLockedAccount) {
-            var (balance,) = lockedAccount.investment(this, investor);
+            (uint256 balance,) = lockedAccount.investment(this, investor);
             assert(balance <= a);
             if (balance > 0) {
                 assert(token.approve(address(lockedAccount), balance));

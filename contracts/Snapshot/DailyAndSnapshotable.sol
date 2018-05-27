@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Standards/ISnapshotable.sol";
 import "./MSnapshotPolicy.sol";

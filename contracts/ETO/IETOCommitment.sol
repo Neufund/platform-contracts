@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "./ICommitment.sol";
 import "./ETOTerms.sol";
@@ -81,7 +81,7 @@ contract IETOCommitment is
 
     function etoTerms() public constant returns (ETOTerms);
 
-    function platformTerms() public constant returns (ETOPlatformTerms);
+    function platformTerms() public constant returns (PlatformTerms);
 
     // equity token
     function equityToken() public constant returns (IEquityToken);

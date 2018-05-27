@@ -33,11 +33,15 @@ contract(
           .dividedToIntegerBy(4)
           .mod(2)
           .eq(1),
+        claimsN
+          .dividedToIntegerBy(8)
+          .mod(2)
+          .eq(1),
       );
     }
 
-    function referenceClaims(hasKYC, isSophisticatedInvestor, hasBankAccount) {
-      return [{ hasKyc: hasKYC }, { isSophisticatedInvestor }, { hasBankAccount }];
+    function referenceClaims(isVerified, isSophisticatedInvestor, hasBankAccount, accountFrozen) {
+      return [{ isVerified }, { isSophisticatedInvestor }, { hasBankAccount }, { accountFrozen }];
     }
 
     function expectSetClaimsEvent(tx, i, oldClaims, newClaims) {
@@ -73,7 +77,7 @@ contract(
       });
       const expHasKYCandHasAccount = await identityRegistry.getClaims(identity);
       expect(deserializeClaims(expHasKYCandHasAccount)).to.deep.eq(
-        referenceClaims(true, false, true),
+        referenceClaims(true, false, true, false),
       );
 
       const isSophisticated = toBytes32("0x2");
@@ -81,14 +85,25 @@ contract(
         from: identityManager,
       });
       const expIsSophisticated = await identityRegistry.getClaims(identity);
-      expect(deserializeClaims(expIsSophisticated)).to.deep.eq(referenceClaims(false, true, false));
+      expect(deserializeClaims(expIsSophisticated)).to.deep.eq(
+        referenceClaims(false, true, false, false),
+      );
 
-      const hasKyc = toBytes32("0x1");
-      await identityRegistry.setClaims(identity, isSophisticated, hasKyc, {
+      const isVerified = toBytes32("0x1");
+      await identityRegistry.setClaims(identity, isSophisticated, isVerified, {
         from: identityManager,
       });
       const expHasKyc = await identityRegistry.getClaims(identity);
-      expect(deserializeClaims(expHasKyc)).to.deep.eq(referenceClaims(true, false, false));
+      expect(deserializeClaims(expHasKyc)).to.deep.eq(referenceClaims(true, false, false, false));
+
+      const isVerifiedAndFrozen = toBytes32("0x9");
+      await identityRegistry.setClaims(identity, isVerified, isVerifiedAndFrozen, {
+        from: identityManager,
+      });
+      const expIsVerifiedAndFrozen = await identityRegistry.getClaims(identity);
+      expect(deserializeClaims(expIsVerifiedAndFrozen)).to.deep.eq(
+        referenceClaims(true, false, false, true),
+      );
     });
 
     it("should set multiple claims", async () => {
@@ -134,13 +149,13 @@ contract(
       expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
     });
 
-    for (let ii = 0; ii <= 8; ii += 1) {
+    for (let ii = 0; ii <= 16; ii += 1) {
       const claims = toBytes32(web3.toHex(ii));
       /* eslint-disable no-loop-func */
       it(`should deserialize claims - ${claims}`, async () => {
         const structMap = await testIdentityRecord.getIdentityRecord(claims);
         expect(deserializeClaims(claims)).to.deep.eq(
-          referenceClaims(structMap[0], structMap[1], structMap[2]),
+          referenceClaims(structMap[0], structMap[1], structMap[2], structMap[3]),
         );
       });
     }

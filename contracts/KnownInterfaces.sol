@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 
 /// @title known interfaces of the platform
@@ -61,15 +61,21 @@ contract KnownInterfaces {
     // euro token interface and singleton keccak256("ICBMEuroToken")
     bytes4 internal constant KNOWN_INTERFACE_ICBM_EURO_TOKEN = 0xc2c6cd72;
 
-    // ETO commitment interface interface and singleton keccak256("ICBMCommitment")
+    // ICBM commitment interface interface and singleton keccak256("ICBMCommitment")
     bytes4 internal constant KNOWN_INTERFACE_ICBM_COMMITMENT = 0x7f2795ef;
 
     // ethereum fork arbiter interface and singleton keccak256("IEthereumForkArbiter")
     bytes4 internal constant KNOWN_INTERFACE_FORK_ARBITER = 0x2fe7778c;
 
-    // ETO commitment interface interface and singleton keccak256("ICommitment")
-    bytes4 internal constant KNOWN_INTERFACE_COMMITMENT = 0xfa0e0c60;
-
     // Platform terms interface and singletong keccak256("PlatformTerms")
     bytes4 internal constant KNOWN_INTERFACE_PLATFORM_TERMS = 0x75ecd7f8;
+
+    // ETO commitment interface (collection) keccak256("ICommitment")
+    bytes4 internal constant KNOWN_INTERFACE_COMMITMENT = 0xfa0e0c60;
+
+    // Equity Token Controller interface (collection) keccak256("IEquityTokenController")
+    bytes4 internal constant KNOWN_INTERFACE_EQUITY_TOKEN_CONTROLLER = 0xfa30b2f1;
+
+    // Equity Token interface (collection) keccak256("IEquityToken")
+    bytes4 internal constant KNOWN_INTERFACE_EQUITY_TOKEN = 0xab9885bb;
 }

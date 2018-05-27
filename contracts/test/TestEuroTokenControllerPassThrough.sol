@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Standards/ITokenController.sol";
 
@@ -15,6 +15,14 @@ contract TestEuroTokenControllerPassThrough is ITokenController
     //
 
     function onTransfer(address, address ,uint256)
+        public
+        constant
+        returns (bool allow)
+    {
+        return true;
+    }
+
+    function onTransferFrom(address, address, address, uint256)
         public
         constant
         returns (bool allow)

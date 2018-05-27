@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 
 contract ShareholderRights {
@@ -27,15 +27,45 @@ contract ShareholderRights {
     // liquidation preference multiplicator as decimal fraction
     uint256 public LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC;
     // founder's vesting
-    bool public constant HAS_FOUNDERS_VESTING = true;
+    bool public HAS_FOUNDERS_VESTING;
     // duration of general voting in days
-    uint256 public constant GENERAL_VOTING_DURATION_DAYS = 10;
+    uint256 public GENERAL_VOTING_DURATION;
     // duration of restricted act votings (like exit etc.)
-    uint256 public constant RESTRICTED_ACT_VOTING_DURATION_DAYS = 14;
+    uint256 public RESTRICTED_ACT_VOTING_DURATION;
+    // offchain time to finalize and execute voting;
+    uint256 public VOTING_FINALIZATION;
     // quorum of tokenholders for the vote to count as decimal fraction
-    uint256 public constant TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
-    // {gen-general-resolutions-voting-duration-days}
-    // {gen-liquidation-preference-muliplier}
-    // Founders-vesting
+    uint256 public TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
 
+    ////////////////////////
+    // Constructor
+    ////////////////////////
+
+    constructor(
+        VotingRule generalVotingRule,
+        VotingRule tagAlongVotingRule,
+        uint256 liquidationPreferenceFrac,
+        bool hasFoundersVesting,
+        uint256 generalVotingDuration,
+        uint256 restrictedActVotingDuration,
+        uint256 votingFinalization,
+        uint256 tokenholdersQuorumFrac
+    )
+        public
+    {
+        // todo: revise requires
+        require(uint(generalVotingRule) < 4);
+        require(uint(tagAlongVotingRule) < 4);
+        // quorum < 100%
+        require(tokenholdersQuorumFrac < 10**18);
+
+        GENERAL_VOTING_RULE = generalVotingRule;
+        TAG_ALONG_VOTING_RULE = tagAlongVotingRule;
+        LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC = liquidationPreferenceFrac;
+        HAS_FOUNDERS_VESTING = hasFoundersVesting;
+        GENERAL_VOTING_DURATION = generalVotingDuration;
+        RESTRICTED_ACT_VOTING_DURATION = restrictedActVotingDuration;
+        VOTING_FINALIZATION = votingFinalization;
+        TOKENHOLDERS_QUORUM_FRAC = tokenholdersQuorumFrac;
+    }
 }

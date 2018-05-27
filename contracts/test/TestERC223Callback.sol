@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
@@ -19,7 +19,7 @@ contract TestERC223Callback is IERC223Callback {
     ////////////////////////
     constructor() public {
         // some "random" hash
-        _dataKeccak = keccak256(address(this));
+        _dataKeccak = keccak256(abi.encodePacked(address(this)));
     }
 
     ////////////////////////

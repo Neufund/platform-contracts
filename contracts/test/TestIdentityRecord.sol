@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Identity/IIdentityRegistry.sol";
 
@@ -9,7 +9,7 @@ contract TestIdentityRecord is IdentityRecord {
     // Public functions
     ////////////////////////
 
-    function getIdentityRecord(bytes32 claims) public pure returns (bool[3] deserializedClaims){
+    function getIdentityRecord(bytes32 claims) public pure returns (bool[4] deserializedClaims){
         IdentityClaims memory ds = deserializeClaims(claims);
         assembly {
             deserializedClaims := ds

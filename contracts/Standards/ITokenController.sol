@@ -1,4 +1,4 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 
 /// @title granular token controller based on MSnapshotToken observer pattern
@@ -10,6 +10,12 @@ contract ITokenController {
 
     /// @notice see MTokenTransferController
     function onTransfer(address from, address to, uint256 amount)
+        public
+        constant
+        returns (bool allow);
+
+    /// @notice additionally checks broker that is executing transaction between from and to
+    function onTransferFrom(address broker, address from, address to, uint256 amount)
         public
         constant
         returns (bool allow);

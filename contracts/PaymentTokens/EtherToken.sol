@@ -1,12 +1,12 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "./AccessControl/AccessControlled.sol";
-import "./Reclaimable.sol";
-import "./IsContract.sol";
-import "./Standards/IERC223Token.sol";
-import "./Standards/IERC223Callback.sol";
-import "./SnapshotToken/Helpers/TokenMetadata.sol";
-import "./Zeppelin/StandardToken.sol";
+import "../AccessControl/AccessControlled.sol";
+import "../Reclaimable.sol";
+import "../IsContract.sol";
+import "../Standards/IERC223Token.sol";
+import "../Standards/IERC223Callback.sol";
+import "../SnapshotToken/Helpers/TokenMetadata.sol";
+import "../Zeppelin/StandardToken.sol";
 
 
 contract EtherToken is

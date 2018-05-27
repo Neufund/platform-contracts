@@ -1,10 +1,10 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../Math.sol";
+import "./Math.sol";
 
 
 /// @title set terms of Platform (investor's network) of the ETO
-contract ETOPlatformTerms is Math {
+contract PlatformTerms is Math {
 
     ////////////////////////
     // Constants
@@ -26,20 +26,36 @@ contract ETOPlatformTerms is Math {
     uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
     // minimum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MIN_TICKET_EUR_ULPS = 500 * 10**18;
+    uint256 public constant MIN_TICKET_EUR_ULPS = 300 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
+    // no max ticket in general prospectus regulation
+    // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
     // maximum ticket size for sophisiticated investor under crowdfunding regulations
     uint256 public constant MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS = 10000 * 10**18;
     // maximum ticket size for simple investor under crowdfunding regulations
-    uint256 public constant MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS = 10000 * 10**18;
+    uint256 public constant MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS = 1000 * 10**18;
     // maximum raised amount for crowdfunding regulation
     uint256 public constant MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS = 2500000 * 10**18;
 
     // min duration from setting the date to ETO start
     uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 3 days;
 
-    // todo: add other duration constraints
+    // duration constraints
+    uint256 public constant MIN_WHITELIST_DURATION_DAYS = 0 days;
+    uint256 public constant MAX_WHITELIST_DURATION_DAYS = 60 days;
+    uint256 public constant MIN_PUBLIC_DURATION_DAYS = 0 days;
+    uint256 public constant MAX_PUBLIC_DURATION_DAYS = 60 days;
+
+    // minimum length of whole offer
+    uint256 public constant MIN_OFFER_DURATION_DAYS = 1 days;
+    // quarter should be enough for everyone
+    uint256 public constant MAX_OFFER_DURATION_DAYS = 90 days;
+
+    uint256 public constant MIN_SIGNING_DURATION_DAYS = 14 days;
+    uint256 public constant MAX_SIGNING_DURATION_DAYS = 30 days;
+
+    uint256 public constant MIN_CLAIM_DURATION_DAYS = 7 days;
+    uint256 public constant MAX_CLAIM_DURATION_DAYS = 30 days;
 
     ////////////////////////
     // Public Function
@@ -62,10 +78,8 @@ contract ETOPlatformTerms is Math {
         pure
         returns (uint256)
     {
-        return decimalFraction(
-            tokenAmount,
-            TOKEN_PARTICIPATION_FEE_FRACTION
-        );
+        // mind tokens having 0 precision
+        return proportion(tokenAmount, TOKEN_PARTICIPATION_FEE_FRACTION, 10**18);
     }
 
     function calculatePlatformFee(uint256 amount)

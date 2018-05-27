@@ -1,6 +1,6 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
-import "../../EtherToken.sol";
+import "../ICBMEtherToken.sol";
 import "../ICBMEuroToken.sol";
 import "../ICBMLockedAccount.sol";
 import "../../Math.sol";
@@ -66,7 +66,7 @@ contract ICBMCommitment is
 
     Neumark private NEUMARK;
 
-    EtherToken private ETHER_TOKEN;
+    ICBMEtherToken private ETHER_TOKEN;
 
     ICBMEuroToken private EURO_TOKEN;
 
@@ -140,7 +140,7 @@ contract ICBMCommitment is
         int256 startDate,
         address platformWallet,
         Neumark neumark,
-        EtherToken etherToken,
+        ICBMEtherToken etherToken,
         ICBMEuroToken euroToken,
         ICBMLockedAccount etherLock,
         ICBMLockedAccount euroLock,
@@ -296,7 +296,7 @@ contract ICBMCommitment is
     {
         uint256 amountEurUlps = convertToEur(amount);
         uint256 rewardNmk = NEUMARK.incremental(amountEurUlps);
-        var (, investorNmk) = calculateNeumarkDistribtion(rewardNmk);
+        (,uint256 investorNmk) = calculateNeumarkDistribtion(rewardNmk);
         return investorNmk;
     }
 
@@ -401,7 +401,7 @@ contract ICBMCommitment is
     {
         WhitelistTicket storage ticket = _whitelist[investor];
         //  could also use ( , investorNmk) but parser has problems in solium TODO fix solium
-        var (, investorNmk) = calculateNeumarkDistribtion(ticket.rewardNmk);
+        (, uint256 investorNmk) = calculateNeumarkDistribtion(ticket.rewardNmk);
         return (ticket.token, ticket.amountEurUlps, investorNmk);
     }
 
@@ -546,7 +546,7 @@ contract ICBMCommitment is
         }
 
         // Split the Neumarks
-        var (platformNmk, investorNmk) = calculateNeumarkDistribtion(rewardNmk);
+        (uint256 platformNmk, uint256 investorNmk) = calculateNeumarkDistribtion(rewardNmk);
 
         // Issue Neumarks and distribute
         NEUMARK.distribute(msg.sender, investorNmk);

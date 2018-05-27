@@ -1,9 +1,9 @@
-pragma solidity 0.4.23;
+pragma solidity 0.4.24;
 
 import "../Universe.sol";
 import "./ICBMRoles.sol";
-import "../EtherToken.sol";
-import "../EuroToken.sol";
+import "../PaymentTokens/EtherToken.sol";
+import "../PaymentTokens/EuroToken.sol";
 import "../MigrationSource.sol";
 import "./ICBMLockedAccount.sol";
 import "./ICBMLockedAccountMigration.sol";
@@ -307,7 +307,7 @@ contract LockedAccount is
         // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(newInvestor));
-        require(claims.hasKyc);
+        require(claims.isVerified && !claims.accountFrozen);
         Account storage newAccount = _accounts[newInvestor];
         // only to empty accounts
         require(newAccount.unlockDate == 0);
@@ -375,11 +375,11 @@ contract LockedAccount is
         onlyMigrationSource()
     {
         // internally we use 112 bits to store amounts
-        require(balance256 < 2*112);
+        require(balance256 < 2**112);
         uint112 balance = uint112(balance256);
-        require(neumarksDue256 < 2*112);
+        require(neumarksDue256 < 2**112);
         uint112 neumarksDue = uint112(neumarksDue256);
-        require(unlockDate256 < 2*32);
+        require(unlockDate256 < 2**32);
         uint32 unlockDate = uint32(unlockDate256);
 
         IERC677Token oldToken = MIGRATION_SOURCE.assetToken();
@@ -717,7 +717,7 @@ contract LockedAccount is
     {
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
-        require(claims.hasKyc);
+        require(claims.isVerified && !claims.accountFrozen);
 
         destinations.push(
             Destination({investor: wallet, amount: amount})

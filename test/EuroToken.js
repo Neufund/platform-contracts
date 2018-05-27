@@ -132,11 +132,16 @@ contract(
         ).to.be.rejectedWith(EvmError);
       });
 
-      async function transferViaGasExchange(from, to, amount, initialBalance) {
-        const hasKyc = toBytes32("0x1");
-        await identityRegistry.setMultipleClaims([from, to], ["0x0", "0x0"], [hasKyc, hasKyc], {
-          from: masterManager,
-        });
+      async function prepTransferViaGasExchange(from, to, amount, initialBalance) {
+        const isVerified = toBytes32("0x1");
+        await identityRegistry.setMultipleClaims(
+          [from, to],
+          ["0x0", "0x0"],
+          [isVerified, isVerified],
+          {
+            from: masterManager,
+          },
+        );
         await euroToken.deposit(from, initialBalance, {
           from: depositManager,
         });
@@ -148,39 +153,100 @@ contract(
         await tokenController.setAllowedTransferFrom(gasExchange, true, {
           from: eurtLegalManager,
         });
-
-        await euroToken.transferFrom(from, to, amount, { from: gasExchange });
       }
 
       it("should transfer between investors via gasExchange with minimum permissions", async () => {
         const initialBalance = etherToWei(83781221);
-        await transferViaGasExchange(investors[0], investors[1], initialBalance, initialBalance);
+        await prepTransferViaGasExchange(
+          investors[0],
+          investors[1],
+          initialBalance,
+          initialBalance,
+        );
+        await euroToken.transferFrom(investors[0], investors[1], initialBalance, {
+          from: gasExchange,
+        });
         const afterBalance = await euroToken.balanceOf.call(investors[1]);
         expect(afterBalance).to.be.bignumber.eq(initialBalance.mul(2));
       });
 
-      it("should transfer between investor and ETO", async () => {
-        const initialBalance = etherToWei(183781221);
-        // deposit only to KYC investors
-        await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), {
+      it("should reject transfer by gas exchange if account frozen", async () => {
+        const initialBalance = etherToWei(83781221);
+        await prepTransferViaGasExchange(
+          investors[0],
+          investors[1],
+          initialBalance,
+          initialBalance,
+        );
+        // freeze account (comment this line for the test to fail)
+        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
           from: masterManager,
         });
-        await euroToken.deposit(investors[0], initialBalance, {
+        await expect(
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
+        ).to.be.rejectedWith(EvmError);
+      });
+
+      it("should reject transfer by broker if broker is not explicit from", async () => {
+        const initialBalance = etherToWei(83781221);
+        await prepTransferViaGasExchange(
+          investors[0],
+          investors[1],
+          initialBalance,
+          initialBalance,
+        );
+        // comment this line for test to fails
+        await tokenController.setAllowedTransferFrom(gasExchange, false, {
+          from: eurtLegalManager,
+        });
+        await expect(
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
+        ).to.be.rejectedWith(EvmError);
+      });
+
+      async function prepareETOTransfer(investor, etoAddress, initialBalance) {
+        // deposit only to KYC investors
+        await identityRegistry.setClaims(investor, "0x0", toBytes32("0x1"), {
+          from: masterManager,
+        });
+        await euroToken.deposit(investor, initialBalance, {
           from: depositManager,
         });
-        // white list investor[1] address as ETO
-        const etoAddress = investors[1];
+
         await universe.setCollectionInterface(
           knownInterfaces.commitmentInterface,
           etoAddress,
           true,
           { from: masterManager },
         );
+      }
+
+      it("should transfer between investor and ETO", async () => {
+        const initialBalance = etherToWei(183781221);
+        // white list investor[1] address as ETO
+        const etoAddress = investors[1];
+        await prepareETOTransfer(investors[0], etoAddress, initialBalance);
         await euroToken.transfer(etoAddress, initialBalance, {
           from: investors[0],
         });
         const afterBalance = await euroToken.balanceOf.call(investors[1]);
         expect(afterBalance).to.be.bignumber.eq(initialBalance);
+      });
+
+      it("should reject transfer between investor and ETO if account frozen", async () => {
+        const initialBalance = etherToWei(183781221);
+        // white list investor[1] address as ETO
+        const etoAddress = investors[1];
+        await prepareETOTransfer(investors[0], etoAddress, initialBalance);
+        // freeze account (comment this line for the test to fail)
+        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
+          from: masterManager,
+        });
+        await expect(
+          euroToken.transfer(etoAddress, initialBalance, {
+            from: investors[0],
+          }),
+        ).to.be.rejectedWith(EvmError);
       });
 
       it("should not transfer from not allowed", async () => {
@@ -190,24 +256,32 @@ contract(
       });
 
       it("should not decrease allowance for gasExchange when <= amount", async () => {
-        await transferViaGasExchange(
+        const exchangeAmount = maxSimpleExchangeAllowanceEurUlps;
+        await prepTransferViaGasExchange(
           investors[0],
           investors[1],
-          maxSimpleExchangeAllowanceEurUlps,
+          exchangeAmount,
           minDepositAmountEurUlps,
         );
+        await euroToken.transferFrom(investors[0], investors[1], exchangeAmount, {
+          from: gasExchange,
+        });
         expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(
-          maxSimpleExchangeAllowanceEurUlps,
+          exchangeAmount,
         );
       });
 
       it("should decrease allowance for gasExchange when > amount", async () => {
-        await transferViaGasExchange(
+        const exchangeAmount = maxSimpleExchangeAllowanceEurUlps.add(1);
+        await prepTransferViaGasExchange(
           investors[0],
           investors[1],
-          maxSimpleExchangeAllowanceEurUlps.add(1),
+          exchangeAmount,
           minDepositAmountEurUlps,
         );
+        await euroToken.transferFrom(investors[0], investors[1], exchangeAmount, {
+          from: gasExchange,
+        });
         expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(0);
       });
 
