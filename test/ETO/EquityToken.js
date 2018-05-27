@@ -1,5 +1,5 @@
-import {expect} from "chai";
-import {prettyPrintGasCost} from "../helpers/gasUtils";
+import { expect } from "chai";
+import { prettyPrintGasCost } from "../helpers/gasUtils";
 import {
   deployUniverse,
   deployPlatformTerms,
@@ -18,11 +18,11 @@ import {
   testWithdrawal,
   deployTestErc223Callback,
 } from "../helpers/tokenTestCases";
-import {eventValue} from "../helpers/events";
+import { eventValue } from "../helpers/events";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
-import {snapshotTokenTests} from "../helpers/snapshotTokenTestCases";
-import {increaseTime} from "../helpers/evmCommands";
+import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
+import { increaseTime } from "../helpers/evmCommands";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
@@ -38,7 +38,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
-    await createAccessPolicy(accessPolicy, [{subject: admin, role: roles.reclaimer}]);
+    await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.reclaimer }]);
     [, platformTermsDict] = await deployPlatformTerms(universe, admin);
     const [shareholderRights] = await deployShareholderRights();
     const [durationTerms] = await deployDurationTerms();
@@ -51,7 +51,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       nominee,
       company,
     );
-    await equityToken.amendAgreement("AGREEMENT#HASH", {from: nominee});
+    await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
   });
 
   describe("specific tests", () => {

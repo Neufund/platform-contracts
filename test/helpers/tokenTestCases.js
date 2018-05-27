@@ -369,11 +369,11 @@ export function erc223TokenTests(token, erc223cb, fromAddr, toAddr, initialBalan
 
 export function testWithdrawal(token, investor, initialBalance, withdrawEventFOvr) {
   // eslint-disable-next-line no-func-assign
-  expectWithdrawEvent = withdrawEventFOvr || expectWithdrawEvent;
+  const expectWithdrawEv = withdrawEventFOvr || expectWithdrawEvent;
 
   it("should withdraw whole balance after deposit", async () => {
     const tx = await token().withdraw(initialBalance, { from: investor });
-    expectWithdrawEvent(tx, investor, initialBalance);
+    expectWithdrawEv(tx, investor, initialBalance);
     expectTransferEvent(tx, investor, ZERO_ADDRESS, initialBalance);
     const finalBalance = await token().balanceOf.call(investor);
     expect(finalBalance).to.be.bignumber.eq(0);
@@ -386,13 +386,13 @@ export function testWithdrawal(token, investor, initialBalance, withdrawEventFOv
     const tranche2 = initialBalance.sub(tranche1).sub(1);
     const tranche3 = new web3.BigNumber(1);
     const tx1 = await token().withdraw(tranche1, { from: investor });
-    expectWithdrawEvent(tx1, investor, tranche1);
+    expectWithdrawEv(tx1, investor, tranche1);
     expectTransferEvent(tx1, investor, ZERO_ADDRESS, tranche1);
     const tx2 = await token().withdraw(tranche2, { from: investor });
-    expectWithdrawEvent(tx2, investor, tranche2);
+    expectWithdrawEv(tx2, investor, tranche2);
     expectTransferEvent(tx2, investor, ZERO_ADDRESS, tranche2);
     const tx3 = await token().withdraw(tranche3, { from: investor });
-    expectWithdrawEvent(tx3, investor, tranche3);
+    expectWithdrawEv(tx3, investor, tranche3);
     expectTransferEvent(tx3, investor, ZERO_ADDRESS, tranche3);
 
     const finalBalance = await token().balanceOf.call(investor);

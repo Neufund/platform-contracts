@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound } from "./helpers/unitConverter";
-import {deployUniverse, deployPlatformTerms} from "./helpers/deployContracts";
+import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
 
 const Q18 = web3.toBigNumber("10").pow(18);
 
