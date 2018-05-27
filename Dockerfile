@@ -15,7 +15,7 @@ RUN apk --update add git openssh make gcc g++ python bash && \
 # add full permissions to anyone as we intend to run commands on host users
 RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contracts
 WORKDIR /usr/src/platform-contracts
-ADD .babelrc mocha.js nanoWeb3Provider.js package.json truffle.js ./
+ADD .babelrc mocha.js nanoWeb3Provider.js package.json truffle.js yarn.lock ./
 RUN yarn
 ADD contracts contracts
 RUN find ./contracts/ -exec touch -t 200906122350 {} \;
