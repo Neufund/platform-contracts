@@ -12,9 +12,16 @@ const EtherToken = artifacts.require("EtherToken");
 const EuroToken = artifacts.require("EuroToken");
 const EuroTokenController = artifacts.require("EuroTokenController");
 const SimpleExchange = artifacts.require("SimpleExchange");
+const PlatformTerms = artifacts.require("PlatformTerms");
+const ETOTerms = artifacts.require("ETOTerms");
+const ETODurationTerms = artifacts.require("ETODurationTerms");
+const ShareholderRights = artifacts.require("ShareholderRights");
+
+const Q18 = web3.toBigNumber("10").pow(18);
 
 export const dayInSeconds = 24 * 60 * 60;
 export const monthInSeconds = 30 * dayInSeconds;
+export const daysToSeconds = sec => sec * dayInSeconds;
 
 export function toBytes32(hex) {
   return `0x${web3.padLeft(hex.slice(2), 64)}`;
@@ -49,7 +56,7 @@ export async function deployUniverse(platformOperatorRepresentative, universeMan
     universe.address,
     TriState.Allow,
   );
-  return universe;
+  return [universe, accessPolicy, forkArbiter];
 }
 
 export async function deployIdentityRegistry(universe, universeManager, identityManager) {
@@ -163,4 +170,89 @@ export async function deploySimpleExchangeUniverse(
     },
   ]);
   return simpleExchange;
+}
+
+export async function deployPlatformTerms(universe, universeManager, overrideTerms) {
+  const defaultTerms = {
+    PLATFORM_FEE_FRACTION: Q18.mul(0.03),
+    TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul(0.02),
+    MIN_OFFER_DURATION_DAYS: daysToSeconds(1),
+    MAX_OFFER_DURATION_DAYS: daysToSeconds(90),
+    MIN_TICKET_EUR_ULPS: Q18.mul(300),
+    EQUITY_TOKENS_PER_SHARE: 1000000,
+    // todo: fill remaining contants to be tested below
+  };
+
+  const terms = Object.assign(defaultTerms, overrideTerms || {});
+  const termsKeys = Object.keys(terms);
+  const termsValues = termsKeys.map(v => terms[v]);
+
+  const platformTerms = await PlatformTerms.new();
+  await universe.setSingleton(knownInterfaces.platformTerms, platformTerms.address, {
+    from: universeManager,
+  });
+
+  return [platformTerms, terms, termsKeys, termsValues];
+}
+
+export async function deployShareholderRights(overrideTerms) {
+  const defaultShareholderTerms = {
+    GENERAL_VOTING_RULE: 1,
+    TAG_ALONG_VOTING_RULE: 2,
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
+    HAS_FOUNDERS_VESTING: true,
+    GENERAL_VOTING_DURATION: daysToSeconds(10),
+    RESTRICTED_ACT_VOTING_DURATION: daysToSeconds(14),
+    VOTING_FINALIZATION: daysToSeconds(5),
+    TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
+  };
+  const shareholderTerms = Object.assign(defaultShareholderTerms, overrideTerms || {});
+  const shareholderTermsKeys = Object.keys(shareholderTerms);
+  const shareholderTermsValues = shareholderTermsKeys.map(v => shareholderTerms[v]);
+  const shareholderRights = await ShareholderRights.new.apply(this, shareholderTermsValues);
+
+  return [shareholderRights, shareholderTerms, shareholderTermsKeys, shareholderTermsValues];
+}
+
+export async function deployDurationTerms(overrideTerms) {
+  const defDurTerms = {
+    WHITELIST_DURATION: daysToSeconds(7),
+    PUBLIC_DURATION: daysToSeconds(30),
+    SIGNING_DURATION: daysToSeconds(14),
+    CLAIM_DURATION: daysToSeconds(10),
+  };
+  const durTerms = Object.assign(defDurTerms, overrideTerms || {});
+  const durationTermsKeys = Object.keys(durTerms);
+  const durationTermsValues = durationTermsKeys.map(v => durTerms[v]);
+  const etoDurationTerms = await ETODurationTerms.new.apply(this, durationTermsValues);
+
+  return [etoDurationTerms, durTerms, durationTermsKeys, durationTermsValues];
+}
+
+export async function deployETOTerms(durationTerms, shareholderRights, overrideTerms) {
+  const defTerms = {
+    DURATION_TERMS: null,
+    EXISTING_COMPANY_SHARES: 32000,
+    MIN_NUMBER_OF_TOKENS: 5000 * 1000000,
+    MAX_NUMBER_OF_TOKENS: 10000 * 1000000,
+    TOKEN_PRICE_EUR_ULPS: Q18.mul(0.0001),
+    MIN_TICKET_EUR_ULPS: Q18.mul(500),
+    MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
+    ENABLE_TRANSFERS_ON_SUCCESS: true,
+    IS_CROWDFUNDING: false,
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
+    PROSPECTUS_URL: "893289290300923809jdkljoi3",
+    SHAREHOLDER_RIGHTS: null,
+    EQUITY_TOKEN_NAME: "Quintessence",
+    EQUITY_TOKEN_SYMBOL: "FFT",
+    SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
+  };
+  const terms = Object.assign(defTerms, overrideTerms || {});
+  const termsKeys = Object.keys(terms);
+  terms.DURATION_TERMS = durationTerms.address;
+  terms.SHAREHOLDER_RIGHTS = shareholderRights.address;
+  const termsValues = termsKeys.map(v => terms[v]);
+  const etoTerms = await ETOTerms.new.apply(this, termsValues);
+
+  return [etoTerms, terms, termsKeys, termsValues];
 }

@@ -2,71 +2,32 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { divRound } from "../helpers/unitConverter";
 import EvmError from "../helpers/EVMThrow";
-
-const PlatformTerms = artifacts.require("PlatformTerms");
-const ETOTerms = artifacts.require("ETOTerms");
-const ETODurationTerms = artifacts.require("ETODurationTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
+import {
+  deployUniverse,
+  deployPlatformTerms,
+  deployShareholderRights,
+  deployDurationTerms,
+  deployETOTerms,
+} from "../helpers/deployContracts";
 
 const Q18 = web3.toBigNumber("10").pow(18);
-const days = sec => sec * 60 * 60 * 24;
-const terms = {
-  DURATION_TERMS: null,
-  EXISTING_COMPANY_SHARES: 32000,
-  MIN_NUMBER_OF_TOKENS: 5000 * 1000000,
-  MAX_NUMBER_OF_TOKENS: 10000 * 1000000,
-  TOKEN_PRICE_EUR_ULPS: Q18.mul(0.0001),
-  MIN_TICKET_EUR_ULPS: Q18.mul(500),
-  MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
-  ENABLE_TRANSFERS_ON_SUCCESS: true,
-  IS_CROWDFUNDING: false,
-  INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
-  PROSPECTUS_URL: "893289290300923809jdkljoi3",
-  SHAREHOLDER_RIGHTS: null,
-  EQUITY_TOKEN_NAME: "Quintessence",
-  EQUITY_TOKEN_SYMBOL: "FFT",
-  SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-};
-const termsKeys = Object.keys(terms);
-let termsValues;
+const ETOTerms = artifacts.require("ETOTerms");
 
-const durTerms = {
-  WHITELIST_DURATION: days(7),
-  PUBLIC_DURATION: days(30),
-  SIGNING_DURATION: days(14),
-  CLAIM_DURATION: days(10),
-};
-const durationTermsKeys = Object.keys(durTerms);
-const durationTermsValues = durationTermsKeys.map(v => durTerms[v]);
-
-const shareholderTerms = {
-  GENERAL_VOTING_RULE: 1,
-  TAG_ALONG_VOTING_RULE: 2,
-  LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
-  HAS_FOUNDERS_VESTING: true,
-  GENERAL_VOTING_DURATION: days(10),
-  RESTRICTED_ACT_VOTING_DURATION: days(14),
-  VOTING_FINALIZATION: days(5),
-  TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
-};
-const shareholderTermsKeys = Object.keys(shareholderTerms);
-const shareholderTermsValues = shareholderTermsKeys.map(v => shareholderTerms[v]);
-
-contract("ETOTerms", ([deployer, investorDiscount, investorNoDiscount]) => {
+contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) => {
   let platformTerms;
-  let durationTerms;
   let etoTerms;
+  let terms, termsKeys;
   let shareholderRights;
+  let shareholderTerms, shareholderTermsKeys;
+  let durationTerms;
+  let durTerms, durationTermsKeys;
 
   beforeEach(async () => {
-    platformTerms = await PlatformTerms.new();
-    shareholderRights = await ShareholderRights.new.apply(this, shareholderTermsValues);
-    durationTerms = await ETODurationTerms.new.apply(this, durationTermsValues);
-    terms.DURATION_TERMS = durationTerms.address;
-    terms.SHAREHOLDER_RIGHTS = shareholderRights.address;
-    termsValues = termsKeys.map(v => terms[v]);
-    // console.log(termsValues);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
+    const [universe] = await deployUniverse(admin, admin);
+    [platformTerms] = await deployPlatformTerms(universe, admin);
+    [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights();
+    [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms();
+    [etoTerms, terms, termsKeys] = await deployETOTerms(durationTerms, shareholderRights);
   });
 
   it("should deploy", async () => {
@@ -107,7 +68,7 @@ contract("ETOTerms", ([deployer, investorDiscount, investorNoDiscount]) => {
   it("should reject on platform terms with minimum ticket too small", async () => {
     // change to sub(0) for this test to fail
     terms.MIN_TICKET_EUR_ULPS = (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1);
-    termsValues = termsKeys.map(v => terms[v]);
+    const termsValues = termsKeys.map(v => terms[v]);
     // console.log(termsValues);
     etoTerms = await ETOTerms.new.apply(this, termsValues);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
