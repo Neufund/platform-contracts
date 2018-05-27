@@ -20,7 +20,6 @@ const Q18 = new web3.BigNumber(10).pow(18);
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
 const gasExchangeFee = Q18.mul(0.07);
 const hasKYCandHasAccount = toBytes32("0x5");
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
 contract(
   "SimpleExchange",
@@ -42,8 +41,7 @@ contract(
     let identityRegistry;
 
     beforeEach(async () => {
-      universe = await deployUniverse(admin, admin);
-      accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+      [universe, accessPolicy] = await deployUniverse(admin, admin);
       identityRegistry = await deployIdentityRegistry(universe, admin, admin);
       etherToken = await deployEtherTokenUniverse(universe, admin);
       [euroToken, euroTokenController] = await deployEuroTokenUniverse(
@@ -82,11 +80,11 @@ contract(
       const rate = await simpleExchange.getExchangeRate(etherToken.address, euroToken.address);
       let timestamp = await latestTimestamp();
       expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rate[1]).to.be.bignumber.eq(timestamp);
+      expect(rate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
       const invRate = await simpleExchange.getExchangeRate(euroToken.address, etherToken.address);
       timestamp = await latestTimestamp();
       expect(invRate[0]).to.be.bignumber.eq(Q18.mul(0.01));
-      expect(invRate[1]).to.be.bignumber.eq(timestamp);
+      expect(invRate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
     it("should set many exchange rates", async () => {
@@ -108,18 +106,18 @@ contract(
       );
       let timestamp = await latestTimestamp();
       expect(rates[0][0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rates[1][0]).to.be.bignumber.eq(timestamp);
+      expect(rates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
       expect(rates[0][1]).to.be.bignumber.eq(Q18.mul(0.4));
-      expect(rates[1][1]).to.be.bignumber.eq(timestamp);
+      expect(rates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
       const invRates = await simpleExchange.getExchangeRates(
         [euroToken.address, euroToken.address],
         [etherToken.address, neuToken.address],
       );
       timestamp = await latestTimestamp();
       expect(invRates[0][0]).to.be.bignumber.eq(Q18.mul(0.01));
-      expect(invRates[1][0]).to.be.bignumber.eq(timestamp);
+      expect(invRates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
       expect(invRates[0][1]).to.be.bignumber.eq(Q18.mul(2.5));
-      expect(invRates[1][1]).to.be.bignumber.eq(timestamp);
+      expect(invRates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
     it("should revert on not set exchange rate");
