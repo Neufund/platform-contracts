@@ -183,7 +183,7 @@ contract(
           from: masterManager,
         });
         await expect(
-          euroToken.transferFrom(investors[0], investors[1], initialBalance, {from: gasExchange}),
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
         ).to.be.rejectedWith(EvmError);
       });
 
@@ -200,7 +200,7 @@ contract(
           from: eurtLegalManager,
         });
         await expect(
-          euroToken.transferFrom(investors[0], investors[1], initialBalance, {from: gasExchange}),
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
         ).to.be.rejectedWith(EvmError);
       });
 

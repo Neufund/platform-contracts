@@ -383,8 +383,7 @@ contract(
           .true;
       });
 
-      it("should disallow withdraw if no bank account", async () => {
-      });
+      it("should disallow withdraw if no bank account", async () => {});
 
       it("should disallow withdraw below minimum", async () => {
         await tokenController.setAllowedTransferFrom(explicit, true, {

@@ -10,7 +10,7 @@ import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { LockState } from "./lockState";
 import { CommitmentState } from "./commitmentState";
 import { promisify } from "../helpers/evmCommands";
-import {divRound} from "../helpers/unitConverter";
+import { divRound } from "../helpers/unitConverter";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 const Neumark = artifacts.require("Neumark");

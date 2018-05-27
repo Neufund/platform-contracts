@@ -1,6 +1,6 @@
-import {expect} from "chai";
-import {prettyPrintGasCost} from "../helpers/gasUtils";
-import {divRound} from "../helpers/unitConverter";
+import { expect } from "chai";
+import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { divRound } from "../helpers/unitConverter";
 import EvmError from "../helpers/EVMThrow";
 
 const PlatformTerms = artifacts.require("PlatformTerms");
@@ -147,7 +147,7 @@ contract("ETOTerms", ([deployer, investorDiscount, investorNoDiscount]) => {
   describe("whitelist tests", () => {
     it("add single investor", async () => {
       // no discount
-      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {from: deployer});
+      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: deployer });
       expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, Q18);
       let ticket = await etoTerms.whitelistTicket(investorNoDiscount);
       expect(ticket[0]).to.be.true;

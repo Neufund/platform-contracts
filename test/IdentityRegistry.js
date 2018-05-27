@@ -41,7 +41,7 @@ contract(
     }
 
     function referenceClaims(isVerified, isSophisticatedInvestor, hasBankAccount, accountFrozen) {
-      return [{isVerified}, {isSophisticatedInvestor}, {hasBankAccount}, {accountFrozen}];
+      return [{ isVerified }, { isSophisticatedInvestor }, { hasBankAccount }, { accountFrozen }];
     }
 
     function expectSetClaimsEvent(tx, i, oldClaims, newClaims) {

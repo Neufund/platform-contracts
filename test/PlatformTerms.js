@@ -1,6 +1,6 @@
-import {expect} from "chai";
-import {prettyPrintGasCost} from "./helpers/gasUtils";
-import {divRound} from "./helpers/unitConverter";
+import { expect } from "chai";
+import { prettyPrintGasCost } from "./helpers/gasUtils";
+import { divRound } from "./helpers/unitConverter";
 
 const PlatformTerms = artifacts.require("PlatformTerms");
 

@@ -14,7 +14,7 @@ import {
 } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
-import {divRound} from "./helpers/unitConverter";
+import { divRound } from "./helpers/unitConverter";
 
 const Q18 = new web3.BigNumber(10).pow(18);
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
