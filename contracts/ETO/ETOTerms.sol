@@ -204,7 +204,7 @@ contract ETOTerms is Math {
         require(investors.length == discountAmountsEurUlps.length);
         require(investors.length == discountsFrac.length);
 
-        for (uint256 i = 0; i < investors.length; i+=1) {
+        for (uint256 i = 0; i < investors.length; i += 1) {
             addWhitelistInvestorPrivate(investors[i], discountAmountsEurUlps[i], discountsFrac[i]);
         }
     }

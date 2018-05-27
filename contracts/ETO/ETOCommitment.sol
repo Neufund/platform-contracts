@@ -633,7 +633,8 @@ contract ETOCommitment is
         // nominee gets nominal share value immediately to be added to cap table
         uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
-        uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps)); // no overflow as smaller one is uint96
+        // no overflow as smaller one is uint96
+        uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
         _additionalContributionEurUlps -= availableCapitalEurUlps;
@@ -730,7 +731,7 @@ contract ETOCommitment is
         require(_totalTokensInt + equityTokenInt256 > MAX_NUMBER_OF_TOKENS, "ETO_MAX_TOK_CAP");
         // kick out not whitelist or not LockedAccount
         if (state() == ETOState.Whitelist) {
-            require(isWhitelisted|| isLockedAccount, "ETO_NOT_ON_WL");
+            require(isWhitelisted || isLockedAccount, "ETO_NOT_ON_WL");
         }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded
