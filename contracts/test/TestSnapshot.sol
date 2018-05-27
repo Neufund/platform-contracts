@@ -63,4 +63,17 @@ contract TestSnapshot is
     {
         return getValueAt(_val, snapshot, def);
     }
+
+    //
+    // Implements ISnapshotable
+    //
+
+    /// upper bound of series snapshotIds for which there's a value
+    function currentSnapshotId()
+        public
+        constant
+        returns (uint256)
+    {
+        return mCurrentSnapshotId();
+    }
 }
