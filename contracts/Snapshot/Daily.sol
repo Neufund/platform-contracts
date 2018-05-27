@@ -8,16 +8,41 @@ import "./MSnapshotPolicy.sol";
 contract Daily is MSnapshotPolicy {
 
     ////////////////////////
+    // Constants
+    ////////////////////////
+
+    // Floor[2**128 / 1 days]
+    uint256 private MAX_TIMESTAMP = 3938453320844195178974243141571391;
+
+    ////////////////////////
+    // Constructor
+    ////////////////////////
+
+    /// @param start snapshotId from which to start generating values, used to prevent cloning from incompatible schemes
+    /// @dev start must be for the same day or 0, required for token cloning
+    constructor(uint256 start) internal {
+        // 0 is invalid value as we are past unix epoch
+        if (start > 0) {
+            uint256 base = dayBase(uint128(block.timestamp));
+            // must be within current day base
+            require(start >= base);
+            // dayBase + 2**128 will not overflow as it is based on block.timestamp
+            require(start < base + 2**128);
+        }
+    }
+
+    ////////////////////////
     // Public functions
     ////////////////////////
 
     function snapshotAt(uint256 timestamp)
         public
-        pure
+        constant
         returns (uint256)
     {
-        // Round down to the start of the day (00:00 UTC)
-        return timestamp - (timestamp % 1 days);
+        require(timestamp < MAX_TIMESTAMP);
+
+        return dayBase(uint128(timestamp));
     }
 
     ////////////////////////
@@ -40,12 +65,16 @@ contract Daily is MSnapshotPolicy {
         constant
         returns (uint256)
     {
-        // Take the current time in UTC
-        uint256 timestamp = block.timestamp;
+        // disregard overflows on block.timestamp, see MAX_TIMESTAMP
+        return dayBase(uint128(block.timestamp));
+    }
 
-        // Round down to the start of the day (00:00 UTC)
-        timestamp -= timestamp % 1 days;
-
-        return timestamp;
+    function dayBase(uint128 timestamp)
+        internal
+        pure
+        returns (uint256)
+    {
+        // Round down to the start of the day (00:00 UTC) and place in higher 128bits
+        return 2**128 * (uint256(timestamp) / 1 days);
     }
 }

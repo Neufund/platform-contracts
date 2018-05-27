@@ -17,7 +17,7 @@ contract(
     });
 
     beforeEach(async () => {
-      universe = await deployUniverse(platformLegalRepresentative, universeManager);
+      [universe] = await deployUniverse(platformLegalRepresentative, universeManager);
       identityRegistry = await deployIdentityRegistry(universe, universeManager, identityManager);
     });
 

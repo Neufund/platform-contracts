@@ -19,6 +19,9 @@ contract IEquityToken is
     /// nominal value of a share in EUR decimal(18) precision
     function shareNominalValueEurUlps() public constant returns (uint256);
 
+    // returns company legal representative account that never changes
+    function companyLegalRepresentative() public constant returns (address);
+
     /// @notice returns associated token controller
     function equityTokenController() public constant returns (IEquityTokenController);
 

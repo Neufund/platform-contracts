@@ -24,7 +24,6 @@ import {
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
-const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 const Q18 = web3.toBigNumber("10").pow(18);
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
@@ -38,8 +37,7 @@ contract(
     let universe;
 
     before(async () => {
-      universe = await deployUniverse(masterManager, masterManager);
-      accessControl = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+      [universe, accessControl] = await deployUniverse(masterManager, masterManager);
       await universe.setSingleton(knownInterfaces.gasExchange, gasExchange, {
         from: masterManager,
       });

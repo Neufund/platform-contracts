@@ -12,9 +12,10 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
   let ethereumForkArbiter;
 
   beforeEach(async () => {
-    universe = await deployUniverse(platformLegalRepresentative, universeManager);
-    accessPolicy = await universe.accessPolicy();
-    ethereumForkArbiter = await universe.forkArbiter();
+    [universe, accessPolicy, ethereumForkArbiter] = await deployUniverse(
+      platformLegalRepresentative,
+      universeManager,
+    );
   });
 
   function expectSingletonSetEvent(tx, interfaceId, address) {
@@ -34,14 +35,19 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
 
   it("should deploy", async () => {
     await prettyPrintGasCost("Deploy", universe);
-    expect(await universe.accessPolicy()).to.eq(accessPolicy);
-    expect(await universe.forkArbiter()).to.eq(ethereumForkArbiter);
-    expect(await universe.getSingleton(knownInterfaces.accessPolicy)).to.eq(accessPolicy);
-    expect(await universe.getSingleton(knownInterfaces.forkArbiter)).to.eq(ethereumForkArbiter);
+    expect(await universe.accessPolicy()).to.eq(accessPolicy.address);
+    expect(await universe.forkArbiter()).to.eq(ethereumForkArbiter.address);
+    expect(await universe.getSingleton(knownInterfaces.accessPolicy)).to.eq(accessPolicy.address);
+    expect(await universe.getSingleton(knownInterfaces.forkArbiter)).to.eq(
+      ethereumForkArbiter.address,
+    );
     expect(
       await universe.getManySingletons([knownInterfaces.forkArbiter, knownInterfaces.accessPolicy]),
-    ).to.deep.eq([ethereumForkArbiter, accessPolicy]);
-    expect(await universe.isSingleton(knownInterfaces.accessPolicy, accessPolicy)).to.be.true;
+    ).to.deep.eq([ethereumForkArbiter.address, accessPolicy.address]);
+    expect(await universe.isSingleton(knownInterfaces.accessPolicy, accessPolicy.address)).to.be
+      .true;
+    expect(await universe.isSingleton(knownInterfaces.forkArbiter, ethereumForkArbiter.address)).to
+      .be.true;
   });
 
   it("should set singleton", async () => {

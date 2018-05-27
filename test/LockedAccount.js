@@ -58,8 +58,7 @@ contract(
     let startTimestamp;
 
     beforeEach(async () => {
-      universe = await deployUniverse(admin, admin);
-      accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+      [universe, accessPolicy] = await deployUniverse(admin, admin);
       neumark = await deployNeumarkUniverse(universe, admin);
       console.log("identity");
       identityRegistry = await deployIdentityRegistry(universe, admin, admin);
