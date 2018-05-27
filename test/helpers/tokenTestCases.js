@@ -367,7 +367,10 @@ export function erc223TokenTests(token, erc223cb, fromAddr, toAddr, initialBalan
   });
 }
 
-export function testWithdrawal(token, investor, initialBalance) {
+export function testWithdrawal(token, investor, initialBalance, withdrawEventFOvr) {
+  // eslint-disable-next-line no-func-assign
+  expectWithdrawEvent = withdrawEventFOvr || expectWithdrawEvent;
+
   it("should withdraw whole balance after deposit", async () => {
     const tx = await token().withdraw(initialBalance, { from: investor });
     expectWithdrawEvent(tx, investor, initialBalance);
