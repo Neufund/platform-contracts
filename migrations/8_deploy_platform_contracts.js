@@ -5,11 +5,11 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").default;
 const { TriState } = require("../test/helpers/triState");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
+const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  // do not deploy testing network
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
@@ -96,12 +96,21 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const simpleExchange = await SimpleExchange.deployed();
 
     console.log("Setting permissions to Universe");
-    await accessPolicy.setUserRole(
-      CONFIG.addresses.UNIVERSE_MANAGER,
-      roles.universeManager,
-      universe.address,
-      TriState.Allow,
-    );
+    await createAccessPolicy(accessPolicy, [
+      // allow deployer temporarily, later drop
+      {
+        subject: CONFIG.addresses.UNIVERSE_MANAGER,
+        role: roles.universeManager,
+        object: universe.address,
+        state: TriState.Allow,
+      },
+      {
+        subject: DEPLOYER,
+        role: roles.universeManager,
+        object: universe.address,
+        state: TriState.Allow,
+      },
+    ]);
 
     console.log("Add singletons to Universe");
     const interfaces = [
@@ -162,6 +171,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         addr: commitment.address,
       },
     ];
-    await registerSingletons(universe, CONFIG.addresses.UNIVERSE_MANAGER, interfaces);
+    await registerSingletons(universe, DEPLOYER, interfaces);
   });
 };

@@ -40,32 +40,44 @@ module.exports = {
       host: "localhost",
       port: 8555,
     },
-    ropsten: {
-      host: "localhost", // local parity kovan node
-      port: 8544,
-      network_id: "3",
-      gas: 4300000, // close to current mainnet limit
-      gasPrice: 30000000000, // 10 gwei /shannon
+    forked_live: {
+      network_id: 1, // Ethereum public network
+      host: "ethexp-node.neustg.net",
+      port: 8545,
+      gas: 6500000, // close to current mainnet limit
+      gasPrice: 5000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+      },
+    },
+    localhost_live: {
+      network_id: "*",
+      host: "localhost",
+      port: 8545,
+      gas: 6500000,
+      gasPrice: 21000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xba102002e0ec3292870b447b45931635219b0302",
+      },
     },
     live: {
       network_id: 1, // Ethereum public network
       host: "localhost",
       port: 8543,
-      gas: 6300000, // close to current mainnet limit
-      gasPrice: 50000000000, // 21 gwei /shannon
+      gas: 6500000, // close to current mainnet limit
+      gasPrice: 5000000000, // 21 gwei /shannon
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+      },
       // optional config values
       // host - defaults to "localhost"
       // port - defaults to 8545
       // gas
       // gasPrice
       // from - default address to use for any transaction Truffle makes during migrations
-    },
-    ropsten_live: {
-      host: "localhost", // local parity ropsten
-      port: 8544,
-      network_id: "3",
-      gas: 4300000, // close to current mainnet limit
-      gasPrice: 10000000000, // 10 gwei /shannon
     },
     nano: {
       network_id: "*",

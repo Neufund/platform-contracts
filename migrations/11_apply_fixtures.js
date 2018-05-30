@@ -11,8 +11,8 @@ function toBytes32(hex) {
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  // skip fixtures on live deployment
-  if (CONFIG.shouldSkipDeployment || CONFIG.isLiveDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
+  if (CONFIG.isLiveDeployment) return;
 
   const fas = getFixtureAccounts(accounts);
   const DEPLOYER = getDeployerAccount(network, accounts);

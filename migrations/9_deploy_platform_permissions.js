@@ -8,8 +8,7 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  // do not deploy testing network
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
 
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);

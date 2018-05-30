@@ -159,6 +159,8 @@ contract(
           .sub(expectedWei)
           .abs(),
       ).to.be.bignumber.lt(10);
+      // simple check if we are not doing stupid error of using invesrse rate and selling wei for cheap
+      expect(exchangedAmount).to.be.bignumber.gt(afterBalance.sub(initalBalance));
       // set platform_wallet as reclaimer for gasExchange and extract euro
       await reclaimEuroFromExchange(platformWallet);
       expect(await euroToken.balanceOf(simpleExchange.address)).to.be.bignumber.eq(0);

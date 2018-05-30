@@ -1,5 +1,6 @@
 const moment = require("moment");
 const deployableArtifacts = require("../test/helpers/artifacts").default;
+const path = require("path");
 const networks = require("../truffle.js").networks;
 
 export function getDeployerAccount(network, accounts) {
@@ -42,11 +43,11 @@ export function getConfig(web3, network, accounts) {
       PLATFORM_OPERATOR_WALLET: "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4",
       PLATFORM_OPERATOR_REPRESENTATIVE: "0x83CBaB70Bc1d4e08997e5e00F2A3f1bCE225811F",
       EURT_DEPOSIT_MANAGER: "0x30A72cD2F5AEDCd86c7f199E0500235674a08E27",
-      UNIVERSE_MANAGER: "??",
-      IDENTITY_MANAGER: "??",
-      EURT_LEGAL_MANAGER: "??",
-      GAS_EXCHANGE: "??",
-      TOKEN_RATE_ORACLE: "??",
+      UNIVERSE_MANAGER: "0x45eF682bC0467edE800547Ce3866E0A14e93cB45",
+      IDENTITY_MANAGER: "0xf026dfC7de31d153Ae6B0375b93BA4E138de9130",
+      EURT_LEGAL_MANAGER: "0x5c31F869F4f9891ca3470bE30Ca3d9e60ced0a05",
+      GAS_EXCHANGE: "0x58125e023252A1Da9655994fC446892dbD1B2C03",
+      TOKEN_RATE_ORACLE: "0x58125e023252A1Da9655994fC446892dbD1B2C03",
     },
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
@@ -54,6 +55,15 @@ export function getConfig(web3, network, accounts) {
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
     isLiveDeployment: network.endsWith("_live"),
+    shouldSkipStep: filename => {
+      if (config.shouldSkipDeployment) return true;
+      const stepNumber = parseInt(path.basename(filename), 10);
+      console.log(`checking step ${stepNumber}`);
+      if (config.ICBM_COMMITMENT_ADDRESS && stepNumber < 7) {
+        return true;
+      }
+      return false;
+    },
   };
 
   // modify live configuration according to network type
@@ -102,7 +112,10 @@ export function getConfig(web3, network, accounts) {
     artifactMapping.ICBM_COMMITMENT = "MockICBMCommitment";
   }
 
-  return config;
+  // apply overrides from the truffle network
+  const networkDefinition = getNetworkDefinition(network);
+
+  return Object.assign(config, networkDefinition.deploymentConfigOverride);
 }
 
 export function getFixtureAccounts(accounts) {

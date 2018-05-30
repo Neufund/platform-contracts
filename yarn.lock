@@ -363,7 +363,7 @@ async-eventemitter@^0.2.2:
   dependencies:
     async "^2.4.0"
 
-"async-eventemitter@github:ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c":
+async-eventemitter@ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c:
   version "0.2.3"
   resolved "https://codeload.github.com/ahultgren/async-eventemitter/tar.gz/fa06e39e56786ba541c180061dbf2c0a5bbf951c"
   dependencies:
@@ -7903,9 +7903,9 @@ truffle-resolver@^4.0.1:
     truffle-expect "0.0.3"
     truffle-provisioner "^0.1.0"
 
-truffle@Neufund/truffle#neufund:
+truffle@Neufund/truffle#593601f2eb0607db439a395673233c7370b1ebfc:
   version "3.4.9"
-  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/78e02223cae6973c514d7d70cc23e8a675d01c9e"
+  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/593601f2eb0607db439a395673233c7370b1ebfc"
   dependencies:
     mocha "^3.4.2"
     original-require "^1.0.1"
