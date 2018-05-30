@@ -133,6 +133,12 @@ contract SimpleExchange is
     /// Gnosis does not seem to be working
     /// it seems that for Neufund investor it's best to trust Platform Operator to provide correct information, Platform is aligned via NEU and has no incentive to lie
     /// SimpleExchange is replaceable via Universe. when proper oracle is available we'll move to it
+    /// @param numeratorToken token to be converted from
+    /// @param denominatorToken token to be converted to
+    /// @param rateFraction a decimal fraction (see Math.decimalFraction) of numeratorToken to denominatorToken
+    /// example: to set rate of eur to eth you provide (euroToken, etherToken, 0.0016129032258064516129032*10**18)
+    /// example: to set rate of eth to eur you provide (etherToken, euroToken, 620*10**18)
+    /// @dev we always set a rate and an invesrse rate! so you call once with eur/eth and you also get eth/eur
     function setExchangeRate(IERC223Token numeratorToken, IERC223Token denominatorToken, uint256 rateFraction)
         public
         only(ROLE_TOKEN_RATE_ORACLE)
@@ -237,6 +243,7 @@ contract SimpleExchange is
             rateFraction: uint128(rateFraction),
             timestamp: uint128(block.timestamp)
         });
+        // todo: compute invesrse on the fly!
         // also store the invesrse
         _rates[denominatorToken][numeratorToken] = TokenRate({
             rateFraction: uint128(invRateFraction),
