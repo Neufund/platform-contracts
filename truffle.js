@@ -16,7 +16,7 @@ module.exports = {
       port: 8545,
       gas: 6500000,
       gasPrice: 21000000000,
-      from: "0x8a194c13308326173423119f8dcb785ce14c732b"
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
     },
     inprocess: {
       network_id: "*",
@@ -48,8 +48,8 @@ module.exports = {
       gasPrice: 5000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653"
-      }
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+      },
     },
     localhost_live: {
       network_id: "*",
@@ -59,8 +59,8 @@ module.exports = {
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0xba102002e0ec3292870b447b45931635219b0302"
-      }
+        ICBM_COMMITMENT_ADDRESS: "0xba102002e0ec3292870b447b45931635219b0302",
+      },
     },
     live: {
       network_id: 1, // Ethereum public network
@@ -70,8 +70,8 @@ module.exports = {
       gasPrice: 5000000000, // 21 gwei /shannon
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653"
-      }
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+      },
       // optional config values
       // host - defaults to "localhost"
       // port - defaults to 8545

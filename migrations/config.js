@@ -1,6 +1,6 @@
 const moment = require("moment");
 const deployableArtifacts = require("../test/helpers/artifacts").default;
-const path = require('path');
+const path = require("path");
 const networks = require("../truffle.js").networks;
 
 export function getDeployerAccount(network, accounts) {
@@ -55,16 +55,15 @@ export function getConfig(web3, network, accounts) {
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
     isLiveDeployment: network.endsWith("_live"),
-    shouldSkipStep: (filename) => {
-      if (config.shouldSkipDeployment)
-        return true;
+    shouldSkipStep: filename => {
+      if (config.shouldSkipDeployment) return true;
       const stepNumber = parseInt(path.basename(filename), 10);
       console.log(`checking step ${stepNumber}`);
       if (config.ICBM_COMMITMENT_ADDRESS && stepNumber < 7) {
         return true;
       }
       return false;
-    }
+    },
   };
 
   // modify live configuration according to network type
