@@ -3,8 +3,7 @@ const getConfig = require("./config").getConfig;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  // do not deploy testing network
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const LockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);

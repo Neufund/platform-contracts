@@ -14,11 +14,12 @@ const promisify = require("../test/helpers/evmCommands").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
+
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const DEPLOYER = getDeployerAccount(network, accounts);
-  const fas = getFixtureAccounts(accounts);
+  const fas = CONFIG.isLiveDeployment ? [] : getFixtureAccounts(accounts);
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
@@ -29,6 +30,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log("Dropping temporary permissions");
       await createAccessPolicy(accessPolicy, [
         { subject: DEPLOYER, role: roles.eurtLegalManager, state: TriState.Unset },
+        {
+          subject: DEPLOYER,
+          role: roles.universeManager,
+          object: universe.address,
+          state: TriState.Unset,
+        },
       ]);
 
       console.log("---------------------------------------------");

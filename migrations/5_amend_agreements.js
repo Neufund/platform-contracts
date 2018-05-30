@@ -3,7 +3,7 @@ const getConfig = require("./config").getConfig;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);

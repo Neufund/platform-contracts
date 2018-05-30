@@ -4,8 +4,10 @@ const getFixtureAccounts = require("./config").getFixtureAccounts;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
+  if (CONFIG.shouldSkipStep(__filename)) return;
   // skip fixtures on live deployment
-  if (CONFIG.shouldSkipDeployment || CONFIG.isLiveDeployment) return;
+  if (CONFIG.isLiveDeployment) return;
+
   const fas = getFixtureAccounts(accounts);
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
   const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);

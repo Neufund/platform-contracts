@@ -5,10 +5,10 @@ const getDeployerAccount = require("./config").getDeployerAccount;
 const roles = require("../test/helpers/roles").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
-  const DEPLOYER = getDeployerAccount(network, accounts);
   const CONFIG = getConfig(web3, network, accounts);
-  if (CONFIG.shouldSkipDeployment) return;
+  if (CONFIG.shouldSkipStep(__filename)) return;
 
+  const DEPLOYER = getDeployerAccount(network, accounts);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
