@@ -89,4 +89,12 @@ contract PlatformTerms is Math {
     {
         return decimalFraction(amount, PLATFORM_FEE_FRACTION);
     }
+
+    function equityTokensToShares(uint256 amount)
+        public
+        pure
+        returns (uint256)
+    {
+        return divRound(amount, EQUITY_TOKENS_PER_SHARE);
+    }
 }

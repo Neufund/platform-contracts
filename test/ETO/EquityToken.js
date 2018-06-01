@@ -95,6 +95,9 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should change token controller");
 
     it("should change nominee");
+
+    // should be a set of tests with different rounding, we should be able to run it on platform as well
+    it("should convert equity token amount to shares");
   });
 
   describe("IEquityTokenController tests", () => {
