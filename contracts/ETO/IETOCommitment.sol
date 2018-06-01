@@ -97,7 +97,7 @@ contract IETOCommitment is
 
     /// financial outcome of token offering set on Signing state transition
     /// @dev in preceding states 0 is returned
-    function signedOfferingResults()
+    function contributionSummary()
         public
         constant
         returns (
