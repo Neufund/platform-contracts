@@ -1,7 +1,10 @@
 pragma solidity 0.4.24;
 
 
-/// @title known interfaces of the platform
+/// @title known interfaces (services) of the platform
+/// "known interface" is a unique id of service provided by the platform and discovered via Universe contract
+///  it does not refer to particular contract/interface ABI, particular service may be delivered via different implementations
+///  however for a few contracts we commit platform to particular implementation (all ICBM Contracts, Universe itself etc.)
 /// @dev constants are kept in CODE not in STORAGE so they are comparatively cheap
 contract KnownInterfaces {
 
@@ -69,6 +72,9 @@ contract KnownInterfaces {
 
     // Platform terms interface and singletong keccak256("PlatformTerms")
     bytes4 internal constant KNOWN_INTERFACE_PLATFORM_TERMS = 0x75ecd7f8;
+
+    // for completness we define Universe service keccak256("Universe");
+    bytes4 internal constant KNOWN_INTERFACE_UNIVERSE = 0xbf202454;
 
     // ETO commitment interface (collection) keccak256("ICommitment")
     bytes4 internal constant KNOWN_INTERFACE_COMMITMENT = 0xfa0e0c60;
