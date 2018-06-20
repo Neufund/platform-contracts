@@ -21,7 +21,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
   const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
-  const SimpleExchange = artifacts.require(CONFIG.artifacts.SIMPLE_EXCHANGE);
+  const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
 
   deployer.then(async () => {
@@ -36,7 +36,16 @@ module.exports = function deployContracts(deployer, network, accounts) {
     } else {
       commitment = await Commitment.deployed();
     }
-    const accessPolicy = await RoleBasedAccessPolicy.at(await commitment.accessPolicy());
+    let accessPolicy;
+    if (CONFIG.ISOLATED_UNIVERSE) {
+      console.log(`Re-deploying RoleBasedAccessPolicy to isolate Universe`);
+      await deployer.deploy(RoleBasedAccessPolicy);
+      accessPolicy = await RoleBasedAccessPolicy.deployed();
+    } else {
+      const accessPolicyAddress = await commitment.accessPolicy();
+      console.log(`Using ICBM RoleBasedAccessPolicy ${accessPolicyAddress} in Universe`);
+      accessPolicy = await RoleBasedAccessPolicy.at(accessPolicyAddress);
+    }
     const forkArbiter = await EthereumForkArbiter.at(await commitment.ethereumForkArbiter());
     const icbmEtherLock = await ICBMLockedAccount.at(await commitment.etherLock());
     const icbmEuroLock = await ICBMLockedAccount.at(await commitment.euroLock());
