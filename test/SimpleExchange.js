@@ -34,6 +34,8 @@ contract(
   ]) => {
     let universe;
     let accessPolicy;
+    let rateOracle;
+    let gasExchange;
     let simpleExchange;
     let etherToken;
     let euroToken;
@@ -53,7 +55,7 @@ contract(
         0,
         gasExchangeMaxAllowanceEurUlps,
       );
-      simpleExchange = await deploySimpleExchangeUniverse(
+      [gasExchange, rateOracle, simpleExchange] = await deploySimpleExchangeUniverse(
         universe,
         admin,
         etherToken,
@@ -68,7 +70,7 @@ contract(
     });
 
     it("should set exchange rate", async () => {
-      const tx = await simpleExchange.setExchangeRate(
+      const tx = await gasExchange.setExchangeRate(
         etherToken.address,
         euroToken.address,
         Q18.mul(100),
@@ -77,11 +79,11 @@ contract(
       expect(tx.logs.length).to.eq(2);
       expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
       expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
-      const rate = await simpleExchange.getExchangeRate(etherToken.address, euroToken.address);
+      const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
       let timestamp = await latestTimestamp();
       expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
       expect(rate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
-      const invRate = await simpleExchange.getExchangeRate(euroToken.address, etherToken.address);
+      const invRate = await rateOracle.getExchangeRate(euroToken.address, etherToken.address);
       timestamp = await latestTimestamp();
       expect(invRate[0]).to.be.bignumber.eq(Q18.mul(0.01));
       expect(invRate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
@@ -89,7 +91,7 @@ contract(
 
     it("should set many exchange rates", async () => {
       const neuToken = await deployNeumarkUniverse(universe, admin);
-      const tx = await simpleExchange.setExchangeRates(
+      const tx = await gasExchange.setExchangeRates(
         [etherToken.address, neuToken.address],
         [euroToken.address, euroToken.address],
         [Q18.mul(100), Q18.mul(0.4)],
@@ -100,7 +102,7 @@ contract(
       expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
       expectLogSetExchangeRate(tx.logs[2], neuToken.address, euroToken.address, Q18.mul(0.4));
       expectLogSetExchangeRate(tx.logs[3], euroToken.address, neuToken.address, Q18.mul(2.5));
-      const rates = await simpleExchange.getExchangeRates(
+      const rates = await rateOracle.getExchangeRates(
         [etherToken.address, neuToken.address],
         [euroToken.address, euroToken.address],
       );
@@ -109,7 +111,7 @@ contract(
       expect(rates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
       expect(rates[0][1]).to.be.bignumber.eq(Q18.mul(0.4));
       expect(rates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
-      const invRates = await simpleExchange.getExchangeRates(
+      const invRates = await rateOracle.getExchangeRates(
         [euroToken.address, euroToken.address],
         [etherToken.address, neuToken.address],
       );
@@ -134,7 +136,7 @@ contract(
       await depositEuroToken(gasRecipient, Q18.mul(40));
       await sendEtherToExchange(_, Q18);
 
-      const tx = await simpleExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+      const tx = await gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
         from: gasExchangeManager,
       });
       const expectedWei = divRound(
@@ -151,7 +153,7 @@ contract(
         invRate,
       );
       // check balances
-      expect(await euroToken.balanceOf(simpleExchange.address)).to.be.bignumber.eq(exchangedAmount);
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(exchangedAmount);
       const afterBalance = await promisify(web3.eth.getBalance)(gasRecipient);
       expect(
         afterBalance
@@ -163,7 +165,7 @@ contract(
       expect(exchangedAmount).to.be.bignumber.gt(afterBalance.sub(initalBalance));
       // set platform_wallet as reclaimer for gasExchange and extract euro
       await reclaimEuroFromExchange(platformWallet);
-      expect(await euroToken.balanceOf(simpleExchange.address)).to.be.bignumber.eq(0);
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(0);
       expect(await euroToken.balanceOf(platformWallet)).to.be.bignumber.eq(exchangedAmount);
     });
 
@@ -181,7 +183,7 @@ contract(
       await depositEuroToken(anotherGasRecipient, Q18.mul(40));
       await sendEtherToExchange(_, Q18);
 
-      const tx = await simpleExchange.gasExchangeMultiple(
+      const tx = await gasExchange.gasExchangeMultiple(
         [gasRecipient, anotherGasRecipient],
         [exchangedAmount1, exchangedAmount2],
         gasExchangeFee,
@@ -216,7 +218,7 @@ contract(
         invRate,
       );
       // check balances
-      expect(await euroToken.balanceOf(simpleExchange.address)).to.be.bignumber.eq(
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
         exchangedAmount1.add(exchangedAmount2),
       );
       const afterBalance1 = await promisify(web3.eth.getBalance)(gasRecipient);
@@ -235,7 +237,7 @@ contract(
       ).to.be.bignumber.lt(10);
       // set platform_wallet as reclaimer for gasExchange and extract euro
       await reclaimEuroFromExchange(platformWallet);
-      expect(await euroToken.balanceOf(simpleExchange.address)).to.be.bignumber.eq(0);
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(0);
       expect(await euroToken.balanceOf(platformWallet)).to.be.bignumber.eq(
         exchangedAmount1.add(exchangedAmount2),
       );
@@ -256,7 +258,7 @@ contract(
     it("should reclaim ether from SimpleExchange");
 
     async function setGasExchangeRateAndAllowance(rate, allowanceEurUlps) {
-      await simpleExchange.setExchangeRate(etherToken.address, euroToken.address, rate, {
+      await gasExchange.setExchangeRate(etherToken.address, euroToken.address, rate, {
         from: tokenOracleManager,
       });
       await euroTokenController.applySettings(0, 0, allowanceEurUlps, { from: admin });
@@ -272,12 +274,12 @@ contract(
     async function sendEtherToExchange(sender, amount) {
       // const tx = await promisify(web3.eth.sendTransaction)({
       //   from: sender,
-      //   to: simpleExchange.address,
+      //   to: gasExchange.address,
       //   value: amount,
       // });
-      const tx = await simpleExchange.send(amount, { from: sender });
+      const tx = await gasExchange.send(amount, { from: sender });
       expectLogReceivedEther(tx, sender, amount, amount);
-      const balanceAfter = await promisify(web3.eth.getBalance)(simpleExchange.address);
+      const balanceAfter = await promisify(web3.eth.getBalance)(gasExchange.address);
       expect(balanceAfter).to.be.bignumber.eq(amount);
     }
 
@@ -286,7 +288,7 @@ contract(
         {
           subject: recipient,
           role: roles.reclaimer,
-          object: simpleExchange.address,
+          object: gasExchange.address,
         },
       ]);
       await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {

@@ -12,6 +12,8 @@ const EtherToken = artifacts.require("EtherToken");
 const EuroToken = artifacts.require("EuroToken");
 const EuroTokenController = artifacts.require("EuroTokenController");
 const SimpleExchange = artifacts.require("SimpleExchange");
+const ITokenExchangeRateOracle = artifacts.require("ITokenExchangeRateOracle");
+const IGasExchange = artifacts.require("IGasExchange");
 const PlatformTerms = artifacts.require("PlatformTerms");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
@@ -169,7 +171,11 @@ export async function deploySimpleExchangeUniverse(
       object: simpleExchange.address,
     },
   ]);
-  return simpleExchange;
+  return [
+    await IGasExchange.at(simpleExchange.address),
+    await ITokenExchangeRateOracle.at(simpleExchange.address),
+    simpleExchange,
+  ];
 }
 
 export async function deployPlatformTerms(universe, universeManager, overrideTerms) {
