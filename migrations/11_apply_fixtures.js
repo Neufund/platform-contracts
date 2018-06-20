@@ -17,11 +17,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const fas = getFixtureAccounts(accounts);
   const DEPLOYER = getDeployerAccount(network, accounts);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
-  const SimpleExchange = artifacts.require(CONFIG.artifacts.SIMPLE_EXCHANGE);
+  const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
-  const ITokenExchangeRateOracle = artifacts.require("ITokenExchangeRateOracle");
+  const ITokenExchangeRateOracle = artifacts.require(CONFIG.artifacts.TOKEN_RATE_ORACLE);
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
 
   deployer.then(async () => {
@@ -86,6 +86,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("send ether to simple exchange");
     await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
+    console.log("send ether to services transacting on Ethereum");
+    // todo: send to token rate oracle, KYC, deposit, withdraw, gas exchange service
     console.log("add platform wallet as reclaimer to simple exchange");
     await createAccessPolicy(accessPolicy, [
       {
