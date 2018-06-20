@@ -103,6 +103,7 @@ contract IETOCommitment is
         returns (
             uint256 newShares, uint256 capitalIncreaseEurUlps,
             uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
-            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps
+            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps,
+            uint256 sharePriceEurUlps
         );
 }

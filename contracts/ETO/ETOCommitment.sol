@@ -469,13 +469,15 @@ contract ETOCommitment is
         returns (
             uint256 newShares, uint256 capitalIncreaseEurUlps,
             uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
-            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps
+            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps,
+            uint256 sharePriceEurUlps
         )
     {
         return (
             _newShares, _newShares * EQUITY_TOKEN.shareNominalValueEurUlps(),
             _additionalContributionEth, _additionalContributionEurUlps,
-            _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps
+            _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps,
+            divRound(_totalEquivEurUlps, _newShares)
         );
     }
 
