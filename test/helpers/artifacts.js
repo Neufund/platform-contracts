@@ -12,5 +12,10 @@ export default {
   EURO_TOKEN: "EuroToken",
   EURO_TOKEN_CONTROLLER: "EuroTokenController",
   IDENTITY_REGISTRY: "IdentityRegistry",
-  SIMPLE_EXCHANGE: "SimpleExchange",
+  GAS_EXCHANGE: "SimpleExchange",
+  TOKEN_RATE_ORACLE: "ITokenExchangeRateOracle",
+  FEE_DISBURSAL: "IFeeDisbursal",
+  COMMITMENT_INTERFACE: "ETOCommitment",
+  EQUITY_TOKEN: "EquityToken",
+  EQUITY_TOKEN_CONTROLLER: "IEquityTokenController",
 };
