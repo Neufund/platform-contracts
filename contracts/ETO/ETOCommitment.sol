@@ -463,7 +463,7 @@ contract ETOCommitment is
         return _signedInvestmentAgreementUrl;
     }
 
-    function signedOfferingResults()
+    function contributionSummary()
         public
         constant
         returns (
@@ -501,6 +501,53 @@ contract ETOCommitment is
 
     function companyLegalRep() public constant returns (address) {
         return COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
+    function calculateContribution(address investor, uint256 newInvestorContributionEurUlps)
+        public
+        constant
+        returns (
+            bool isWhitelisted,
+            uint256 minTicketEurUlps,
+            uint256 maxTicketEurUlps,
+            uint256 equityTokenInt
+            )
+    {
+        InvestmentTicket storage ticket = _tickets[investor];
+        return ETO_TERMS.calculateContribution(
+            investor,
+            _totalEquivEurUlps,
+            ticket.equivEurUlps,
+            newInvestorContributionEurUlps
+        );
+    }
+
+    function investorTicket(address investor)
+        public
+        constant
+        returns (
+            uint256 equivEurUlps,
+            uint256 rewardNmkUlps,
+            uint256 equityTokenInt,
+            uint256 sharesInt,
+            uint256 tokenPrice,
+            uint256 neuRate,
+            uint256 amountEth,
+            uint256 amountEurUlps
+        )
+    {
+        InvestmentTicket storage ticket = _tickets[investor];
+        // here we assume that equity token precisions is 0
+        return (
+            ticket.equivEurUlps,
+            ticket.rewardNmkUlps,
+            ticket.equityTokenInt,
+            PLATFORM_TERMS.equityTokensToShares(ticket.equityTokenInt),
+            equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0,
+            rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0,
+            ticket.amountEth,
+            ticket.amountEurUlps
+        );
     }
 
     ////////////////////////

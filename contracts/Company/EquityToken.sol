@@ -13,6 +13,7 @@ import "../SnapshotToken/StandardSnapshotToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
 import "../IsContract.sol";
+import "../Math.sol";
 
 
 contract EquityToken is
@@ -22,7 +23,8 @@ contract EquityToken is
     TokenMetadata,
     Agreement,
     Reclaimable,
-    IsContract
+    IsContract,
+    Math
 {
     ////////////////////////
     // Immutable state
@@ -199,6 +201,15 @@ contract EquityToken is
         return TOKENS_PER_SHARE;
     }
 
+    function sharesTotalSupply() public constant returns (uint256) {
+        return tokensToShares(totalSupply());
+    }
+
+    // number of shares represented by tokens
+    function sharesBalanceOf(address owner) public constant returns (uint256) {
+        return tokensToShares(balanceOf(owner));
+    }
+
     function shareNominalValueEurUlps() public constant returns (uint256) {
         return SHARE_NOMINAL_VALUE_EUR_ULPS;
     }
@@ -275,5 +286,13 @@ contract EquityToken is
         returns (bool)
     {
         return legalRepresentative == _nominee;
+    }
+
+    function tokensToShares(uint256 amount)
+        internal
+        constant
+        returns (uint256)
+    {
+        return divRound(amount, TOKENS_PER_SHARE);
     }
 }

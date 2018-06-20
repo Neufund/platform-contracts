@@ -50,4 +50,7 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   it("should calculate neumark share");
+
+  // should be a set of tests with different rounding, we should be able to run it on equity token as well
+  it("should convert equity token amount to shares");
 });
