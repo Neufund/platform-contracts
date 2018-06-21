@@ -18,7 +18,7 @@ export function getConfig(web3, network, accounts) {
   // specifies smart contracts parameters and addresses to be deployed on live network
   // DO NOT EDIT THESE VALUES
   // EDIT BELOW
-  const config = {
+  let config = {
     Q18,
     // ICBMLockedAccount
     LOCK_DURATION: 18 * 30 * 24 * 60 * 60,
@@ -51,6 +51,8 @@ export function getConfig(web3, network, accounts) {
     },
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
+    // set to true to deploy separate access policy for Universe
+    ISOLATED_UNIVERSE: false,
     // deployed artifacts (may be mocked below)
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
@@ -59,12 +61,12 @@ export function getConfig(web3, network, accounts) {
       if (config.shouldSkipDeployment) return true;
       const stepNumber = parseInt(path.basename(filename), 10);
       console.log(`checking step ${stepNumber}`);
-      if (config.ICBM_COMMITMENT_ADDRESS && stepNumber < 7) {
-        return true;
-      }
-      return false;
+      return !!(config.ICBM_COMMITMENT_ADDRESS && stepNumber < 7);
     },
   };
+  // apply overrides from the truffle network
+  const networkDefinition = getNetworkDefinition(network);
+  config = Object.assign(config, networkDefinition.deploymentConfigOverride);
 
   // modify live configuration according to network type
   if (!config.isLiveDeployment) {
@@ -78,23 +80,9 @@ export function getConfig(web3, network, accounts) {
   const roleMapping = config.addresses;
   // override artifacts according to network type
   const artifactMapping = config.artifacts;
-  if (network === "simulated_live") {
-    // on simulated live network, map roles to different accounts, skip deployer (accounts[0])
-    roleMapping.ACCESS_CONTROLLER = accounts[1];
-    roleMapping.LOCKED_ACCOUNT_ADMIN = accounts[2];
-    roleMapping.WHITELIST_ADMIN = accounts[3];
-    roleMapping.PLATFORM_OPERATOR_WALLET = accounts[4];
-    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = accounts[5];
-    roleMapping.EURT_DEPOSIT_MANAGER = accounts[6];
-    roleMapping.UNIVERSE_MANAGER = accounts[1];
-    roleMapping.IDENTITY_MANAGER = accounts[6];
-    roleMapping.EURT_LEGAL_MANAGER = accounts[5];
-    roleMapping.GAS_EXCHANGE = accounts[6];
-    roleMapping.TOKEN_RATE_ORACLE = accounts[3];
-  }
+  const DEPLOYER = getDeployerAccount(network, accounts);
   if (!config.isLiveDeployment) {
     // on all test network, map all roles to deployer
-    const DEPLOYER = getDeployerAccount(network, accounts);
     roleMapping.ACCESS_CONTROLLER = DEPLOYER;
     roleMapping.LOCKED_ACCOUNT_ADMIN = DEPLOYER;
     roleMapping.WHITELIST_ADMIN = DEPLOYER;
@@ -110,12 +98,20 @@ export function getConfig(web3, network, accounts) {
     // use mocked artifacts when necessary
     // artifactMapping.ICBM_EURO_TOKEN = "MockedICBMEuroToken";
     artifactMapping.ICBM_COMMITMENT = "MockICBMCommitment";
+  } else if (config.ISOLATED_UNIVERSE) {
+    // overwrite all roles used in Universe and attached contracts with deployer
+    roleMapping.ACCESS_CONTROLLER = DEPLOYER;
+    roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
+    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = DEPLOYER;
+    roleMapping.EURT_DEPOSIT_MANAGER = DEPLOYER;
+    roleMapping.UNIVERSE_MANAGER = DEPLOYER;
+    roleMapping.IDENTITY_MANAGER = DEPLOYER;
+    roleMapping.EURT_LEGAL_MANAGER = DEPLOYER;
+    roleMapping.GAS_EXCHANGE = DEPLOYER;
+    roleMapping.TOKEN_RATE_ORACLE = DEPLOYER;
   }
 
-  // apply overrides from the truffle network
-  const networkDefinition = getNetworkDefinition(network);
-
-  return Object.assign(config, networkDefinition.deploymentConfigOverride);
+  return config;
 }
 
 export function getFixtureAccounts(accounts) {
