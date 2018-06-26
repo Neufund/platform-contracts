@@ -18,11 +18,12 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
     );
   });
 
-  function expectSingletonSetEvent(tx, interfaceId, address) {
+  function expectSingletonSetEvent(tx, interfaceId, address, replacedAddress) {
     const event = eventValue(tx, "LogSetSingleton");
     expect(event).to.exist;
     expect(event.args.interfaceId).to.equal(interfaceId);
     expect(event.args.instance).to.equal(address);
+    expect(event.args.replacedInstance).to.equal(replacedAddress);
   }
 
   function expectSetCollectionInterfaceEvent(tx, interfaceId, address, isset) {
@@ -54,7 +55,7 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
     const tx = await universe.setSingleton(knownInterfaces.neumark, other, {
       from: universeManager,
     });
-    expectSingletonSetEvent(tx, knownInterfaces.neumark, other);
+    expectSingletonSetEvent(tx, knownInterfaces.neumark, other, ZERO_ADDRESS);
     expect(await universe.getSingleton(knownInterfaces.neumark)).to.eq(other);
     expect(await universe.getManySingletons([knownInterfaces.neumark])).to.deep.eq([other]);
     expect(await universe.isSingleton(knownInterfaces.neumark, other)).to.be.true;
@@ -64,7 +65,7 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
     const regTx = await registerSingletons(universe, universeManager, [
       { ki: knownInterfaces.neumark, addr: other },
     ]);
-    expectSingletonSetEvent(regTx, knownInterfaces.neumark, other);
+    expectSingletonSetEvent(regTx, knownInterfaces.neumark, other, ZERO_ADDRESS);
     expect(await universe.getManySingletons([knownInterfaces.neumark])).to.deep.eq([other]);
     expect(await universe.neumark()).to.eq(other);
 
@@ -180,23 +181,26 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
   it("reject on set not from manager");
 
   it("should set and replace in instances", async () => {
-    await universe.setSingleton(knownInterfaces.neumark, other, {
+    let regTx = await universe.setSingleton(knownInterfaces.neumark, other, {
       from: universeManager,
     });
+    expectSingletonSetEvent(regTx, knownInterfaces.neumark, other, ZERO_ADDRESS);
     expect(await universe.getInterfacesOfInstance(other)).to.deep.eq([knownInterfaces.neumark]);
     // overwrite with itself
-    await universe.setSingleton(knownInterfaces.neumark, other, {
+    regTx = await universe.setSingleton(knownInterfaces.neumark, other, {
       from: universeManager,
     });
     expect(await universe.getInterfacesOfInstance(other)).to.deep.eq([knownInterfaces.neumark]);
+    expectSingletonSetEvent(regTx, knownInterfaces.neumark, other, other);
     // overwrite with new
     const addr = "0xd102445e80c56d36c7dcd968dc2792b87b236b46";
-    await universe.setSingleton(knownInterfaces.neumark, addr, {
+    regTx = await universe.setSingleton(knownInterfaces.neumark, addr, {
       from: universeManager,
     });
     // old instance dropped
     expect(await universe.getInterfacesOfInstance(other)).to.deep.eq([]);
     expect(await universe.getInterfacesOfInstance(addr)).to.deep.eq([knownInterfaces.neumark]);
+    expectSingletonSetEvent(regTx, knownInterfaces.neumark, addr, other);
     // add few more
     await registerSingletons(universe, universeManager, [
       { ki: knownInterfaces.tokenExchangeRateOracle, addr },
@@ -249,12 +253,13 @@ contract("Universe", ([_, platformLegalRepresentative, universeManager, other]) 
       knownInterfaces.identityRegistry,
       knownInterfaces.tokenExchangeRateOracle,
     ]);
-    await universe.setSingleton(knownInterfaces.identityRegistry, ZERO_ADDRESS, {
+    const regZeroTx = await universe.setSingleton(knownInterfaces.identityRegistry, ZERO_ADDRESS, {
       from: universeManager,
     });
     expect(await universe.getInterfacesOfInstance(addr)).to.deep.eq([
       knownInterfaces.tokenExchangeRateOracle,
     ]);
+    expectSingletonSetEvent(regZeroTx, knownInterfaces.identityRegistry, ZERO_ADDRESS, addr);
   });
 
   it("should remove from last position", async () => {
