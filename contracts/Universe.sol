@@ -25,9 +25,11 @@ contract Universe is
     ////////////////////////
 
     /// raised on any change of singleton instance
+    /// @dev for convenience we provide previous instance of singleton in replacedInstance
     event LogSetSingleton(
         bytes4 interfaceId,
-        address instance
+        address instance,
+        address replacedInstance
     );
 
     /// raised on add/remove interface instance in collection
@@ -247,14 +249,16 @@ contract Universe is
     function setSingletonPrivate(bytes4 interfaceId, address instance)
         private
     {
+
+        address replacedInstance = _singletons[interfaceId];
         // do nothing if not changing
-        if (_singletons[interfaceId] == instance) {
-            return;
+        if (replacedInstance != instance) {
+            dropInstance(replacedInstance, interfaceId);
+            addInstance(instance, interfaceId);
+            _singletons[interfaceId] = instance;
         }
-        dropInstance(_singletons[interfaceId], interfaceId);
-        addInstance(instance, interfaceId);
-        _singletons[interfaceId] = instance;
-        emit LogSetSingleton(interfaceId, instance);
+
+        emit LogSetSingleton(interfaceId, instance, replacedInstance);
     }
 
     function setCollectionPrivate(bytes4 interfaceId, address instance, bool set)

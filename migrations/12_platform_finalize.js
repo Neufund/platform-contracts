@@ -60,6 +60,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       NETWORK: getNetworkDefinition(network),
       FIXTURE_ACCOUNTS: fas,
       HEAD_BLOCK_NO: endBlockNo,
+      INITIAL_BLOCK_NO: global._initialBlockNo,
     };
     const path = join(__dirname, "../build/meta.json");
     fs.writeFile(path, JSON.stringify(meta), err => {

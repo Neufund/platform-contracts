@@ -6,6 +6,7 @@ const { TriState } = require("../test/helpers/triState");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
+const promisify = require("../test/helpers/evmCommands").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -25,6 +26,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
 
   deployer.then(async () => {
+    // set initial block
+    global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
+    console.log(deployer._initialBlockNo);
     // take all ICBM addresses from commitment contract
     if (CONFIG.isLiveDeployment && !CONFIG.ICBM_COMMITMENT_ADDRESS) {
       throw Error("On live deployment ICBM_COMMITMENT_ADDRESS must be set");
