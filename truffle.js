@@ -41,7 +41,7 @@ module.exports = {
       port: 8555,
     },
     forked_live: {
-      network_id: 0x19,
+      network_id: 72,
       host: "ethexp-node.neustg.net",
       port: 8545,
       gas: 6500000, // close to current mainnet limit
