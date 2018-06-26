@@ -22,7 +22,7 @@ test-container: container
 	$(MAKE) down
 
 down:
-ifneq ($(shell docker ps -f NAME=platform-contracts -q),)
+ifneq ($(shell docker ps -f NAME=^/platform-contracts$ -q),)
 	docker stop platform-contracts
 endif
 
