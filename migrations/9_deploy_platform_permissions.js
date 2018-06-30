@@ -3,7 +3,6 @@ const getConfig = require("./config").getConfig;
 const roles = require("../test/helpers/roles").default;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const { TriState } = require("../test/helpers/triState");
-const getDeployerAccount = require("./config").getDeployerAccount;
 const knownInterfaces = require("../test/helpers/knownInterfaces").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
@@ -21,21 +20,23 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const tokenOracleAddress = await universe.tokenExchangeRateOracle();
     const gasExchangeAddress = await universe.gasExchange();
 
-    console.log("drop permissions from icbm contracts");
-    await createAccessPolicy(accessPolicy, [
-      {
-        subject: commitmentAddress,
-        role: roles.neumarkIssuer,
-        object: neumarkAddress,
-        state: TriState.Unset,
-      },
-      {
-        subject: commitmentAddress,
-        role: roles.transferAdmin,
-        object: neumarkAddress,
-        state: TriState.Unset,
-      },
-    ]);
+    if (!CONFIG.ISOLATED_UNIVERSE) {
+      console.log("drop permissions from icbm contracts");
+      await createAccessPolicy(accessPolicy, [
+        {
+          subject: commitmentAddress,
+          role: roles.neumarkIssuer,
+          object: neumarkAddress,
+          state: TriState.Unset,
+        },
+        {
+          subject: commitmentAddress,
+          role: roles.transferAdmin,
+          object: neumarkAddress,
+          state: TriState.Unset,
+        },
+      ]);
+    }
 
     console.log("set platform permissions");
     await createAccessPolicy(accessPolicy, [
@@ -55,10 +56,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
         role: roles.gasExchange,
         object: gasExchangeAddress,
       },
+      {
+        subject: CONFIG.addresses.UNIVERSE_MANAGER,
+        role: roles.universeManager,
+        object: universe.address,
+        state: TriState.Allow,
+      },
     ]);
-
-    console.log("give deployer permissions to setup eur-t, to be relinquished later");
-    const DEPLOYER = getDeployerAccount(network, accounts);
-    await createAccessPolicy(accessPolicy, [{ subject: DEPLOYER, role: roles.eurtLegalManager }]);
   });
 };
