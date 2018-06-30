@@ -9,7 +9,6 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").default;
 const interfaceArtifacts = require("../test/helpers/interfaceArtifacts").default;
 const { TriState } = require("../test/helpers/triState");
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
-const getFixtureAccounts = require("./config").getFixtureAccounts;
 const promisify = require("../test/helpers/evmCommands").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
@@ -19,7 +18,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const DEPLOYER = getDeployerAccount(network, accounts);
-  const fas = CONFIG.isLiveDeployment ? [] : getFixtureAccounts(accounts);
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
@@ -29,7 +27,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
       console.log("Dropping temporary permissions");
       await createAccessPolicy(accessPolicy, [
-        { subject: DEPLOYER, role: roles.eurtLegalManager, state: TriState.Unset },
+        { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
+        { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
+        { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
         {
           subject: DEPLOYER,
           role: roles.universeManager,
@@ -58,7 +58,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
       KNOWN_INTERFACES: knownInterfaces,
       INTERFACE_ARTIFACTS: interfaceArtifacts,
       NETWORK: getNetworkDefinition(network),
-      FIXTURE_ACCOUNTS: fas,
       HEAD_BLOCK_NO: endBlockNo,
       INITIAL_BLOCK_NO: global._initialBlockNo,
     };

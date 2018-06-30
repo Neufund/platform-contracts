@@ -47,8 +47,8 @@ Log events start with `Log`.
 
 # References
 
-* [Solidity official style guide][docs]
-* [ConsenSys Best Practices][csbp]
+- [Solidity official style guide][docs]
+- [ConsenSys Best Practices][csbp]
 
 [docs]: https://solidity.readthedocs.io/en/develop/style-guide.html
 [csbp]: https://github.com/ConsenSys/smart-contract-best-practices

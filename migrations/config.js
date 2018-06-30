@@ -15,10 +15,9 @@ export function getNetworkDefinition(network) {
 export function getConfig(web3, network, accounts) {
   const Q18 = web3.toBigNumber("10").pow(18);
 
-  // specifies smart contracts parameters and addresses to be deployed on live network
-  // DO NOT EDIT THESE VALUES
-  // EDIT BELOW
-  let config = {
+  let config;
+  // icbmConfig kept for dev networks to recreate whole system
+  const icbmConfig = {
     Q18,
     // ICBMLockedAccount
     LOCK_DURATION: 18 * 30 * 24 * 60 * 60,
@@ -31,10 +30,6 @@ export function getConfig(web3, network, accounts) {
     // Agreements
     RESERVATION_AGREEMENT: "ipfs:QmbH7mtyWpwTxigGtvnbYJAJ9ZZPe1FDxr9hTc2mNwpRe2", // attached to Commitment
     NEUMARK_HOLDER_AGREEMENT: "ipfs:QmVQfuibCipv9j6v4cSYTnvkjoBnx3DqSLNY3PKg8MZbP4", // attached to Neumark
-    // euro token settings
-    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.mul(50),
-    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.mul(10),
-    MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS: Q18.mul(25),
     // Maps roles to addresses
     addresses: {
       ACCESS_CONTROLLER: "0x8AD8B24594ef90c15B2bd05edE0c67509c036B29",
@@ -43,17 +38,28 @@ export function getConfig(web3, network, accounts) {
       PLATFORM_OPERATOR_WALLET: "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4",
       PLATFORM_OPERATOR_REPRESENTATIVE: "0x83CBaB70Bc1d4e08997e5e00F2A3f1bCE225811F",
       EURT_DEPOSIT_MANAGER: "0x30A72cD2F5AEDCd86c7f199E0500235674a08E27",
+    },
+  };
+
+  // platform config - new settings go here
+  const platformConfig = {
+    // euro token settings
+    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.mul(50),
+    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.mul(10),
+    MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS: Q18.mul(25),
+    // Maps roles to addresses
+    addresses: {
       UNIVERSE_MANAGER: "0x45eF682bC0467edE800547Ce3866E0A14e93cB45",
       IDENTITY_MANAGER: "0xf026dfC7de31d153Ae6B0375b93BA4E138de9130",
       EURT_LEGAL_MANAGER: "0x5c31F869F4f9891ca3470bE30Ca3d9e60ced0a05",
       GAS_EXCHANGE: "0x58125e023252A1Da9655994fC446892dbD1B2C03",
-      TOKEN_RATE_ORACLE: "0x58125e023252A1Da9655994fC446892dbD1B2C03",
+      TOKEN_RATE_ORACLE: "0x7C725f972D1ebDEF5Bbfd8996d3Cbe307b23cd42",
     },
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
     // set to true to deploy separate access policy for Universe
     ISOLATED_UNIVERSE: false,
-    // deployed artifacts (may be mocked below)
+    // deployed artifacts (may be mocked in overrides)
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
     isLiveDeployment: network.endsWith("_live"),
@@ -64,51 +70,45 @@ export function getConfig(web3, network, accounts) {
       return !!(config.ICBM_COMMITMENT_ADDRESS && stepNumber < 7);
     },
   };
-  // apply overrides from the truffle network
+  // override icbmConfig with platform config and from the truffle.js
   const networkDefinition = getNetworkDefinition(network);
-  config = Object.assign(config, networkDefinition.deploymentConfigOverride);
-
-  // modify live configuration according to network type
-  if (!config.isLiveDeployment) {
-    // start ICO in one day
-    const now = Math.floor(new Date().getTime() / 1000);
-    // give 5 minutes for deployment - Commitment deployment will fail if less than 24h from beginning
-    config.START_DATE = now + 1 * 24 * 60 * 60 + 5 * 60;
-  }
+  config = Object.assign(
+    {},
+    icbmConfig,
+    platformConfig,
+    networkDefinition.deploymentConfigOverride,
+  );
+  config.addresses = Object.assign({}, icbmConfig.addresses, platformConfig.addresses);
+  config.artifacts = Object.assign({}, icbmConfig.artifacts, platformConfig.artifacts);
 
   // assign addresses to roles according to network type
   const roleMapping = config.addresses;
-  // override artifacts according to network type
-  const artifactMapping = config.artifacts;
   const DEPLOYER = getDeployerAccount(network, accounts);
   if (!config.isLiveDeployment) {
     // on all test network, map all roles to deployer
-    roleMapping.ACCESS_CONTROLLER = DEPLOYER;
-    roleMapping.LOCKED_ACCOUNT_ADMIN = DEPLOYER;
-    roleMapping.WHITELIST_ADMIN = DEPLOYER;
-    roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
-    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = DEPLOYER;
-    roleMapping.EURT_DEPOSIT_MANAGER = DEPLOYER;
-    roleMapping.UNIVERSE_MANAGER = DEPLOYER;
-    roleMapping.IDENTITY_MANAGER = DEPLOYER;
-    roleMapping.EURT_LEGAL_MANAGER = DEPLOYER;
-    roleMapping.GAS_EXCHANGE = DEPLOYER;
-    roleMapping.TOKEN_RATE_ORACLE = DEPLOYER;
-
-    // use mocked artifacts when necessary
-    // artifactMapping.ICBM_EURO_TOKEN = "MockedICBMEuroToken";
-    artifactMapping.ICBM_COMMITMENT = "MockICBMCommitment";
+    for (const role of Object.keys(roleMapping)) {
+      roleMapping[role] = DEPLOYER;
+    }
   } else if (config.ISOLATED_UNIVERSE) {
-    // overwrite all roles used in Universe and attached contracts with deployer
+    // overwrite required roles with DEPLOYER
     roleMapping.ACCESS_CONTROLLER = DEPLOYER;
-    roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
-    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = DEPLOYER;
-    roleMapping.EURT_DEPOSIT_MANAGER = DEPLOYER;
     roleMapping.UNIVERSE_MANAGER = DEPLOYER;
-    roleMapping.IDENTITY_MANAGER = DEPLOYER;
     roleMapping.EURT_LEGAL_MANAGER = DEPLOYER;
-    roleMapping.GAS_EXCHANGE = DEPLOYER;
-    roleMapping.TOKEN_RATE_ORACLE = DEPLOYER;
+    roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
+  }
+
+  // finally override addresses and artifacts from truffle.js
+  if (networkDefinition.deploymentConfigOverride) {
+    config.addresses = Object.assign(
+      {},
+      config.addresses,
+      networkDefinition.deploymentConfigOverride.addresses,
+    );
+    config.artifacts = Object.assign(
+      {},
+      config.artifacts,
+      networkDefinition.deploymentConfigOverride.artifacts,
+    );
   }
 
   return config;
@@ -126,5 +126,9 @@ export function getFixtureAccounts(accounts) {
     ICBM_EUR_MIGRATED_HAS_KYC: accounts[5],
     HAS_EUR_HAS_KYC: accounts[6],
     HAS_ETH_T_NO_KYC: accounts[7],
+    EMPTY_HAS_KYC: accounts[8],
+    NANO_1: "0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D",
+    NANO_2: "0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C",
+    NANO_3: "0xaa4689311f3C3E88848CFd90f7dAA25eA2aacDD3",
   };
 }

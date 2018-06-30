@@ -150,8 +150,8 @@ in order to flatten all smart contracts included in the deployment processes
 
 In order to verify a smart-contract on Etherscan you will have to provide a:
 
-* flattened version of the smart contract source code
-* bytecode string with deployed constructor Arguments.
+- flattened version of the smart contract source code
+- bytecode string with deployed constructor Arguments.
 
 The verification processes can be done [here](https://etherscan.io/verifyContract)
 
@@ -192,9 +192,9 @@ In order to prefill legal Agreements with correct addresses of contracts and rol
 automatically fills both `NEUMARK TOKEN HOLDER AGREEMENT` and `RESERVATION AGREEMENT` with correct
 addresses for
 
-* Neumark contract address
-* Commitment contract Address
-* PLATFORM_OPERATOR_REPRESENTATIVE
+- Neumark contract address
+- Commitment contract Address
+- PLATFORM_OPERATOR_REPRESENTATIVE
 
 ### Upload files to IPFS
 
@@ -218,26 +218,26 @@ Currently default files are
 
 **Calling constant method that reverts**
 
-* pre-byzantium and post byzantium parity will return `result: 0x` (0x in result field of JSON-RPC
+- pre-byzantium and post byzantium parity will return `result: 0x` (0x in result field of JSON-RPC
   response). Clearly it does not look as the error code ;> and if you are using web3, it will try to
   decode and fail specific expection per expected data type returned (like invalid BigNumber or
   address), some types will just succeed so **BEWARE**
-* `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
+- `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
   JSON-RPC response
-* `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
+- `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
   JSON-RPC response
 
 **Executing transactions that revert**
 
-* pre-byzantium parity - normal transaction object and transaction receipt are returned (just with
+- pre-byzantium parity - normal transaction object and transaction receipt are returned (just with
   all gas used). there is no other way to detect revert besides generating and checking events in
   case of success (so lack of event is error situation). this is very weak
-* post-byzantium parity and other nodes - there is `status` field in transaction receipt! use this.
+- post-byzantium parity and other nodes - there is `status` field in transaction receipt! use this.
   use Neufund modified truffle that recognize this situation (https://github.com/Neufund/truffle),
   `neufund` branch.
-* `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
+- `testrpc` will return exception string `invalid opcode` and stack trace in `error` field of
   JSON-RPC response
-* `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
+- `ganache` will return exception string `VM Exception ...` and stack trace in `error` field of
   JSON-RPC response
 
 **Executing transactions that revert with status string**

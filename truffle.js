@@ -3,6 +3,36 @@ require("babel-register");
 require("babel-polyfill");
 const Ganache = require("ganache-core");
 
+// dev network override
+const now = Math.floor(new Date().getTime() / 1000);
+const devNetworkDeploymentConfigOverride = {
+  // give 5 minutes for deployment - Commitment deployment will fail if less than 24h from beginning
+  START_DATE: now + 1 * 24 * 60 * 60 + 5 * 60,
+  // setup mocked artifacts
+  artifacts: {
+    ICBM_COMMITMENT: "MockICBMCommitment",
+  },
+  // other addresses set to DEPLOYER
+  addresses: {
+    EURT_DEPOSIT_MANAGER: "0x9058B511C7450303F5Bc187aAf4cC25d7f7F88C6",
+    IDENTITY_MANAGER: "0xF08E9c0FcC6A3972c5Fd80fF7D478E0Db3091768",
+    GAS_EXCHANGE: "0x81cE04F4015077E53f01c2881865D78496861369",
+    TOKEN_RATE_ORACLE: "0xB3E69d2637076D265bFb056bF5F35d9155535CD6",
+  },
+};
+// forked mainnet override
+const forkedLiveNetworkDeploymentConfigOverride = {
+  ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+  ISOLATED_UNIVERSE: true,
+  // other addresses preserve ICBM or set to DEPLOYER
+  addresses: {
+    EURT_DEPOSIT_MANAGER: "0x86f1B38f1293CC2A520695CF35c03589DbD00B50",
+    IDENTITY_MANAGER: "0x7791bD8f15c69AE01a72ef0a40A8967270712f9d",
+    GAS_EXCHANGE: "0xdA9AcF6Fa7912C54e9aF86E2957DD4782129cFA8",
+    TOKEN_RATE_ORACLE: "0x46CDC1c9C00bf1F5Dd71cBCC72d4ef08F841E334",
+  },
+};
+
 const nanoProvider = (providerUrl, nanoPath, network) =>
   process.argv.some(arg => arg === network)
     ? require("./nanoWeb3Provider").nanoWeb3Provider(providerUrl, nanoPath)
@@ -17,6 +47,7 @@ module.exports = {
       gas: 6500000,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
     },
     inprocess: {
       network_id: "*",
@@ -29,9 +60,9 @@ module.exports = {
       port: 8545,
       network_id: "17",
       gas: 6500000,
-      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
-      // gasPrice: 11904761856
       gasPrice: 21000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
     },
     coverage: {
       network_id: "*",
@@ -47,10 +78,7 @@ module.exports = {
       gas: 6500000, // close to current mainnet limit
       gasPrice: 5000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
-      deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
-        ISOLATED_UNIVERSE: true,
-      },
+      deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
     },
     localhost_live: {
       network_id: "*",
@@ -60,7 +88,7 @@ module.exports = {
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0x8305e4b65a6cd60b2aac3f22b9810db602492dcd",
+        ICBM_COMMITMENT_ADDRESS: "0x5b8ce2b715522998053fe2cead3e70f9a2b6ea17",
         ISOLATED_UNIVERSE: true,
       },
     },

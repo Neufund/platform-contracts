@@ -1,9 +1,10 @@
 require("babel-register");
+const fs = require("fs");
+const { join } = require("path");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
-const roles = require("../test/helpers/roles").default;
-const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const getDeployerAccount = require("./config").getDeployerAccount;
+const promisify = require("../test/helpers/evmCommands").promisify;
 
 function toBytes32(hex) {
   return `0x${web3.padLeft(hex.slice(2), 64)}`;
@@ -16,25 +17,44 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
   const fas = getFixtureAccounts(accounts);
   const DEPLOYER = getDeployerAccount(network, accounts);
-  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
+  const ICBMEtherToken = artifacts.require(CONFIG.artifacts.ICBM_ETHER_TOKEN);
+  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
   const ITokenExchangeRateOracle = artifacts.require(CONFIG.artifacts.TOKEN_RATE_ORACLE);
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
+  const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
+  const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
 
+    console.log("set Euro LockedAccount migration");
+    const euroLock = await LockedAccount.at(await universe.euroLock());
+    const icbmEuroLock = await ICBMLockedAccount.at(await universe.icbmEuroLock());
+    await icbmEuroLock.enableMigration(euroLock.address);
+    if ((await icbmEuroLock.currentMigrationTarget()) !== euroLock.address) {
+      throw new Error("cannot set migrations for EuroLock");
+    }
+
+    console.log("set Ether LockedAccount migration");
+    const etherLock = await LockedAccount.at(await universe.etherLock());
+    const icbmEtherLock = await ICBMLockedAccount.at(await universe.icbmEtherLock());
+    await icbmEtherLock.enableMigration(etherLock.address);
+    if ((await icbmEtherLock.currentMigrationTarget()) !== etherLock.address) {
+      throw new Error("cannot set migrations for EtherLock");
+    }
+
     console.log("set actual ETH/EUR price");
     const EUR_ETH_RATE = CONFIG.Q18.mul(new web3.BigNumber("360.9828182"));
-    const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
     const simpleExchange = await SimpleExchange.at(await universe.gasExchange());
     const euroTokenAddress = await universe.euroToken();
     const etherTokenAddress = await universe.etherToken();
     await simpleExchange.setExchangeRate(euroTokenAddress, etherTokenAddress, EUR_ETH_RATE, {
-      from: CONFIG.addresses.TOKEN_RATE_ORACLE,
+      from: DEPLOYER,
     });
     const tokenRateOracle = await ITokenExchangeRateOracle.at(
       await universe.tokenExchangeRateOracle(),
@@ -43,9 +63,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     if (!currentRate[0].eq(EUR_ETH_RATE)) {
       throw new Error("could not set EUR/ETH rate");
     }
-    // const revRate = await tokenRateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress);
-    // console.log(revRate);
 
+    // setup fixture accounts
     console.log("deposit in EtherToken");
     const etherToken = await EtherToken.at(await universe.etherToken());
     await etherToken.deposit({ from: fas.HAS_ETH_T_NO_KYC, value: CONFIG.Q18.mul(1187.198273981) });
@@ -62,10 +81,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
         fas.ICBM_EUR_MIGRATED_HAS_KYC,
         fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC,
         fas.HAS_EUR_HAS_KYC,
+        fas.EMPTY_HAS_KYC,
       ],
-      [toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0")],
-      [toBytes32("0x1"), toBytes32("0x1"), toBytes32("0x7"), toBytes32("0x5")],
-      { from: CONFIG.addresses.IDENTITY_MANAGER },
+      [toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0")],
+      [toBytes32("0x1"), toBytes32("0x1"), toBytes32("0x7"), toBytes32("0x5"), toBytes32("0x1")],
+      { from: DEPLOYER },
     );
     const claims = await identityRegistry.getClaims(fas.HAS_EUR_HAS_KYC);
     if (claims !== toBytes32("0x5")) {
@@ -75,35 +95,84 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log("deposit in EuroToken");
     const euroToken = await EuroToken.at(await universe.euroToken());
     await euroToken.deposit(fas.HAS_EUR_HAS_KYC, CONFIG.Q18.mul(10278127.1988), {
-      from: CONFIG.addresses.EURT_DEPOSIT_MANAGER,
+      from: DEPLOYER,
     });
     await euroToken.deposit(fas.ICBM_EUR_MIGRATED_HAS_KYC, CONFIG.Q18.mul(1271.1988), {
-      from: CONFIG.addresses.EURT_DEPOSIT_MANAGER,
+      from: DEPLOYER,
     });
 
     console.log("migrating locked accounts");
     // todo: add migrations when tested
 
-    console.log("send ether to simple exchange");
-    await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
-    console.log("send ether to services transacting on Ethereum");
-    // todo: send to token rate oracle, KYC, deposit, withdraw, gas exchange service
-    console.log("add platform wallet as reclaimer to simple exchange");
-    await createAccessPolicy(accessPolicy, [
-      {
-        subject: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
-        role: roles.reclaimer,
-        object: simpleExchange.address,
-      },
-    ]);
-    console.log("make KYC for platform wallet");
-    await identityRegistry.setClaims(
-      CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
-      "0",
-      toBytes32("0x5"),
-      {
-        from: CONFIG.addresses.IDENTITY_MANAGER,
-      },
-    );
+    console.log("add ether to test accounts");
+    for (const f of Object.keys(fas)) {
+      await promisify(web3.eth.sendTransaction)({
+        from: DEPLOYER,
+        to: fas[f],
+        value: CONFIG.Q18.mul(14.21182),
+      });
+    }
+
+    const neumark = await Neumark.at(await universe.neumark());
+    const icbmEuroToken = await ICBMEuroToken.at(await icbmEuroLock.assetToken());
+    const icbmEtherToken = await ICBMEtherToken.at(await icbmEtherLock.assetToken());
+
+    const describeFixture = async address => {
+      // get balances: ETH, neu, euro tokens, ethertokens
+      const ethBalance = await promisify(web3.eth.getBalance)(address);
+      const neuBalance = await neumark.balanceOf(address);
+      const euroBalance = await euroToken.balanceOf(address);
+      const ethTokenBalance = await etherToken.balanceOf(address);
+      const icbmEuroBalance = await icbmEuroToken.balanceOf(address);
+      const icbmEthTokenBalance = await icbmEtherToken.balanceOf(address);
+      // get statuses of locked accounts
+      const euroLockBalance = await euroLock.balanceOf(address);
+      const etherLockBalance = await etherLock.balanceOf(address);
+      const icbmEuroLockBalance = await icbmEuroLock.balanceOf(address);
+      const icbmEtherLockBalance = await icbmEtherLock.balanceOf(address);
+      // get identity claims
+      const identityClaims = await identityRegistry.getClaims(address);
+
+      return {
+        ethBalance,
+        neuBalance,
+        euroBalance,
+        ethTokenBalance,
+        icbmEuroBalance,
+        icbmEthTokenBalance,
+        euroLockBalance,
+        etherLockBalance,
+        icbmEuroLockBalance,
+        icbmEtherLockBalance,
+        identityClaims,
+      };
+    };
+
+    const stringify = o => {
+      const op = {};
+      for (const p of Object.keys(o)) {
+        if (typeof o[p] === "string") {
+          op[p] = o[p];
+        } else if (typeof o[p][Symbol.iterator] === "function") {
+          op[p] = Array.from(o[p]).map(e => e.toString(10));
+        } else {
+          op[p] = o[p].toString(10);
+        }
+      }
+      return op;
+    };
+
+    const describedFixtures = {};
+    for (const f of Object.keys(fas)) {
+      const desc = await describeFixture(fas[f]);
+      desc.name = f;
+      describedFixtures[fas[f]] = stringify(desc);
+    }
+
+    const path = join(__dirname, "../build/fixtures.json");
+    fs.writeFile(path, JSON.stringify(describedFixtures), err => {
+      if (err) throw new Error(err);
+    });
+    console.log(`Fixtures described in ${path}`);
   });
 };

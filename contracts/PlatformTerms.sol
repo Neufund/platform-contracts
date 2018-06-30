@@ -38,7 +38,7 @@ contract PlatformTerms is Math {
     uint256 public constant MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS = 2500000 * 10**18;
 
     // min duration from setting the date to ETO start
-    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 3 days;
+    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 14 days;
 
     // duration constraints
     uint256 public constant MIN_WHITELIST_DURATION_DAYS = 0 days;

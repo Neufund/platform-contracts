@@ -272,11 +272,6 @@ contract(
     }
 
     async function sendEtherToExchange(sender, amount) {
-      // const tx = await promisify(web3.eth.sendTransaction)({
-      //   from: sender,
-      //   to: gasExchange.address,
-      //   value: amount,
-      // });
       const tx = await gasExchange.send(amount, { from: sender });
       expectLogReceivedEther(tx, sender, amount, amount);
       const balanceAfter = await promisify(web3.eth.getBalance)(gasExchange.address);
