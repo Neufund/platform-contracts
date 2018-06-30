@@ -27,6 +27,7 @@ contract IControllerGovernance {
         Payout, // any dividend payout (amount eur, amount eth)
         ChangeTokenController, // (new token controller)
         AmendISHA, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur)
+    IssueTokensForExistingShares, // (number of converted shares, allocation (address => balance))
         ChangeNominee
     }
 
