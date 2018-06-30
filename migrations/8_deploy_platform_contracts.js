@@ -28,11 +28,20 @@ module.exports = function deployContracts(deployer, network, accounts) {
   deployer.then(async () => {
     // set initial block
     global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
-    console.log(deployer._initialBlockNo);
     // take all ICBM addresses from commitment contract
     if (CONFIG.isLiveDeployment && !CONFIG.ICBM_COMMITMENT_ADDRESS) {
       throw Error("On live deployment ICBM_COMMITMENT_ADDRESS must be set");
     }
+    // must have ether to deploy and initialize services
+    const DEPLOYER = getDeployerAccount(network, accounts);
+    console.log("checking if DEPLOYER has enough ETH");
+    const deployerBalance = await promisify(web3.eth.getBalance)(DEPLOYER);
+    if (deployerBalance.lt(CONFIG.Q18.mul(5))) {
+      throw new Error(
+        `DEPLOYER ${DEPLOYER} requires min 5 ETH balance, has ${deployerBalance.toNumber()}`,
+      );
+    }
+    // obtain commitment contract
     let commitment;
     if (CONFIG.ICBM_COMMITMENT_ADDRESS) {
       console.log(`Deploying over ICBM contracts: Commitment ${CONFIG.ICBM_COMMITMENT_ADDRESS} `);
@@ -41,13 +50,14 @@ module.exports = function deployContracts(deployer, network, accounts) {
       commitment = await Commitment.deployed();
     }
     let accessPolicy;
+    // isolated universe will attach separate access controller to Universe and via this to platform contracts
     if (CONFIG.ISOLATED_UNIVERSE) {
       console.log(`Re-deploying RoleBasedAccessPolicy to isolate Universe`);
       await deployer.deploy(RoleBasedAccessPolicy);
       accessPolicy = await RoleBasedAccessPolicy.deployed();
     } else {
       const accessPolicyAddress = await commitment.accessPolicy();
-      console.log(`Using ICBM RoleBasedAccessPolicy ${accessPolicyAddress} in Universe`);
+      console.log(`Using ICBM RoleBasedAccessPolicy ${accessPolicyAddress} in ICBM Commitment`);
       accessPolicy = await RoleBasedAccessPolicy.at(accessPolicyAddress);
     }
     const forkArbiter = await EthereumForkArbiter.at(await commitment.ethereumForkArbiter());
@@ -56,7 +66,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const neumark = await Neumark.at(await commitment.neumark());
 
     // deployer will set some permissions so access is required
-    const DEPLOYER = getDeployerAccount(network, accounts);
     console.log(`Checking if DEPLOYER ${DEPLOYER} has access to accessPolicy`);
     const hasAccess = await accessPolicy.allowed.call(
       DEPLOYER,
@@ -65,7 +74,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       "",
     );
     if (!hasAccess === true) {
-      throw new Error("DEPLOYER must be able to change permissions to run this script");
+      throw new Error(`DEPLOYER needs ${roles.accessController} to run this script`);
     }
     console.log("Universe deploying...");
     await deployer.deploy(Universe, accessPolicy.address, forkArbiter.address);
@@ -112,19 +121,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await createAccessPolicy(accessPolicy, [
       // allow deployer temporarily, later drop
       {
-        subject: CONFIG.addresses.UNIVERSE_MANAGER,
-        role: roles.universeManager,
-        object: universe.address,
-        state: TriState.Allow,
-      },
-      {
         subject: DEPLOYER,
         role: roles.universeManager,
         object: universe.address,
         state: TriState.Allow,
       },
     ]);
-
     console.log("Add singletons to Universe");
     const interfaces = [
       {
