@@ -5,7 +5,7 @@ export const gasPrice = 21e9 * weiPrice; // https://ethstats.net
 export const gasLimit = 6712392; // https://ethstats.net
 
 const gasCostString = gas =>
-  `${gas} gas (€${Math.round(100 * gas * gasPrice) / 100}, ${Math.round(1000 * gas / gasLimit) /
+  `${gas} gas (€${Math.round(100 * gas * gasPrice) / 100}, ${Math.round((1000 * gas) / gasLimit) /
     10}% of limit)`;
 
 export const txGasCost = tx => tx.receipt.gasUsed;

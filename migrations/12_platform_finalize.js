@@ -27,9 +27,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
       console.log("Dropping temporary permissions");
       await createAccessPolicy(accessPolicy, [
-        {subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset},
-        {subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset},
-        {subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset},
+        { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
+        { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
+        { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
         {
           subject: DEPLOYER,
           role: roles.universeManager,

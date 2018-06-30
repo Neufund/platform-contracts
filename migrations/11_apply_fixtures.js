@@ -1,6 +1,6 @@
 require("babel-register");
 const fs = require("fs");
-const {join} = require("path");
+const { join } = require("path");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
@@ -85,7 +85,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       ],
       [toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0")],
       [toBytes32("0x1"), toBytes32("0x1"), toBytes32("0x7"), toBytes32("0x5"), toBytes32("0x1")],
-      {from: DEPLOYER},
+      { from: DEPLOYER },
     );
     const claims = await identityRegistry.getClaims(fas.HAS_EUR_HAS_KYC);
     if (claims !== toBytes32("0x5")) {
@@ -117,7 +117,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const icbmEuroToken = await ICBMEuroToken.at(await icbmEuroLock.assetToken());
     const icbmEtherToken = await ICBMEtherToken.at(await icbmEtherLock.assetToken());
 
-    const describeFixture = async function (address) {
+    const describeFixture = async address => {
       // get balances: ETH, neu, euro tokens, ethertokens
       const ethBalance = await promisify(web3.eth.getBalance)(address);
       const neuBalance = await neumark.balanceOf(address);

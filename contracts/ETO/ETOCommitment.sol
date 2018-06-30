@@ -305,11 +305,13 @@ contract ETOCommitment is
         assert(startDate < 0xFFFFFFFF);
         // must be more than 14 days (platform terms!)
         require(
-        startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
+            startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
             "ETO_DATE_TOO_EARLY");
         // prevent re-setting start date if ETO starts too soon
         uint256 startAt = startOfInternal(ETOState.Whitelist);
-        require(startAt == 0 || startAt > block.timestamp || startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(), "ETO_START_TOO_SOON");
+        require(
+            startAt == 0 || startAt > block.timestamp || startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
+            "ETO_START_TOO_SOON");
         runStateMachine(uint32(startDate));
         // todo: lock ETO_TERMS whitelist
 

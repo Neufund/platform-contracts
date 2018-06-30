@@ -33,9 +33,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await createAccessPolicy(
       accessPolicy,
       [
-        {subject: DEPLOYER, role: roles.eurtDepositManager},
-        {subject: DEPLOYER, role: roles.identityManager},
-        {subject: DEPLOYER, role: roles.tokenRateOracle},
+        { subject: DEPLOYER, role: roles.eurtDepositManager },
+        { subject: DEPLOYER, role: roles.identityManager },
+        { subject: DEPLOYER, role: roles.tokenRateOracle },
       ],
       [],
     );
@@ -88,7 +88,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       );
 
       console.log("send ether to simple exchange");
-      await simpleExchange.send(CONFIG.Q18.mul(10), {from: DEPLOYER});
+      await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
     }
 
     if (CONFIG.isLiveDeployment) {
@@ -98,7 +98,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         console.log(
           `On live network, make sure PLATFORM_OPERATOR_WALLET ${
             CONFIG.addresses.PLATFORM_OPERATOR_WALLET
-            } has KYC done`,
+          } has KYC done`,
         );
         console.log(`On live network, send some ether to SimpleExchange`);
         console.log("---------------------------------------------");
