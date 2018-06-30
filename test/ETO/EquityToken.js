@@ -96,6 +96,16 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     it("should change nominee");
 
+    it("should sign agreement on transfer");
+
+    it("should sign agreement on receiving transfer - ???? we need answer from legal");
+
+    it("should sign agreement on approve");
+
+    it("should sign agreement on distributeTokens for receiver");
+
+    it("should sign agreement explicitely");
+
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
   });
