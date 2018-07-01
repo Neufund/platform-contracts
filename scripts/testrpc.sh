@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 yarn ganache-cli \
---deterministic --gasLimit 0xFFFFFFFF --networkId 17 \
+--deterministic --gasLimit 0xFFFFFFFF --networkId 17 -h 0.0.0.0 \
 --account="0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1, 1000000000000000000000000" \
 --account="0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93, 1000000000000000000000000" \
 --account="0xb8c9391742bcf13c2efe56aa8d158ff8b50191a11d9fe5021d8b31cd86f96f46, 1000000000000000000000000" \
