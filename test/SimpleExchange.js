@@ -31,6 +31,7 @@ contract(
     gasRecipient,
     anotherGasRecipient,
     platformWallet,
+    randomAddress,
   ]) => {
     let universe;
     let accessPolicy;
@@ -122,9 +123,26 @@ contract(
       expect(invRates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
-    it("should revert on not set exchange rate");
+    it("should revert on set exchange rate not from tokenOracleManager", async () => {
+      // this should work
+      gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
+        from: tokenOracleManager,
+      });
+      const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
+      expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
 
-    it("should revert on set exchange rate not from tokenOracleManager");
+      // this should fail for authentication reasons
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(90), {
+          from: randomAddress,
+        }),
+      ).to.revert;
+      const rateAfterFailedTx = await rateOracle.getExchangeRate(
+        etherToken.address,
+        euroToken.address,
+      );
+      expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
+    });
 
     it("should exchange EuroToken to gas", async () => {
       const decimalExchangeAmount = 20;
@@ -243,17 +261,108 @@ contract(
       );
     });
 
-    it("should revert on exchange bigger than permanent allowance");
+    it("should revert on not set exchange rate", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on exchange bigger than permanent allowance", async () => {
+      const decimalExchangeAmount = 60; // larger than gasExchangeMaxAllowanceEurUlps
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.revert;
+    });
 
     it("should revert on exchange if rate older than 1 hour");
 
-    it("should revert on exchange not from gasExchangeManager");
+    it("should revert on exchange not from gasExchangeManager", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
 
-    it("should revert on multiple exchange not from gasExchangeManager");
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
 
-    it("should revert on exchange contract not having ether");
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: randomAddress,
+        }),
+      ).to.revert;
+    });
 
-    it("should revert on not having enough euroToken");
+    it("should revert on multiple exchange not from gasExchangeManager", async () => {
+      const decimalExchangeAmount1 = 20;
+      const exchangedAmount1 = Q18.mul(decimalExchangeAmount1);
+      const decimalExchangeAmount2 = 17.90128;
+      const exchangedAmount2 = Q18.mul(decimalExchangeAmount2);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(anotherGasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      await expect(
+        gasExchange.gasExchangeMultiple(
+          [gasRecipient, anotherGasRecipient],
+          [exchangedAmount1, exchangedAmount2],
+          gasExchangeFee,
+          {
+            from: randomAddress,
+          },
+        ),
+      ).to.revert;
+    });
+
+    it("should revert on exchange contract not having ether", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on not having enough euroToken", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(1)); // not enough tokens
+      await sendEtherToExchange(_, Q18);
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.revert;
+    });
 
     it("should reclaim ether from SimpleExchange");
 
