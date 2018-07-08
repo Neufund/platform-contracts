@@ -293,6 +293,11 @@ contract(
 
     it("should revert on exchange if rate older than 1 hour");
 
+    // there is permanent allowance but still investor can increase  allowance by `approve` on euro token
+    // gasExchange (in fact euro token controller) should disregard that
+    // IMO this will fail. I didn't take such case into account
+    it("should revert on exchange bigger than permanent allowance if investor increased allowance");
+
     it("should revert on exchange not from gasExchangeManager", async () => {
       const decimalExchangeAmount = 20;
       const exchangedAmount = Q18.mul(decimalExchangeAmount);
