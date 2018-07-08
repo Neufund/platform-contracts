@@ -48,20 +48,33 @@ module.exports = function deployContracts(deployer, network, accounts) {
       throw new Error("cannot set migrations for EtherLock");
     }
 
-    console.log("set actual ETH/EUR price");
+    console.log("set actual ETH and NEU to EUR price");
     const EUR_ETH_RATE = CONFIG.Q18.mul(new web3.BigNumber("360.9828182"));
+    const EUR_NEU_RATE = CONFIG.Q18.mul(new web3.BigNumber("0.2828182"));
     const simpleExchange = await SimpleExchange.at(await universe.gasExchange());
     const euroTokenAddress = await universe.euroToken();
     const etherTokenAddress = await universe.etherToken();
+    const neuTokenAddress = await universe.neumark();
     await simpleExchange.setExchangeRate(euroTokenAddress, etherTokenAddress, EUR_ETH_RATE, {
+      from: DEPLOYER,
+    });
+    await simpleExchange.setExchangeRate(euroTokenAddress, neuTokenAddress, EUR_NEU_RATE, {
       from: DEPLOYER,
     });
     const tokenRateOracle = await ITokenExchangeRateOracle.at(
       await universe.tokenExchangeRateOracle(),
     );
-    const currentRate = await tokenRateOracle.getExchangeRate(euroTokenAddress, etherTokenAddress);
-    if (!currentRate[0].eq(EUR_ETH_RATE)) {
+    const currentETHRate = await tokenRateOracle.getExchangeRate(
+      euroTokenAddress,
+      etherTokenAddress,
+    );
+    if (!currentETHRate[0].eq(EUR_ETH_RATE)) {
       throw new Error("could not set EUR/ETH rate");
+    }
+
+    const currentNEURate = await tokenRateOracle.getExchangeRate(euroTokenAddress, neuTokenAddress);
+    if (!currentNEURate[0].eq(EUR_NEU_RATE)) {
+      throw new Error("could not set EUR/NEU rate");
     }
 
     // setup fixture accounts
