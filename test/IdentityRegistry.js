@@ -4,6 +4,7 @@ import { eventValue } from "./helpers/events";
 import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
+const TestUpdatedIdentityRecord = artifacts.require("TestUpdatedIdentityRecord");
 
 contract(
   "IdentityRegistry",
@@ -11,9 +12,11 @@ contract(
     let universe;
     let identityRegistry;
     let testIdentityRecord;
+    let testUpdatedIdentityRecord;
 
     before(async () => {
       testIdentityRecord = await TestIdentityRecord.new();
+      testUpdatedIdentityRecord = await TestUpdatedIdentityRecord.new();
     });
 
     beforeEach(async () => {
@@ -40,8 +43,47 @@ contract(
       );
     }
 
+    function deserializeUpgradedClaims(claims) {
+      const claimsN = new web3.BigNumber(claims, 16);
+      return updatedReferenceClaims(
+        claimsN.mod(2).eq(1),
+        claimsN
+          .dividedToIntegerBy(2)
+          .mod(2)
+          .eq(1),
+        claimsN
+          .dividedToIntegerBy(4)
+          .mod(2)
+          .eq(1),
+        claimsN
+          .dividedToIntegerBy(8)
+          .mod(2)
+          .eq(1),
+        claimsN
+          .dividedToIntegerBy(16)
+          .mod(2)
+          .eq(1),
+      );
+    }
+
     function referenceClaims(isVerified, isSophisticatedInvestor, hasBankAccount, accountFrozen) {
       return [{ isVerified }, { isSophisticatedInvestor }, { hasBankAccount }, { accountFrozen }];
+    }
+
+    function updatedReferenceClaims(
+      isVerified,
+      isSophisticatedInvestor,
+      hasBankAccount,
+      accountFrozen,
+      newProperty,
+    ) {
+      return [
+        { isVerified },
+        { isSophisticatedInvestor },
+        { hasBankAccount },
+        { accountFrozen },
+        { newProperty },
+      ];
     }
 
     function expectSetClaimsEvent(tx, i, oldClaims, newClaims) {
@@ -161,6 +203,26 @@ contract(
     }
 
     // test IdentityRecord with added fields should be used to deserialize new and old claim set
-    it("should deserialize upgraded claims ");
+    for (let ii = 0; ii <= 32; ii += 1) {
+      const claims = toBytes32(web3.toHex(ii));
+      /* eslint-disable no-loop-func */
+      it(`should deserialize upgraded claims - ${claims}`, async () => {
+        const structMap = await testIdentityRecord.getIdentityRecord(claims);
+        expect(deserializeClaims(claims)).to.deep.eq(
+          referenceClaims(structMap[0], structMap[1], structMap[2], structMap[3]),
+        );
+        // test the same claim entry, but with an updated identify record
+        const updatedStructMap = await testUpdatedIdentityRecord.getIdentityRecord(claims);
+        expect(deserializeUpgradedClaims(claims)).to.deep.eq(
+          updatedReferenceClaims(
+            updatedStructMap[0],
+            updatedStructMap[1],
+            updatedStructMap[2],
+            updatedStructMap[3],
+            updatedStructMap[4],
+          ),
+        );
+      });
+    }
   },
 );
