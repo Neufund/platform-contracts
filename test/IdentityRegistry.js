@@ -7,7 +7,15 @@ const TestIdentityRecord = artifacts.require("TestIdentityRecord");
 
 contract(
   "IdentityRegistry",
-  ([_, platformLegalRepresentative, universeManager, identityManager, identity, identity2]) => {
+  ([
+    _,
+    platformLegalRepresentative,
+    universeManager,
+    identityManager,
+    identity,
+    identity2,
+    randomAccount,
+  ]) => {
     let universe;
     let identityRegistry;
     let testIdentityRecord;
@@ -137,13 +145,104 @@ contract(
       expect(await identityRegistry.getClaims(identity2)).to.be.bytes32(newClaims4);
     });
 
-    it("should reject on invalid oldClaims");
+    it("should reject on invalid oldClaims", async () => {
+      // this should work
+      const newClaims = toBytes32("0x10298A90192083091920F90192809380");
+      const tx = await identityRegistry.setClaims(identity, "0", newClaims, {
+        from: identityManager,
+      });
+      prettyPrintGasCost("set claims", tx);
+      expectSetClaimsEvent(tx, identity, "0", newClaims);
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32(newClaims);
 
-    it("should reject on invalid multiple oldClaims");
+      // this one will fail, as we don't set the old claims right
+      const evenNewerClaims = toBytes32("0x10298A90192083091920F90192809381");
+      const invalidOldClaims = toBytes32("0x10298A90192083091920F90192809382");
+      await expect(
+        identityRegistry.setClaims(identity, invalidOldClaims, evenNewerClaims, {
+          from: identityManager,
+        }),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32(
+        "0x10298A90192083091920F90192809380",
+      );
+    });
 
-    it("should reject not on identity manager");
+    it("should reject on invalid multiple oldClaims", async () => {
+      const newClaims1 = toBytes32("0x10298A90192083091920F90192809380");
+      const newClaims2 = toBytes32("0x9812AB9112199209981982739817");
 
-    it("should reject on multiple set claims when arrays not eq");
+      // first oldClaim is invalid
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          [
+            toBytes32("0x10298A90192083091920F90192BBBBBB"), // this should be 0 for the tx to work
+            toBytes32("0x0"),
+          ],
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+
+      // second oldClaim is invalid
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          [
+            toBytes32("0x0"),
+            toBytes32("0x10298A90192083091920F90192BBBBBB"), // this should be 0 for the tx to work
+          ],
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+
+      // both oldClaims are invalid
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          [
+            toBytes32("0x10298A90192083091920F90192BBBBBB"),
+            toBytes32("0x10298A90192083091920F90192BBBBBB"),
+          ], // these should be 0 for the tx to work
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+    });
+
+    it("should reject on not identity manager", async () => {
+      const newClaims = toBytes32("0x10298A90192083091920F90192809380");
+      await expect(
+        identityRegistry.setClaims(identity, "0", newClaims, {
+          from: randomAccount,
+        }),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0");
+    });
+
+    it("should reject on multiple set claims when arrays not eq", async () => {
+      const newClaims1 = toBytes32("0x10298A90192083091920F90192809380");
+      const newClaims2 = toBytes32("0x9812AB9112199209981982739817");
+
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          ["0", "0", "0"], // this array is too long!
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+    });
 
     it("should get empty claims for non existing identity", async () => {
       expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
