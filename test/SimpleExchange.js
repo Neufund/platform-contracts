@@ -276,8 +276,7 @@ contract(
     });
 
     it("should revert on exchange bigger than permanent allowance", async () => {
-      const decimalExchangeAmount = 60; // larger than gasExchangeMaxAllowanceEurUlps
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const exchangedAmount = gasExchangeMaxAllowanceEurUlps.add(1); // larger than gasExchangeMaxAllowanceEurUlps
       const rate = Q18.mul(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
