@@ -171,6 +171,38 @@ contract(
     it("should reject on invalid multiple oldClaims", async () => {
       const newClaims1 = toBytes32("0x10298A90192083091920F90192809380");
       const newClaims2 = toBytes32("0x9812AB9112199209981982739817");
+
+      // first oldClaim is invalid
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          [
+            toBytes32("0x10298A90192083091920F90192BBBBBB"), // this should be 0 for the tx to work
+            toBytes32("0x0"),
+          ],
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+
+      // second oldClaim is invalid
+      await expect(
+        identityRegistry.setMultipleClaims(
+          [identity, identity2],
+          [
+            toBytes32("0x0"),
+            toBytes32("0x10298A90192083091920F90192BBBBBB"), // this should be 0 for the tx to work
+          ],
+          [newClaims1, newClaims2],
+          { from: identityManager },
+        ),
+      ).to.revert;
+      expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
+      expect(await identityRegistry.getClaims(identity2)).to.be.bytes32("0x0");
+
+      // both oldClaims are invalid
       await expect(
         identityRegistry.setMultipleClaims(
           [identity, identity2],
