@@ -17,10 +17,12 @@ RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contract
 WORKDIR /usr/src/platform-contracts
 ADD .babelrc mocha.js nanoWeb3Provider.js package.json truffle.js yarn.lock ./
 RUN yarn
+ADD bin/solc.4.24 /usr/bin/
+ADD scripts scripts
+RUN ./scripts/solctruffle.sh
 ADD contracts contracts
 RUN find ./contracts/ -exec touch -t 200906122350 {} \;
 ADD legal legal
 ADD migrations migrations
-ADD scripts scripts
 RUN mkdir -p test
 ADD test/helpers test/helpers
