@@ -63,17 +63,150 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       );
     });
 
-    it("should deposit and transfer");
-    it("should deposit 0 wei and transfer");
-    it("should deposit and transfer if initial balance 0");
-    it("should deposit and transfer to itself");
-    it("should reject to deposit and transfer more than balance");
+    it("should deposit and transfer", async () => {
+      const initialBalance = etherToWei(1.19827398791827);
+      const amountToTranfser = etherToWei(0.543);
+      const balanceAfterTransfer = initialBalance.minus(amountToTranfser);
 
-    it("should withdraw and send");
-    it("should withdraw and send with 0 wei payable");
-    it("should withdraw and send with 0 initial balance");
-    it("should reject withdraw and send over balance");
-    it("should reject when withdraw amount less than payable");
+      const tx = await etherToken.depositAndTransfer(investors[1], amountToTranfser, 0, {
+        from: investors[0],
+        value: initialBalance,
+      });
+
+      expectDepositEvent(tx, investors[0], initialBalance);
+      expectTransferEvent(tx, investors[0], investors[1], amountToTranfser);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+      const senderBalance = await etherToken.balanceOf(investors[0]);
+      expect(senderBalance).to.be.bignumber.eq(balanceAfterTransfer);
+
+      const recivedBalance = await etherToken.balanceOf(investors[1]);
+      expect(recivedBalance).to.be.bignumber.eq(amountToTranfser);
+    });
+
+    it("should deposit and transfer whole deposit", async () => {
+      const initialBalance = etherToWei(1.19827398791827);
+      const amountToTranfser = initialBalance;
+      const balanceAfterTransfer = 0;
+
+      const tx = await etherToken.depositAndTransfer(investors[1], amountToTranfser, 0, {
+        from: investors[0],
+        value: initialBalance,
+      });
+
+      expectDepositEvent(tx, investors[0], initialBalance);
+      expectTransferEvent(tx, investors[0], investors[1], initialBalance);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+      const senderBalance = await etherToken.balanceOf(investors[0]);
+      expect(senderBalance).to.be.bignumber.eq(balanceAfterTransfer);
+
+      const recivedBalance = await etherToken.balanceOf(investors[1]);
+      expect(recivedBalance).to.be.bignumber.eq(amountToTranfser);
+    });
+
+    it("should deposit 0 wei and transfer", async () => {
+      const initialBalance = etherToWei(1.19827398791827);
+      const initialDepositTx = await etherToken.deposit({
+        from: investors[0],
+        value: initialBalance,
+      });
+      expectDepositEvent(initialDepositTx, investors[0], initialBalance);
+
+      const zeroWei = 0;
+      const amountToTranfser = etherToWei(0.5432);
+      const balanceAfterTransfer = initialBalance.minus(amountToTranfser);
+
+      const tx = await etherToken.depositAndTransfer(investors[1], amountToTranfser, 0, {
+        from: investors[0],
+        value: zeroWei,
+      });
+
+      expectDepositEvent(tx, investors[0], zeroWei);
+      expectTransferEvent(tx, investors[0], investors[1], amountToTranfser);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+      const senderBalance = await etherToken.balanceOf(investors[0]);
+      expect(senderBalance).to.be.bignumber.eq(balanceAfterTransfer);
+
+      const recivedBalance = await etherToken.balanceOf(investors[1]);
+      expect(recivedBalance).to.be.bignumber.eq(amountToTranfser);
+    });
+
+    it("should deposit and transfer some funds if initial balance 0", async () => {
+      const initialBalance = await etherToken.totalSupply.call();
+      expect(initialBalance).to.be.bignumber.eq(0);
+
+      const amountToDeposit = etherToWei(1.4568923);
+      const amountToTranfser = etherToWei(1.0);
+      const balanceAfterTransfer = amountToDeposit.minus(amountToTranfser);
+
+      const tx = await etherToken.depositAndTransfer(investors[1], amountToTranfser, 0, {
+        from: investors[0],
+        value: amountToDeposit,
+      });
+
+      expectDepositEvent(tx, investors[0], amountToDeposit);
+      expectTransferEvent(tx, investors[0], investors[1], amountToTranfser);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(amountToDeposit);
+      const balance = await etherToken.balanceOf(investors[0]);
+      expect(balance).to.be.bignumber.eq(balanceAfterTransfer);
+
+      const reciverBalance = await etherToken.balanceOf(investors[1]);
+      expect(reciverBalance).to.be.bignumber.eq(amountToTranfser);
+    });
+
+    it("should deposit and transfer to itself", async () => {
+      const initialBalance = etherToWei(1.19827398791827);
+      const amountToTranfser = etherToWei(0.543);
+
+      const tx = await etherToken.depositAndTransfer(investors[0], amountToTranfser, 0, {
+        from: investors[0],
+        value: initialBalance,
+      });
+
+      expectDepositEvent(tx, investors[0], initialBalance);
+      expectTransferEvent(tx, investors[0], investors[0], amountToTranfser);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+      const balance = await etherToken.balanceOf(investors[0]);
+      expect(balance).to.be.bignumber.eq(initialBalance);
+    });
+
+    it("should deposit and transfer to itself whole amount", async () => {
+      const initialBalance = etherToWei(1.19827398791827);
+
+      const tx = await etherToken.depositAndTransfer(investors[0], initialBalance, 0, {
+        from: investors[0],
+        value: initialBalance,
+      });
+
+      expectDepositEvent(tx, investors[0], initialBalance);
+      expectTransferEvent(tx, investors[0], investors[0], initialBalance);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+      const balance = await etherToken.balanceOf(investors[0]);
+      expect(balance).to.be.bignumber.eq(initialBalance);
+    });
+
+    it("should reject to deposit and transfer more than balance", async () => {
+      const initialBalance = etherToWei(1.882256125);
+      const amountToTransferThatIsMoreThanBalcnce = initialBalance.plus(etherToWei(1));
+
+      await expect(
+        etherToken.depositAndTransfer(investors[1], amountToTransferThatIsMoreThanBalcnce, 0, {
+          from: investors[0],
+          value: initialBalance,
+        }),
+      ).to.be.rejectedWith(EvmError);
+    });
   });
 
   describe("IBasicToken tests", () => {
@@ -144,11 +277,17 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
 
     beforeEach(async () => {
       await etherToken.deposit({
-        from: investors[1],
+        from: investors[0],
         value: initialBalance,
       });
     });
 
-    testWithdrawal(getToken, investors[1], initialBalance);
+    testWithdrawal(getToken, investors[0], initialBalance);
+
+    it("should withdraw and send");
+    it("should withdraw and send with 0 wei payable");
+    it("should withdraw and send with 0 initial balance");
+    it("should reject withdraw and send over balance");
+    it("should reject when withdraw amount less than payable");
   });
 });
