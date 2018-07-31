@@ -185,7 +185,7 @@ export async function deployPlatformTerms(universe, universeManager, overrideTer
     MIN_OFFER_DURATION_DAYS: daysToSeconds(1),
     MAX_OFFER_DURATION_DAYS: daysToSeconds(90),
     MIN_TICKET_EUR_ULPS: Q18.mul(300),
-    EQUITY_TOKENS_PER_SHARE: 1000000,
+    EQUITY_TOKENS_PER_SHARE: 10000,
     // todo: fill remaining contants to be tested below
   };
 
@@ -239,8 +239,8 @@ export async function deployETOTerms(durationTerms, shareholderRights, overrideT
   const defTerms = {
     DURATION_TERMS: null,
     EXISTING_COMPANY_SHARES: 32000,
-    MIN_NUMBER_OF_TOKENS: 5000 * 1000000,
-    MAX_NUMBER_OF_TOKENS: 10000 * 1000000,
+    MIN_NUMBER_OF_TOKENS: 5000 * 10000,
+    MAX_NUMBER_OF_TOKENS: 10000 * 10000,
     TOKEN_PRICE_EUR_ULPS: Q18.mul(0.0001),
     MIN_TICKET_EUR_ULPS: Q18.mul(500),
     MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
