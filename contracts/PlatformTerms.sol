@@ -21,7 +21,7 @@ contract PlatformTerms is Math {
     // ICBM investors whitelisted by default
     bool public constant IS_ICBM_INVESTOR_WHITELISTED = true;
     // equity tokens per share
-    uint256 public constant EQUITY_TOKENS_PER_SHARE = 1000000; // move it to platform
+    uint256 public constant EQUITY_TOKENS_PER_SHARE = 10000; // move it to platform
     // equity tokens decimals (precision)
     uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
