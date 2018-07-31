@@ -62,7 +62,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       INITIAL_BLOCK_NO: global._initialBlockNo,
     };
     const path = join(__dirname, "../build/meta.json");
-    fs.writeFile(path, JSON.stringify(meta), err => {
+    fs.writeFile(path, JSON.stringify(meta, null, 2), err => {
       if (err) throw new Error(err);
     });
 
