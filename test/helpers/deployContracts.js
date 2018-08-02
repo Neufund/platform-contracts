@@ -25,9 +25,23 @@ export const dayInSeconds = 24 * 60 * 60;
 export const monthInSeconds = 30 * dayInSeconds;
 export const daysToSeconds = sec => sec * dayInSeconds;
 
-export function toBytes32(hex) {
-  return `0x${web3.padLeft(hex.slice(2), 64)}`;
+export function toBytes32(hexOrNumber) {
+  let strippedHex = "0";
+  if (Number.isInteger(hexOrNumber)) {
+    strippedHex = hexOrNumber.toString(16);
+  } else {
+    strippedHex = hexOrNumber.slice(2);
+  }
+  return `0x${web3.padLeft(strippedHex, 64)}`;
 }
+
+export const identityClaims = {
+  isNone: 0,
+  isVerified: 1,
+  isSophisticatedInvestor: 2,
+  hasBankAccount: 4,
+  isAccountFrozen: 8,
+};
 
 export async function deployAccessControl(initialRules) {
   const accessPolicy = await RoleBasedAccessPolicy.new();

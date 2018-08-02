@@ -19,6 +19,7 @@ import {
   deployUniverse,
   deployIdentityRegistry,
   toBytes32,
+  identityClaims,
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
 
@@ -75,9 +76,14 @@ contract(
       it("should deposit", async () => {
         const initialBalance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         const tx = await euroToken.deposit(investors[0], initialBalance, {
           from: depositManager,
         });
@@ -92,15 +98,25 @@ contract(
       it("should overflow totalSupply on deposit", async () => {
         const initialBalance = new web3.BigNumber(2).pow(256).sub(1);
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await euroToken.deposit(investors[0], initialBalance, {
           from: depositManager,
         });
-        await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[1],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.deposit(investors[1], initialBalance, {
             from: depositManager,
@@ -131,7 +147,7 @@ contract(
       });
 
       async function prepTransferViaGasExchange(from, to, amount, initialBalance) {
-        const isVerified = toBytes32("0x1");
+        const isVerified = toBytes32(identityClaims.isVerified);
         await identityRegistry.setMultipleClaims(
           [from, to],
           ["0x0", "0x0"],
@@ -177,9 +193,14 @@ contract(
           initialBalance,
         );
         // freeze account (comment this line for the test to fail)
-        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(identityClaims.isVerified | identityClaims.isAccountFrozen),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
         ).to.be.rejectedWith(EvmError);
@@ -204,9 +225,14 @@ contract(
 
       async function prepareETOTransfer(investor, etoAddress, initialBalance) {
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investor, "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investor,
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await euroToken.deposit(investor, initialBalance, {
           from: depositManager,
         });
@@ -237,9 +263,14 @@ contract(
         const etoAddress = investors[1];
         await prepareETOTransfer(investors[0], etoAddress, initialBalance);
         // freeze account (comment this line for the test to fail)
-        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(identityClaims.isVerified | identityClaims.isAccountFrozen),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.transfer(etoAddress, initialBalance, {
             from: investors[0],
