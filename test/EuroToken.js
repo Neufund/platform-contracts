@@ -69,6 +69,14 @@ contract(
         expect(event.args.amount).to.be.bignumber.eq(amount);
       }
 
+      function expectDestroyEvent(tx, owner, by, amount) {
+        const event = eventValue(tx, "LogDestroy");
+        expect(event).to.exist;
+        expect(event.args.from).to.eq(owner);
+        expect(event.args.by).to.eq(by);
+        expect(event.args.amount).to.be.bignumber.eq(amount);
+      }
+
       it("should deploy", async () => {
         await prettyPrintGasCost("EuroToken deploy", euroToken);
         expect(await euroToken.tokenController()).to.be.eq(tokenController.address);
@@ -458,11 +466,10 @@ contract(
         ).to.revert;
       });
 
-      // @TODO marcin I have no idea why this test is not passing
-      it.skip("should destroy tokens", async () => {
+      it("should destroy tokens", async () => {
         const initialBalance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
         const destroyAmount = etherToWei(minDepositAmountEurUlps.add(0.19827398791827));
-        const expectedFinalBalance = etherToWei(minDepositAmountEurUlps.add(1));
+        const expectedFinalBalance = etherToWei(1);
 
         await identityRegistry.setClaims(
           investors[0],
@@ -480,10 +487,14 @@ contract(
         const balance = await euroToken.balanceOf(investors[0]);
         expect(balance).to.be.bignumber.eq(initialBalance);
 
-        // destroy here, I don't know why this does not work
-        await euroToken.destroy(investors[0], destroyAmount, {
+        const tx = await euroToken.destroy(investors[0], destroyAmount, {
           from: eurtLegalManager,
         });
+
+        // check events
+        expectTransferEvent(tx, investors[0], ZERO_ADDRESS, destroyAmount);
+        expectDestroyEvent(tx, investors[0], eurtLegalManager, destroyAmount);
+
         const finalBalance = await euroToken.balanceOf(investors[0]);
         expect(finalBalance).to.be.bignumber.eq(expectedFinalBalance);
       });
