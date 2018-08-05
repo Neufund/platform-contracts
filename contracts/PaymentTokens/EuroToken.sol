@@ -223,7 +223,7 @@ contract EuroToken is
     function destroyTokensPrivate(address owner, uint256 amount)
         private
     {
-        require(_balances[msg.sender] >= amount);
+        require(_balances[owner] >= amount);
         _balances[owner] = sub(_balances[owner], amount);
         _totalSupply = sub(_totalSupply, amount);
         emit Transfer(owner, address(0), amount);

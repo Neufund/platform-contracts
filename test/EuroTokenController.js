@@ -128,16 +128,138 @@ contract(
         expect(await tokenController.allowedTransferTo(await universe.euroToken())).to.be.false;
       });
 
-      it("should set allow from");
+      it("should set allow from", async () => {
+        expect(await tokenController.allowedTransferFrom(identity1)).to.be.false;
+        await tokenController.setAllowedTransferFrom(identity1, true, { from: eurtLegalManager });
+        expect(await tokenController.allowedTransferFrom(identity1)).to.be.true;
+        expect(await tokenController.allowedTransferFrom(identity2)).to.be.false;
+        await tokenController.setAllowedTransferFrom(identity1, false, { from: eurtLegalManager });
+        expect(await tokenController.allowedTransferFrom(identity1)).to.be.false;
+      });
 
-      it("should set allow to");
+      it("should set allow to", async () => {
+        expect(await tokenController.allowedTransferTo(identity1)).to.be.false;
+        await tokenController.setAllowedTransferTo(identity1, true, { from: eurtLegalManager });
+        expect(await tokenController.allowedTransferTo(identity1)).to.be.true;
+        expect(await tokenController.allowedTransferTo(identity2)).to.be.false;
+        await tokenController.setAllowedTransferTo(identity1, false, { from: eurtLegalManager });
+        expect(await tokenController.allowedTransferTo(identity1)).to.be.false;
+      });
 
-      it("should apply settings");
+      it("should apply settings", async () => {
+        tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
+          from: eurtLegalManager,
+        });
+        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(10));
+        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.mul(20));
+        expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
+          Q18.mul(30),
+        );
 
-      it("should apply settings when gas exchange address changes");
+        tokenController.applySettings(Q18.mul(40), Q18.mul(50), Q18.mul(60), {
+          from: eurtLegalManager,
+        });
+        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(40));
+        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.mul(50));
+        expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
+          Q18.mul(60),
+        );
+      });
+
+      it("should apply allowances from universe", async () => {
+        const newGasExchange = "0x498a042f52f1737a77b91dd8107e68d75bf9ffff";
+        const newFeedisbursal = "0x498a042f52f1737a77b91dd8107e68d75bf9eeee";
+        const newEuroLock = "0x498a042f52f1737a77b91dd8107e68d75bf9dddd";
+
+        expect(await tokenController.allowedTransferTo(newGasExchange)).to.be.false;
+        expect(await tokenController.allowedTransferTo(newFeedisbursal)).to.be.false;
+        expect(await tokenController.allowedTransferTo(newEuroLock)).to.be.false;
+        expect(await tokenController.allowedTransferFrom(newGasExchange)).to.be.false;
+        expect(await tokenController.allowedTransferFrom(newFeedisbursal)).to.be.false;
+        expect(await tokenController.allowedTransferFrom(newEuroLock)).to.be.false;
+
+        await registerSingletons(universe, masterManager, [
+          {
+            ki: knownInterfaces.gasExchange,
+            addr: newGasExchange,
+          },
+          {
+            ki: knownInterfaces.feeDisbursal,
+            addr: newFeedisbursal,
+          },
+          {
+            ki: knownInterfaces.euroLock,
+            addr: newEuroLock,
+          },
+        ]);
+
+        tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
+          from: eurtLegalManager,
+        });
+
+        expect(await tokenController.allowedTransferTo(newGasExchange)).to.be.true;
+        expect(await tokenController.allowedTransferTo(newFeedisbursal)).to.be.true;
+        expect(await tokenController.allowedTransferTo(newEuroLock)).to.be.true;
+        expect(await tokenController.allowedTransferFrom(newGasExchange)).to.be.true;
+        expect(await tokenController.allowedTransferFrom(newFeedisbursal)).to.be.true;
+        expect(await tokenController.allowedTransferFrom(newEuroLock)).to.be.true;
+      });
+
+      it("should apply settings when gas exchange address changes", async () => {
+        const newGasExchange = "0x498a042f52f1737a77b91dd8107e68d75bf90000";
+        const oldGasExchange = await universe.gasExchange();
+        expect(
+          await tokenController.hasPermanentAllowance(
+            oldGasExchange,
+            maxSimpleExchangeAllowanceEurUlps,
+          ),
+        ).to.be.true;
+        expect(
+          await tokenController.hasPermanentAllowance(
+            newGasExchange,
+            maxSimpleExchangeAllowanceEurUlps,
+          ),
+        ).to.be.false;
+        // singletons recognized internally by token controller
+        await registerSingletons(universe, masterManager, [
+          {
+            ki: knownInterfaces.gasExchange,
+            addr: newGasExchange,
+          },
+        ]);
+        expect(
+          await tokenController.hasPermanentAllowance(
+            oldGasExchange,
+            maxSimpleExchangeAllowanceEurUlps,
+          ),
+        ).to.be.false;
+        expect(
+          await tokenController.hasPermanentAllowance(
+            newGasExchange,
+            maxSimpleExchangeAllowanceEurUlps,
+          ),
+        ).to.be.true;
+      });
 
       // set allowed from. allowed to, apply settings
-      it("should reject on admin ops not from manager");
+      it("should reject on admin ops not from manager", async () => {
+        const amount = 1;
+
+        await expect(
+          tokenController.setAllowedTransferFrom(identity1, true, {
+            from: identity1,
+          }),
+        ).to.revert;
+
+        await expect(
+          tokenController.setAllowedTransferTo(identity2, true, {
+            from: identity1,
+          }),
+        ).to.revert;
+
+        await expect(tokenController.applySettings(amount, amount, amount, { from: identity1 })).to
+          .revert;
+      });
 
       it("should liquidate account via eurt legal rep");
     });

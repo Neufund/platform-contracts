@@ -19,11 +19,13 @@ import {
   deployUniverse,
   deployIdentityRegistry,
   toBytes32,
+  identityClaims,
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
+
 const Q18 = web3.toBigNumber("10").pow(18);
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
@@ -67,6 +69,14 @@ contract(
         expect(event.args.amount).to.be.bignumber.eq(amount);
       }
 
+      function expectDestroyEvent(tx, owner, by, amount) {
+        const event = eventValue(tx, "LogDestroy");
+        expect(event).to.exist;
+        expect(event.args.from).to.eq(owner);
+        expect(event.args.by).to.eq(by);
+        expect(event.args.amount).to.be.bignumber.eq(amount);
+      }
+
       it("should deploy", async () => {
         await prettyPrintGasCost("EuroToken deploy", euroToken);
         expect(await euroToken.tokenController()).to.be.eq(tokenController.address);
@@ -75,9 +85,14 @@ contract(
       it("should deposit", async () => {
         const initialBalance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         const tx = await euroToken.deposit(investors[0], initialBalance, {
           from: depositManager,
         });
@@ -92,15 +107,25 @@ contract(
       it("should overflow totalSupply on deposit", async () => {
         const initialBalance = new web3.BigNumber(2).pow(256).sub(1);
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await euroToken.deposit(investors[0], initialBalance, {
           from: depositManager,
         });
-        await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[1],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.deposit(investors[1], initialBalance, {
             from: depositManager,
@@ -131,7 +156,7 @@ contract(
       });
 
       async function prepTransferViaGasExchange(from, to, amount, initialBalance) {
-        const isVerified = toBytes32("0x1");
+        const isVerified = toBytes32(identityClaims.isVerified);
         await identityRegistry.setMultipleClaims(
           [from, to],
           ["0x0", "0x0"],
@@ -177,9 +202,14 @@ contract(
           initialBalance,
         );
         // freeze account (comment this line for the test to fail)
-        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(identityClaims.isVerified | identityClaims.isAccountFrozen),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
         ).to.be.rejectedWith(EvmError);
@@ -204,9 +234,14 @@ contract(
 
       async function prepareETOTransfer(investor, etoAddress, initialBalance) {
         // deposit only to KYC investors
-        await identityRegistry.setClaims(investor, "0x0", toBytes32("0x1"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investor,
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
         await euroToken.deposit(investor, initialBalance, {
           from: depositManager,
         });
@@ -237,9 +272,14 @@ contract(
         const etoAddress = investors[1];
         await prepareETOTransfer(investors[0], etoAddress, initialBalance);
         // freeze account (comment this line for the test to fail)
-        await identityRegistry.setClaims(investors[0], toBytes32("0x1"), toBytes32("0x9"), {
-          from: masterManager,
-        });
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(identityClaims.isVerified | identityClaims.isAccountFrozen),
+          {
+            from: masterManager,
+          },
+        );
         await expect(
           euroToken.transfer(etoAddress, initialBalance, {
             from: investors[0],
@@ -283,13 +323,232 @@ contract(
         expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(0);
       });
 
-      it("should disallow deposit for non KYC or not explicit");
-      it("should disallow withdraw for non KYC or not explicit");
-      it("should change token controller"); // simulate changing to permit all Test controller
-      it("should reject on change token controller from invalid account");
-      it("should destroy tokens");
-      it("should reject destroy not from legal rep");
-      it("should reject destroy below balance");
+      it("should disallow deposit for non KYC or not explicit", async () => {
+        const balance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
+
+        // set some claim which is -not verified-
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.hasBankAccount),
+          {
+            from: masterManager,
+          },
+        );
+
+        // deposit should faile here
+        await expect(
+          euroToken.deposit(investors[0], balance, {
+            from: depositManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should disallow withdraw for non KYC, non bank account or with forzen account or not explicit", async () => {
+        const balance = etherToWei(minDepositAmountEurUlps);
+
+        // make verified
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        // deposit should work
+        await euroToken.deposit(investors[0], balance, {
+          from: depositManager,
+        });
+
+        // also add bank account
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(identityClaims.isVerified | identityClaims.hasBankAccount),
+          {
+            from: masterManager,
+          },
+        );
+        // withdraw should work now
+        await euroToken.withdraw(etherToWei(minWithdrawAmountEurUlps), {
+          from: investors[0],
+        });
+
+        // without verification no withdrawal
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified | identityClaims.hasBankAccount),
+          toBytes32(identityClaims.hasBankAccount),
+          {
+            from: masterManager,
+          },
+        );
+
+        // now withdrawal will fail
+        await expect(
+          euroToken.withdraw(etherToWei(minWithdrawAmountEurUlps), {
+            from: investors[0],
+          }),
+        ).to.revert;
+
+        // without bank account no withdrawal
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.hasBankAccount),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        // now withdrawal will fail
+        await expect(
+          euroToken.withdraw(etherToWei(minWithdrawAmountEurUlps), {
+            from: investors[0],
+          }),
+        ).to.revert;
+
+        // without bank account no withdrawal
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isVerified),
+          toBytes32(
+            identityClaims.isVerified |
+              identityClaims.hasBankAccount |
+              identityClaims.isAccountFrozen,
+          ),
+          {
+            from: masterManager,
+          },
+        );
+
+        // now withdrawal will fail
+        await expect(
+          euroToken.withdraw(etherToWei(minWithdrawAmountEurUlps), {
+            from: investors[0],
+          }),
+        ).to.revert;
+      });
+
+      it("should change token controller", async () => {
+        const balance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
+
+        // deposit to first investor should not work, she is not verifed
+        await expect(
+          euroToken.deposit(investors[0], balance, {
+            from: depositManager,
+          }),
+        ).to.revert;
+
+        // switch controller
+        const controller = await TestEuroTokenControllerPassThrough.new();
+        await euroToken.changeTokenController(controller.address, {
+          from: eurtLegalManager,
+        });
+
+        // verify that the new controller works by making a deposit just like that
+        await euroToken.deposit(investors[0], balance, {
+          from: depositManager,
+        });
+        const fetchedBalance = await euroToken.balanceOf(investors[0]);
+        expect(fetchedBalance).to.be.bignumber.eq(balance);
+      });
+
+      it("should reject on change token controller from invalid account", async () => {
+        // switch controller
+        const controller = await TestEuroTokenControllerPassThrough.new();
+        await expect(
+          euroToken.changeTokenController(controller.address, {
+            from: investors[0],
+          }),
+        ).to.revert;
+      });
+
+      it("should destroy tokens", async () => {
+        const initialBalance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
+        const destroyAmount = etherToWei(minDepositAmountEurUlps.add(0.19827398791827));
+        const expectedFinalBalance = etherToWei(1);
+
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        // deposit here
+        await euroToken.deposit(investors[0], initialBalance, {
+          from: depositManager,
+        });
+        const balance = await euroToken.balanceOf(investors[0]);
+        expect(balance).to.be.bignumber.eq(initialBalance);
+
+        const tx = await euroToken.destroy(investors[0], destroyAmount, {
+          from: eurtLegalManager,
+        });
+
+        // check events
+        expectTransferEvent(tx, investors[0], ZERO_ADDRESS, destroyAmount);
+        expectDestroyEvent(tx, investors[0], eurtLegalManager, destroyAmount);
+
+        const finalBalance = await euroToken.balanceOf(investors[0]);
+        expect(finalBalance).to.be.bignumber.eq(expectedFinalBalance);
+      });
+
+      it("should reject destroy not from legal rep", async () => {
+        const balance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
+
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        // deposit here
+        await euroToken.deposit(investors[0], balance, {
+          from: depositManager,
+        });
+
+        // investor 2 may not destroy any tokens!
+        await expect(
+          euroToken.destroy(investors[0], balance, {
+            from: investors[1],
+          }),
+        ).to.revert;
+      });
+
+      it("should reject destroy below balance", async () => {
+        const initialBalance = etherToWei(minDepositAmountEurUlps.add(1));
+        const largerThanInitialBalance = etherToWei(minDepositAmountEurUlps.add(10));
+
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        // deposit here
+        await euroToken.deposit(investors[0], initialBalance, {
+          from: depositManager,
+        });
+
+        // destroying more should not work
+        await expect(
+          euroToken.destroy(investors[0], largerThanInitialBalance, {
+            from: eurtLegalManager,
+          }),
+        ).to.revert;
+      });
     });
 
     describe("euro token controller emulating ICBM Euro Token", () => {
