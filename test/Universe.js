@@ -154,16 +154,16 @@ contract(
     });
 
     it("should set singleton without convenience method", async () => {
-      const some_id = "0x63452ff6";
+      const someId = "0x63452ff6";
       // set neumark to address other
-      let tx = await universe.setSingleton(some_id, other, {
+      const tx = await universe.setSingleton(someId, other, {
         from: universeManager,
       });
-      expectSingletonSetEvent(tx, some_id, other, ZERO_ADDRESS);
-      expect(await universe.getSingleton(some_id)).to.eq(other);
-      expect(await universe.getManySingletons([some_id])).to.deep.eq([other]);
-      expect(await universe.isSingleton(some_id, other)).to.be.true;
-      expect(await universe.isSingleton(some_id, other2)).to.be.false;
+      expectSingletonSetEvent(tx, someId, other, ZERO_ADDRESS);
+      expect(await universe.getSingleton(someId)).to.eq(other);
+      expect(await universe.getManySingletons([someId])).to.deep.eq([other]);
+      expect(await universe.isSingleton(someId, other)).to.be.true;
+      expect(await universe.isSingleton(someId, other2)).to.be.false;
     });
 
     it("should replace singleton", async () => {
