@@ -153,7 +153,18 @@ contract(
       }
     });
 
-    it("should set singleton without convenience method");
+    it("should set singleton without convenience method", async () => {
+      const some_id = "0x63452ff6";
+      // set neumark to address other
+      let tx = await universe.setSingleton(some_id, other, {
+        from: universeManager,
+      });
+      expectSingletonSetEvent(tx, some_id, other, ZERO_ADDRESS);
+      expect(await universe.getSingleton(some_id)).to.eq(other);
+      expect(await universe.getManySingletons([some_id])).to.deep.eq([other]);
+      expect(await universe.isSingleton(some_id, other)).to.be.true;
+      expect(await universe.isSingleton(some_id, other2)).to.be.false;
+    });
 
     it("should replace singleton", async () => {
       // set neumark to address other
@@ -183,7 +194,7 @@ contract(
     });
 
     it("should change many singletons", async () => {
-      let tx = await universe.setManySingletons(
+      await universe.setManySingletons(
         [knownInterfaces.neumark, knownInterfaces.etherToken],
         [other, other2],
         {
@@ -195,7 +206,7 @@ contract(
       expect(await universe.getSingleton(knownInterfaces.neumark)).to.eq(other);
       expect(await universe.getSingleton(knownInterfaces.etherToken)).to.eq(other2);
 
-      tx = await universe.setManySingletons(
+      await universe.setManySingletons(
         [knownInterfaces.neumark, knownInterfaces.etherToken],
         [other3, other4],
         {
@@ -398,9 +409,6 @@ contract(
         ),
       ).is.false;
     });
-
-    // i would say this is tested above
-    it("should remove interface from collection");
 
     it("should replace interface in collection", async () => {
       universe.setCollectionInterface(knownInterfaces.neumark, other, true, {
