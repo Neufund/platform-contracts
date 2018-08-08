@@ -17,4 +17,7 @@ contract IETOCommitmentStates {
         Payout, // Terminal state
         Refund // Terminal state
     }
+
+    // number of states in enum
+    uint256 constant internal ETO_STATES_COUNT = 7;
 }

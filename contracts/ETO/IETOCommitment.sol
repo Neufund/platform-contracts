@@ -18,7 +18,8 @@ contract IETOCommitment is
     // on every state transition
     event LogStateTransition(
         uint32 oldState,
-        uint32 newState
+        uint32 newState,
+        uint32 timestamp
     );
 
     /// on a claim by invester
