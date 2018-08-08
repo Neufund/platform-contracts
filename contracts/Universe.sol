@@ -175,6 +175,7 @@ contract Universe is
         uint256 idx;
         while(idx < interfaceIds.length) {
             setCollectionPrivate(interfaceIds[idx], instance, set);
+            idx += 1;
         }
     }
 
