@@ -179,6 +179,20 @@ contract Universe is
         }
     }
 
+    /// set or unset array of collection
+    function setCollectionsInterfaces(bytes4[] interfaceIds, address[] instances, bool[] set_flags)
+        public
+        only(ROLE_UNIVERSE_MANAGER)
+    {
+        require(interfaceIds.length == instances.length);
+        require(interfaceIds.length == set_flags.length);
+        uint256 idx;
+        while(idx < interfaceIds.length) {
+            setCollectionPrivate(interfaceIds[idx], instances[idx], set_flags[idx]);
+            idx += 1;
+        }
+    }
+
     ////////////////////////
     // Getters
     ////////////////////////
