@@ -25,11 +25,87 @@ contract IControllerGovernance {
         ContinueToken, // enables transfers
         CloseToken, // any liquidation: dissolution, tag, drag, exit (settlement time, amount eur, amount eth)
         Payout, // any dividend payout (amount eur, amount eth)
+        RegisterOffer, // start new token offering
         ChangeTokenController, // (new token controller)
         AmendISHA, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur)
-    IssueTokensForExistingShares, // (number of converted shares, allocation (address => balance))
+        IssueTokensForExistingShares, // (number of converted shares, allocation (address => balance))
         ChangeNominee
     }
+
+    ////////////////////////
+    // Events
+    ////////////////////////
+
+    // logged on controller state transition
+    event LogGovStateTransition(
+        uint32 oldState,
+        uint32 newState,
+        uint32 timestamp
+    );
+
+    // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
+    event ResolutionExecuted(
+        bytes32 resolutionId,
+        Action action
+    );
+
+    // logged when transferability of given token was changed
+    event LogTransfersStateChanged(
+        bytes32 resolutionId,
+        address equityToken,
+        bool transfersEnabled
+    );
+
+    // logged when ISHA was amended (new text, new shareholders, new cap table, offline round etc.)
+    event LogISHAAmended(
+        bytes32 resolutionId,
+        string ISHAUrl,
+        uint256 totalShares,
+        uint256 companyValuationEurUlps,
+        address newShareholderRights
+    );
+
+    // offering of the token in ETO failed (Refund)
+    event LogOfferingFailed(
+        address etoCommitment,
+        address equityToken
+    );
+
+    // offering of the token in ETO succeeded (with all on-chain consequences)
+    event LogOfferingSucceeded(
+        address etoCommitment,
+        address equityToken,
+        uint256 newShares
+    );
+
+    // logs when company issues official information to shareholders
+    event LogGeneralInformation(
+        address companyLegalRep,
+        string informationType,
+        string informationUrl
+    );
+
+    //
+    event LogOfferingRegistered(
+        bytes32 resolutionId,
+        address etoCommitment,
+        address equityToken
+    );
+
+    event LogMigratedTokenController(
+        bytes32 resolutionId,
+        address newController
+    );
+
+    ////////////////////////
+    // Interface methods
+    ////////////////////////
+
+    // returns current state of the controller
+    function state()
+        public
+        constant
+        returns (GovState);
 
     // return basic shareholder information
     function shareholderInformation()
@@ -47,7 +123,8 @@ contract IControllerGovernance {
         constant
         returns (
             address[] equityTokens,
-            uint256[] shares
+            uint256[] shares,
+            address[] lastOfferings
         );
 
     // officially inform shareholders, can be quarterly report, yearly closing
