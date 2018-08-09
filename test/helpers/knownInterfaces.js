@@ -13,6 +13,7 @@ export default {
   identityRegistry: sha3("IIdentityRegistry").slice(0, 10),
   tokenExchangeRateOracle: sha3("ITokenExchangeRateOracle").slice(0, 10),
   feeDisbursal: sha3("IFeeDisbursal").slice(0, 10),
+  platformPortfolio: sha3("IPlatformPortfolio").slice(0, 10),
   tokenExchange: sha3("ITokenExchange").slice(0, 10),
   gasExchange: sha3("IGasTokenExchange").slice(0, 10),
   euroLock: sha3("LockedAccount:Euro").slice(0, 10),
