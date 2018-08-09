@@ -157,42 +157,6 @@ contract ETOCommitment is
     // Events
     ////////////////////////
 
-    // logged at the moment of Company setting terms
-    event LogTermsSet(
-        address companyLegalRep,
-        address etoTerms,
-        address equityToken
-    );
-
-    // logged at the moment Company sets/resets Whitelisting start date
-    event LogETOStartDateSet(
-        address companyLegalRep,
-        uint256 previousTimestamp,
-        uint256 newTimestamp
-    );
-
-    // logged at the moment Signing procedure starts
-    event LogSigningStarted(
-        address nominee,
-        address companyLegalRep,
-        uint256 newShares,
-        uint256 capitalIncreaseEurUlps
-    );
-
-    // logged when company presents signed investment agreement
-    event LogCompanySignedAgreement(
-        address companyLegalRep,
-        address nominee,
-        string signedInvestmentAgreementUrl
-    );
-
-    // logged when nominee presents and verifies its copy of investment agreement
-    event LogNomineeConfirmedAgreement(
-        address nominee,
-        address companyLegalRep,
-        string signedInvestmentAgreementUrl
-    );
-
     // logged on claim state transition indicating that additional contribution was released to company
     event LogAdditionalContribution(
         address companyLegalRep,
@@ -202,29 +166,23 @@ contract ETOCommitment is
 
     // logged on claim state transition indicating NEU reward available
     event LogPlatformNeuReward(
+        address platformWallet,
         uint256 totalRewardNmkUlps,
         uint256 platformRewardNmkUlps
     );
 
     // logged on payout transition to mark cash payout to NEU holders
     event LogPlatformFeePayout(
-        address disbursalPool,
         address paymentToken,
+        address disbursalPool,
         uint256 amount
     );
 
     // logged on payout transition to mark equity token payout to portfolio smart contract
     event LogPlatformPortfolioPayout(
+        address assetToken,
         address platformPortfolio,
-        address assetToken,
         uint256 amount
-    );
-
-    // logged on refund transition to mark destroyed tokens
-    event LogRefundStarted(
-        address assetToken,
-        uint256 totalTokenAmountInt,
-        uint256 totalRewardNmkUlps
     );
 
     ////////////////////////
@@ -492,6 +450,10 @@ contract ETOCommitment is
         return COMPANY_LEGAL_REPRESENTATIVE;
     }
 
+    function platfromWallet() public constant returns (address) {
+        return PLATFORM_WALLET;
+    }
+
     function totalInvestment()
         public
         constant
@@ -534,21 +496,21 @@ contract ETOCommitment is
             uint256 tokenPrice,
             uint256 neuRate,
             uint256 amountEth,
-            uint256 amountEurUlps
+            uint256 amountEurUlps,
+            bool claimedOrRefunded
         )
     {
         InvestmentTicket storage ticket = _tickets[investor];
         // here we assume that equity token precisions is 0
-        return (
-            ticket.equivEurUlps,
-            ticket.rewardNmkUlps,
-            ticket.equityTokenInt,
-            PLATFORM_TERMS.equityTokensToShares(ticket.equityTokenInt),
-            equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0,
-            rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0,
-            ticket.amountEth,
-            ticket.amountEurUlps
-        );
+        equivEurUlps = ticket.equivEurUlps;
+        rewardNmkUlps = ticket.rewardNmkUlps;
+        equityTokenInt = ticket.equityTokenInt;
+        sharesInt = PLATFORM_TERMS.equityTokensToShares(ticket.equityTokenInt);
+        tokenPrice = equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0;
+        neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
+        amountEth = ticket.amountEth;
+        amountEurUlps = ticket.amountEurUlps;
+        claimedOrRefunded = ticket.claimOrRefundSettled;
     }
 
     ////////////////////////
@@ -706,7 +668,7 @@ contract ETOCommitment is
         if (_additionalContributionEurUlps > 0) {
             assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEurUlps, ""));
         }
-        emit LogPlatformNeuReward(rewardNmk, platformNmk);
+        emit LogPlatformNeuReward(PLATFORM_WALLET, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
     }
@@ -735,6 +697,8 @@ contract ETOCommitment is
         // distribute what's left in balances: company took funds on claim
         address disbursal = UNIVERSE.feeDisbursal();
         assert(disbursal != address(0));
+        address platformPortfolio = UNIVERSE.platformPortfolio();
+        assert(platformPortfolio != address(0));
         bytes memory serializedAddress = abi.encodePacked(address(NEUMARK));// addressToBytes(address(NEUMARK));
         // assert(decodeAddress(serializedAddress) == address(NEUMARK));
         if (_platformFeeEth > 0) {
@@ -746,11 +710,11 @@ contract ETOCommitment is
             assert(EURO_TOKEN.transfer(disbursal, _platformFeeEurUlps, serializedAddress));
         }
         // add token participation fee to platfrom portfolio
-        EQUITY_TOKEN.distributeTokens(PLATFORM_WALLET, _tokenParticipationFeeInt);
+        EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFeeInt);
 
         emit LogPlatformFeePayout(ETHER_TOKEN, disbursal, _platformFeeEth);
         emit LogPlatformFeePayout(EURO_TOKEN, disbursal, _platformFeeEurUlps);
-        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, PLATFORM_WALLET, _tokenParticipationFeeInt);
+        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFeeInt);
     }
 
     function processTicket(
@@ -832,6 +796,9 @@ contract ETOCommitment is
         if (ticket.claimOrRefundSettled) {
             return;
         }
+        if (ticket.equivEurUlps == 0) {
+            return;
+        }
         ticket.claimOrRefundSettled = true;
 
         if (ticket.rewardNmkUlps > 0) {
@@ -852,6 +819,9 @@ contract ETOCommitment is
     {
         InvestmentTicket storage ticket = _tickets[investor];
         if (ticket.claimOrRefundSettled) {
+            return;
+        }
+        if (ticket.equivEurUlps == 0) {
             return;
         }
         ticket.claimOrRefundSettled = true;
