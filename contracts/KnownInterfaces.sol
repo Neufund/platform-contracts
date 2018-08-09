@@ -37,6 +37,9 @@ contract KnownInterfaces {
     // fee disbursal interface and singleton keccak256("IFeeDisbursal")
     bytes4 internal constant KNOWN_INTERFACE_FEE_DISBURSAL = 0xf4c848e8;
 
+    // platform portfolio holding equity tokens belonging to NEU holders keccak256("IPlatformPortfolio");
+    bytes4 internal constant KNOWN_INTERFACE_PLATFORM_PORTFOLIO = 0xaa1590d0;
+
     // token exchange interface and singleton keccak256("ITokenExchange")
     bytes4 internal constant KNOWN_INTERFACE_TOKEN_EXCHANGE = 0xddd7a521;
 
