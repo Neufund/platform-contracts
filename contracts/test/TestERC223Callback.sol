@@ -33,15 +33,15 @@ contract TestERC223Callback is IERC223Callback {
         _dataKeccak = keccak256(data);
     }
 
-    function amount() constant public returns (uint256) {
+    function amount() public constant returns (uint256) {
         return _amount;
     }
 
-    function from() constant public returns (address) {
+    function from() public constant returns (address) {
         return _from;
     }
 
-    function dataKeccak() constant public returns (bytes32) {
+    function dataKeccak() public constant returns (bytes32) {
         return _dataKeccak;
     }
 }

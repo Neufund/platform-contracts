@@ -261,7 +261,7 @@ contract EquityToken is
         acceptAgreement(from)
         returns (bool allow)
     {
-        // must have transfer enabled or msg.sender is Neumark issuer
+        // token controller allows transfer and token is not closed
         return _tokenController.onTransfer(from, to, amount) && !_isTokenClosed;
     }
 

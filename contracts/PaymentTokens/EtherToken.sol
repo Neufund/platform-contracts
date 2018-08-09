@@ -66,8 +66,8 @@ contract EtherToken is
 
     /// deposit msg.value of Ether to msg.sender balance
     function deposit()
-        payable
         public
+        payable
     {
         depositPrivate();
         emit Transfer(address(0), msg.sender, msg.value);
@@ -79,8 +79,8 @@ contract EtherToken is
     /// @param data erc223 data
     /// @dev intended to deposit from simple account and invest in ETO
     function depositAndTransfer(address transferTo, uint256 amount, bytes data)
-        payable
         public
+        payable
     {
         depositPrivate();
         transfer(transferTo, amount, data);
@@ -98,11 +98,11 @@ contract EtherToken is
     /// @param sendTo address to which send total amount
     /// @param amount total amount to withdraw and send
     /// @dev function is payable and is meant to withdraw funds on accounts balance and token in single transaction
-    /// @dev BEWARE that msg.sender of the funds is Ether Token contract not, simple account calling it.
+    /// @dev BEWARE that msg.sender of the funds is Ether Token contract and not simple account calling it.
     /// @dev  when sent to smart conctract funds may be lost, so this is prevented below
     function withdrawAndSend(address sendTo, uint256 amount)
-        payable
         public
+        payable
     {
         // must send at least what is in msg.value to being another deposit function
         require(amount >= msg.value);

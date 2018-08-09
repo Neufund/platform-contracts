@@ -60,8 +60,8 @@ contract ICBMEtherToken is
 
     /// deposit msg.value of Ether to msg.sender balance
     function deposit()
-        payable
         public
+        payable
     {
         _balances[msg.sender] = add(_balances[msg.sender], msg.value);
         _totalSupply = add(_totalSupply, msg.value);
