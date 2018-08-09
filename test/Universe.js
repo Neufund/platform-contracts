@@ -88,6 +88,10 @@ contract(
           addr: "0xc22b7a02afa706b5bc2fdfc305288bd910812977",
         },
         {
+          ki: knownInterfaces.platformPortfolio,
+          addr: "0x4bee4641a18523d726a06841d8b57e2ce582e390",
+        },
+        {
           ki: knownInterfaces.euroLock,
           addr: "0x147df49452f805d1a35e7ca314f564d1087b112f",
         },
@@ -137,6 +141,7 @@ contract(
         "etherToken",
         "euroToken",
         "feeDisbursal",
+        "platformPortfolio",
         "euroLock",
         "etherLock",
         "gasExchange",
@@ -551,5 +556,7 @@ contract(
       });
       expect(await universe.getInterfacesOfInstance(other)).to.deep.eq([]);
     });
+    it("should revert on setting KNOWN_INTERFACE_UNIVERSE singleton");
+    it("several test for setCollectionsInterfaces");
   },
 );
