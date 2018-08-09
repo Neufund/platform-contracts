@@ -146,7 +146,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("should set start date", async () => {
       // company confirms terms and sets start date
-      let statDate = await latestTimestamp() + dayInSeconds;
+      let statDate = (await latestTimestamp()) + dayInSeconds;
       statDate += (await platformTerms.DATE_TO_WHITELIST_MIN_DURATION()).toNumber();
       const tx = await etoCommitment.setStartDate(etoTerms.address, equityToken.address, statDate, {
         from: company,
@@ -233,7 +233,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           from: deployer,
         },
       );
-      let startDate = await latestTimestamp() + dayInSeconds;
+      let startDate = (await latestTimestamp()) + dayInSeconds;
       startDate += (await platformTerms.DATE_TO_WHITELIST_MIN_DURATION()).toNumber();
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
