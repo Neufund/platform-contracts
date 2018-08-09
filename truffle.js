@@ -127,11 +127,13 @@ module.exports = {
       provider: Ganache.provider({
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
+      gas: 6500000,
     },
     localhost_test: {
       network_id: "*",
       host: "localhost",
       port: 8545,
+      gas: 6500000,
     },
     inprocess_massive_test: {
       network_id: "*",
