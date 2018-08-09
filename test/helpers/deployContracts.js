@@ -35,14 +35,6 @@ export function toBytes32(hexOrNumber) {
   return `0x${web3.padLeft(strippedHex, 64)}`;
 }
 
-export const identityClaims = {
-  isNone: 0,
-  isVerified: 1,
-  isSophisticatedInvestor: 2,
-  hasBankAccount: 4,
-  isAccountFrozen: 8,
-};
-
 export async function deployAccessControl(initialRules) {
   const accessPolicy = await RoleBasedAccessPolicy.new();
   await createAccessPolicy(accessPolicy, initialRules);
@@ -199,7 +191,7 @@ export async function deployPlatformTerms(universe, universeManager, overrideTer
     MIN_OFFER_DURATION_DAYS: daysToSeconds(1),
     MAX_OFFER_DURATION_DAYS: daysToSeconds(90),
     MIN_TICKET_EUR_ULPS: Q18.mul(300),
-    EQUITY_TOKENS_PER_SHARE: 10000,
+    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
     // todo: fill remaining contants to be tested below
   };
 
@@ -252,10 +244,10 @@ export async function deployDurationTerms(overrideTerms) {
 export async function deployETOTerms(durationTerms, shareholderRights, overrideTerms) {
   const defTerms = {
     DURATION_TERMS: null,
-    EXISTING_COMPANY_SHARES: 32000,
-    MIN_NUMBER_OF_TOKENS: 5000 * 10000,
-    MAX_NUMBER_OF_TOKENS: 10000 * 10000,
-    TOKEN_PRICE_EUR_ULPS: Q18.mul(0.0001),
+    EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
+    MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
+    MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
+    TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
     MIN_TICKET_EUR_ULPS: Q18.mul(500),
     MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
