@@ -19,9 +19,9 @@ import {
   deployUniverse,
   deployIdentityRegistry,
   toBytes32,
-  identityClaims,
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
+import { identityClaims } from "./helpers/identityClaims";
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");

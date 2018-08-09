@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
+import { referenceClaims, deserializeClaims } from "./helpers/identityClaims";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
 const TestUpdatedIdentityRecord = artifacts.require("TestUpdatedIdentityRecord");
@@ -32,25 +33,6 @@ contract(
       identityRegistry = await deployIdentityRegistry(universe, universeManager, identityManager);
     });
 
-    function deserializeClaims(claims) {
-      const claimsN = new web3.BigNumber(claims, 16);
-      return referenceClaims(
-        claimsN.mod(2).eq(1),
-        claimsN
-          .dividedToIntegerBy(2)
-          .mod(2)
-          .eq(1),
-        claimsN
-          .dividedToIntegerBy(4)
-          .mod(2)
-          .eq(1),
-        claimsN
-          .dividedToIntegerBy(8)
-          .mod(2)
-          .eq(1),
-      );
-    }
-
     function deserializeUpgradedClaims(claims) {
       const claimsN = new web3.BigNumber(claims, 16);
       return updatedReferenceClaims(
@@ -72,10 +54,6 @@ contract(
           .mod(2)
           .eq(1),
       );
-    }
-
-    function referenceClaims(isVerified, isSophisticatedInvestor, hasBankAccount, accountFrozen) {
-      return [{ isVerified }, { isSophisticatedInvestor }, { hasBankAccount }, { accountFrozen }];
     }
 
     function updatedReferenceClaims(
