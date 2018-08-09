@@ -7,6 +7,7 @@
     "security/no-inline-assembly": "off",
     "security/no-block-members": "off",
     "no-empty-blocks": "off",
-    "no-constant": "off"
+    "no-constant": "off",
+    "error-reason": "off"
   }
 }
