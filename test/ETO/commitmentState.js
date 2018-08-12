@@ -8,3 +8,8 @@ export const CommitmentState = {
   Payout: 5,
   Refund: 6,
 };
+
+export const CommitmentStateRev = Object.keys(CommitmentState).reduce(
+  (obj, x) => Object.assign(obj, { [CommitmentState[x]]: x }),
+  {},
+);
