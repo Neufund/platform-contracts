@@ -26,7 +26,7 @@ contract PlatformTerms is Math {
     uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
     // minimum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MIN_TICKET_EUR_ULPS = 300 * 10**18;
+    uint256 public constant MIN_TICKET_EUR_ULPS = 100 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
     // no max ticket in general prospectus regulation
     // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
@@ -39,6 +39,8 @@ contract PlatformTerms is Math {
 
     // min duration from setting the date to ETO start
     uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 14 days;
+    // token rate expires after
+    uint256 public constant TOKEN_RATE_EXPIRES_AFTER = 4 hours;
 
     // duration constraints
     uint256 public constant MIN_WHITELIST_DURATION_DAYS = 0 days;
