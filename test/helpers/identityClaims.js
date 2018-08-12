@@ -1,3 +1,7 @@
+const Web3 = require("web3");
+
+const web3 = new Web3();
+
 export function deserializeClaims(claims) {
   const claimsN = new web3.BigNumber(claims, 16);
   return referenceClaims(

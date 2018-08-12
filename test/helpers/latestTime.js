@@ -1,5 +1,6 @@
 import moment from "moment";
 import { promisify, mineBlock } from "./evmCommands";
+import { hourInSeconds, monthInSeconds } from "./constants";
 
 let firstTimeRequestedTime = true;
 
@@ -18,16 +19,12 @@ export async function latestTimestamp() {
   return (await promisify(web3.eth.getBlock)("latest")).timestamp;
 }
 
-export const HOUR = 60 * 60;
-export const DAY = 24 * 60 * 60;
-export const MONTH = HOUR * 24 * 31;
-
 // useful for spawning time sensitive contracts
 export async function closeFutureDate() {
-  return (await latestTimestamp()) + DAY;
+  return (await latestTimestamp()) + hourInSeconds;
 }
 
 // useful for spawning time sensitive contracts
 export async function furtherFutureDate() {
-  return (await latestTimestamp()) + MONTH;
+  return (await latestTimestamp()) + monthInSeconds;
 }

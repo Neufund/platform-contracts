@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { eventValue } from "./events";
 import EvmError from "./EVMThrow";
+import { ZERO_ADDRESS } from "./constants";
 
 const TestERC677Callback = artifacts.require("TestERC677Callback");
 const TestERC223Callback = artifacts.require("TestERC223Callback");
 const TestERC223LegacyCallback = artifacts.require("TestERC223LegacyCallback");
-export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export function expectTransferEvent(tx, from, to, amount) {
   const event = eventValue(tx, "Transfer");

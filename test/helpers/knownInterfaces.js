@@ -4,7 +4,8 @@ function sha3(s) {
   return `0x${sha3Web3(s)}`;
 }
 
-export default {
+// lists all known interfaces which provide same services with different concrete implementations (abis)
+export const knownInterfaces = {
   accessPolicy: sha3("IAccessPolicy").slice(0, 10),
   forkArbiter: sha3("IEthereumForkArbiter").slice(0, 10),
   neumark: sha3("Neumark").slice(0, 10),
@@ -23,9 +24,9 @@ export default {
   icbmEtherToken: sha3("ICBMEtherToken").slice(0, 10),
   icbmEuroToken: sha3("ICBMEuroToken").slice(0, 10),
   icbmCommitment: sha3("ICBMCommitment").slice(0, 10),
-  commitmentInterface: sha3("ICommitment").slice(0, 10),
   platformTerms: sha3("PlatformTerms").slice(0, 10),
   universe: sha3("Universe").slice(0, 10),
+  commitmentInterface: sha3("ICommitment").slice(0, 10),
   equityTokenInterface: sha3("IEquityToken").slice(0, 10),
   equityTokenControllerInterface: sha3("IEquityTokenController").slice(0, 10),
 };
