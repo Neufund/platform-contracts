@@ -37,7 +37,7 @@ contract MockETOCommitment is
 
     // moves all timestamps so
     function _mockShiftBackTime(uint256 delta) public {
-        for(uint256 ii=0; ii<_pastStateTransitionTimes.length; ii+=1) {
+        for(uint256 ii = 0; ii<_pastStateTransitionTimes.length; ii += 1) {
             if(_pastStateTransitionTimes[ii] > 0) {
                 assert(_pastStateTransitionTimes[ii] >= delta);
                 _pastStateTransitionTimes[ii] -= uint32(delta);
