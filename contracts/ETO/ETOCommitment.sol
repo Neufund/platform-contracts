@@ -82,7 +82,9 @@ contract ETOCommitment is
     // minimum ticket in tokens with base price
     uint256 private MIN_TICKET_TOKENS;
     // platform operator share for low gas costs
-    uint256 private PLATFORM_NEUMARK_SHARE;
+    uint128 private PLATFORM_NEUMARK_SHARE;
+    // token rate expires after
+    uint128 private TOKEN_RATE_EXPIRES_AFTER;
 
     // wallet that keeps Platform Operator share of neumarks
     //  and where token participation fee is temporarily stored
@@ -214,7 +216,8 @@ contract ETOCommitment is
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
-        PLATFORM_NEUMARK_SHARE = PLATFORM_TERMS.PLATFORM_NEUMARK_SHARE();
+        PLATFORM_NEUMARK_SHARE = uint128(PLATFORM_TERMS.PLATFORM_NEUMARK_SHARE());
+        TOKEN_RATE_EXPIRES_AFTER = uint128(PLATFORM_TERMS.TOKEN_RATE_EXPIRES_AFTER());
 
         NEUMARK = universe.neumark();
         ETHER_TOKEN = universe.etherToken();
@@ -253,8 +256,8 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(ETOState.Setup)
     {
-        require(etoTerms == ETO_TERMS, "ETO_TERMS");
-        require(equityToken == EQUITY_TOKEN, "ETO_ET");
+        require(etoTerms == ETO_TERMS);
+        require(equityToken == EQUITY_TOKEN);
         assert(startDate < 0xFFFFFFFF);
         // must be more than 14 days (platform terms!)
         require(
@@ -301,9 +304,6 @@ contract ETOCommitment is
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @dev data in case of LockedAccount contains investor address and investor is LockedAccount address
-    event Dupa(bytes32 v);
-    event Dupa256(uint256 v);
-    event DupaBool(bool b);
     function tokenFallback(address investorOrProxy, uint256 amount, bytes data)
         public
         withStateTransition()
@@ -330,7 +330,7 @@ contract ETOCommitment is
         if (!isEuroInvestment) {
             (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
             // require if rate older than 4 hours
-            require(block.timestamp - rateTimestamp < 4 hours);
+            require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER);
             equivEurUlps = uint96(decimalFraction(amount, rate));
         } else {
             equivEurUlps = uint96(amount);
@@ -430,16 +430,8 @@ contract ETOCommitment is
         return ETO_TERMS;
     }
 
-    function platformTerms() public constant returns (PlatformTerms) {
-        return PLATFORM_TERMS;
-    }
-
     function equityToken() public constant returns (IEquityToken) {
         return EQUITY_TOKEN;
-    }
-
-    function identityRegistry() public constant returns (IIdentityRegistry) {
-        return IDENTITY_REGISTRY;
     }
 
     function nominee() public constant returns (address) {
@@ -450,8 +442,20 @@ contract ETOCommitment is
         return COMPANY_LEGAL_REPRESENTATIVE;
     }
 
-    function platfromWallet() public constant returns (address) {
-        return PLATFORM_WALLET;
+    function singletons()
+        public
+        constant
+        returns (
+            address platformWallet,
+            address identityRegistry,
+            address universe,
+            address platformTerms
+            )
+    {
+        platformWallet = PLATFORM_WALLET;
+        identityRegistry = IDENTITY_REGISTRY;
+        universe = UNIVERSE;
+        platformTerms = PLATFORM_TERMS;
     }
 
     function totalInvestment()
