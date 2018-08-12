@@ -1,5 +1,5 @@
 const moment = require("moment");
-const deployableArtifacts = require("../test/helpers/artifacts").default;
+const deployableArtifacts = require("../test/helpers/artifacts").artifacts;
 const path = require("path");
 const networks = require("../truffle.js").networks;
 
@@ -9,7 +9,7 @@ export function getDeployerAccount(network, accounts) {
 }
 
 export function getNetworkDefinition(network) {
-  return networks[network];
+  return Object.assign({}, networks[network]);
 }
 
 export function getConfig(web3, network, accounts) {
@@ -118,17 +118,68 @@ export function getFixtureAccounts(accounts) {
   if (accounts.length < 9) {
     throw new Error("node must present at least 9 unlocked accounts for fixtures");
   }
+
+  const makeAccount = (addr, typ, verified) => {
+    if (typ !== "external") {
+      // account must be unlocked
+      if (!accounts.find(a => addr.toLowerCase() === a.toLowerCase())) {
+        throw new Error(`Account ${addr} must be unlocked to use fixtures`);
+      }
+    }
+    return { address: addr, type: typ, verified };
+  };
+
   return {
-    ICBM_ETH_NOT_MIGRATED_NO_KYC: accounts[1],
-    ICBM_EUR_NOT_MIGRATED_HAS_KYC: accounts[2],
-    ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC: accounts[3],
-    ICBM_ETH_MIGRATED_NO_KYC: accounts[4],
-    ICBM_EUR_MIGRATED_HAS_KYC: accounts[5],
-    HAS_EUR_HAS_KYC: accounts[6],
-    HAS_ETH_T_NO_KYC: accounts[7],
-    EMPTY_HAS_KYC: accounts[8],
-    NANO_1: "0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D",
-    NANO_2: "0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C",
-    NANO_3: "0xaa4689311f3C3E88848CFd90f7dAA25eA2aacDD3",
+    INV_ETH_ICBM_NO_KYC: makeAccount(
+      "0x429123b08DF32b0006fd1F3b0Ef893A8993802f3",
+      "investor",
+      false,
+    ),
+    INV_EUR_ICBM_HAS_KYC: makeAccount(
+      "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
+      "investor",
+      true,
+    ),
+    INV_ETH_EUR_ICBM_HAS_KYC: makeAccount(
+      "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
+      "investor",
+      true,
+    ),
+    // todo: put configured addresses below and set verification, temporarilu all disabled
+    INV_ICBM_ETH_M_HAS_KYC: makeAccount(
+      "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
+      "external",
+      false,
+    ),
+    INV_ICBM_EUR_M_HAS_KYC: makeAccount(
+      "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
+      "external",
+      false,
+    ),
+    INV_HAS_EUR_HAS_KYC: makeAccount(
+      "0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2",
+      "external",
+      false,
+    ),
+    INV_HAS_ETH_T_NO_KYC: makeAccount(
+      "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
+      "external",
+      false,
+    ),
+    INV_EMPTY_HAS_KYC: makeAccount("0xc277e68bed917d68aed984e056d1b5ad0549271f", "external", false),
+    // nominees
+    NOMINEE_NEUMINI: makeAccount("0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6", "nominee", true),
+    // issuers
+    ISSUER_SETUP: makeAccount("0x74180B56DD74BC56a2E9D5720F39247c55F23328", "issuer", true),
+    ISSUER_WHITELIST: makeAccount("0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2", "issuer", true),
+    ISSUER_PUBLIC: makeAccount("0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988", "issuer", true),
+    ISSUER_SIGNING: makeAccount("0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0", "issuer", true),
+    ISSUER_CLAIMS: makeAccount("0xb7d28c28b28f6a753c071ef85a2946287dc8d854", "external", true),
+    ISSUER_PAYOUT: makeAccount("0x9e9f9a2e07c43ab0726e39859d26314c830b99de", "external", true),
+    ISSUER_REFUND: makeAccount("0x271097eaf502939993dd97b9e6435ab5b2e327a6", "external", true),
+    // external accounts
+    NANO_1: makeAccount("0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D", "external", false),
+    NANO_2: makeAccount("0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C", "external", false),
+    NANO_3: makeAccount("0xaa4689311f3C3E88848CFd90f7dAA25eA2aacDD3", "external", false),
   };
 }

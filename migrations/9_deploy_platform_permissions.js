@@ -3,7 +3,7 @@ const getConfig = require("./config").getConfig;
 const roles = require("../test/helpers/roles").default;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const { TriState } = require("../test/helpers/triState");
-const knownInterfaces = require("../test/helpers/knownInterfaces").default;
+const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

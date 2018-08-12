@@ -5,10 +5,8 @@ const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const promisify = require("../test/helpers/evmCommands").promisify;
-
-function toBytes32(hex) {
-  return `0x${web3.padLeft(hex.slice(2), 64)}`;
-}
+const toBytes32 = require("../test/helpers/constants").toBytes32;
+const stringify = require("../test/helpers/constants").stringify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -24,7 +22,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
-  const ITokenExchangeRateOracle = artifacts.require(CONFIG.artifacts.TOKEN_RATE_ORACLE);
+  const ITokenExchangeRateOracle = artifacts.require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
   const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
@@ -80,37 +78,39 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // setup fixture accounts
     console.log("deposit in EtherToken");
     const etherToken = await EtherToken.at(await universe.etherToken());
-    await etherToken.deposit({ from: fas.HAS_ETH_T_NO_KYC, value: CONFIG.Q18.mul(1187.198273981) });
     await etherToken.deposit({
-      from: fas.ICBM_EUR_NOT_MIGRATED_HAS_KYC,
+      from: fas.INV_HAS_ETH_T_NO_KYC.address,
+      value: CONFIG.Q18.mul(1187.198273981),
+    });
+    await etherToken.deposit({
+      from: fas.INV_EUR_ICBM_HAS_KYC.address,
       value: CONFIG.Q18.mul(387.198273981),
     });
 
     console.log("set KYC, sophisiticated, bankAccount");
     const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
-    await identityRegistry.setMultipleClaims(
-      [
-        fas.ICBM_EUR_NOT_MIGRATED_HAS_KYC,
-        fas.ICBM_EUR_MIGRATED_HAS_KYC,
-        fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC,
-        fas.HAS_EUR_HAS_KYC,
-        fas.EMPTY_HAS_KYC,
-      ],
-      [toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0"), toBytes32("0x0")],
-      [toBytes32("0x1"), toBytes32("0x1"), toBytes32("0x7"), toBytes32("0x5"), toBytes32("0x1")],
-      { from: DEPLOYER },
-    );
-    const claims = await identityRegistry.getClaims(fas.HAS_EUR_HAS_KYC);
-    if (claims !== toBytes32("0x5")) {
+    const requireKYC = Object.keys(fas)
+      .filter(fa => fas[fa].verified)
+      .map(fa => fas[fa].address);
+    const zeroClaims = requireKYC.map(() => toBytes32("0x0"));
+    const verifiedClaims = requireKYC.map(() => toBytes32("0x1"));
+    // special verified claims
+    verifiedClaims[2] = toBytes32("0x7");
+    verifiedClaims[3] = toBytes32("0x5");
+    await identityRegistry.setMultipleClaims(requireKYC, zeroClaims, verifiedClaims, {
+      from: DEPLOYER,
+    });
+    const claims = await identityRegistry.getClaims(requireKYC[3]);
+    if (claims !== verifiedClaims[3]) {
       throw new Error("claims could not be set");
     }
 
     console.log("deposit in EuroToken");
     const euroToken = await EuroToken.at(await universe.euroToken());
-    await euroToken.deposit(fas.HAS_EUR_HAS_KYC, CONFIG.Q18.mul(10278127.1988), {
+    await euroToken.deposit(fas.INV_HAS_EUR_HAS_KYC.address, CONFIG.Q18.mul(10278127.1988), {
       from: DEPLOYER,
     });
-    await euroToken.deposit(fas.ICBM_EUR_MIGRATED_HAS_KYC, CONFIG.Q18.mul(1271.1988), {
+    await euroToken.deposit(fas.INV_ICBM_EUR_M_HAS_KYC.address, CONFIG.Q18.mul(1271.1988), {
       from: DEPLOYER,
     });
 
@@ -121,7 +121,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     for (const f of Object.keys(fas)) {
       await promisify(web3.eth.sendTransaction)({
         from: DEPLOYER,
-        to: fas[f],
+        to: fas[f].address,
         value: CONFIG.Q18.mul(14.21182),
       });
     }
@@ -161,25 +161,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
       };
     };
 
-    const stringify = o => {
-      const op = {};
-      for (const p of Object.keys(o)) {
-        if (typeof o[p] === "string") {
-          op[p] = o[p];
-        } else if (typeof o[p][Symbol.iterator] === "function") {
-          op[p] = Array.from(o[p]).map(e => e.toString(10));
-        } else {
-          op[p] = o[p].toString(10);
-        }
-      }
-      return op;
-    };
-
     const describedFixtures = {};
     for (const f of Object.keys(fas)) {
-      const desc = await describeFixture(fas[f]);
+      const desc = await describeFixture(fas[f].address);
       desc.name = f;
-      describedFixtures[fas[f]] = stringify(desc);
+      desc.type = fas[f].type;
+      describedFixtures[fas[f].address] = stringify(desc);
     }
 
     const path = join(__dirname, "../build/fixtures.json");

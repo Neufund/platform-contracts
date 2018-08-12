@@ -5,8 +5,8 @@ const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const getNetworkDefinition = require("./config").getNetworkDefinition;
 const roles = require("../test/helpers/roles").default;
-const knownInterfaces = require("../test/helpers/knownInterfaces").default;
-const interfaceArtifacts = require("../test/helpers/interfaceArtifacts").default;
+const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
+const interfaceArtifacts = require("../test/helpers/interfaceArtifacts").interfaceToArtifacts;
 const { TriState } = require("../test/helpers/triState");
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const promisify = require("../test/helpers/evmCommands").promisify;
@@ -21,7 +21,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
-
     if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
 
@@ -50,6 +49,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const endBlockNo = await promisify(web3.eth.getBlockNumber)();
     console.log(`deployment finished at block ${endBlockNo}`);
 
+    const networkDefinition = getNetworkDefinition(network);
+    networkDefinition.unlockedAccounts = accounts;
     const meta = {
       CONFIG,
       DEPLOYER,
@@ -57,7 +58,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       ROLES: roles,
       KNOWN_INTERFACES: knownInterfaces,
       INTERFACE_ARTIFACTS: interfaceArtifacts,
-      NETWORK: getNetworkDefinition(network),
+      NETWORK: networkDefinition,
       HEAD_BLOCK_NO: endBlockNo,
       INITIAL_BLOCK_NO: global._initialBlockNo,
     };
