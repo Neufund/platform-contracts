@@ -31,9 +31,9 @@ export const interfaceToArtifacts = {
   [keyToKey.universe]: [artifacts.UNIVERSE],
   [keyToKey.platformTerms]: [artifacts.PLATFORM_TERMS],
   // more than one artifact (abi) planned soon
-  [keyToKey.commitmentInterface]: [artifacts.STANDARD_ETO_COMMITMENT],
-  [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN],
-  [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER],
+  [keyToKey.commitmentInterface]: [artifacts.STANDARD_ETO_COMMITMENT, ""],
+  [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN, ""],
+  [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER, ""],
 };
 
 // verify all known interfaces are mapped
