@@ -113,14 +113,14 @@ contract ETOTerms is Math {
         uint256 existingCompanyShares,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
-        uint256 tokenEurPriceUlps,
+        uint256 tokenPriceEurUlps,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
         bool isCrowdfunding,
-        string investmentAgreementUrl,
+        string investmentAgreementTemplateUrl,
         string prospectusUrl,
-        ShareholderRights shareHolderRights,
+        ShareholderRights shareholderRights,
         string equityTokenName,
         string equityTokenSymbol,
         uint256 shareNominalValueEurUlps
@@ -130,12 +130,12 @@ contract ETOTerms is Math {
         require(durationTerms != address(0));
         require(existingCompanyShares > 0);
         require(keccak256(abi.encodePacked(prospectusUrl)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(investmentAgreementUrl)) != EMPTY_STRING_HASH);
+        require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
         require(keccak256(abi.encodePacked(equityTokenName)) != EMPTY_STRING_HASH);
         require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
-        require(shareHolderRights != address(0));
+        require(shareholderRights != address(0));
         // test interface
-        require(shareHolderRights.HAS_GENERAL_INFORMATION_RIGHTS());
+        require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(maxNumberOfTokens >= minNumberOfTokens);
         require(shareNominalValueEurUlps > 0);
 
@@ -143,14 +143,14 @@ contract ETOTerms is Math {
         EXISTING_COMPANY_SHARES = existingCompanyShares;
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
-        TOKEN_PRICE_EUR_ULPS = tokenEurPriceUlps;
+        TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         IS_CROWDFUNDING = isCrowdfunding;
-        INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementUrl;
+        INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
         PROSPECTUS_URL = prospectusUrl;
-        SHAREHOLDER_RIGHTS = shareHolderRights;
+        SHAREHOLDER_RIGHTS = shareholderRights;
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
         SHARE_NOMINAL_VALUE_EUR_ULPS = shareNominalValueEurUlps;
