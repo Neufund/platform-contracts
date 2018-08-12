@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
-import knownInterfaces from "./helpers/knownInterfaces";
+import { knownInterfaces } from "./helpers/knownInterfaces";
 import registerSingletons from "./helpers/registerSingletons";
-import { ZERO_ADDRESS } from "./helpers/tokenTestCases";
+import { ZERO_ADDRESS } from "./helpers/constants";
 import { deployUniverse } from "./helpers/deployContracts";
 
 contract(

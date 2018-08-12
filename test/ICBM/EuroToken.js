@@ -6,7 +6,6 @@ import {
   standardTokenTests,
   erc677TokenTests,
   deployTestErc677Callback,
-  ZERO_ADDRESS,
   expectTransferEvent,
   testWithdrawal,
 } from "../helpers/tokenTestCases";
@@ -14,6 +13,7 @@ import { eventValue } from "../helpers/events";
 import { etherToWei } from "../helpers/unitConverter";
 import roles from "../helpers/roles";
 import EvmError from "../helpers/EVMThrow";
+import { ZERO_ADDRESS } from "../helpers/constants";
 
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const TestICBMEuroTokenMigrationTarget = artifacts.require("TestICBMEuroTokenMigrationTarget");

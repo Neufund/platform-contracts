@@ -2,8 +2,7 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound } from "./helpers/unitConverter";
 import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
-
-const Q18 = web3.toBigNumber("10").pow(18);
+import { Q18 } from "./helpers/constants";
 
 contract("PlatformTerms", ([_, admin]) => {
   let platformTerms;

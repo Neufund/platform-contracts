@@ -8,7 +8,6 @@ import {
   deployTestErc677Callback,
   erc223TokenTests,
   expectTransferEvent,
-  ZERO_ADDRESS,
   testWithdrawal,
   deployTestErc223Callback,
 } from "../helpers/tokenTestCases";
@@ -17,6 +16,7 @@ import { etherToWei } from "../helpers/unitConverter";
 import forceEther from "../helpers/forceEther";
 import roles from "../helpers/roles";
 import EvmError from "../helpers/EVMThrow";
+import { ZERO_ADDRESS } from "../helpers/constants";
 
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 

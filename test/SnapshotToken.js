@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import EvmError from "./helpers/EVMThrow";
-import { erc223TokenTests, deployTestErc223Callback, ZERO_ADDRESS } from "./helpers/tokenTestCases";
+import { erc223TokenTests, deployTestErc223Callback } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
+import { ZERO_ADDRESS } from "./helpers/constants";
 
 const BigNumber = web3.BigNumber;
 const TKN_DECIMALS = new BigNumber(10).toPower(18);

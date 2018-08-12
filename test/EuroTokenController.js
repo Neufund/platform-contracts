@@ -2,12 +2,12 @@ import { expect } from "chai";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { eventValue } from "./helpers/events";
 import roles from "./helpers/roles";
-import knownInterfaces from "./helpers/knownInterfaces";
-import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
+import { knownInterfaces } from "./helpers/knownInterfaces";
+import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import registerSingletons from "./helpers/registerSingletons";
+import { Q18, toBytes32 } from "./helpers/constants";
 
 const EuroTokenController = artifacts.require("EuroTokenController");
-const Q18 = web3.toBigNumber("10").pow(18);
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);

@@ -10,13 +10,12 @@ import {
   deploySimpleExchangeUniverse,
   deployNeumarkUniverse,
   deployIdentityRegistry,
-  toBytes32,
 } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { divRound } from "./helpers/unitConverter";
+import { toBytes32, Q18 } from "./helpers/constants";
 
-const Q18 = new web3.BigNumber(10).pow(18);
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
 const gasExchangeFee = Q18.mul(0.07);
 const hasKYCandHasAccount = toBytes32("0x5");

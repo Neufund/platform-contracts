@@ -6,27 +6,25 @@ import {
   erc677TokenTests,
   deployTestErc677Callback,
   deployTestErc223Callback,
-  ZERO_ADDRESS,
   expectTransferEvent,
   testWithdrawal,
   erc223TokenTests,
 } from "./helpers/tokenTestCases";
 import { eventValue } from "./helpers/events";
 import { etherToWei } from "./helpers/unitConverter";
-import knownInterfaces from "./helpers/knownInterfaces";
+import { knownInterfaces } from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
 import {
   deployUniverse,
   deployIdentityRegistry,
-  toBytes32,
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
 import { identityClaims } from "./helpers/identityClaims";
+import { ZERO_ADDRESS, toBytes32, Q18 } from "./helpers/constants";
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
 
-const Q18 = web3.toBigNumber("10").pow(18);
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);

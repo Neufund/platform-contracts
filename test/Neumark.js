@@ -13,10 +13,10 @@ import {
   deployTestErc223Callback,
   erc223TokenTests,
   expectTransferEvent,
-  ZERO_ADDRESS,
 } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
 import { parseNmkDataset } from "./helpers/dataset";
+import { ZERO_ADDRESS } from "./helpers/constants";
 // import increaseTime  from "./helpers/increaseTime";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
