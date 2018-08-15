@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import EvmError from "./EVMThrow";
-import { ZERO_ADDRESS } from "./tokenTestCases";
+import { ZERO_ADDRESS } from "./constants";
 
 export function snapshotTokenTests(
   getToken,

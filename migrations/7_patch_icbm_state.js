@@ -20,34 +20,36 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await commitment._mockTransitionTo(2);
     console.log("commit ETH");
     await commitment.commit({
-      from: fas.ICBM_ETH_NOT_MIGRATED_NO_KYC,
+      from: fas.INV_ETH_ICBM_NO_KYC.address,
       value: CONFIG.Q18.mul(61.1289798),
     });
     await commitment.commit({
-      from: fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC,
+      from: fas.INV_ETH_EUR_ICBM_HAS_KYC.address,
       value: CONFIG.Q18.mul(18.1289798),
     });
     await commitment.commit({
-      from: fas.ICBM_ETH_MIGRATED_NO_KYC,
+      from: fas.INV_ICBM_ETH_M_HAS_KYC.address,
       value: CONFIG.Q18.mul(11.1289798),
     });
     console.log("commit EUR");
     let amountEur = CONFIG.Q18.mul(1781267);
-    await euroToken.deposit(fas.ICBM_EUR_NOT_MIGRATED_HAS_KYC, amountEur);
+    await euroToken.deposit(fas.INV_EUR_ICBM_HAS_KYC.address, amountEur);
     await euroToken.approve(commitment.address, amountEur, {
-      from: fas.ICBM_EUR_NOT_MIGRATED_HAS_KYC,
+      from: fas.INV_EUR_ICBM_HAS_KYC.address,
     });
-    await commitment.commitEuro({ from: fas.ICBM_EUR_NOT_MIGRATED_HAS_KYC });
+    await commitment.commitEuro({ from: fas.INV_EUR_ICBM_HAS_KYC.address });
     amountEur = CONFIG.Q18.mul(71827);
-    await euroToken.deposit(fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC, amountEur);
+    await euroToken.deposit(fas.INV_ETH_EUR_ICBM_HAS_KYC.address, amountEur);
     await euroToken.approve(commitment.address, amountEur, {
-      from: fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC,
+      from: fas.INV_ETH_EUR_ICBM_HAS_KYC.address,
     });
-    await commitment.commitEuro({ from: fas.ICBM_EUR_ETH_NOT_MIGRATED_HAS_KYC });
+    await commitment.commitEuro({ from: fas.INV_ETH_EUR_ICBM_HAS_KYC.address });
     amountEur = CONFIG.Q18.mul(812988.1988);
-    await euroToken.deposit(fas.ICBM_EUR_MIGRATED_HAS_KYC, amountEur);
-    await euroToken.approve(commitment.address, amountEur, { from: fas.ICBM_EUR_MIGRATED_HAS_KYC });
-    await commitment.commitEuro({ from: fas.ICBM_EUR_MIGRATED_HAS_KYC });
+    await euroToken.deposit(fas.INV_ICBM_EUR_M_HAS_KYC.address, amountEur);
+    await euroToken.approve(commitment.address, amountEur, {
+      from: fas.INV_ICBM_EUR_M_HAS_KYC.address,
+    });
+    await commitment.commitEuro({ from: fas.INV_ICBM_EUR_M_HAS_KYC.address });
     console.log("set Commitment to final phase");
     await commitment._mockTransitionTo(3);
   });

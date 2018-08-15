@@ -4,10 +4,7 @@ const createAccessPolicy = require("../test/helpers/createAccessPolicy").default
 const getDeployerAccount = require("./config").getDeployerAccount;
 const roles = require("../test/helpers/roles").default;
 const promisify = require("../test/helpers/evmCommands").promisify;
-
-function toBytes32(hex) {
-  return `0x${web3.padLeft(hex.slice(2), 64)}`;
-}
+const toBytes32 = require("../test/helpers/constants").toBytes32;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

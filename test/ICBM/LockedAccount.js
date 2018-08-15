@@ -1,12 +1,7 @@
 import { expect } from "chai";
 import moment from "moment";
 import { hasEvent, eventValue } from "../helpers/events";
-import {
-  deployControlContracts,
-  deployNeumark,
-  dayInSeconds,
-  monthInSeconds,
-} from "../helpers/deployContracts";
+import { deployControlContracts, deployNeumark } from "../helpers/deployContracts";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
 import EvmError from "../helpers/EVMThrow";
@@ -16,6 +11,7 @@ import forceEther from "../helpers/forceEther";
 import { etherToWei } from "../helpers/unitConverter";
 import roles from "../helpers/roles";
 import { promisify } from "../helpers/evmCommands";
+import { dayInSeconds, monthInSeconds, Q18 } from "../helpers/constants";
 
 const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
@@ -27,7 +23,6 @@ const TestICBMLockedAccountMigrationTarget = artifacts.require(
   "TestICBMLockedAccountMigrationTarget",
 );
 
-const Q18 = new web3.BigNumber(10).pow(18);
 const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
 const LOCK_PERIOD = 18 * monthInSeconds;
 const UNLOCK_PENALTY_FRACTION = Q18.mul(0.1).round(0, 0);

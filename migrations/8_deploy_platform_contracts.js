@@ -1,7 +1,7 @@
 require("babel-register");
 const registerSingletons = require("../test/helpers/registerSingletons").default;
 const roles = require("../test/helpers/roles").default;
-const knownInterfaces = require("../test/helpers/knownInterfaces").default;
+const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const { TriState } = require("../test/helpers/triState");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
@@ -24,6 +24,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
   const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
+  const PlatformTerms = artifacts.require(CONFIG.artifacts.PLATFORM_TERMS);
 
   deployer.then(async () => {
     // set initial block
@@ -79,6 +80,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log("Universe deploying...");
     await deployer.deploy(Universe, accessPolicy.address, forkArbiter.address);
     const universe = await Universe.deployed();
+    console.log("Platform Terms deploying...");
+    await deployer.deploy(PlatformTerms);
+    const platformTerms = await PlatformTerms.deployed();
     console.log("IdentityRegistry deploying...");
     await deployer.deploy(IdentityRegistry, universe.address);
     const identityRegistry = await IdentityRegistry.deployed();
@@ -188,6 +192,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       {
         ki: knownInterfaces.icbmCommitment,
         addr: commitment.address,
+      },
+      {
+        ki: knownInterfaces.platformTerms,
+        addr: platformTerms.address,
       },
     ];
     await registerSingletons(universe, DEPLOYER, interfaces);

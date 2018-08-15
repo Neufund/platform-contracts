@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
-import { deployUniverse, deployIdentityRegistry, toBytes32 } from "./helpers/deployContracts";
+import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import { referenceClaims, deserializeClaims } from "./helpers/identityClaims";
+import { toBytes32 } from "./helpers/constants";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
 const TestUpdatedIdentityRecord = artifacts.require("TestUpdatedIdentityRecord");

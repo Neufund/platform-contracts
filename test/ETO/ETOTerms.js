@@ -2,16 +2,17 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { divRound } from "../helpers/unitConverter";
 import EvmError from "../helpers/EVMThrow";
+import { deployUniverse, deployPlatformTerms } from "../helpers/deployContracts";
 import {
-  deployUniverse,
-  deployPlatformTerms,
   deployShareholderRights,
   deployDurationTerms,
   deployETOTerms,
-} from "../helpers/deployContracts";
+} from "../helpers/deployTerms";
+import { Q18 } from "../helpers/constants";
 
-const Q18 = web3.toBigNumber("10").pow(18);
 const ETOTerms = artifacts.require("ETOTerms");
+const ETODurationTerms = artifacts.require("ETODurationTerms");
+const ShareholderRights = artifacts.require("ShareholderRights");
 
 contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) => {
   let platformTerms;
@@ -25,9 +26,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
   beforeEach(async () => {
     const [universe] = await deployUniverse(admin, admin);
     [platformTerms] = await deployPlatformTerms(universe, admin);
-    [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights();
-    [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms();
-    [etoTerms, terms, termsKeys] = await deployETOTerms(durationTerms, shareholderRights);
+    [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights(
+      ShareholderRights,
+    );
+    [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms(ETODurationTerms);
+    [etoTerms, terms, termsKeys] = await deployETOTerms(ETOTerms, durationTerms, shareholderRights);
   });
 
   it("should deploy", async () => {

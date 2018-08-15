@@ -44,7 +44,7 @@ contract ShareholderRights {
     constructor(
         VotingRule generalVotingRule,
         VotingRule tagAlongVotingRule,
-        uint256 liquidationPreferenceFrac,
+        uint256 liquidationPreferenceMultiplierFrac,
         bool hasFoundersVesting,
         uint256 generalVotingDuration,
         uint256 restrictedActVotingDuration,
@@ -61,7 +61,7 @@ contract ShareholderRights {
 
         GENERAL_VOTING_RULE = generalVotingRule;
         TAG_ALONG_VOTING_RULE = tagAlongVotingRule;
-        LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC = liquidationPreferenceFrac;
+        LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC = liquidationPreferenceMultiplierFrac;
         HAS_FOUNDERS_VESTING = hasFoundersVesting;
         GENERAL_VOTING_DURATION = generalVotingDuration;
         RESTRICTED_ACT_VOTING_DURATION = restrictedActVotingDuration;

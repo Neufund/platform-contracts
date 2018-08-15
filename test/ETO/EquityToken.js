@@ -1,12 +1,11 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { deployUniverse, deployPlatformTerms } from "../helpers/deployContracts";
 import {
-  deployUniverse,
-  deployPlatformTerms,
-  deployETOTerms,
-  deployDurationTerms,
   deployShareholderRights,
-} from "../helpers/deployContracts";
+  deployDurationTerms,
+  deployETOTerms,
+} from "../helpers/deployTerms";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -14,7 +13,6 @@ import {
   deployTestErc677Callback,
   erc223TokenTests,
   expectTransferEvent,
-  ZERO_ADDRESS,
   testWithdrawal,
   deployTestErc223Callback,
 } from "../helpers/tokenTestCases";
@@ -23,10 +21,14 @@ import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { increaseTime } from "../helpers/evmCommands";
+import { ZERO_ADDRESS } from "../helpers/constants";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
+const ETOTerms = artifacts.require("ETOTerms");
+const ETODurationTerms = artifacts.require("ETODurationTerms");
+const ShareholderRights = artifacts.require("ShareholderRights");
 
 contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let equityToken;
@@ -40,9 +42,9 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.reclaimer }]);
     [, platformTermsDict] = await deployPlatformTerms(universe, admin);
-    const [shareholderRights] = await deployShareholderRights();
-    const [durationTerms] = await deployDurationTerms();
-    [etoTerms, etoTermsDict] = await deployETOTerms(durationTerms, shareholderRights);
+    const [shareholderRights] = await deployShareholderRights(ShareholderRights);
+    const [durationTerms] = await deployDurationTerms(ETODurationTerms);
+    [etoTerms, etoTermsDict] = await deployETOTerms(ETOTerms, durationTerms, shareholderRights);
     equityTokenController = await TestNullEquityTokenController.new(universe.address);
     equityToken = await EquityToken.new(
       universe.address,

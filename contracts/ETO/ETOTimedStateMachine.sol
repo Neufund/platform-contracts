@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
 import "./IETOCommitment.sol";
+import "./METOStateMachineObserver.sol";
 
 
 /// @title time induced state machine for Equity Token Offering
@@ -11,7 +12,10 @@ import "./IETOCommitment.sol";
 ///  correct state before executing function body. note that this is contract state changing modifier so use with care
 /// @dev timed state change request is publicly accessible via 'handleTimedTransitions'
 /// @dev time is based on block.timestamp
-contract ETOTimedStateMachine is IETOCommitment {
+contract ETOTimedStateMachine is
+    IETOCommitment,
+    METOStateMachineObserver
+{
 
     ////////////////////////
     // CONSTANTS
@@ -37,7 +41,8 @@ contract ETOTimedStateMachine is IETOCommitment {
     ETOState private _state = ETOState.Setup;
 
     // historical times of state transition (index is ETOState)
-    uint32[7] private _pastStateTransitionTimes;
+    // internal access used to allow mocking time
+    uint32[7] internal _pastStateTransitionTimes;
 
     ////////////////////////
     // Modifiers
@@ -139,7 +144,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         returns (uint256[7] startOfs)
     {
         // 7 is number of states
-        for(uint256 ii=0;ii<ETO_STATES_COUNT;ii++) {
+        for(uint256 ii = 0;ii<ETO_STATES_COUNT;ii += 1) {
             startOfs[ii] = startOfInternal(ETOState(ii));
         }
     }
@@ -147,30 +152,6 @@ contract ETOTimedStateMachine is IETOCommitment {
     function commitmentObserver() public constant returns (IETOCommitmentObserver) {
         return COMMITMENT_OBSERVER;
     }
-
-    ////////////////////////
-    // Internal Interface
-    ////////////////////////
-
-    /// @notice called before state transitions, allows override transition due to additional business logic
-    /// @dev advance due to time implemented in advanceTimedState, here implement other conditions like
-    ///     max cap reached -> we go to signing
-    function mBeforeStateTransition(ETOState oldState, ETOState newState)
-        internal
-        constant
-        returns (ETOState newStateOverride);
-
-    /// @notice gets called after every state transition.
-    function mAfterTransition(ETOState oldState, ETOState newState)
-        internal;
-
-    /// @notice gets called after business logic, may induce state transition
-    function mAdavanceLogicState(ETOState oldState)
-        internal
-        constant
-        returns (ETOState);
-
-
 
     ////////////////////////
     // Internal functions
@@ -283,7 +264,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     {
         ETOState oldState = _state;
         ETOState effectiveNewState = mBeforeStateTransition(oldState, newState);
-        require(validTransition(oldState, effectiveNewState));
+        // require(validTransition(oldState, effectiveNewState));
 
         _state = effectiveNewState;
         // we have 60+ years for 2^32 overflow on epoch so disregard
@@ -298,7 +279,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         COMMITMENT_OBSERVER.onStateTransition(oldState, newState);
     }
 
-    function validTransition(ETOState oldState, ETOState newState)
+    /*function validTransition(ETOState oldState, ETOState newState)
         private
         pure
         returns (bool valid)
@@ -315,5 +296,5 @@ contract ETOTimedStateMachine is IETOCommitment {
             (oldState == ETOState.Signing && newState == ETOState.Refund) ||
             (oldState == ETOState.Signing && newState == ETOState.Claim) ||
             (oldState == ETOState.Claim && newState == ETOState.Payout);
-    }
+    }*/
 }
