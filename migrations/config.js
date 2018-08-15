@@ -147,26 +147,26 @@ export function getFixtureAccounts(accounts) {
     ),
     // todo: put configured addresses below and set verification, temporarilu all disabled
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
-      "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
-      "external",
-      false,
+      "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
+      "investor",
+      true,
     ),
     INV_ICBM_EUR_M_HAS_KYC: makeAccount(
-      "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
-      "external",
-      false,
+      "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
+      "investor",
+      true,
     ),
     INV_HAS_EUR_HAS_KYC: makeAccount(
-      "0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2",
-      "external",
-      false,
+      "0x0009C1d95C547d53E3b962059Be11802b5e85BA3",
+      "investor",
+      true,
     ),
     INV_HAS_ETH_T_NO_KYC: makeAccount(
-      "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
-      "external",
+      "0x008Cf11F0439C3e85f736B84244dfA04C6382c22",
+      "investor",
       false,
     ),
-    INV_EMPTY_HAS_KYC: makeAccount("0xc277e68bed917d68aed984e056d1b5ad0549271f", "external", false),
+    INV_EMPTY_HAS_KYC: makeAccount("0x0012f184BA450a1E4e2E90110c57D84b06354770", "investor", true),
     // nominees
     NOMINEE_NEUMINI: makeAccount("0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6", "nominee", true),
     // issuers
@@ -174,9 +174,11 @@ export function getFixtureAccounts(accounts) {
     ISSUER_WHITELIST: makeAccount("0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2", "issuer", true),
     ISSUER_PUBLIC: makeAccount("0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988", "issuer", true),
     ISSUER_SIGNING: makeAccount("0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0", "issuer", true),
-    ISSUER_CLAIMS: makeAccount("0xb7d28c28b28f6a753c071ef85a2946287dc8d854", "external", true),
-    ISSUER_PAYOUT: makeAccount("0x9e9f9a2e07c43ab0726e39859d26314c830b99de", "external", true),
-    ISSUER_REFUND: makeAccount("0x271097eaf502939993dd97b9e6435ab5b2e327a6", "external", true),
+    ISSUER_CLAIMS: makeAccount("0x007D45D94368AE57ac8351604dC1cB3236150727", "issuer", true),
+    ISSUER_PAYOUT: makeAccount("0x00866b5e4F539b215a28476aD5A364425599F206", "issuer", true),
+    ISSUER_REFUND: makeAccount("0x0028625dcBc24a821b40864294D66507fEC70B7F", "issuer", true),
+    // spare
+    SPARE_ACCOUNT: makeAccount("0x0015650359DaF66f6633DEeb490a059027B0e396", "investor", false),
     // external accounts
     NANO_1: makeAccount("0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D", "external", false),
     NANO_2: makeAccount("0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C", "external", false),

@@ -92,6 +92,8 @@ async function describeETO(etoCommitment, etoDefinition, state, whitelist, inves
     name: etoDefinition.name,
     state,
     startDate: await etoCommitment.startOf(1),
+    nominee: await etoCommitment.nominee(),
+    company: await etoCommitment.companyLegalRep(),
     definition: etoDefinition,
   };
   if (whitelist) {
