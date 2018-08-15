@@ -15,8 +15,8 @@ import {
   deployDurationTerms,
   deployETOTerms,
 } from "../helpers/deployTerms";
-import { CommitmentState } from "./commitmentState";
-import { GovState } from "./govState";
+import { CommitmentState } from "../helpers/commitmentState";
+import { GovState } from "../helpers/govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { eventValue, decodeLogs, eventWithIdxValue } from "../helpers/events";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";

@@ -536,6 +536,8 @@ contract ETOCommitment is
                 // todo: must write tests wl -> public and public -> signing. first one is potential problem, should we skip public in that case?
                 return oldState == ETOState.Whitelist ? ETOState.Public : ETOState.Signing;
             }
+            // todo: introduce a max cap in tokens for whitelist but do not switch state here.
+            // todo: general cap on the whitelist (but take into account fixed slots)
         }
 
         if (oldState == ETOState.Signing && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {

@@ -9,7 +9,7 @@ const checkETO = require("./deployETO").checkETO;
 const publicETOTerms = require("./configETOFixtures").publicETOTerms;
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
-const CommitmentState = require("../test/ETO/commitmentState").CommitmentState;
+const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

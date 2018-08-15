@@ -9,7 +9,7 @@ import {
   deployDurationTerms,
   deployETOTerms,
 } from "../test/helpers/deployTerms";
-import { CommitmentStateRev } from "../test/ETO/commitmentState";
+import { CommitmentStateRev } from "../test/helpers/commitmentState";
 
 function logDeployed(contract) {
   console.log("...deployed at address ", ...good(contract.address));
