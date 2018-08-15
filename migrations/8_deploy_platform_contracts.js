@@ -174,6 +174,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
         addr: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
       },
       {
+        ki: knownInterfaces.platformPortfolio,
+        addr: CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
+      },
+      {
         ki: knownInterfaces.icbmEuroToken,
         addr: await icbmEuroLock.assetToken(),
       },

@@ -145,9 +145,10 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
 
   describe("contribution calculation tests", () => {
     function tokenPrice(_, amount, discount = 1) {
-      return divRound(amount, terms.TOKEN_PRICE_EUR_ULPS)
-        .div(discount)
-        .round(0, 4);
+      // here we need to reproduce exact rounding as in smart contract
+      const discountFraction = Q18.mul(discount);
+      const discountedPrice = divRound(terms.TOKEN_PRICE_EUR_ULPS.mul(discountFraction), Q18);
+      return divRound(amount, discountedPrice);
     }
 
     async function amountNoDiscount(total, amount) {

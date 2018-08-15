@@ -18,7 +18,8 @@ contract IETOCommitment is
     // on every state transition
     event LogStateTransition(
         uint32 oldState,
-        uint32 newState
+        uint32 newState,
+        uint32 timestamp
     );
 
     /// on a claim by invester
@@ -39,6 +40,48 @@ contract IETOCommitment is
         uint256 amount
     );
 
+    // logged at the moment of Company setting terms
+    event LogTermsSet(
+        address companyLegalRep,
+        address etoTerms,
+        address equityToken
+    );
+
+    // logged at the moment Company sets/resets Whitelisting start date
+    event LogETOStartDateSet(
+        address companyLegalRep,
+        uint256 previousTimestamp,
+        uint256 newTimestamp
+    );
+
+    // logged at the moment Signing procedure starts
+    event LogSigningStarted(
+        address nominee,
+        address companyLegalRep,
+        uint256 newShares,
+        uint256 capitalIncreaseEurUlps
+    );
+
+    // logged when company presents signed investment agreement
+    event LogCompanySignedAgreement(
+        address companyLegalRep,
+        address nominee,
+        string signedInvestmentAgreementUrl
+    );
+
+    // logged when nominee presents and verifies its copy of investment agreement
+    event LogNomineeConfirmedAgreement(
+        address nominee,
+        address companyLegalRep,
+        string signedInvestmentAgreementUrl
+    );
+
+    // logged on refund transition to mark destroyed tokens
+    event LogRefundStarted(
+        address assetToken,
+        uint256 totalTokenAmountInt,
+        uint256 totalRewardNmkUlps
+    );
 
     ////////////////////////
     // Public functions
@@ -105,5 +148,21 @@ contract IETOCommitment is
             uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
             uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps,
             uint256 sharePriceEurUlps
+        );
+
+    /// method to obtain current investors ticket
+    function investorTicket(address investor)
+        public
+        constant
+        returns (
+            uint256 equivEurUlps,
+            uint256 rewardNmkUlps,
+            uint256 equityTokenInt,
+            uint256 sharesInt,
+            uint256 tokenPrice,
+            uint256 neuRate,
+            uint256 amountEth,
+            uint256 amountEurUlps,
+            bool claimOrRefundSettled
         );
 }

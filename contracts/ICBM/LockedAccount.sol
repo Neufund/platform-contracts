@@ -266,7 +266,7 @@ contract LockedAccount is
         investment.balance += amount;
         investment.neumarksDue += unlockedNmkUlps;
         // invest via ERC223 interface
-        assert(PAYMENT_TOKEN.transfer(commitment, amount, addressToBytes(msg.sender)));
+        assert(PAYMENT_TOKEN.transfer(commitment, amount, abi.encodePacked(msg.sender)));
         emit LogFundsCommitted(msg.sender, commitment, amount, unlockedNmkUlps);
     }
 

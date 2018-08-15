@@ -70,6 +70,8 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       );
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
+
+      // todo: TokenMetadata should be set from EtoTerms -> test it
     });
 
     it("should deposit", async () => {
@@ -88,9 +90,11 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     it("should overflow on deposit");
 
-    it("should withdraw");
+    // transfers are disabled no matter controller settings -> may cases to test
+    it("should close tokens");
 
-    it("should close tokens"); // transfers are disabled no matter controller settings
+    // cases for successful destroy, rejected due to controller, not enough balance etc.
+    it("should destroy tokens");
 
     it("should change token controller");
 
@@ -98,7 +102,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     it("should sign agreement on transfer");
 
-    it("should sign agreement on receiving transfer - ???? we need answer from legal");
+    it("should not sign agreement on receiving transfer");
 
     it("should sign agreement on approve");
 
@@ -108,6 +112,8 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
+
+    it("should set token symbol and other metadata from eto terms correctly");
   });
 
   describe("IEquityTokenController tests", () => {

@@ -44,6 +44,16 @@ contract ICommitment is
     // says if state is failure
     function failed() public constant returns (bool);
 
+    // currently committed funds
+    function totalInvestment()
+        public
+        constant
+        returns (
+            uint256 totalEquivEurUlps,
+            uint256 totalTokensInt,
+            uint256 totalInvestors
+        );
+
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @param investor address of the investor
     /// @param amount amount commited

@@ -7,6 +7,7 @@ import "./Identity/IIdentityRegistry.sol";
 import "./Standards/IERC223Token.sol";
 import "./Standards/ITokenExchangeRateOracle.sol";
 import "./Standards/IFeeDisbursal.sol";
+import "./Standards/IPlatformPortfolio.sol";
 import "./Standards/IEthereumForkArbiter.sol";
 
 
@@ -179,6 +180,20 @@ contract Universe is
         }
     }
 
+    /// set or unset array of collection
+    function setCollectionsInterfaces(bytes4[] interfaceIds, address[] instances, bool[] set_flags)
+        public
+        only(ROLE_UNIVERSE_MANAGER)
+    {
+        require(interfaceIds.length == instances.length);
+        require(interfaceIds.length == set_flags.length);
+        uint256 idx;
+        while(idx < interfaceIds.length) {
+            setCollectionPrivate(interfaceIds[idx], instances[idx], set_flags[idx]);
+            idx += 1;
+        }
+    }
+
     ////////////////////////
     // Getters
     ////////////////////////
@@ -231,6 +246,10 @@ contract Universe is
         return IFeeDisbursal(_singletons[KNOWN_INTERFACE_FEE_DISBURSAL]);
     }
 
+    function platformPortfolio() public constant returns (address) {
+        return IPlatformPortfolio(_singletons[KNOWN_INTERFACE_PLATFORM_PORTFOLIO]);
+    }
+
     function tokenExchange() public constant returns (address) {
         return _singletons[KNOWN_INTERFACE_TOKEN_EXCHANGE];
     }
@@ -250,7 +269,7 @@ contract Universe is
     function setSingletonPrivate(bytes4 interfaceId, address instance)
         private
     {
-
+        require(interfaceId != KNOWN_INTERFACE_UNIVERSE, "UNI_NO_UNIVERSE_SINGLETON");
         address replacedInstance = _singletons[interfaceId];
         // do nothing if not changing
         if (replacedInstance != instance) {

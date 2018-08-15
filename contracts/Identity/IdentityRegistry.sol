@@ -55,8 +55,8 @@ contract IdentityRegistry is
     }
 
     function setClaims(address identity, bytes32 oldClaims, bytes32 newClaims)
-        only(ROLE_IDENTITY_MANAGER)
         public
+        only(ROLE_IDENTITY_MANAGER)
     {
         require(_claims[identity] == oldClaims);
         _claims[identity] = newClaims;
@@ -65,8 +65,8 @@ contract IdentityRegistry is
 
     /// sets multiple claims in single transaction to save on gas
     function setMultipleClaims(address[] identities, bytes32[] oldClaims, bytes32[] newClaims)
-        only(ROLE_IDENTITY_MANAGER)
         public
+        only(ROLE_IDENTITY_MANAGER)
     {
         assert(identities.length == oldClaims.length);
         assert(identities.length == newClaims.length);

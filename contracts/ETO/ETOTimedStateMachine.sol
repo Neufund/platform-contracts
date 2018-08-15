@@ -17,7 +17,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     // CONSTANTS
     ////////////////////////
 
-    uint32 private constant TS_STATE_NOT_SET = 1;
+    // uint32 private constant TS_STATE_NOT_SET = 1;
 
     ////////////////////////
     // Immutable state
@@ -37,7 +37,7 @@ contract ETOTimedStateMachine is IETOCommitment {
     ETOState private _state = ETOState.Setup;
 
     // historical times of state transition (index is ETOState)
-    uint32[] private _pastStateTransitionTimes;
+    uint32[7] private _pastStateTransitionTimes;
 
     ////////////////////////
     // Modifiers
@@ -70,19 +70,6 @@ contract ETOTimedStateMachine is IETOCommitment {
         require(_state != state);
         _;
     }*/
-
-    ////////////////////////
-    // Constructor
-    ////////////////////////
-
-    constructor()
-        internal
-    {
-        // set values to past timed transitions to reduce future gas cost
-        _pastStateTransitionTimes = [
-            TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET, TS_STATE_NOT_SET
-            ];
-    }
 
     ////////////////////////
     // Public functions
@@ -146,6 +133,17 @@ contract ETOTimedStateMachine is IETOCommitment {
         return startOfInternal(s);
     }
 
+    function startOfStates()
+        public
+        constant
+        returns (uint256[7] startOfs)
+    {
+        // 7 is number of states
+        for(uint256 ii=0;ii<ETO_STATES_COUNT;ii++) {
+            startOfs[ii] = startOfInternal(ETOState(ii));
+        }
+    }
+
     function commitmentObserver() public constant returns (IETOCommitmentObserver) {
         return COMMITMENT_OBSERVER;
     }
@@ -185,10 +183,10 @@ contract ETOTimedStateMachine is IETOCommitment {
         require(observer != address(0));
 
         COMMITMENT_OBSERVER = observer;
-        ETO_STATE_DURATIONS[uint32(ETOState.Whitelist)] = durationTerms.WHITELIST_DURATION();
-        ETO_STATE_DURATIONS[uint32(ETOState.Public)] = durationTerms.PUBLIC_DURATION();
-        ETO_STATE_DURATIONS[uint32(ETOState.Signing)] = durationTerms.SIGNING_DURATION();
-        ETO_STATE_DURATIONS[uint32(ETOState.Claim)] = durationTerms.CLAIM_DURATION();
+        ETO_STATE_DURATIONS = [
+            0, durationTerms.WHITELIST_DURATION(), durationTerms.PUBLIC_DURATION(), durationTerms.SIGNING_DURATION(),
+            durationTerms.CLAIM_DURATION(), 0, 0
+            ];
     }
 
     function runStateMachine(uint32 startDate)
@@ -226,7 +224,7 @@ contract ETOTimedStateMachine is IETOCommitment {
         // this trick gets start of required state by adding all durations between current and required states
         // note that past and current state were handled above so required state is in the future
         // we also rely on terminal states having duration of 0
-        for (uint256 stateIdx = uint32(_state) + 1; stateIdx <= uint32(s); stateIdx++) {
+        for (uint256 stateIdx = uint32(_state) + 1; stateIdx < uint32(s); stateIdx++) {
             currStateExpiration += ETO_STATE_DURATIONS[stateIdx];
         }
         return currStateExpiration;
@@ -254,11 +252,12 @@ contract ETOTimedStateMachine is IETOCommitment {
         if (_state == ETOState.Whitelist && t >= startOfInternal(ETOState.Public)) {
             transitionTo(ETOState.Public);
         }
-        if (_state == ETOState.Public && t >= startOfInternal(ETOState.Claim)) {
-            transitionTo(ETOState.Claim);
+        if (_state == ETOState.Public && t >= startOfInternal(ETOState.Signing)) {
+            transitionTo(ETOState.Signing);
         }
-        // signing to refund
-        if (_state == ETOState.Signing && t >= startOfInternal(ETOState.Refund)) {
+        // signing to refund: first we check if it's claim time and if it we go
+        // for refund. to go to claim agreement MUST be signed, no time transition
+        if (_state == ETOState.Signing && t >= startOfInternal(ETOState.Claim)) {
             transitionTo(ETOState.Refund);
         }
         // claim to payout
@@ -288,9 +287,9 @@ contract ETOTimedStateMachine is IETOCommitment {
 
         _state = effectiveNewState;
         // we have 60+ years for 2^32 overflow on epoch so disregard
-        _pastStateTransitionTimes[uint32(oldState)] = uint32(block.timestamp);
-        _pastStateTransitionTimes[uint32(effectiveNewState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint32(effectiveNewState)];
-        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState));
+        _pastStateTransitionTimes[uint256(oldState)] = uint32(block.timestamp);
+        _pastStateTransitionTimes[uint256(effectiveNewState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint256(effectiveNewState)];
+        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState), uint32(block.timestamp));
 
         // should not change _state
         mAfterTransition(oldState, effectiveNewState);

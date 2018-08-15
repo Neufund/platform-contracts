@@ -128,8 +128,8 @@ contract EuroToken is
     /// @dev proof is provided in form of log entry. based on that proof backend will make a bank transfer
     ///     by default controller will check the following: KYC and existence of working bank account
     function withdraw(uint256 amount)
-        onlyIfWithdrawAllowed(msg.sender, amount)
         public
+        onlyIfWithdrawAllowed(msg.sender, amount)
     {
         destroyTokensPrivate(msg.sender, amount);
         emit LogWithdrawal(msg.sender, amount);
@@ -140,8 +140,8 @@ contract EuroToken is
     ///     just internal currency of Neufund platform, not general purpose stable coin
     ///     we need to be able to destroy EUR-T if ordered by authorities
     function destroy(address owner, uint256 amount)
-        only(ROLE_EURT_LEGAL_MANAGER)
         public
+        only(ROLE_EURT_LEGAL_MANAGER)
     {
         destroyTokensPrivate(owner, amount);
         emit LogDestroy(owner, msg.sender, amount);
@@ -152,8 +152,8 @@ contract EuroToken is
     //
 
     function changeTokenController(ITokenController newController)
-        only(ROLE_EURT_LEGAL_MANAGER)
         public
+        only(ROLE_EURT_LEGAL_MANAGER)
     {
         require(newController != ITokenController(0x0));
         _tokenController = newController;
