@@ -174,15 +174,51 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectStateStarts({ Whitelist: startDate, Refund: 0 }, defaultDurationTable());
     });
 
-    it("should reset start date");
+    it("should reset start date", async () => {
+      // company confirms terms and sets start date
+      let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
+      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+        from: company,
+      });
+      // timed state machine works now and we can read out expected starts of states
+      await expectStateStarts({ Whitelist: startDate, Refund: 0 }, defaultDurationTable());
 
-    it("rejects setting initial start date closer than DATE_TO_WHITELIST_MIN_DURATION to now");
+      let newStartDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds * 2);
+      newStartDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      await etoCommitment.setStartDate(etoTerms.address, equityToken.address, newStartDate, {
+        from: company,
+      });
+      // timed state machine works now and we can read out expected starts of states
+      await expectStateStarts({ Whitelist: newStartDate, Refund: 0 }, defaultDurationTable());
+    });
 
+    it("rejects setting initial start date closer than DATE_TO_WHITELIST_MIN_DURATION to now", async () => {
+      // company confirms terms and sets start date
+      let startDate = new web3.BigNumber((await latestTimestamp()) - dayInSeconds);
+      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      await expect(
+        etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+          from: company,
+        }),
+      ).to.revert;
+    });
+
+    // @marcin: not sure how to test this, do we have some kind of time machine mechanism?
     it(
       "rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date",
     );
 
-    it("rejects setting date not from company");
+    it("rejects setting date not from company", async () => {
+      // company confirms terms and sets start date
+      let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
+      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      await expect(
+        etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+          from: investors[0],
+        }),
+      ).to.revert;
+    });
 
     it("rejects setting date before block.timestamp");
 
