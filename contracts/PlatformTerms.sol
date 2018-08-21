@@ -44,7 +44,7 @@ contract PlatformTerms is Math {
 
     // duration constraints
     uint256 public constant MIN_WHITELIST_DURATION_DAYS = 0 days;
-    uint256 public constant MAX_WHITELIST_DURATION_DAYS = 60 days;
+    uint256 public constant MAX_WHITELIST_DURATION_DAYS = 30 days;
     uint256 public constant MIN_PUBLIC_DURATION_DAYS = 0 days;
     uint256 public constant MAX_PUBLIC_DURATION_DAYS = 60 days;
 
