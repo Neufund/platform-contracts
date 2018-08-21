@@ -93,9 +93,8 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   it("should reject on platform terms with max ticket in crowdfunding to large", async () => {
     // change to sub(0) for this test to fail
-    terms.MAX_TICKET_EUR_ULPS = (await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS()).add(
-      1,
-    );
+    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS();
+    terms.MAX_TICKET_EUR_ULPS = oldValue.add(1);
     terms.IS_CROWDFUNDING = true;
     const termsValues = termsKeys.map(v => terms[v]);
     // console.log(termsValues);
@@ -105,9 +104,8 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   it("should reject on platform terms with simple max ticket in crowdfunding to large", async () => {
     // change to sub(0) for this test to fail
-    terms.MAX_TICKET_SIMPLE_EUR_ULPS = (await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS()).add(
-      1,
-    );
+    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS();
+    terms.MAX_TICKET_SIMPLE_EUR_ULPS = oldValue.add(1);
     terms.IS_CROWDFUNDING = true;
     const termsValues = termsKeys.map(v => terms[v]);
     // console.log(termsValues);
