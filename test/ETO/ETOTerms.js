@@ -113,6 +113,18 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
+  it("should accept new duration terms", async () => {
+    // change to sub(0) for this test to fail
+    durationTerms.WHITELIST_DURATION = (await platformTerms.MAX_WHITELIST_DURATION_DAYS()).sub(1);
+    let values = durationTermsKeys.map(v => durTerms[v]);
+    durationTerms = await ETODurationTerms.new.apply(values);
+
+    terms.DURATION_TERMS = durationTerms.address;
+    values = termsKeys.map(v => terms[v]);
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await etoTerms.requireValidTerms(platformTerms.address);
+  });
+
   it("should reject on platform terms with whitelist duration too small", async () => {
     // change to sub(0) for this test to fail
     durationTerms.WHITELIST_DURATION = (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).sub(1);
