@@ -33,9 +33,11 @@ contract ShareholderRights {
     // duration of restricted act votings (like exit etc.)
     uint256 public RESTRICTED_ACT_VOTING_DURATION;
     // offchain time to finalize and execute voting;
-    uint256 public VOTING_FINALIZATION;
+    uint256 public VOTING_FINALIZATION_DURATION;
     // quorum of tokenholders for the vote to count as decimal fraction
     uint256 public TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
+    // quorum of tokenholders voting in favor for the vote to count
+    uint256 public VOTING_MAJORITY_FRAC = 10**17; // 10% 
 
     ////////////////////////
     // Constructor
@@ -49,7 +51,8 @@ contract ShareholderRights {
         uint256 generalVotingDuration,
         uint256 restrictedActVotingDuration,
         uint256 votingFinalization,
-        uint256 tokenholdersQuorumFrac
+        uint256 tokenholdersQuorumFrac,
+        uint256 votingMajorityFrac
     )
         public
     {
@@ -65,7 +68,8 @@ contract ShareholderRights {
         HAS_FOUNDERS_VESTING = hasFoundersVesting;
         GENERAL_VOTING_DURATION = generalVotingDuration;
         RESTRICTED_ACT_VOTING_DURATION = restrictedActVotingDuration;
-        VOTING_FINALIZATION = votingFinalization;
+        VOTING_FINALIZATION_DURATION = votingFinalization;
         TOKENHOLDERS_QUORUM_FRAC = tokenholdersQuorumFrac;
+        VOTING_MAJORITY_FRAC = votingMajorityFrac;
     }
 }

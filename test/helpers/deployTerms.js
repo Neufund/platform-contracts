@@ -7,8 +7,9 @@ export const defaultShareholderTerms = {
   HAS_FOUNDERS_VESTING: true,
   GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
   RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  VOTING_FINALIZATION: new web3.BigNumber(daysToSeconds(5)),
+  VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
+  VOTING_MAJORITY_FRAC: Q18.mul(0.1),
 };
 
 export const defDurTerms = {
