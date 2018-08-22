@@ -200,24 +200,28 @@ contract EuroToken is
     //
     // Implements IERC223Token
     //
-
     function transfer(address to, uint256 amount, bytes data)
         public
-        onlyIfTransferAllowed(msg.sender, to, amount)
         returns (bool success)
     {
-        transferInternal(msg.sender, to, amount);
+        return ierc223TransferInternal(msg.sender, to, amount, data);
+    }
 
-        // Notify the receiving contract.
-        if (isContract(to)) {
-            // in case of re-entry (1) transfer is done (2) msg.sender is different
-            IERC223Callback(to).tokenFallback(msg.sender, amount, data);
-        }
-        return true;
+    /// @notice convenience function to deposit and immediately transfer amount
+    /// @param depositTo which account to deposit to and then transfer from
+    /// @param transferTo where to transfer after deposit
+    /// @param amount total amount to transfer, must be <= balance after deposit
+    /// @dev intended to deposit from bank account and invest in ETO
+    function depositAndTransfer(address depositTo, address transferTo, uint256 amount, bytes data)
+        public
+        returns (bool success)
+    {
+        deposit(depositTo, amount);
+        return ierc223TransferInternal(depositTo, transferTo, amount, data);
     }
 
     ////////////////////////
-    // Public functions
+    // Private functions
     ////////////////////////
 
     function destroyTokensPrivate(address owner, uint256 amount)
@@ -227,5 +231,21 @@ contract EuroToken is
         _balances[owner] = sub(_balances[owner], amount);
         _totalSupply = sub(_totalSupply, amount);
         emit Transfer(owner, address(0), amount);
+    }
+
+    /// @notice internal transfer function that checks permissions and calls the tokenFallback
+    function ierc223TransferInternal(address from, address to, uint256 amount, bytes data)
+        private
+        onlyIfTransferAllowed(from, to, amount)
+        returns (bool success)
+    {
+        transferInternal(from, to, amount);
+
+        // Notify the receiving contract.
+        if (isContract(to)) {
+            // in case of re-entry (1) transfer is done (2) msg.sender is different
+            IERC223Callback(to).tokenFallback(from, amount, data);
+        }
+        return true;
     }
 }

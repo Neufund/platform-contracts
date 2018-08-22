@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { eventValue } from "./events";
+import { eventValue, eventValueAtIndex } from "./events";
 import EvmError from "./EVMThrow";
 import { ZERO_ADDRESS } from "./constants";
 
@@ -9,6 +9,14 @@ const TestERC223LegacyCallback = artifacts.require("TestERC223LegacyCallback");
 
 export function expectTransferEvent(tx, from, to, amount) {
   const event = eventValue(tx, "Transfer");
+  expect(event).to.exist;
+  expect(event.args.from).to.eq(from);
+  expect(event.args.to).to.eq(to);
+  expect(event.args.amount).to.be.bignumber.eq(amount);
+}
+
+export function expectTransferEventAtIndex(tx, index, from, to, amount) {
+  const event = eventValueAtIndex(tx, index, "Transfer");
   expect(event).to.exist;
   expect(event.args.from).to.eq(from);
   expect(event.args.to).to.eq(to);

@@ -33,6 +33,18 @@ export function eventValue(tx, eventName, parName) {
   return event;
 }
 
+export function eventValueAtIndex(tx, index, eventName, parName) {
+  const events = tx.logs.filter(e => e.event === eventName);
+  expect(events, `Event ${eventName} not found in logs`).to.not.be.empty;
+  expect(events.length, `Multiple ${eventName} events found in logs`).to.be.greaterThan(index - 1);
+  const event = events[index];
+  if (parName) {
+    expect(event.args, `Parameter ${parName} not in ${eventName} event`).to.have.property(parName);
+    return event.args[parName];
+  }
+  return event;
+}
+
 export function eventWithIdxValue(tx, logIdx, eventName, parName) {
   const events = tx.logs.filter(e => e.event === eventName);
   expect(events, `Event ${eventName} not found in logs`).to.not.be.empty;
