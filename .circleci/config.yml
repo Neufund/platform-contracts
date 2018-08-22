@@ -16,7 +16,7 @@ jobs:
           keys:
           - v1-deps-{{ checksum "package.json" }}
           - v1-deps-
-      - run: source /opt/circleci/.nvm/nvm.sh yarn
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn
       - run: source /opt/circleci/.nvm/nvm.sh && yarn lint
       - run: source /opt/circleci/.nvm/nvm.sh && yarn build
       - save_cache:
@@ -39,7 +39,7 @@ jobs:
           keys:
           - v1-deps-{{ checksum "package.json" }}
           - v1-deps-
-      - run: source /opt/circleci/.nvm/nvm.sh yarn
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn
       - run: make test-container
       - run: source /opt/circleci/.nvm/nvm.sh && yarn test
       - save_cache:
