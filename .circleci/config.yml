@@ -24,7 +24,19 @@ jobs:
             - node_modules
           key: v1-deps-{{ checksum "package.json" }}
 
-  test:
+  test-container:
+    machine:
+      enabled: true
+      image: circleci/classic:edge
+      docker_layer_caching: true
+
+    working_directory: /home/circleci/app
+
+    steps:
+      - checkout
+      - run: make test-container
+
+  tests:
     machine:
       enabled: true
       image: circleci/classic:edge
@@ -40,7 +52,6 @@ jobs:
           - v1-deps-{{ checksum "package.json" }}
           - v1-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn
-      - run: make test-container
       - run: source /opt/circleci/.nvm/nvm.sh && yarn test
       - save_cache:
           paths:
@@ -53,5 +64,6 @@ workflows:
   mainflow:
     jobs:
       - lint-and-build
-      - test
+      - test-container
+      - tests
 
