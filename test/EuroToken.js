@@ -7,10 +7,11 @@ import {
   deployTestErc677Callback,
   deployTestErc223Callback,
   expectTransferEvent,
+  expectTransferEventAtIndex,
   testWithdrawal,
   erc223TokenTests,
 } from "./helpers/tokenTestCases";
-import { eventValue } from "./helpers/events";
+import { eventValue, eventValueAtIndex } from "./helpers/events";
 import { etherToWei } from "./helpers/unitConverter";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
@@ -67,6 +68,13 @@ contract(
         expect(event.args.amount).to.be.bignumber.eq(amount);
       }
 
+      function expectDepositEventAtIndex(tx, index, owner, amount) {
+        const event = eventValueAtIndex(tx, index, "LogDeposit");
+        expect(event).to.exist;
+        expect(event.args.to).to.eq(owner);
+        expect(event.args.amount).to.be.bignumber.eq(amount);
+      }
+
       function expectDestroyEvent(tx, owner, by, amount) {
         const event = eventValue(tx, "LogDestroy");
         expect(event).to.exist;
@@ -81,7 +89,7 @@ contract(
       });
 
       it("should deposit", async () => {
-        const initialBalance = etherToWei(minDepositAmountEurUlps.add(1.19827398791827));
+        const initialBalance = minDepositAmountEurUlps.add(119827398791827);
         // deposit only to KYC investors
         await identityRegistry.setClaims(
           investors[0],
@@ -100,6 +108,196 @@ contract(
         expect(totalSupply).to.be.bignumber.eq(initialBalance);
         const balance = await euroToken.balanceOf(investors[0]);
         expect(balance).to.be.bignumber.eq(initialBalance);
+      });
+
+      it("should reject too low deposit", async () => {
+        const initialBalance = minDepositAmountEurUlps.minus(1);
+
+        // deposit only to KYC investors
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+
+        await expect(
+          euroToken.deposit(investors[0], initialBalance, {
+            from: depositManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should deposit many", async () => {
+        const initialBalance1 = minDepositAmountEurUlps.add(1);
+        const initialBalance2 = minDepositAmountEurUlps.add(2);
+        const initialBalance3 = minDepositAmountEurUlps.add(3);
+        const total = minDepositAmountEurUlps.mul(3).add(6);
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 3),
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+          ],
+          [
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+          ],
+          {
+            from: masterManager,
+          },
+        );
+        const tx = await euroToken.depositMany(
+          investors.slice(0, 3),
+          [initialBalance1, initialBalance2, initialBalance3],
+          {
+            from: depositManager,
+          },
+        );
+        expectDepositEventAtIndex(tx, 0, investors[0], initialBalance1);
+        expectDepositEventAtIndex(tx, 1, investors[1], initialBalance2);
+        expectDepositEventAtIndex(tx, 2, investors[2], initialBalance3);
+        expectTransferEventAtIndex(tx, 0, ZERO_ADDRESS, investors[0], initialBalance1);
+        expectTransferEventAtIndex(tx, 1, ZERO_ADDRESS, investors[1], initialBalance2);
+        expectTransferEventAtIndex(tx, 2, ZERO_ADDRESS, investors[2], initialBalance3);
+
+        const totalSupply = await euroToken.totalSupply.call();
+        expect(totalSupply).to.be.bignumber.eq(total);
+
+        let balance = await euroToken.balanceOf(investors[0]);
+        expect(balance).to.be.bignumber.eq(initialBalance1);
+        balance = await euroToken.balanceOf(investors[1]);
+        expect(balance).to.be.bignumber.eq(initialBalance2);
+        balance = await euroToken.balanceOf(investors[2]);
+        expect(balance).to.be.bignumber.eq(initialBalance3);
+      });
+
+      it("should fail deposit many if one investor has no kyc", async () => {
+        const initialBalance1 = minDepositAmountEurUlps.add(1);
+        const initialBalance2 = minDepositAmountEurUlps.add(2);
+        const initialBalance3 = minDepositAmountEurUlps.add(3);
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 3),
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+          ],
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+          ],
+          {
+            from: masterManager,
+          },
+        );
+        await expect(
+          euroToken.depositMany(
+            investors.slice(0, 3),
+            [initialBalance1, initialBalance2, initialBalance3],
+            {
+              from: depositManager,
+            },
+          ),
+        ).to.revert;
+      });
+
+      it("should fail deposit many if array lengths don't match", async () => {
+        const initialBalance1 = minDepositAmountEurUlps.add(1);
+        const initialBalance2 = minDepositAmountEurUlps.add(2);
+        const initialBalance3 = minDepositAmountEurUlps.add(3);
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 3),
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+          ],
+          [
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+          ],
+          {
+            from: masterManager,
+          },
+        );
+        await expect(
+          euroToken.depositMany(
+            investors.slice(0, 2),
+            [initialBalance1, initialBalance2, initialBalance3],
+            {
+              from: depositManager,
+            },
+          ),
+        ).to.revert;
+      });
+
+      it("should fail deposit many if sender is not manager", async () => {
+        const initialBalance1 = minDepositAmountEurUlps.add(1);
+        const initialBalance2 = minDepositAmountEurUlps.add(2);
+        const initialBalance3 = minDepositAmountEurUlps.add(3);
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 3),
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+          ],
+          [
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+          ],
+          {
+            from: masterManager,
+          },
+        );
+        await expect(
+          euroToken.depositMany(
+            investors.slice(0, 3),
+            [initialBalance1, initialBalance2, initialBalance3],
+            {
+              from: gasExchange,
+            },
+          ),
+        ).to.revert;
+      });
+
+      it("should fail deposit many if one amount is too low", async () => {
+        const initialBalance1 = minDepositAmountEurUlps.sub(2);
+        const initialBalance2 = minDepositAmountEurUlps.add(2);
+        const initialBalance3 = minDepositAmountEurUlps.add(3);
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 3),
+          [
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+            toBytes32(identityClaims.isNone),
+          ],
+          [
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+            toBytes32(identityClaims.isVerified),
+          ],
+          {
+            from: masterManager,
+          },
+        );
+        await expect(
+          euroToken.depositMany(
+            investors.slice(0, 3),
+            [initialBalance1, initialBalance2, initialBalance3],
+            {
+              from: depositManager,
+            },
+          ),
+        ).to.revert;
       });
 
       it("should overflow totalSupply on deposit", async () => {

@@ -124,6 +124,18 @@ contract EuroToken is
         emit Transfer(address(0), to, amount);
     }
 
+    /// @notice runs many deposits within one transaction
+    /// @dev deposit may happen only in case 'to' can receive transfer in token controller
+    ///     by default KYC is required to receive deposits
+    function depositMany(address[] to, uint256[] amount)
+        public
+    {
+        require(to.length == amount.length);
+        for (uint256 i = 0; i < to.length; i++) {
+            deposit(to[i], amount[i]);
+        }
+    }
+
     /// @notice withdraws 'amount' of EUR-T by burning required amount and providing a proof of whithdrawal
     /// @dev proof is provided in form of log entry. based on that proof backend will make a bank transfer
     ///     by default controller will check the following: KYC and existence of working bank account
