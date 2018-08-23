@@ -8,7 +8,7 @@ export const publicETOTerms = {
     HAS_FOUNDERS_VESTING: true,
     GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
     RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-    VOTING_FINALIZATION: new web3.BigNumber(daysToSeconds(5)),
+    VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
   },
   durTerms: {
@@ -22,6 +22,7 @@ export const publicETOTerms = {
     EXISTING_COMPANY_SHARES: new web3.BigNumber(40976),
     MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
     MIN_TICKET_EUR_ULPS: Q18.mul(100),
     MAX_TICKET_EUR_ULPS: Q18.mul(1000000),

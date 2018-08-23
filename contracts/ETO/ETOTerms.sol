@@ -57,8 +57,6 @@ contract ETOTerms is Math {
     uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
-    // additional tokens issued to company on success (founders' tokens)
-    uint256 public ADDITIONAL_COMPANY_TOKENS_ON_SUCCESS;
     // says if we work under crowdfunding regulation
     bool public IS_CROWDFUNDING;
 
@@ -113,6 +111,7 @@ contract ETOTerms is Math {
         uint256 existingCompanyShares,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
+        uint256 maxNumberOfTokensInWhitelist,
         uint256 tokenPriceEurUlps,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
@@ -138,11 +137,13 @@ contract ETOTerms is Math {
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(maxNumberOfTokens >= minNumberOfTokens);
         require(shareNominalValueEurUlps > 0);
+        require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens);
 
         DURATION_TERMS = durationTerms;
         EXISTING_COMPANY_SHARES = existingCompanyShares;
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
         TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;

@@ -7,8 +7,9 @@ export const defaultShareholderTerms = {
   HAS_FOUNDERS_VESTING: true,
   GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
   RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  VOTING_FINALIZATION: new web3.BigNumber(daysToSeconds(5)),
+  VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
+  VOTING_MAJORITY_FRAC: Q18.mul(0.1),
 };
 
 export const defDurTerms = {
@@ -23,6 +24,7 @@ export const defEtoTerms = {
   EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
+  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(5000 * 10000),
   TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
