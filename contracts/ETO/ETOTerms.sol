@@ -69,6 +69,14 @@ contract ETOTerms is Math {
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
 
+    // variables from token terms for local use
+    // minimum number of tokens being offered. will set min cap
+    uint256 private MIN_NUMBER_OF_TOKENS;
+    // maximum number of tokens being offered. will set max cap
+    uint256 private MAX_NUMBER_OF_TOKENS;
+    // base token price in EUR-T, without any discount scheme
+    uint256 private TOKEN_PRICE_EUR_ULPS;
+
     // manages whitelist
     address private WHITELIST_MANAGER;
 
@@ -130,8 +138,15 @@ contract ETOTerms is Math {
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
-        require(tokenTerms.MAX_NUMBER_OF_TOKENS() >= tokenTerms.MIN_NUMBER_OF_TOKENS());
         require(shareNominalValueEurUlps > 0);
+
+        // copy token terms variables
+        MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
+        MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
+        TOKEN_PRICE_EUR_ULPS = tokenTerms.TOKEN_PRICE_EUR_ULPS();
+
+        require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
+
 
         DURATION_TERMS = durationTerms;
         TOKEN_TERMS = tokenTerms;
@@ -161,7 +176,7 @@ contract ETOTerms is Math {
         returns (uint256 tokenAmountInt)
     {
         // we may disregard totalEurUlps as curve is flat
-        return divRound(committedEurUlps, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS());
+        return divRound(committedEurUlps, TOKEN_PRICE_EUR_ULPS);
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
@@ -172,17 +187,17 @@ contract ETOTerms is Math {
         returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokensInt as curve is flat
-        return mul(tokenAmountInt, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS());
+        return mul(tokenAmountInt, TOKEN_PRICE_EUR_ULPS);
     }
 
     // get mincap in EUR
     function ESTIMATED_MIN_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, TOKEN_TERMS.MIN_NUMBER_OF_TOKENS());
+        return calculateEurUlpsAmount(0, MIN_NUMBER_OF_TOKENS);
     }
 
     // get max cap in EUR
     function ESTIMATED_MAX_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, TOKEN_TERMS.MAX_NUMBER_OF_TOKENS());
+        return calculateEurUlpsAmount(0, MAX_NUMBER_OF_TOKENS);
     }
 
     function addWhitelisted(
@@ -238,7 +253,7 @@ contract ETOTerms is Math {
             discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
             // discount is fixed so use base token price
             if (discountedAmount > 0) {
-                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS()));
+                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_PRICE_EUR_ULPS));
             }
         }
         // if any amount above discount
@@ -263,7 +278,7 @@ contract ETOTerms is Math {
             require(MAX_TICKET_SIMPLE_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS(), "ETO_TERMS_MAX_S_TICKET_EUR_ULPS");
         }
         // at least one shre sold
-        require(TOKEN_TERMS.MIN_NUMBER_OF_TOKENS() >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
+        require(MIN_NUMBER_OF_TOKENS >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
         // duration checks
         require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MIN");
         require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MAX");
