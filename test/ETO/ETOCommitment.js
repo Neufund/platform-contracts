@@ -14,6 +14,7 @@ import {
   deployShareholderRights,
   deployDurationTerms,
   deployETOTerms,
+  deployTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -31,6 +32,7 @@ const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTok
 const ETOCommitment = artifacts.require("ETOCommitment");
 const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
+const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 
@@ -61,6 +63,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   // terms
   let platformTerms;
   let platformTermsDict;
+  let tokenTerms;
+  let tokenTermsDict;
   let etoTerms;
   let etoTermsDict;
   let shareholderRights;
@@ -325,11 +329,11 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const generalInfo = await equityTokenController.shareholderInformation();
       expect(generalInfo[0]).to.be.bignumber.eq(etoTermsDict.EXISTING_COMPANY_SHARES);
       expect(generalInfo[1]).to.be.bignumber.eq(
-        etoTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES),
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES),
       );
       expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
       // we have constant price in this use case - no discounts
-      const tokenprice = etoTermsDict.TOKEN_PRICE_EUR_ULPS;
+      const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
       // invest some
       await investAmount(investors[0], Q18, "ETH");
       await investAmount(investors[0], Q18.mul(1.1289791), "ETH", tokenprice);
@@ -363,9 +367,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
       const totalInvestment = await etoCommitment.totalInvestment();
       // we must cross MIN CAP
-      if (etoTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
-        const missingTokens = etoTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
-        let missingAmount = missingTokens.mul(etoTermsDict.TOKEN_PRICE_EUR_ULPS);
+      if (tokenTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
+        const missingTokens = tokenTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
+        let missingAmount = missingTokens.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
         if (missingAmount.lt(etoTermsDict.MIN_TICKET_EUR_ULPS)) {
           missingAmount = etoTermsDict.MIN_TICKET_EUR_ULPS;
         }
@@ -548,13 +552,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(await neumark.agreementSignedAtBlock(investor)).to.be.bignumber.gt(0);
   }
 
-  async function deployETO(ovrArtifact, ovrETOTerms, ovrShareholderRights, ovrDurations) {
+  async function deployETO(
+    ovrArtifact,
+    ovrETOTerms,
+    ovrShareholderRights,
+    ovrDurations,
+    ovrTokenTerms,
+  ) {
     // deploy ETO Terms: here deployment of single ETO contracts start
     [shareholderRights] = await deployShareholderRights(ShareholderRights, ovrShareholderRights);
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, ovrDurations);
+    [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, ovrTokenTerms);
     [etoTerms, etoTermsDict] = await deployETOTerms(
       ETOTerms,
       durationTerms,
+      tokenTerms,
       shareholderRights,
       ovrETOTerms,
     );
@@ -822,7 +834,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(contribution[0]);
     expect(generalInformation[0]).to.be.bignumber.eq(newTotalShares);
     expect(generalInformation[1]).to.be.bignumber.eq(
-      newTotalShares.mul(etoTermsDict.TOKEN_PRICE_EUR_ULPS),
+      newTotalShares.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
     );
     expect(generalInformation[2]).to.eq(shareholderRights.address);
     const capTable = await equityTokenController.capTable();

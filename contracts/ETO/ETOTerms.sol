@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
+import "./ETOTokenTerms.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
@@ -35,18 +36,12 @@ contract ETOTerms is Math {
 
     // reference to duration terms
     ETODurationTerms public DURATION_TERMS;
+    // reference to token terms
+    ETOTokenTerms public TOKEN_TERMS;
     // total number of shares in the company (incl. Authorized Shares) at moment of sale
     uint256 public EXISTING_COMPANY_SHARES;
     // sets nominal value of a share
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
-    // minimum number of tokens being offered. will set min cap
-    uint256 public MIN_NUMBER_OF_TOKENS;
-    // maximum number of tokens being offered. will set max cap
-    uint256 public MAX_NUMBER_OF_TOKENS;
-    // maximum number of tokens in whitelist phase
-    uint256 public MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
-    // base token price in EUR-T, without any discount scheme
-    uint256 public TOKEN_PRICE_EUR_ULPS;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
@@ -110,10 +105,8 @@ contract ETOTerms is Math {
 
     constructor(
         ETODurationTerms durationTerms,
+        ETOTokenTerms tokenTerms,
         uint256 existingCompanyShares,
-        uint256 minNumberOfTokens,
-        uint256 maxNumberOfTokens,
-        uint256 tokenPriceEurUlps,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
@@ -128,6 +121,7 @@ contract ETOTerms is Math {
         public
     {
         require(durationTerms != address(0));
+        require(tokenTerms != address(0));
         require(existingCompanyShares > 0);
         require(keccak256(abi.encodePacked(prospectusUrl)) != EMPTY_STRING_HASH);
         require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
@@ -136,14 +130,12 @@ contract ETOTerms is Math {
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
-        require(maxNumberOfTokens >= minNumberOfTokens);
+        require(tokenTerms.MAX_NUMBER_OF_TOKENS() >= tokenTerms.MIN_NUMBER_OF_TOKENS());
         require(shareNominalValueEurUlps > 0);
 
         DURATION_TERMS = durationTerms;
+        TOKEN_TERMS = tokenTerms;
         EXISTING_COMPANY_SHARES = existingCompanyShares;
-        MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
-        MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
-        TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
@@ -169,7 +161,7 @@ contract ETOTerms is Math {
         returns (uint256 tokenAmountInt)
     {
         // we may disregard totalEurUlps as curve is flat
-        return divRound(committedEurUlps, TOKEN_PRICE_EUR_ULPS);
+        return divRound(committedEurUlps, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS());
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
@@ -180,17 +172,17 @@ contract ETOTerms is Math {
         returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokensInt as curve is flat
-        return mul(tokenAmountInt, TOKEN_PRICE_EUR_ULPS);
+        return mul(tokenAmountInt, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS());
     }
 
     // get mincap in EUR
     function ESTIMATED_MIN_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, MIN_NUMBER_OF_TOKENS);
+        return calculateEurUlpsAmount(0, TOKEN_TERMS.MIN_NUMBER_OF_TOKENS());
     }
 
     // get max cap in EUR
     function ESTIMATED_MAX_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, MAX_NUMBER_OF_TOKENS);
+        return calculateEurUlpsAmount(0, TOKEN_TERMS.MAX_NUMBER_OF_TOKENS());
     }
 
     function addWhitelisted(
@@ -246,7 +238,7 @@ contract ETOTerms is Math {
             discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
             // discount is fixed so use base token price
             if (discountedAmount > 0) {
-                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_PRICE_EUR_ULPS));
+                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS()));
             }
         }
         // if any amount above discount
@@ -271,7 +263,7 @@ contract ETOTerms is Math {
             require(MAX_TICKET_SIMPLE_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS(), "ETO_TERMS_MAX_S_TICKET_EUR_ULPS");
         }
         // at least one shre sold
-        require(MIN_NUMBER_OF_TOKENS >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
+        require(TOKEN_TERMS.MIN_NUMBER_OF_TOKENS() >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
         // duration checks
         require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MIN");
         require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MAX");
