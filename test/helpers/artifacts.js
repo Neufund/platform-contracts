@@ -21,6 +21,7 @@ export const artifacts = {
   STANDARD_ETO_TERMS: "ETOTerms",
   STANDARD_SHAREHOLDER_RIGHTS: "ShareholderRights",
   STANDARD_DURATION_TERMS: "ETODurationTerms",
+  STANDARD_TOKEN_TERMS: "ETOTokenTerms",
   // interfaces used in migrations
   TOKEN_EXCHANGE_RATE_ORACLE: "ITokenExchangeRateOracle",
   // not implemented

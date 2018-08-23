@@ -230,8 +230,8 @@ contract ETOCommitment is
         ETO_TERMS = etoTerms;
         EQUITY_TOKEN = equityToken;
 
-        MAX_NUMBER_OF_TOKENS = etoTerms.MAX_NUMBER_OF_TOKENS();
-        MIN_NUMBER_OF_TOKENS = etoTerms.MIN_NUMBER_OF_TOKENS();
+        MAX_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS();
+        MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
 
         setupStateMachine(
