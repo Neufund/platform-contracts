@@ -115,108 +115,101 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   it("should accept new duration terms", async () => {
     // change to sub(0) for this test to fail
-    durationTerms.WHITELIST_DURATION = (await platformTerms.MAX_WHITELIST_DURATION_DAYS()).sub(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
 
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await etoTerms.requireValidTerms(platformTerms.address);
   });
 
   it("should reject on platform terms with whitelist duration too small", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.WHITELIST_DURATION = (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).sub(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).sub(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with whitelist duration too large", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.WHITELIST_DURATION = (await platformTerms.MAX_WHITELIST_DURATION_DAYS()).add(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION_DAYS()).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with public duration too small", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.PUBLIC_DURATION = (await platformTerms.MIN_PUBLIC_DURATION_DAYS()).sub(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      PUBLIC_DURATION: (await platformTerms.MIN_PUBLIC_DURATION_DAYS()).sub(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with public duration too large", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.PUBLIC_DURATION = (await platformTerms.MAX_PUBLIC_DURATION_DAYS()).add(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      PUBLIC_DURATION: (await platformTerms.MAX_PUBLIC_DURATION_DAYS()).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with signing duration too small", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.SIGNING_DURATION = (await platformTerms.MIN_SIGNING_DURATION_DAYS()).sub(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      SIGNING_DURATION: (await platformTerms.MIN_SIGNING_DURATION_DAYS()).sub(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with signing duration too large", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.SIGNING_DURATION = (await platformTerms.MAX_SIGNING_DURATION_DAYS()).add(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      SIGNING_DURATION: (await platformTerms.MAX_SIGNING_DURATION_DAYS()).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with claim duration too small", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.CLAIM_DURATION = (await platformTerms.MIN_CLAIM_DURATION_DAYS()).sub(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      CLAIM_DURATION: (await platformTerms.MIN_CLAIM_DURATION_DAYS()).sub(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
   it("should reject on platform terms with claim duration too large", async () => {
-    // change to sub(0) for this test to fail
-    durationTerms.CLAIM_DURATION = (await platformTerms.MAX_CLAIM_DURATION_DAYS()).add(1);
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      CLAIM_DURATION: (await platformTerms.MAX_CLAIM_DURATION_DAYS()).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
@@ -224,14 +217,13 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   it("should reject on platform terms with total duration too small", async () => {
     // change to sub(0) for this test to fail
 
-    durationTerms.WHITELIST_DURATION = (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2);
-    durationTerms.PUBLIC_DURATION = (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2).sub(1);
-
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2),
+      PUBLIC_DURATION: (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2).sub(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
@@ -239,14 +231,13 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   it("should reject on platform terms with total duration too large", async () => {
     // change to sub(0) for this test to fail
 
-    durationTerms.WHITELIST_DURATION = (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2);
-    durationTerms.PUBLIC_DURATION = (await platformTerms.MAX_OFFER_DURATION_DAYS()).div(2).add(1);
-
-    let values = durationTermsKeys.map(v => durTerms[v]);
-    durationTerms = await ETODurationTerms.new.apply(values);
-
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MAX_OFFER_DURATION_DAYS()).div(2),
+      PUBLIC_DURATION: (await platformTerms.MAX_OFFER_DURATION_DAYS()).div(2).add(1),
+    });
     terms.DURATION_TERMS = durationTerms.address;
-    values = termsKeys.map(v => terms[v]);
+    const values = termsKeys.map(v => terms[v]);
+
     etoTerms = await ETOTerms.new.apply(this, values);
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
