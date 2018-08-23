@@ -8,6 +8,7 @@ import {
   deployShareholderRights,
   deployDurationTerms,
   deployETOTerms,
+  deployTokenTerms,
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
 
@@ -25,6 +26,7 @@ export async function deployETO(
   ovrETOTerms,
   ovrShareholderRights,
   ovrDurations,
+  ovrTokenTerms,
 ) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
@@ -35,6 +37,7 @@ export async function deployETO(
   // todo: add to artifacts
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
+  const ETOTokenTerms = artifacts.require(config.artifacts.STANDARD_TOKEN_TERMS);
   const ShareholderRights = artifacts.require(config.artifacts.STANDARD_SHAREHOLDER_RIGHTS);
 
   // preliminary checks
@@ -83,8 +86,17 @@ export async function deployETO(
   console.log("Deploying ETODurationTerms");
   const [durationTerms] = await deployDurationTerms(ETODurationTerms, ovrDurations);
   logDeployed(durationTerms);
+  console.log("Deploying ETOTokenTerms");
+  const [tokenTerms] = await deployTokenTerms(ETOTokenTerms, ovrTokenTerms);
+  logDeployed(tokenTerms);
   console.log("Deploying ETOTerms");
-  const [etoTerms] = await deployETOTerms(ETOTerms, durationTerms, shareholderRights, ovrETOTerms);
+  const [etoTerms] = await deployETOTerms(
+    ETOTerms,
+    durationTerms,
+    tokenTerms,
+    shareholderRights,
+    ovrETOTerms,
+  );
   logDeployed(etoTerms);
   // deploy equity token controller which is company management contract
   console.log("Deploying PlaceholderEquityTokenController");

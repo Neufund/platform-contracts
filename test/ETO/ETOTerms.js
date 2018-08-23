@@ -6,12 +6,14 @@ import { deployUniverse, deployPlatformTerms } from "../helpers/deployContracts"
 import {
   deployShareholderRights,
   deployDurationTerms,
+  deployTokenTerms,
   deployETOTerms,
 } from "../helpers/deployTerms";
 import { Q18 } from "../helpers/constants";
 
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
+const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 
 contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) => {
@@ -22,6 +24,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
   let shareholderTerms, shareholderTermsKeys;
   let durationTerms;
   let durTerms, durationTermsKeys;
+  let etoTokenTerms, tokenTerms, tokenTermsKeys;
 
   beforeEach(async () => {
     const [universe] = await deployUniverse(admin, admin);
@@ -30,7 +33,13 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
       ShareholderRights,
     );
     [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms(ETODurationTerms);
-    [etoTerms, terms, termsKeys] = await deployETOTerms(ETOTerms, durationTerms, shareholderRights);
+    [etoTokenTerms, tokenTerms, tokenTermsKeys] = await deployTokenTerms(ETOTokenTerms);
+    [etoTerms, terms, termsKeys] = await deployETOTerms(
+      ETOTerms,
+      durationTerms,
+      etoTokenTerms,
+      shareholderRights,
+    );
   });
 
   it("should deploy", async () => {
@@ -59,6 +68,10 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
     await verifyTerms(durationTerms, durationTermsKeys, durTerms);
   });
 
+  it("should verify terms in ETOTokenTerms", async () => {
+    await verifyTerms(etoTokenTerms, tokenTermsKeys, tokenTerms);
+  });
+
   it("should verify terms in ShareholderRights", async () => {
     await verifyTerms(shareholderRights, shareholderTermsKeys, shareholderTerms);
     // todo: also verify constant parameters
@@ -83,28 +96,32 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
   it("should compute estimated max cap and min cap in eur", async () => {
     // simple flat pricing without discounts
     const maxCap = await etoTerms.ESTIMATED_MAX_CAP_EUR_ULPS();
-    expect(maxCap).to.be.bignumber.eq(terms.TOKEN_PRICE_EUR_ULPS.mul(terms.MAX_NUMBER_OF_TOKENS));
+    expect(maxCap).to.be.bignumber.eq(
+      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MAX_NUMBER_OF_TOKENS),
+    );
     const minCap = await etoTerms.ESTIMATED_MIN_CAP_EUR_ULPS();
-    expect(minCap).to.be.bignumber.eq(terms.TOKEN_PRICE_EUR_ULPS.mul(terms.MIN_NUMBER_OF_TOKENS));
+    expect(minCap).to.be.bignumber.eq(
+      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MIN_NUMBER_OF_TOKENS),
+    );
   });
 
   it("should compute tokens from eur", async () => {
-    expect(await etoTerms.calculateTokenAmount(0, terms.TOKEN_PRICE_EUR_ULPS)).to.be.bignumber.eq(
-      1,
-    );
+    expect(
+      await etoTerms.calculateTokenAmount(0, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+    ).to.be.bignumber.eq(1);
     expect(await etoTerms.calculateTokenAmount(0, 0)).to.be.bignumber.eq(0);
     expect(await etoTerms.calculateTokenAmount(0, Q18.mul(717271))).to.be.bignumber.eq(
-      divRound(Q18.mul(717271), terms.TOKEN_PRICE_EUR_ULPS),
+      divRound(Q18.mul(717271), tokenTerms.TOKEN_PRICE_EUR_ULPS),
     );
   });
 
   it("should compute eurs from tokens", async () => {
     expect(await etoTerms.calculateEurUlpsAmount(0, 1)).to.be.bignumber.eq(
-      terms.TOKEN_PRICE_EUR_ULPS,
+      tokenTerms.TOKEN_PRICE_EUR_ULPS,
     );
     expect(await etoTerms.calculateEurUlpsAmount(0, 0)).to.be.bignumber.eq(0);
     expect(await etoTerms.calculateEurUlpsAmount(0, 9812791)).to.be.bignumber.eq(
-      terms.TOKEN_PRICE_EUR_ULPS.mul(9812791),
+      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(9812791),
     );
   });
 
@@ -150,7 +167,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
     function tokenPrice(_, amount, discount = 1) {
       // here we need to reproduce exact rounding as in smart contract
       const discountFraction = Q18.mul(discount);
-      const discountedPrice = divRound(terms.TOKEN_PRICE_EUR_ULPS.mul(discountFraction), Q18);
+      const discountedPrice = divRound(tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(discountFraction), Q18);
       return divRound(amount, discountedPrice);
     }
 
