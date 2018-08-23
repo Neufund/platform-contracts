@@ -367,7 +367,7 @@ contract PlaceholderEquityTokenController is
         _equityToken = equityToken;
         _etoCommitment = tokenOffering;
         _totalCompanyShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES();
-        _companyValuationEurUlps = _totalCompanyShares * tokenOffering.etoTerms().TOKEN_PRICE_EUR_ULPS();
+        _companyValuationEurUlps = _totalCompanyShares * tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
 
         transitionTo(GovState.Offering);
         emit ResolutionExecuted(0, Action.RegisterOffer);
@@ -379,7 +379,7 @@ contract PlaceholderEquityTokenController is
     {
         (uint256 newShares,,,,,,,) = tokenOffering.contributionSummary();
         uint256 totalShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES() + newShares;
-        uint256 marginalPrice = tokenOffering.etoTerms().TOKEN_PRICE_EUR_ULPS();
+        uint256 marginalPrice = tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
         string memory ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
         amendISHA(
             ISHAUrl,

@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
+import "./ETOTokenTerms.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
@@ -35,18 +36,12 @@ contract ETOTerms is Math {
 
     // reference to duration terms
     ETODurationTerms public DURATION_TERMS;
+    // reference to token terms
+    ETOTokenTerms public TOKEN_TERMS;
     // total number of shares in the company (incl. Authorized Shares) at moment of sale
     uint256 public EXISTING_COMPANY_SHARES;
     // sets nominal value of a share
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
-    // minimum number of tokens being offered. will set min cap
-    uint256 public MIN_NUMBER_OF_TOKENS;
-    // maximum number of tokens being offered. will set max cap
-    uint256 public MAX_NUMBER_OF_TOKENS;
-    // maximum number of tokens in whitelist phase
-    uint256 public MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
-    // base token price in EUR-T, without any discount scheme
-    uint256 public TOKEN_PRICE_EUR_ULPS;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
@@ -73,6 +68,14 @@ contract ETOTerms is Math {
     // equity token setup
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
+
+    // variables from token terms for local use
+    // minimum number of tokens being offered. will set min cap
+    uint256 private MIN_NUMBER_OF_TOKENS;
+    // maximum number of tokens being offered. will set max cap
+    uint256 private MAX_NUMBER_OF_TOKENS;
+    // base token price in EUR-T, without any discount scheme
+    uint256 private TOKEN_PRICE_EUR_ULPS;
 
     // manages whitelist
     address private WHITELIST_MANAGER;
@@ -110,10 +113,8 @@ contract ETOTerms is Math {
 
     constructor(
         ETODurationTerms durationTerms,
+        ETOTokenTerms tokenTerms,
         uint256 existingCompanyShares,
-        uint256 minNumberOfTokens,
-        uint256 maxNumberOfTokens,
-        uint256 tokenPriceEurUlps,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
@@ -128,6 +129,7 @@ contract ETOTerms is Math {
         public
     {
         require(durationTerms != address(0));
+        require(tokenTerms != address(0));
         require(existingCompanyShares > 0);
         require(keccak256(abi.encodePacked(prospectusUrl)) != EMPTY_STRING_HASH);
         require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
@@ -136,14 +138,19 @@ contract ETOTerms is Math {
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
-        require(maxNumberOfTokens >= minNumberOfTokens);
         require(shareNominalValueEurUlps > 0);
 
+        // copy token terms variables
+        MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
+        MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
+        TOKEN_PRICE_EUR_ULPS = tokenTerms.TOKEN_PRICE_EUR_ULPS();
+
+        require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
+
+
         DURATION_TERMS = durationTerms;
+        TOKEN_TERMS = tokenTerms;
         EXISTING_COMPANY_SHARES = existingCompanyShares;
-        MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
-        MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
-        TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;

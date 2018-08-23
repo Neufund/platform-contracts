@@ -5,6 +5,7 @@ import {
   deployShareholderRights,
   deployDurationTerms,
   deployETOTerms,
+  deployTokenTerms,
 } from "../helpers/deployTerms";
 import {
   basicTokenTests,
@@ -28,6 +29,7 @@ const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenCont
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
+const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 
 contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
@@ -44,7 +46,13 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     [, platformTermsDict] = await deployPlatformTerms(universe, admin);
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
-    [etoTerms, etoTermsDict] = await deployETOTerms(ETOTerms, durationTerms, shareholderRights);
+    const [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
+    [etoTerms, etoTermsDict] = await deployETOTerms(
+      ETOTerms,
+      durationTerms,
+      tokenTerms,
+      shareholderRights,
+    );
     equityTokenController = await TestNullEquityTokenController.new(universe.address);
     equityToken = await EquityToken.new(
       universe.address,

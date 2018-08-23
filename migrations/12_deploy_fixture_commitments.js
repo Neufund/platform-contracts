@@ -33,6 +33,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       publicETOTerms.etoTerms,
       publicETOTerms.shareholderTerms,
       publicETOTerms.durTerms,
+      publicETOTerms.tokenTerms,
     );
     // nominee sets agreement
     console.log("Nominee sets agreements");

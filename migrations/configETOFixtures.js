@@ -17,12 +17,14 @@ export const publicETOTerms = {
     SIGNING_DURATION: new web3.BigNumber(daysToSeconds(14)),
     CLAIM_DURATION: new web3.BigNumber(daysToSeconds(10)),
   },
-  etoTerms: {
-    DURATION_TERMS: null,
-    EXISTING_COMPANY_SHARES: new web3.BigNumber(40976),
+  tokenTerms: {
     MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
+  },
+  etoTerms: {
+    DURATION_TERMS: null,
+    EXISTING_COMPANY_SHARES: new web3.BigNumber(40976),
     MIN_TICKET_EUR_ULPS: Q18.mul(100),
     MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
