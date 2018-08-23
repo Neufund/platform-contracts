@@ -7,6 +7,7 @@ import {
   deployTestErc677Callback,
   deployTestErc223Callback,
   expectTransferEvent,
+  expectTransferEventAtIndex,
   testWithdrawal,
   erc223TokenTests,
 } from "./helpers/tokenTestCases";
@@ -544,6 +545,150 @@ contract(
         await expect(
           euroToken.destroy(investors[0], largerThanInitialBalance, {
             from: eurtLegalManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should deposit and transfer", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(50);
+        const etoAddress = investors[1];
+
+        // deposit only to KYC investors
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 1),
+          [toBytes32(identityClaims.isNone)],
+          [toBytes32(identityClaims.isVerified)],
+          {
+            from: masterManager,
+          },
+        );
+
+        await universe.setCollectionInterface(
+          knownInterfaces.commitmentInterface,
+          etoAddress,
+          true,
+          { from: masterManager },
+        );
+
+        const tx = await euroToken.depositAndTransfer(
+          investors[0],
+          etoAddress,
+          initialBalance,
+          "",
+          {
+            from: depositManager,
+          },
+        );
+        expectDepositEvent(tx, investors[0], initialBalance);
+        expectTransferEventAtIndex(tx, 0, ZERO_ADDRESS, investors[0], initialBalance);
+        expectTransferEventAtIndex(tx, 1, investors[0], etoAddress, initialBalance);
+
+        const totalSupply = await euroToken.totalSupply.call();
+        expect(totalSupply).to.be.bignumber.eq(initialBalance);
+        let balance = await euroToken.balanceOf(investors[0]);
+        expect(balance).to.be.bignumber.eq(0);
+        balance = await euroToken.balanceOf(etoAddress);
+        expect(balance).to.be.bignumber.eq(initialBalance);
+      });
+
+      it("should reject deposit and transfer if claims are not set", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(50);
+        const etoAddress = investors[1];
+
+        await universe.setCollectionInterface(
+          knownInterfaces.commitmentInterface,
+          etoAddress,
+          true,
+          { from: masterManager },
+        );
+
+        await expect(
+          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
+            from: depositManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should reject deposit and transfer if transfer to address is not known", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(50);
+        const etoAddress = investors[1];
+
+        // deposit only to KYC investors
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 1),
+          [toBytes32(identityClaims.isNone)],
+          [toBytes32(identityClaims.isVerified)],
+          {
+            from: masterManager,
+          },
+        );
+
+        await universe.setCollectionInterface(
+          knownInterfaces.commitmentInterface,
+          etoAddress,
+          false,
+          { from: masterManager },
+        );
+
+        await expect(
+          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
+            from: depositManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should reject deposit and transfer if value is too low", async () => {
+        const initialBalance = minDepositAmountEurUlps.sub(50);
+        const etoAddress = investors[1];
+
+        // deposit only to KYC investors
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 1),
+          [toBytes32(identityClaims.isNone)],
+          [toBytes32(identityClaims.isVerified)],
+          {
+            from: masterManager,
+          },
+        );
+
+        await universe.setCollectionInterface(
+          knownInterfaces.commitmentInterface,
+          etoAddress,
+          true,
+          { from: masterManager },
+        );
+
+        await expect(
+          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
+            from: depositManager,
+          }),
+        ).to.revert;
+      });
+
+      it("should reject deposit and transfer if sender is not depositManager", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(50);
+        const etoAddress = investors[1];
+
+        // deposit only to KYC investors
+        await identityRegistry.setMultipleClaims(
+          investors.slice(0, 1),
+          [toBytes32(identityClaims.isNone)],
+          [toBytes32(identityClaims.isVerified)],
+          {
+            from: masterManager,
+          },
+        );
+
+        await universe.setCollectionInterface(
+          knownInterfaces.commitmentInterface,
+          etoAddress,
+          true,
+          { from: masterManager },
+        );
+
+        await expect(
+          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
+            from: investors[1],
           }),
         ).to.revert;
       });
