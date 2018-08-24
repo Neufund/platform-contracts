@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
 
   lint-and-build:
@@ -66,4 +66,16 @@ workflows:
       - lint-and-build
       - test-container
       - tests
-
+      
+  nightly:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
+    jobs:
+      - lint-and-build
+      - test-container
+      - tests
