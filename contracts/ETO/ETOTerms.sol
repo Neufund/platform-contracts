@@ -52,10 +52,10 @@ contract ETOTerms is Math {
     uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
-    // additional tokens issued to company on success (founders' tokens)
-    uint256 public ADDITIONAL_COMPANY_TOKENS_ON_SUCCESS;
     // says if we work under crowdfunding regulation
     bool public IS_CROWDFUNDING;
+    // represents the discount % for whitelist participants
+    uint256 public WHITELIST_DISCOUNT_FRAC;
 
     // paperwork
     // url (typically IPFS hash) to investment agreement between nominee and company
@@ -124,7 +124,8 @@ contract ETOTerms is Math {
         ShareholderRights shareholderRights,
         string equityTokenName,
         string equityTokenSymbol,
-        uint256 shareNominalValueEurUlps
+        uint256 shareNominalValueEurUlps,
+        uint256 whitelistDiscountFrac
     )
         public
     {
@@ -139,14 +140,12 @@ contract ETOTerms is Math {
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(shareNominalValueEurUlps > 0);
+        require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac < 99*10**16);
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
         MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
         TOKEN_PRICE_EUR_ULPS = tokenTerms.TOKEN_PRICE_EUR_ULPS();
-
-        require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
-
 
         DURATION_TERMS = durationTerms;
         TOKEN_TERMS = tokenTerms;
@@ -161,6 +160,7 @@ contract ETOTerms is Math {
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
         SHARE_NOMINAL_VALUE_EUR_ULPS = shareNominalValueEurUlps;
+        WHITELIST_DISCOUNT_FRAC = whitelistDiscountFrac;
         WHITELIST_MANAGER = msg.sender;
     }
 
