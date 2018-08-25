@@ -91,7 +91,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
-  it("should reject on platform terms with max ticket in crowdfunding to large", async () => {
+  it("should reject on platform terms with max ticket in crowdfunding too large", async () => {
     // change to sub(0) for this test to fail
     const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS();
     terms.MAX_TICKET_EUR_ULPS = oldValue.add(1);
@@ -102,7 +102,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
-  it("should reject on platform terms with simple max ticket in crowdfunding to large", async () => {
+  it("should reject on platform terms with simple max ticket in crowdfunding too large", async () => {
     // change to sub(0) for this test to fail
     const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS();
     terms.MAX_TICKET_SIMPLE_EUR_ULPS = oldValue.add(1);
@@ -399,7 +399,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.4));
     });
 
-    it("fails on setting discount frac to 0", async () => {
+    it("fails on setting token price frac to 0", async () => {
       await expect(etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer })).to
         .revert;
 

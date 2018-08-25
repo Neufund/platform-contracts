@@ -194,8 +194,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     });
 
     it("rejects setting initial start date closer than DATE_TO_WHITELIST_MIN_DURATION to now", async () => {
-      // company confirms terms and sets start date
-      let startDate = new web3.BigNumber((await latestTimestamp()) - dayInSeconds);
+      // set exactly DATE_TO_WHITELIST_MIN_DURATION - 1 second
+      let startDate = new web3.BigNumber((await latestTimestamp()) - 1);
       startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
       await expect(
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
@@ -205,6 +205,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     });
 
     // @marcin: not sure how to test this, do we have some kind of time machine mechanism?
+    // yes, there are ways to time travel ;> increaseTime and setTimeTo - only ganache
     it(
       "rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date",
     );
