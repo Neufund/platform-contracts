@@ -21,9 +21,11 @@ contract ICommitment is
     /// `investor` committed `amount` in `paymentToken` currency which was
     /// converted to `eurEquivalent` that generates `grantedAmount` of
     /// `assetToken` and `nmkReward` NEU
+    /// for investment funds could be provided from `wallet` (like icbm wallet) controlled by investor
     event LogFundsCommitted(
         address indexed investor,
-        address indexed paymentToken,
+        address wallet,
+        address paymentToken,
         uint256 amount,
         uint256 eurEquivalent,
         uint256 grantedAmount,
