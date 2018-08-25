@@ -79,6 +79,8 @@ contract ETOCommitment is
     uint256 private MIN_NUMBER_OF_TOKENS;
     // min cap taken from ETOTerms for low gas costs
     uint256 private MAX_NUMBER_OF_TOKENS;
+    // max cap of tokens in whitelist (without fixed slots)
+    uint256 private MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
     // minimum ticket in tokens with base price
     uint256 private MIN_TICKET_TOKENS;
     // platform operator share for low gas costs
@@ -111,7 +113,10 @@ contract ETOCommitment is
     uint112 private _totalEquivEurUlps;
 
     // total equity tokens acquired
-    uint112 private _totalTokensInt;
+    uint56 private _totalTokensInt;
+
+    // total equity tokens acquired in fixed slots
+    uint56 private _totalFixedSlotsTokensInt;
 
     // total investors that participated
     uint32 private _totalInvestors;
@@ -231,6 +236,7 @@ contract ETOCommitment is
         EQUITY_TOKEN = equityToken;
 
         MAX_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS();
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
 
@@ -304,7 +310,7 @@ contract ETOCommitment is
 
     /// commit function happens via ERC223 callback that must happen from trusted payment token
     /// @dev data in case of LockedAccount contains investor address and investor is LockedAccount address
-    function tokenFallback(address investorOrProxy, uint256 amount, bytes data)
+    function tokenFallback(address wallet, uint256 amount, bytes data)
         public
         withStateTransition()
         onlyStates(ETOState.Whitelist, ETOState.Public)
@@ -313,8 +319,8 @@ contract ETOCommitment is
         // we trust only tokens below
         require(msg.sender == address(ETHER_TOKEN) || msg.sender == address(EURO_TOKEN));
         // check if LockedAccount
-        bool isLockedAccount = (investorOrProxy == address(ETHER_LOCK) || investorOrProxy == address(EURO_LOCK));
-        address investor = investorOrProxy;
+        bool isLockedAccount = (wallet == address(ETHER_LOCK) || wallet == address(EURO_LOCK));
+        address investor = wallet;
         if (isLockedAccount) {
             // data contains investor address
             investor = decodeAddress(data); // solium-disable-line security/no-assign-params
@@ -338,7 +344,7 @@ contract ETOCommitment is
         // agreement accepted by act of reserving funds in this function
         acceptAgreementInternal(investor);
         // we modify state and emit events in function below
-        processTicket(investor, amount, equivEurUlps, isEuroInvestment, isLockedAccount);
+        processTicket(investor, wallet, amount, equivEurUlps, isEuroInvestment);
     }
 
     //
@@ -470,23 +476,32 @@ contract ETOCommitment is
         return (_totalEquivEurUlps, _totalTokensInt, _totalInvestors);
     }
 
-    function calculateContribution(address investor, uint256 newInvestorContributionEurUlps)
-        public
+    function calculateContribution(address investor, bool fromIcbmWallet, uint256 newInvestorContributionEurUlps)
+        external
         constant
         returns (
             bool isWhitelisted,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt
+            uint256 equityTokenInt,
+            uint256 neuRewardUlps,
+            bool maxCapExceeded
             )
     {
         InvestmentTicket storage ticket = _tickets[investor];
-        return ETO_TERMS.calculateContribution(
+        bool applyDiscounts = state() == ETOState.Whitelist;
+        uint256 fixedSlotsEquityTokenInt;
+        (isWhitelisted, minTicketEurUlps, maxTicketEurUlps, equityTokenInt, fixedSlotsEquityTokenInt) = ETO_TERMS.calculateContribution(
             investor,
             _totalEquivEurUlps,
             ticket.equivEurUlps,
-            newInvestorContributionEurUlps
+            newInvestorContributionEurUlps,
+            applyDiscounts
         );
+        isWhitelisted = isWhitelisted || fromIcbmWallet;
+        (,neuRewardUlps) = calculateNeumarkDistribution(newInvestorContributionEurUlps);
+        // crossing max cap can always happen
+        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt);
     }
 
     function investorTicket(address investor)
@@ -530,26 +545,17 @@ contract ETOCommitment is
         constant
         returns (ETOState)
     {
-        if (oldState == ETOState.Whitelist || oldState == ETOState.Public) {
-            // if within min ticket of max cap then move state
-            if (_totalTokensInt + MIN_TICKET_TOKENS >= MAX_NUMBER_OF_TOKENS) {
-                // todo: must write tests wl -> public and public -> signing. first one is potential problem, should we skip public in that case?
-                return oldState == ETOState.Whitelist ? ETOState.Public : ETOState.Signing;
-            }
-            // todo: introduce a max cap in tokens for whitelist but do not switch state here.
-            // todo: general cap on the whitelist (but take into account fixed slots)
+        bool isWhitelist = oldState == ETOState.Whitelist;
+        bool capExceeded = isCapExceeded(isWhitelist, MIN_TICKET_TOKENS - 1, 0);
+        if (isWhitelist && capExceeded) {
+            return ETOState.Public;
         }
-
+        if (oldState == ETOState.Public && capExceeded) {
+            return ETOState.Signing;
+        }
         if (oldState == ETOState.Signing && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
             return ETOState.Claim;
         }
-        /*if (oldState == ETOState.Claim) {
-            // we can go to payout if all assets claimed!
-            if (NEUMARK.balanceOf(this) == 0 && EQUITY_TOKEN.balanceOf(this) == 0 &&
-                ETHER_TOKEN.balanceOf(this) == 0 && EURO_TOKEN.balanceOf(this) == 0) {
-                transitionTo(ETOState.Payout);
-            }
-        }*/
         return oldState;
     }
 
@@ -725,32 +731,37 @@ contract ETOCommitment is
 
     function processTicket(
         address investor,
+        address wallet,
         uint256 amount,
         uint96 equivEurUlps,
-        bool isEuroInvestment,
-        bool isLockedAccount
+        bool isEuroInvestment
     )
         private
     {
         // read current ticket
         InvestmentTicket storage ticket = _tickets[investor];
+        // should we apply whitelist discounts
+        bool applyDiscounts = state() == ETOState.Whitelist;
         // calculate contribution
         (
             bool isWhitelisted,
-            uint256 minTicketEurUlps,
+            uint minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt256
-        ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps);
-        assert(equityTokenInt256 < 2 ** 96);
+            uint256 equityTokenInt256,
+            uint256 fixedSlotEquityTokenInt256
+        ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
+        assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
         // kick on minimum ticket
         require(equivEurUlps >= minTicketEurUlps, "ETO_MIN_TICKET");
         // kick on max ticket exceeded
         require(ticket.equivEurUlps + equivEurUlps <= maxTicketEurUlps, "ETO_MAX_TICKET");
         // kick on cap exceeded
-        require(_totalTokensInt + equityTokenInt256 <= MAX_NUMBER_OF_TOKENS, "ETO_MAX_TOK_CAP");
+        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "ETO_MAX_TOK_CAP");
+        // when that sent money is not the same as investor it must be icbm locked wallet
+        bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
-        if (state() == ETOState.Whitelist) {
-            require(isWhitelisted || isLockedAccount, "ETO_NOT_ON_WL");
+        if (state() == ETOState.Whitelist || isLockedAccount) {
+            require(isWhitelisted, "ETO_NOT_ON_WL");
         }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded
@@ -762,21 +773,20 @@ contract ETOCommitment is
                 // small amount of NEU ( no of investors * (PLATFORM_NEUMARK_SHARE-1)) may be left in contract
                 assert(investorNmk > PLATFORM_NEUMARK_SHARE - 1);
                 investorNmk -= PLATFORM_NEUMARK_SHARE - 1;
-                // uint96 is much more than 1.5 bln of NEU so no overflow
-                uint96 rewardNmkUlps = uint96(investorNmk);
             }
         }
         // issue equity token
-        uint96 equityTokenInt = uint96(equityTokenInt256);
-        EQUITY_TOKEN.issueTokens(equityTokenInt);
+        EQUITY_TOKEN.issueTokens(uint32(equityTokenInt256));
         // update total investment
         _totalEquivEurUlps += equivEurUlps;
-        _totalTokensInt += equityTokenInt;
+        _totalTokensInt += uint32(equityTokenInt256);
+        _totalFixedSlotsTokensInt += uint32(fixedSlotEquityTokenInt256);
         _totalInvestors += ticket.equivEurUlps == 0 ? 1 : 0;
         // write new ticket values
         ticket.equivEurUlps += equivEurUlps;
-        ticket.rewardNmkUlps += rewardNmkUlps;
-        ticket.equityTokenInt += equityTokenInt;
+        // uint96 is much more than 1.5 bln of NEU so no overflow
+        ticket.rewardNmkUlps += uint96(investorNmk);
+        ticket.equityTokenInt += uint32(equityTokenInt256);
         if (isEuroInvestment) {
             ticket.amountEurUlps += uint96(amount);
         } else {
@@ -786,13 +796,25 @@ contract ETOCommitment is
         // log successful commitment
         emit LogFundsCommitted(
             investor,
+            wallet,
             msg.sender,
             amount,
             equivEurUlps,
-            equityTokenInt,
+            uint32(equityTokenInt256),
             EQUITY_TOKEN,
-            rewardNmkUlps
+            uint96(investorNmk)
         );
+    }
+
+    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt)
+        private
+        constant
+        returns (bool maxCapExceeded)
+    {
+        maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_NUMBER_OF_TOKENS;
+        if (applyDiscounts && !maxCapExceeded) {
+            maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+        }
     }
 
     function claimTokensPrivate(address investor)
