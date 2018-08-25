@@ -28,7 +28,7 @@ contract ShareholderRights {
     uint256 public LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC;
     // founder's vesting
     bool public HAS_FOUNDERS_VESTING;
-    // duration of general voting in days
+    // duration of general voting
     uint256 public GENERAL_VOTING_DURATION;
     // duration of restricted act votings (like exit etc.)
     uint256 public RESTRICTED_ACT_VOTING_DURATION;
