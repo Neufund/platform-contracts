@@ -8,8 +8,9 @@ export const publicETOTerms = {
     HAS_FOUNDERS_VESTING: true,
     GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
     RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-    VOTING_FINALIZATION: new web3.BigNumber(daysToSeconds(5)),
+    VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
+    VOTING_MAJORITY_FRAC: Q18.mul(0.1),
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
@@ -21,6 +22,7 @@ export const publicETOTerms = {
     MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
   },
   etoTerms: {
     DURATION_TERMS: null,
@@ -35,6 +37,7 @@ export const publicETOTerms = {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
+    WHITELIST_DISCOUNT_FRAC: new web3.BigNumber(0),
   },
   reservationAndAcquisitionAgreement: "ipfs:QmcXFyLwH5cerZCP3rFNNBKTr3cXtgZnvHxnTx5C8scp6M",
   companyTokenHolderAgreement: "ipfs:QmcptXHPvPUHEaJjJ3mTEJpBwHexggF16dqFhJaWVed5uB",

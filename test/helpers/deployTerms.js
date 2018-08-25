@@ -7,8 +7,9 @@ export const defaultShareholderTerms = {
   HAS_FOUNDERS_VESTING: true,
   GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
   RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  VOTING_FINALIZATION: new web3.BigNumber(daysToSeconds(5)),
+  VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
+  VOTING_MAJORITY_FRAC: Q18.mul(0.1),
 };
 
 export const defDurTerms = {
@@ -22,6 +23,7 @@ export const defTokenTerms = {
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
   TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
+  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
 };
 
 export const defEtoTerms = {
@@ -38,6 +40,7 @@ export const defEtoTerms = {
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
+  WHITELIST_DISCOUNT_FRAC: new web3.BigNumber(0),
 };
 
 export function validateTerms(artifact, terms) {

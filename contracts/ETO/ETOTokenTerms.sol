@@ -25,12 +25,16 @@ contract ETOTokenTerms {
     constructor(
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
-        uint256 tokenPriceEurUlps
+        uint256 tokenPriceEurUlps,
+        uint256 maxNumberOfTokensInWhitelist
     )
         public
     {
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
         TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
+        require(MAX_NUMBER_OF_TOKENS_IN_WHITELIST <= MAX_NUMBER_OF_TOKENS);
+        require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
     }
 }
