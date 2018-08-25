@@ -234,6 +234,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   describe("MockETOCommitment tests", () => {
     it("should mock time", async () => {
       await deployETO(MockETOCommitment);
+      await prettyPrintGasCost("MockETOCommitment deploy", etoCommitment);
       const timestamp = await latestTimestamp();
       const startDate = new web3.BigNumber(timestamp - 3 * dayInSeconds);
       // set start data to the past via mocker
@@ -291,10 +292,18 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   it("go from public to signing by reaching max cap exactly");
   it("go from public to signing by reaching max cap within minimum ticket");
   it("two tests above but by crossing from whitelist. two state transitions must occur.");
+  it("go from whitelist to public if whitelist maximum cap exceeded and no fixed slots");
+  it("fixed slots may exceed whitelist maximum cap but will not induce state transition");
+  it("fixed slots will induce signing state if total max cap exceeded");
+  it(
+    "go from whitelist to public if whitelist maximum cap exceeded and fixed slots do not count to the cap",
+  );
   it("sign to claim with feeDisbursal as simple address");
   it("sign to claim with feeDisbursal as contract implementing fallback");
-  it("should invest with induced state transition from setup to whitelist and whitelist to public");
-  it("rejects invest on outdated price oracle");
+  it(
+    "should invest with induced state transition from setup to whitelist and whitelist to public (big ticket)",
+  );
+  it("should invest with induced state transition from setup to signing (very big ticket)");
   it("refund nominee returns nominal value");
   it("should refund if company signs too late");
   it("should refund if nominee signs too late");
@@ -315,6 +324,12 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should claim many in payout");
     it("should claim many with duplicates without effect");
     it("should claim many without tickets without effect");
+  });
+
+  describe("calculateContribution", () => {
+    it("calculate contribution in whitelist (with discounts)");
+    it("calculate contribution in whitelist when fixed slots");
+    it("max cap flag exceeded should be set in whitelist and public");
   });
   // describe("all whitelist cases");
   // describe("all public cases");
@@ -369,13 +384,16 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES),
       );
       expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
-      // we have constant price in this use case - no discounts
-      const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
+      // apply whitelist general discount, fixed slots not tested here
+      const disountedPrice = discountedPrice(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+        etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+      );
       // invest some
-      await investAmount(investors[0], Q18, "ETH");
-      await investAmount(investors[0], Q18.mul(1.1289791), "ETH", tokenprice);
-      await investAmount(investors[1], Q18.mul(0.9528763), "ETH", tokenprice);
-      await investAmount(investors[0], Q18.mul(30876.18912), "EUR", tokenprice);
+      await investAmount(investors[0], Q18, "ETH", disountedPrice);
+      await investAmount(investors[0], Q18.mul(1.1289791), "ETH", disountedPrice);
+      await investAmount(investors[1], Q18.mul(0.9528763), "ETH", disountedPrice);
+      await investAmount(investors[0], Q18.mul(30876.18912), "EUR", disountedPrice);
       const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
       // console.log(new Date(publicStartDate * 1000));
       await skipTimeTo(publicStartDate.add(1));
@@ -394,6 +412,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         { Whitelist: whitelistTs, Public: publicTs, Signing: signingStartOf, Refund: 0 },
         durTable,
       );
+      // we have constant price in this use case - no discounts
+      const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
       // invest so we have min cap
       await investAmount(investors[1], Q18.mul(130876.61721), "EUR", tokenprice);
       // out of whitelist
@@ -765,6 +785,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expectLogFundsCommitted(
       tx,
       investor,
+      investor,
       token.address,
       amount,
       eurEquiv,
@@ -941,6 +962,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     });
   }
 
+  function discountedPrice(price, discount) {
+    return divRound(price.mul(Q18.sub(discount)), Q18);
+  }
+
   function expectLogStateTransition(tx, oldState, newState, ts) {
     const event = eventValue(tx, "LogStateTransition");
     expect(event).to.exist;
@@ -984,6 +1009,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   function expectLogFundsCommitted(
     tx,
     investor,
+    wallet,
     paymentTokenAddress,
     amount,
     eurEquiv,
@@ -994,6 +1020,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     const event = eventValue(tx, "LogFundsCommitted");
     expect(event).to.exist;
     expect(event.args.investor).to.eq(investor);
+    expect(event.args.wallet).to.eq(wallet);
     expect(event.args.paymentToken).to.eq(paymentTokenAddress);
     expect(event.args.amount).to.be.bignumber.eq(amount);
     expect(event.args.eurEquivalent).to.be.bignumber.eq(eurEquiv);
