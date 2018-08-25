@@ -20,8 +20,8 @@ contract ETOTerms is Math {
     struct WhitelistTicket {
         // this also overrides maximum ticket
         uint128 discountAmountEurUlps;
-        // fixed discount of base price, cannot be 0
-        uint128 fixedDiscountFrac;
+        // a percentage of full price to be paid (1 - discount)
+        uint128 fullTokenPriceFrac;
     }
 
     ////////////////////////
@@ -104,7 +104,7 @@ contract ETOTerms is Math {
     event LogInvestorWhitelisted(
         address indexed investor,
         uint256 discountAmountEurUlps,
-        uint256 fixedDiscountFrac
+        uint256 fullTokenPriceFrac
     );
 
     ////////////////////////
@@ -222,9 +222,9 @@ contract ETOTerms is Math {
         returns (bool isWhitelisted, uint256 discountAmountEurUlps, uint256 discountFrac)
     {
         WhitelistTicket storage wlTicket = _whitelist[investor];
-        isWhitelisted = wlTicket.fixedDiscountFrac > 0;
+        isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
         discountAmountEurUlps = wlTicket.discountAmountEurUlps;
-        discountFrac = wlTicket.fixedDiscountFrac;
+        discountFrac = wlTicket.fullTokenPriceFrac;
     }
 
     // calculate contribution of investor
@@ -244,7 +244,7 @@ contract ETOTerms is Math {
             )
     {
         WhitelistTicket storage wlTicket = _whitelist[investor];
-        isWhitelisted = wlTicket.fixedDiscountFrac > 0;
+        isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
         minTicketEurUlps = MIN_TICKET_EUR_ULPS;
         maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, MAX_TICKET_EUR_ULPS);
         // check if has access to discount
@@ -253,7 +253,7 @@ contract ETOTerms is Math {
             discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
             // discount is fixed so use base token price
             if (discountedAmount > 0) {
-                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fixedDiscountFrac, TOKEN_PRICE_EUR_ULPS));
+                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fullTokenPriceFrac, TOKEN_PRICE_EUR_ULPS));
             }
         }
         // if any amount above discount
@@ -304,22 +304,22 @@ contract ETOTerms is Math {
     function addWhitelistInvestorPrivate(
         address investor,
         uint256 discountAmountEurUlps,
-        uint256 fixedDiscountFrac
+        uint256 fullTokenPriceFrac
     )
         private
     {
         // Validate
         require(investor != address(0));
-        require(fixedDiscountFrac > 0 && fixedDiscountFrac < 2**128);
+        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac < 2**128);
         require(discountAmountEurUlps < 2**128);
 
 
         _whitelist[investor] = WhitelistTicket({
             discountAmountEurUlps: uint128(discountAmountEurUlps),
-            fixedDiscountFrac: uint128(fixedDiscountFrac)
+            fullTokenPriceFrac: uint128(fullTokenPriceFrac)
         });
 
-        emit LogInvestorWhitelisted(investor, discountAmountEurUlps, fixedDiscountFrac);
+        emit LogInvestorWhitelisted(investor, discountAmountEurUlps, fullTokenPriceFrac);
     }
 
 }

@@ -294,6 +294,6 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
     expect(event.event).to.eq("LogInvestorWhitelisted");
     expect(event.args.investor).to.eq(investor);
     expect(event.args.discountAmountEurUlps).to.be.bignumber.eq(discountAmount);
-    expect(event.args.fixedDiscountFrac).to.be.bignumber.eq(discountFrac);
+    expect(event.args.fullTokenPriceFrac).to.be.bignumber.eq(discountFrac);
   }
 });
