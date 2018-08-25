@@ -10,13 +10,14 @@ import {
   deployETOTerms,
 } from "../helpers/deployTerms";
 import { Q18 } from "../helpers/constants";
+// import { duration } from "../../node_modules/moment";
 
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 
-contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) => {
+contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ...investors]) => {
   let platformTerms;
   let etoTerms;
   let terms, termsKeys;
@@ -90,8 +91,166 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
     await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
   });
 
-  // todo: we need many tests here
-  it("should reject on all other possible platform terms violation");
+  it("should reject on platform terms with max ticket in crowdfunding too large", async () => {
+    // change to sub(0) for this test to fail
+    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS();
+    terms.MAX_TICKET_EUR_ULPS = oldValue.add(1);
+    terms.IS_CROWDFUNDING = true;
+    const termsValues = termsKeys.map(v => terms[v]);
+    // console.log(termsValues);
+    etoTerms = await ETOTerms.new.apply(this, termsValues);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with simple max ticket in crowdfunding too large", async () => {
+    // change to sub(0) for this test to fail
+    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS();
+    terms.MAX_TICKET_SIMPLE_EUR_ULPS = oldValue.add(1);
+    terms.IS_CROWDFUNDING = true;
+    const termsValues = termsKeys.map(v => terms[v]);
+    // console.log(termsValues);
+    etoTerms = await ETOTerms.new.apply(this, termsValues);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should accept new duration terms", async () => {
+    // change to sub(0) for this test to fail
+
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await etoTerms.requireValidTerms(platformTerms.address);
+  });
+
+  it("should reject on platform terms with whitelist duration too small", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION_DAYS()).sub(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with whitelist duration too large", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION_DAYS()).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with public duration too small", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      PUBLIC_DURATION: (await platformTerms.MIN_PUBLIC_DURATION_DAYS()).sub(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with public duration too large", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      PUBLIC_DURATION: (await platformTerms.MAX_PUBLIC_DURATION_DAYS()).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with signing duration too small", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      SIGNING_DURATION: (await platformTerms.MIN_SIGNING_DURATION_DAYS()).sub(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with signing duration too large", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      SIGNING_DURATION: (await platformTerms.MAX_SIGNING_DURATION_DAYS()).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with claim duration too small", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      CLAIM_DURATION: (await platformTerms.MIN_CLAIM_DURATION_DAYS()).sub(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with claim duration too large", async () => {
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      CLAIM_DURATION: (await platformTerms.MAX_CLAIM_DURATION_DAYS()).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with total duration too small", async () => {
+    // change to sub(0) for this test to fail
+
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2),
+      PUBLIC_DURATION: (await platformTerms.MIN_OFFER_DURATION_DAYS()).div(2).sub(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with total duration too large", async () => {
+    // change to sub(0) for this test to fail
+
+    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+      WHITELIST_DURATION: (await platformTerms.MAX_OFFER_DURATION_DAYS()).div(2),
+      PUBLIC_DURATION: (await platformTerms.MAX_OFFER_DURATION_DAYS()).div(2).add(1),
+    });
+    terms.DURATION_TERMS = durationTerms.address;
+    const values = termsKeys.map(v => terms[v]);
+
+    etoTerms = await ETOTerms.new.apply(this, values);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
+
+  it("should reject on platform terms with minimum number of tokens too small", async () => {
+    // change to sub(0) for this test to fail
+    terms.MIN_NUMBER_OF_TOKENS = (await platformTerms.EQUITY_TOKENS_PER_SHARE()).sub(1);
+    terms.IS_CROWDFUNDING = true;
+    const termsValues = termsKeys.map(v => terms[v]);
+    // console.log(termsValues);
+    etoTerms = await ETOTerms.new.apply(this, termsValues);
+    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+  });
 
   it("should compute estimated max cap and min cap in eur", async () => {
     // simple flat pricing without discounts
@@ -147,20 +306,115 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount]) =
     });
 
     // todo: use generator from ICBMCommitment
-    it("add many investors");
+    it("add many investors", async () => {
+      const tx = await etoTerms.addWhitelisted(
+        [investors[0], investors[1], investors[2]],
+        [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
+        [Q18.mul(0.5), Q18.mul(0.6), Q18.mul(0.7)],
+        {
+          from: deployer,
+        },
+      );
+      expectLogInvestorWhitelisted(tx.logs[0], investors[0], Q18.mul(500000), Q18.mul(0.5));
+      expectLogInvestorWhitelisted(tx.logs[1], investors[1], Q18.mul(600000), Q18.mul(0.6));
+      expectLogInvestorWhitelisted(tx.logs[2], investors[2], Q18.mul(700000), Q18.mul(0.7));
+
+      let ticket = await etoTerms.whitelistTicket(investors[0]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(500000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.5));
+
+      ticket = await etoTerms.whitelistTicket(investors[1]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(600000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.6));
+
+      ticket = await etoTerms.whitelistTicket(investors[2]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(700000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.7));
+    });
 
     it("not whitelisted has no ticket", async () => {
-      const ticket = await etoTerms.whitelistTicket("0x0ff54c742d4268db86bb43006a891e79f9fd9624");
+      const ticket = await etoTerms.whitelistTicket(investors[3]);
       expect(ticket[0]).to.be.false;
     });
 
-    it("reverts on add not from deployer");
+    it("reverts on add not from deployer", async () => {
+      await expect(
+        etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: investors[3] }),
+      ).to.revert;
+    });
 
-    it("overrides single investor");
+    it("overrides single investor", async () => {
+      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: deployer });
+      expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, Q18);
+      let ticket = await etoTerms.whitelistTicket(investorNoDiscount);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(0);
+      expect(ticket[2]).to.be.bignumber.eq(Q18);
 
-    it("overrides many investors");
+      tx = await etoTerms.addWhitelisted([investorNoDiscount], [Q18.mul(500000)], [Q18.mul(0.6)], {
+        from: deployer,
+      });
+      expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, Q18.mul(500000), Q18.mul(0.6));
+      ticket = await etoTerms.whitelistTicket(investorNoDiscount);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(500000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.6));
+    });
 
-    it("fails on setting discount frac to 0");
+    it("overrides many investors", async () => {
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1], investors[2]],
+        [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
+        [Q18.mul(0.5), Q18.mul(0.6), Q18.mul(0.7)],
+        {
+          from: deployer,
+        },
+      );
+
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1], investors[2]],
+        [Q18.mul(800000), Q18.mul(900000), Q18.mul(1000000)],
+        [Q18.mul(0.2), Q18.mul(0.3), Q18.mul(0.4)],
+        {
+          from: deployer,
+        },
+      );
+
+      let ticket = await etoTerms.whitelistTicket(investors[0]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(800000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.2));
+
+      ticket = await etoTerms.whitelistTicket(investors[1]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(900000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.3));
+
+      ticket = await etoTerms.whitelistTicket(investors[2]);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(1000000));
+      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.4));
+    });
+
+    it("fails on setting token price frac to 0", async () => {
+      await expect(etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer })).to
+        .revert;
+
+      // fail on set many
+      await expect(
+        etoTerms.addWhitelisted(
+          [investors[0], investors[1], investors[2]],
+          [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
+          [0, Q18.mul(0.6), Q18.mul(0.7)],
+          {
+            from: deployer,
+          },
+        ),
+      ).to.revert;
+    });
   });
 
   describe("contribution calculation tests", () => {
