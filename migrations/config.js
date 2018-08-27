@@ -145,7 +145,6 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
-    // todo: put configured addresses below and set verification, temporarilu all disabled
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
       "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
       "investor",
@@ -177,8 +176,7 @@ export function getFixtureAccounts(accounts) {
     ISSUER_CLAIMS: makeAccount("0x007D45D94368AE57ac8351604dC1cB3236150727", "issuer", true),
     ISSUER_PAYOUT: makeAccount("0x00866b5e4F539b215a28476aD5A364425599F206", "issuer", true),
     ISSUER_REFUND: makeAccount("0x0028625dcBc24a821b40864294D66507fEC70B7F", "issuer", true),
-    // spare
-    SPARE_ACCOUNT: makeAccount("0x0015650359DaF66f6633DEeb490a059027B0e396", "investor", false),
+    ISSUER_SETUP_NO_ST: makeAccount("0x0015650359DaF66f6633DEeb490a059027B0e396", "issuer", true),
     // external accounts
     NANO_1: makeAccount("0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D", "external", false),
     NANO_2: makeAccount("0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C", "external", false),

@@ -12,6 +12,10 @@ import {
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
 
+const Web3 = require("web3");
+
+const web3 = new Web3();
+
 function logDeployed(contract) {
   console.log("...deployed at address ", ...good(contract.address));
 }
@@ -118,7 +122,7 @@ export async function deployETO(
   console.log(`Deploying ${config.artifacts.STANDARD_ETO_COMMITMENT}`);
   const etoCommitment = await ETOCommitment.new(
     universe.address,
-    config.PLATFORM_OPERATOR_WALLET,
+    config.addresses.PLATFORM_OPERATOR_WALLET,
     nominee,
     company,
     etoTerms.address,
@@ -151,14 +155,6 @@ export async function deployETO(
   return [etoCommitment, equityToken, equityTokenController, etoTerms];
 }
 
-function wrong(s) {
-  return ["\x1b[31m", s, "\x1b[0m"];
-}
-
-function good(s) {
-  return ["\x1b[32m", s, "\x1b[0m"];
-}
-
 export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const Universe = artifacts.require(config.artifacts.UNIVERSE);
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
@@ -187,7 +183,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   let idx = 1;
   for (const startOf of startOfs.slice(1)) {
     const dateSet = !startOf.eq(0);
-    const startDate = new Date(startOf.div(1000).toNumber());
+    const startDate = new Date(startOf.mul(1000).toNumber());
     console.log(
       `State ${CommitmentStateRev[idx]} starts at:`,
       ...(dateSet ? good(startDate) : wrong("NOT SET")),
@@ -241,16 +237,19 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
     ...(hasPlatformPortfolio ? good("YES") : wrong("NO")),
   );
 
-  const claims = await identityRegistry.getMultipleClaims([
-    await eto.nominee(),
-    await eto.companyLegalRep(),
-    await eto.singletons[0],
-  ]);
+  console.log("Checking if (1) nominee (2) company legal rep (3) operator wallet verified");
+  const parties = [await eto.nominee(), await eto.companyLegalRep(), (await eto.singletons())[0]];
+  const claims = await identityRegistry.getMultipleClaims(parties);
+  let verifeeId = 1;
   for (const claim of claims) {
     // must be properly verified
     const deserializedClaims = deserializeClaims(claim);
     const isVerified = Object.assign(...deserializedClaims).isVerified;
-    console.log("Checking if verified", ...(isVerified ? good("YES") : wrong("NO")));
+    console.log(
+      `Is (${verifeeId}) ${parties[verifeeId - 1]} verified`,
+      ...(isVerified ? good("YES") : wrong("NO")),
+    );
+    verifeeId += 1;
   }
   const rateOracle = await ITokenExchangeRateOracle.at(await universe.tokenExchangeRateOracle());
   const etherTokenAddress = await universe.etherToken();
@@ -261,4 +260,104 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log("Obtained eth to eur rate ", ethRate);
   const isRateExpired = ethRate[1].gte(rateExpiration.add(now));
   console.log("Checking if rate valid", ...(!isRateExpired ? good("YES") : wrong("NO")));
+  const feeDisbursal = await universe.feeDisbursal();
+  console.log(
+    "Universe has fee disbursal",
+    ...(feeDisbursal === ZERO_ADDRESS ? wrong("NO") : good(feeDisbursal)),
+  );
+  const platformPortfolio = await universe.platformPortfolio();
+  console.log(
+    "Universe has platform portfolio",
+    ...(platformPortfolio === ZERO_ADDRESS ? wrong("NO") : good(platformPortfolio)),
+  );
+}
+
+export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist) {
+  const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
+  const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
+  console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
+  const eto = await ETOCommitment.at(etoCommitmentAddress);
+  const etoTerms = await ETOTerms.at(await eto.etoTerms());
+  console.log(`found eto terms at ${etoTerms.address}`);
+  const addresses = [];
+  const amounts = [];
+  const priceFracs = [];
+  for (const ticket of whitelist) {
+    ensureAddress(ticket.address);
+    const parsedDiscountAmount = parseStrToNumStrict(ticket.discountAmount);
+    const parsedPriceFrac = parseStrToNumStrict(ticket.priceFrac);
+    if (Number.isNaN(parsedDiscountAmount) || Number.isNaN(parsedPriceFrac)) {
+      throw new Error(`Investor ${ticket.address} amount or price fraction could not be parsed`);
+    }
+    if (parsedPriceFrac === 0) {
+      throw new Error(`Investor ${ticket.address} cannot have 0 price fraction as discount`);
+    }
+    if (parsedPriceFrac < 0 || parsedPriceFrac > 1) {
+      throw new Error(`Investor ${ticket.address} cannot have price fraction ${parsedPriceFrac}`);
+    }
+    if (parsedDiscountAmount < 0 || parsedDiscountAmount > 100000000) {
+      throw new Error(
+        `Investor ${
+          ticket.address
+        } discount amount value ${parsedDiscountAmount} does not look rights`,
+      );
+    }
+    const existingTicket = await etoTerms.whitelistTicket(ticket.address);
+    if (existingTicket[0]) {
+      throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
+    }
+    addresses.push(ticket.address);
+    amounts.push(Q18.mul(parsedDiscountAmount));
+    priceFracs.push(Q18.mul(parsedPriceFrac));
+    console.log(
+      `Will add ${
+        ticket.address
+      } with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
+    );
+  }
+  await etoTerms.addWhitelisted(addresses, amounts, priceFracs);
+}
+
+function wrong(s) {
+  return ["\x1b[31m", s, "\x1b[0m"];
+}
+
+function good(s) {
+  return ["\x1b[32m", s, "\x1b[0m"];
+}
+
+function parseStrToNumStrict(source) {
+  if (source === null) {
+    return NaN;
+  }
+
+  if (source === undefined) {
+    return NaN;
+  }
+
+  if (typeof source === "number") {
+    return source;
+  }
+
+  let transform = source.replace(/\s/g, "");
+  transform = transform.replace(/,/g, ".");
+
+  // we allow only digits dots and minus
+  if (/[^.\-\d]/.test(transform)) {
+    return NaN;
+  }
+
+  // we allow only one dot
+  if ((transform.match(/\./g) || []).length > 1) {
+    return NaN;
+  }
+
+  return parseFloat(transform);
+}
+
+function ensureAddress(address) {
+  const addressTrimmed = address.trim();
+  if (!web3.isChecksumAddress(addressTrimmed))
+    throw new Error(`Address:${address} must be checksummed address!!`);
+  return addressTrimmed;
 }
