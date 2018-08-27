@@ -140,7 +140,7 @@ contract ETOTerms is Math {
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(shareNominalValueEurUlps > 0);
-        require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac < 99*10**16);
+        require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
@@ -219,12 +219,12 @@ contract ETOTerms is Math {
     function whitelistTicket(address investor)
         public
         constant
-        returns (bool isWhitelisted, uint256 discountAmountEurUlps, uint256 discountFrac)
+        returns (bool isWhitelisted, uint256 discountAmountEurUlps, uint256 fullTokenPriceFrac)
     {
         WhitelistTicket storage wlTicket = _whitelist[investor];
         isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
         discountAmountEurUlps = wlTicket.discountAmountEurUlps;
-        discountFrac = wlTicket.fullTokenPriceFrac;
+        fullTokenPriceFrac = wlTicket.fullTokenPriceFrac;
     }
 
     // calculate contribution of investor
@@ -232,7 +232,8 @@ contract ETOTerms is Math {
         address investor,
         uint256 totalContributedEurUlps,
         uint256 existingInvestorContributionEurUlps,
-        uint256 newInvestorContributionEurUlps
+        uint256 newInvestorContributionEurUlps,
+        bool applyWhitelistDiscounts
     )
         public
         constant
@@ -240,28 +241,40 @@ contract ETOTerms is Math {
             bool isWhitelisted,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt
+            uint256 equityTokenInt,
+            uint256 fixedSlotEquityTokenInt
             )
     {
-        WhitelistTicket storage wlTicket = _whitelist[investor];
-        isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
-        minTicketEurUlps = MIN_TICKET_EUR_ULPS;
-        maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, MAX_TICKET_EUR_ULPS);
-        // check if has access to discount
         uint256 discountedAmount;
-        if (existingInvestorContributionEurUlps < wlTicket.discountAmountEurUlps) {
-            discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
-            // discount is fixed so use base token price
-            if (discountedAmount > 0) {
-                equityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fullTokenPriceFrac, TOKEN_PRICE_EUR_ULPS));
+        minTicketEurUlps = MIN_TICKET_EUR_ULPS;
+        maxTicketEurUlps = MAX_TICKET_EUR_ULPS;
+        // whitelist use discount is possible
+        if (applyWhitelistDiscounts) {
+            WhitelistTicket storage wlTicket = _whitelist[investor];
+            // check if has access to discount
+            isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
+            maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, MAX_TICKET_EUR_ULPS);
+            if (existingInvestorContributionEurUlps < wlTicket.discountAmountEurUlps) {
+                discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
+                // discount is fixed so use base token price
+                if (discountedAmount > 0) {
+                    fixedSlotEquityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fullTokenPriceFrac, TOKEN_PRICE_EUR_ULPS));
+                }
             }
         }
         // if any amount above discount
         uint256 remainingAmount = newInvestorContributionEurUlps - discountedAmount;
         if (remainingAmount > 0) {
-            // use pricing along the curve
-            equityTokenInt += calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
+            if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
+                // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor
+                equityTokenInt = divRound(remainingAmount, decimalFraction(10**18 - WHITELIST_DISCOUNT_FRAC, TOKEN_PRICE_EUR_ULPS));
+            } else {
+                // use pricing along the curve
+                equityTokenInt = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
+            }
         }
+        // should have all issued tokens
+        equityTokenInt += fixedSlotEquityTokenInt;
     }
 
 
@@ -277,7 +290,7 @@ contract ETOTerms is Math {
             require(MAX_TICKET_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS(), "ETO_TERMS_MAX_TICKET_EUR_ULPS");
             require(MAX_TICKET_SIMPLE_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS(), "ETO_TERMS_MAX_S_TICKET_EUR_ULPS");
         }
-        // at least one shre sold
+        // at least one share sold
         require(MIN_NUMBER_OF_TOKENS >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
         // duration checks
         require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MIN");

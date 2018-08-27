@@ -45,7 +45,7 @@ module.exports = {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 6500000,
+      gas: 6700000,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
@@ -53,6 +53,7 @@ module.exports = {
     inprocess: {
       network_id: "*",
       provider: Ganache.provider({
+        gasLimit: 6700000,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
     },
@@ -60,7 +61,7 @@ module.exports = {
       host: "parity-instant-seal-byzantium-enabled",
       port: 8545,
       network_id: "17",
-      gas: 6500000,
+      gas: 6700000,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
@@ -126,15 +127,16 @@ module.exports = {
     inprocess_test: {
       network_id: "*",
       provider: Ganache.provider({
+        gasLimit: 6700000,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
-      gas: 6500000,
+      gas: 6700000,
     },
     localhost_test: {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 6500000,
+      gas: 6700000,
     },
     inprocess_massive_test: {
       network_id: "*",
