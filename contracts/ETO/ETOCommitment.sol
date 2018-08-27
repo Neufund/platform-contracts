@@ -215,6 +215,7 @@ contract ETOCommitment is
         require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION());
         require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE());
         require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS());
+        require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
 
         etoTerms.requireValidTerms(PLATFORM_TERMS);
 
@@ -760,8 +761,8 @@ contract ETOCommitment is
         // when that sent money is not the same as investor it must be icbm locked wallet
         bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
-        if (state() == ETOState.Whitelist || isLockedAccount) {
-            require(isWhitelisted, "ETO_NOT_ON_WL");
+        if (state() == ETOState.Whitelist) {
+            require(isWhitelisted || isLockedAccount, "ETO_NOT_ON_WL");
         }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded
