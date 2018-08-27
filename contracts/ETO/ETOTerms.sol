@@ -323,7 +323,7 @@ contract ETOTerms is Math {
     {
         // Validate
         require(investor != address(0));
-        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac < 2**128);
+        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac <= 10**18, "DISCOUNT_RANGE");
         require(discountAmountEurUlps < 2**128);
 
 
