@@ -49,7 +49,7 @@ export function validateTerms(artifact, terms) {
   const termsValues = termsKeys.map(v => terms[v]);
   if (termsKeys.length !== constructor.inputs.length) {
     throw new Error(
-      `No params in terms not equal no inputs in constructor of ${artifact.contract_name}`,
+      `No. params in terms not equal no. inputs in constructor of ${artifact.contract_name}`,
     );
   }
   let idx = 0;

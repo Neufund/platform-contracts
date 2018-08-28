@@ -402,8 +402,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     });
 
     it("fails on setting token price frac to 0", async () => {
-      await expect(etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer })).to
-        .revert;
+      await expect(
+        etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer }),
+      ).to.be.rejectedWith("DISCOUNT_RANGE");
 
       // fail on set many
       await expect(
@@ -415,7 +416,25 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
             from: deployer,
           },
         ),
-      ).to.revert;
+      ).to.be.rejectedWith("DISCOUNT_RANGE");
+    });
+
+    it("fails on setting token price frac > 1", async () => {
+      await expect(
+        etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18.add(1)], { from: deployer }),
+      ).to.be.rejectedWith("DISCOUNT_RANGE");
+
+      // fail on set many
+      await expect(
+        etoTerms.addWhitelisted(
+          [investors[0], investors[1], investors[2]],
+          [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
+          [Q18.mul(0.6), Q18.mul(0.7), Q18.add(1)],
+          {
+            from: deployer,
+          },
+        ),
+      ).to.be.rejectedWith("DISCOUNT_RANGE");
     });
   });
 
@@ -446,12 +465,12 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     discountTests(Q18.mul(1 - 0.503761));
   });
 
-  describe("contribution calculation without dicount", () => {
+  describe("contribution calculation without discount", () => {
     function tokenPrice(_, amount) {
       return divRound(amount, tokenTerms.TOKEN_PRICE_EUR_ULPS);
     }
 
-    async function amountNoFixedSlot(total, amount) {
+    async function fullAmount(total, amount) {
       const info = await etoTerms.calculateContribution(
         investorNoDiscount,
         total,
@@ -467,21 +486,21 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     }
 
     it("simple amount", async () => {
-      await amountNoFixedSlot(0, Q18.mul(1716.1991));
+      await fullAmount(0, Q18.mul(1716.1991));
       // invest again
-      await amountNoFixedSlot(Q18.mul(1121.1991), Q18.mul(87621.18981));
+      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981));
     });
 
     it("simple amount from former fixed slot", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.6);
-      await etoTerms.addWhitelisted([investorNoDiscount], [discountAmount], [discount], {
+      const priceFrac = Q18.mul(0.6);
+      await etoTerms.addWhitelisted([investorNoDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
 
-      await amountNoFixedSlot(0, Q18.mul(1716.1991));
+      await fullAmount(0, Q18.mul(1716.1991));
       // invest again
-      await amountNoFixedSlot(Q18.mul(1121.1991), Q18.mul(87621.18981));
+      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981));
     });
   });
 
@@ -500,7 +519,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         amount,
         true,
       );
-      expect(info[0]).to.be.false;
+      expect(info[0]).to.be.true;
       expect(info[1]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[2]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(tokenPrice(total, amount, fullPriceFraction));
@@ -508,23 +527,32 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     }
 
     it("with no amount no discount", async () => {
+      await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
+        from: deployer,
+      });
       await amountNoFixedSlot(0, 0);
     });
 
     it("with amount no discount", async () => {
+      await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
+        from: deployer,
+      });
       await amountNoFixedSlot(0, Q18.mul(8129.1991));
       // invest again
       await amountNoFixedSlot(Q18.mul(8129.1991), Q18.mul(29811.18981));
     });
 
     it("with amount crossing max ticket no discount", async () => {
+      await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
+        from: deployer,
+      });
       await amountNoFixedSlot(0, terms.MAX_TICKET_EUR_ULPS.add(1));
     });
 
     it("with no amount and discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.6);
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      const priceFrac = Q18.mul(0.6);
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, 0, true);
@@ -537,46 +565,46 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("with amount below discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.6);
+      const priceFrac = Q18.mul(0.6);
       const amount = discountAmount.divToInt(2);
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
       expect(info[1]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[2]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, discount));
+      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, priceFrac));
       expect(info[4]).to.be.bignumber.eq(info[3]);
     });
 
     it("with amount eq discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.6);
+      const priceFrac = Q18.mul(0.6);
       const amount = discountAmount;
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
       expect(info[1]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[2]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, discount));
+      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, priceFrac));
       expect(info[4]).to.be.bignumber.eq(info[3]);
     });
 
     it("with amount over discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.6);
+      const priceFrac = Q18.mul(0.6);
       const amount = discountAmount.add(Q18);
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
       expect(info[1]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[2]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      const expDiscountedTokens = tokenPrice(0, discountAmount, discount);
+      const expDiscountedTokens = tokenPrice(0, discountAmount, priceFrac);
       const expTokens = expDiscountedTokens.add(
         tokenPrice(discountAmount, amount.sub(discountAmount), fullPriceFraction),
       );
@@ -586,20 +614,20 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("with amount over discount in multiple steps", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const discount = Q18.mul(0.321);
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      const priceFrac = Q18.mul(0.321);
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
 
       // all amount within discount
       const amount = discountAmount.divToInt(2);
       let info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
-      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, discount));
+      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, amount, priceFrac));
       expect(info[4]).to.be.bignumber.eq(info[3]);
       // next amount goes over discount
       const amount2 = amount.add(Q18);
       info = await etoTerms.calculateContribution(investorDiscount, amount, amount, amount2, true);
-      const expDiscountedTokens = tokenPrice(amount, discountAmount.sub(amount), discount);
+      const expDiscountedTokens = tokenPrice(amount, discountAmount.sub(amount), priceFrac);
       const expPrice = expDiscountedTokens.add(
         tokenPrice(discountAmount, amount2.sub(amount), fullPriceFraction),
       );
@@ -617,8 +645,8 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     it("with discount max ticket higher than max ticket size for other investors", async () => {
       // discounts allow overriding max ticket sizes
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.mul(2);
-      const discount = Q18.mul(0.6);
-      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [discount], {
+      const priceFrac = Q18.mul(0.6);
+      await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
       const info = await etoTerms.calculateContribution(
@@ -630,16 +658,16 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       );
       // max cap is discountAmount
       expect(info[2]).to.be.bignumber.eq(discountAmount);
-      const expPrice = tokenPrice(0, discountAmount, discount);
+      const expPrice = tokenPrice(0, discountAmount, priceFrac);
       expect(info[3]).to.be.bignumber.eq(expPrice);
       expect(info[4]).to.be.bignumber.eq(info[3]);
     });
   }
 
-  function expectLogInvestorWhitelisted(event, investor, discountAmount, discountFrac) {
+  function expectLogInvestorWhitelisted(event, investor, discountAmount, priceFracFrac) {
     expect(event.event).to.eq("LogInvestorWhitelisted");
     expect(event.args.investor).to.eq(investor);
     expect(event.args.discountAmountEurUlps).to.be.bignumber.eq(discountAmount);
-    expect(event.args.fullTokenPriceFrac).to.be.bignumber.eq(discountFrac);
+    expect(event.args.fullTokenPriceFrac).to.be.bignumber.eq(priceFracFrac);
   }
 });
