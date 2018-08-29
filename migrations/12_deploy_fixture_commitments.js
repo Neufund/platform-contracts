@@ -87,7 +87,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     from: nominee.address,
   });
   // if final state not provided return before date set up
-  if (!final) {
+  if (Number.isNaN(final)) {
     return etoCommitment;
   }
 
@@ -96,11 +96,13 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     { address: fas.INV_ETH_EUR_ICBM_HAS_KYC.address, discountAmount: 500000, priceFrac: 0.5 },
   ];
   await deployWhitelist(artifacts, CONFIG, etoCommitment.address, whitelist);
-  console.log("Setting start date");
   if (final === CommitmentState.Setup) {
+    console.log("Setting start date");
     // set date in a week as start date
-    const startDate = new web3.BigNumber(Math.floor(new Date() / 1000) + 5 * dayInSeconds);
-    await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate);
+    const startDate = new web3.BigNumber(Math.floor(new Date() / 1000) + 15 * dayInSeconds);
+    await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+      from: issuer.address,
+    });
     return etoCommitment;
   }
   // mock start date if we intend to move to next state
@@ -150,7 +152,11 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   if (final === CommitmentState.Signing) {
     return etoCommitment;
   }
-  console.log("Going to Claim.. putting signatures");
+  console.log(
+    `Going to Claim.. putting signatures ${
+      etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL
+    }`,
+  );
   await etoCommitment.companySignsInvestmentAgreement(
     etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
