@@ -500,7 +500,9 @@ contract ETOCommitment is
             applyDiscounts
         );
         isWhitelisted = isWhitelisted || fromIcbmWallet;
-        (,neuRewardUlps) = calculateNeumarkDistribution(newInvestorContributionEurUlps);
+        if (!fromIcbmWallet) {
+            (,neuRewardUlps) = calculateNeumarkDistribution(newInvestorContributionEurUlps);
+        }
         // crossing max cap can always happen
         maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt);
     }
