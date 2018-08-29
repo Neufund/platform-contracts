@@ -24,7 +24,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   deployer.then(async () => {
     const universe = await Universe.deployed();
     const etoFixtures = {
-      "": ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST],
+      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST],
       [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP],
       [CommitmentState.Whitelist]: ["ETOInWhitelistState", fas.ISSUER_WHITELIST],
       [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC],
@@ -37,7 +37,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     for (const state of Object.keys(etoFixtures)) {
       const etoVars = etoFixtures[state];
       const etoTerms = prepareEtoTerms(etoVars[0]);
-      console.log(`Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1]}`);
+      console.log(
+        `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
+      );
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
@@ -46,7 +48,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoVars[1],
         etoTerms,
         fas,
-        state,
+        parseInt(state, 10),
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -85,7 +87,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     from: nominee.address,
   });
   // if final state not provided return before date set up
-  if (final === "") {
+  if (!final) {
     return etoCommitment;
   }
 
@@ -108,16 +110,19 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
+  // todo: invest from whitelist
   if (final === CommitmentState.Whitelist) {
     return etoCommitment;
   }
-  // todo: invest from whitelist
   console.log("Going to public");
   const whitelistD = etoDefiniton.durTerms.WHITELIST_DURATION.add(1);
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
   // todo: public investments
+  if (final === CommitmentState.Public) {
+    return etoCommitment;
+  }
   const whitelistP = etoDefiniton.durTerms.PUBLIC_DURATION.add(1);
   if (final === CommitmentState.Refund) {
     console.log("Going to Refund");
