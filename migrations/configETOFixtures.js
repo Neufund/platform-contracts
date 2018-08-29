@@ -32,7 +32,7 @@ const defEtoTerms = {
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     IS_CROWDFUNDING: false,
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmRZ3qsDZXGNJpyL9WtCMZVKMrw9SmN2pe3sRQswKgYXSz",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmVbzgZ4Ape7LVqZbsChmoqanj1npfmLR4SG7FezZ3MqS9",
     PROSPECTUS_URL: "ipfs:QmQYWyx6WWwCYqBnJ74ruogTTHfKoscQRHU5eJFKDD22mT",
     SHAREHOLDER_RIGHTS: null,
     EQUITY_TOKEN_NAME: "Quintessence",
@@ -40,8 +40,8 @@ const defEtoTerms = {
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
   },
-  reservationAndAcquisitionAgreement: "ipfs:QmcXFyLwH5cerZCP3rFNNBKTr3cXtgZnvHxnTx5C8scp6M",
-  companyTokenHolderAgreement: "ipfs:QmcptXHPvPUHEaJjJ3mTEJpBwHexggF16dqFhJaWVed5uB",
+  reservationAndAcquisitionAgreement: "ipfs:QmdV6wnSBku1ho1hLwqeSvuaN9HD1E6E7jhyQHdWteRRWz",
+  companyTokenHolderAgreement: "ipfs:QmRCwEaTf6dxSPwDqGEs9nZ6hbtvZdSCaTTWFzoFQYjkwo",
 };
 
 // function cloneObject(obj) {
