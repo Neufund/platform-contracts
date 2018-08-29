@@ -283,7 +283,7 @@ contract ETOCommitment is
     }
 
     function companySignsInvestmentAgreement(string signedInvestmentAgreementUrl)
-        external
+        public
         withStateTransition()
         onlyState(ETOState.Signing)
         onlyCompany
@@ -293,7 +293,7 @@ contract ETOCommitment is
     }
 
     function nomineeConfirmsInvestmentAgreement(string signedInvestmentAgreementUrl)
-        external
+        public
         withStateTransition()
         onlyState(ETOState.Signing)
         onlyNominee
