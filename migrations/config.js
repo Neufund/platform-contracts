@@ -177,6 +177,16 @@ export function getFixtureAccounts(accounts) {
     ISSUER_PAYOUT: makeAccount("0x00866b5e4F539b215a28476aD5A364425599F206", "issuer", true),
     ISSUER_REFUND: makeAccount("0x0028625dcBc24a821b40864294D66507fEC70B7F", "issuer", true),
     ISSUER_SETUP_NO_ST: makeAccount("0x0015650359DaF66f6633DEeb490a059027B0e396", "issuer", true),
+    ISSUER_PREVIEW: makeAccount("0x238FB566005f59Fd5915dde954AB9FA7352Da641", "issuer", true),
+    ISSUER_PENDING: makeAccount("0x0A00992Aea13E8E10287b577256717Aa4910a0Bb", "issuer", true),
+    ISSUER_LISTED: makeAccount("0x007fF055641147d0a170a7A73B00F0eeb2f07f12", "issuer", true),
+    ISSUER_PROSPECTUS_APPROVED: makeAccount(
+      "0x4B07fd23BAA7198061caEd44cF470B0F20cE1b7e",
+      "issuer",
+      true,
+    ),
+    SPARE_1: makeAccount("0x9369dFD79049B7C3CF48d54435287b0AFd5227Da", "investor", true),
+    SPARE_2: makeAccount("0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D", "investor", true),
     // external accounts
     NANO_1: makeAccount("0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D", "external", false),
     NANO_2: makeAccount("0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C", "external", false),
