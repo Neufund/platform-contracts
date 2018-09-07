@@ -170,7 +170,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     const path = join(__dirname, "../build/fixtures.json");
-    fs.writeFile(path, JSON.stringify(describedFixtures), err => {
+    fs.writeFile(path, JSON.stringify(describedFixtures, null, 2), err => {
       if (err) throw new Error(err);
     });
     console.log(`Fixtures described in ${path}`);
