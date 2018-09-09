@@ -1,7 +1,12 @@
 import { expect } from "chai";
 import moment from "moment";
 import { hasEvent, eventValue } from "../helpers/events";
-import { deployControlContracts, deployNeumark } from "../helpers/deployContracts";
+import {
+  deployControlContracts,
+  deployNeumark,
+  deployICBMLockedAccount,
+  applyTransferPermissions,
+} from "../helpers/deployContracts";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
 import EvmError from "../helpers/EVMThrow";
@@ -13,12 +18,10 @@ import roles from "../helpers/roles";
 import { promisify } from "../helpers/evmCommands";
 import { dayInSeconds, monthInSeconds, Q18 } from "../helpers/constants";
 
-const ICBMLockedAccount = artifacts.require("ICBMLockedAccount");
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 const TestNullContract = artifacts.require("TestNullContract");
-const TestICBMLockedAccountController = artifacts.require("TestICBMLockedAccountController");
 const TestICBMLockedAccountMigrationTarget = artifacts.require(
   "TestICBMLockedAccountMigrationTarget",
 );
@@ -71,7 +74,16 @@ contract(
 
       beforeEach(async () => {
         await deployEtherToken();
-        await deployLockedAccount(assetToken, operatorWallet, LOCK_PERIOD, UNLOCK_PENALTY_FRACTION);
+        [lockedAccount, controller] = await deployICBMLockedAccount(
+          accessPolicy,
+          neumark,
+          admin,
+          assetToken,
+          operatorWallet,
+          LOCK_PERIOD,
+          UNLOCK_PENALTY_FRACTION,
+        );
+        await deployAuxiliaryContracts();
       });
 
       describe("core tests", () => {
@@ -88,23 +100,6 @@ contract(
     });
 
     describe("ICBMEuroToken", () => {
-      async function applyTransferPermissions(permissions) {
-        for (const p of permissions) {
-          switch (p.side) {
-            case "from":
-              await assetToken.setAllowedTransferFrom(p.address, true, {
-                from: admin,
-              });
-              break;
-            default:
-              await assetToken.setAllowedTransferTo(p.address, true, {
-                from: admin,
-              });
-              break;
-          }
-        }
-      }
-
       async function deployEuroToken() {
         assetToken = await ICBMEuroToken.new(accessPolicy.address);
         await accessPolicy.setUserRole(
@@ -133,8 +128,17 @@ contract(
 
       beforeEach(async () => {
         await deployEuroToken();
-        await deployLockedAccount(assetToken, operatorWallet, LOCK_PERIOD, UNLOCK_PENALTY_FRACTION);
-        await applyTransferPermissions([
+        [lockedAccount, controller] = await deployICBMLockedAccount(
+          accessPolicy,
+          neumark,
+          admin,
+          assetToken,
+          operatorWallet,
+          LOCK_PERIOD,
+          UNLOCK_PENALTY_FRACTION,
+        );
+        await deployAuxiliaryContracts();
+        await applyTransferPermissions(assetToken, admin, [
           { side: "from", address: lockedAccount.address },
           { side: "to", address: lockedAccount.address },
           { side: "from", address: controller.address },
@@ -154,7 +158,7 @@ contract(
       describe("migration tests", () => {
         beforeEach(async () => {
           migrationTarget = await deployMigrationTarget(assetToken, operatorWallet);
-          await applyTransferPermissions([
+          await applyTransferPermissions(assetToken, admin, [
             { side: "from", address: migrationTarget.address },
             { side: "to", address: migrationTarget.address },
           ]);
@@ -912,13 +916,17 @@ contract(
         PublicFunctionsControllerOnly.forEach(name => {
           it(`${name}`, async () => {
             let pendingTx;
-            await deployLockedAccount(
+            [lockedAccount, controller] = await deployICBMLockedAccount(
+              accessPolicy,
+              neumark,
+              admin,
               assetToken,
               operatorWallet,
               LOCK_PERIOD,
               UNLOCK_PENALTY_FRACTION,
               { leaveUnlocked: true },
             );
+            await deployAuxiliaryContracts();
             switch (name) {
               case "lock":
                 pendingTx = lock(investor, Q18);
@@ -942,35 +950,9 @@ contract(
       });
     }
 
-    async function deployLockedAccount(
-      token,
-      feeDisbursalAddress,
-      lockPeriod,
-      unlockPenaltyFraction,
-      { leaveUnlocked = false } = {},
-    ) {
-      lockedAccount = await ICBMLockedAccount.new(
-        accessPolicy.address,
-        token.address,
-        neumark.address,
-        feeDisbursalAddress,
-        lockPeriod,
-        unlockPenaltyFraction,
-      );
-      await accessPolicy.setUserRole(
-        admin,
-        roles.lockedAccountAdmin,
-        lockedAccount.address,
-        TriState.Allow,
-      );
+    async function deployAuxiliaryContracts() {
       noCallbackContract = await TestNullContract.new();
       testDisbursal = await TestFeeDistributionPool.new();
-      controller = await TestICBMLockedAccountController.new(lockedAccount.address);
-      if (!leaveUnlocked) {
-        await lockedAccount.setController(controller.address, {
-          from: admin,
-        });
-      }
       startTimestamp = await latestTimestamp();
     }
 
