@@ -66,7 +66,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
-    fs.writeFile(etoFixturesPath, JSON.stringify(describedETOs), err => {
+    fs.writeFile(etoFixturesPath, JSON.stringify(describedETOs, null, 2), err => {
       if (err) throw new Error(err);
     });
     console.log(`ETOs described in ${etoFixturesPath}`);
@@ -131,7 +131,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     const fixturesPath = join(__dirname, "../build/fixtures.json");
-    fs.writeFile(fixturesPath, JSON.stringify(describedFixtures), err => {
+    fs.writeFile(fixturesPath, JSON.stringify(describedFixtures, null, 2), err => {
       if (err) throw new Error(err);
     });
     console.log(`Fixtures described in ${fixturesPath}`);
