@@ -61,15 +61,7 @@ contract StandardToken is
         public
         returns (bool)
     {
-
-        // To change the approve amount you first have to reduce the addresses`
-        //  allowance to zero by calling `approve(_spender, 0)` if it is not
-        //  already 0 to mitigate the race condition described here:
-        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-        require((amount == 0) || (_allowed[msg.sender][spender] == 0));
-
-        _allowed[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
+        approveInternal(msg.sender, spender, amount);
         return true;
     }
 
@@ -99,7 +91,7 @@ contract StandardToken is
         public
         returns (bool)
     {
-        require(approve(spender, amount));
+        approveInternal(msg.sender, spender, amount);
 
         // in case of re-entry 1. approval is done 2. msg.sender is different
         bool success = IERC677Callback(spender).receiveApproval(
@@ -111,5 +103,23 @@ contract StandardToken is
         require(success);
 
         return true;
+    }
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    // actual approve function called by all public variants
+    function approveInternal(address /*owner*/, address spender, uint256 amount)
+        internal
+    {
+        // To change the approve amount you first have to reduce the addresses`
+        //  allowance to zero by calling `approve(_spender, 0)` if it is not
+        //  already 0 to mitigate the race condition described here:
+        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        require((amount == 0) || (_allowed[msg.sender][spender] == 0));
+
+        _allowed[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
     }
 }
