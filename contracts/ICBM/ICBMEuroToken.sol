@@ -4,6 +4,7 @@ import "../AccessControl/AccessControlled.sol";
 import "..//Reclaimable.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../Zeppelin/StandardToken.sol";
+import "../Standards/IWithdrawableToken.sol";
 import "../MigrationSource.sol";
 import "./ICBMEuroTokenMigrationTarget.sol";
 import "./ICBMRoles.sol";
@@ -16,6 +17,7 @@ contract ICBMEuroToken is
     IERC677Token,
     AccessControlled,
     StandardToken,
+    IWithdrawableToken,
     TokenMetadata,
     MigrationSource,
     Reclaimable,
