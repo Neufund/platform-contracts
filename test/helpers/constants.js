@@ -49,3 +49,7 @@ export const stringify = o => {
   }
   return op;
 };
+
+export function contractId(contractName) {
+  return web3.sha3(`neufund-platform:${contractName}`);
+}

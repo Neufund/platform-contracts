@@ -22,7 +22,7 @@ import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { increaseTime } from "../helpers/evmCommands";
-import { ZERO_ADDRESS } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
@@ -81,8 +81,10 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 
-      // todo: TokenMetadata should be set from EtoTerms -> test it
+      expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
     });
+
+    it("should contain token metadata from terms");
 
     it("should deposit", async () => {
       // remember: equity tokens are not divisible
@@ -124,6 +126,8 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should convert equity token amount to shares");
 
     it("should set token symbol and other metadata from eto terms correctly");
+
+    it("reverts on reclaming itself");
   });
 
   describe("IEquityTokenController tests", () => {

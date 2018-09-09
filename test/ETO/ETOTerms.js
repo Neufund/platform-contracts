@@ -9,7 +9,7 @@ import {
   deployTokenTerms,
   deployETOTerms,
 } from "../helpers/deployTerms";
-import { Q18 } from "../helpers/constants";
+import { Q18, contractId } from "../helpers/constants";
 // import { duration } from "../../node_modules/moment";
 
 const ETOTerms = artifacts.require("ETOTerms");
@@ -47,6 +47,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     await prettyPrintGasCost("ShareholderRights deploy", shareholderRights);
     await prettyPrintGasCost("ETODurationTerms deploy", durationTerms);
     await prettyPrintGasCost("ETOTerms deploy", etoTerms);
+    await prettyPrintGasCost("ETOTokenTerms deploy", etoTokenTerms);
+    expect((await shareholderRights.contractId())[0]).to.eq(contractId("ShareholderRights"));
+    expect((await durationTerms.contractId())[0]).to.eq(contractId("ETODurationTerms"));
+    expect((await etoTerms.contractId())[0]).to.eq(contractId("ETOTerms"));
+    expect((await etoTokenTerms.contractId())[0]).to.eq(contractId("ETOTokenTerms"));
   });
 
   async function verifyTerms(c, keys, dict) {

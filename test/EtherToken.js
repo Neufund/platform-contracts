@@ -16,7 +16,7 @@ import { etherToWei } from "./helpers/unitConverter";
 import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
 import EvmError from "./helpers/EVMThrow";
-import { ZERO_ADDRESS } from "./helpers/constants";
+import { contractId, ZERO_ADDRESS } from "./helpers/constants";
 
 const EtherToken = artifacts.require("EtherToken");
 
@@ -39,6 +39,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
 
     it("should deploy", async () => {
       await prettyPrintGasCost("EtherToken deploy", etherToken);
+      expect((await etherToken.contractId())[0]).to.eq(contractId("EtherToken"));
     });
 
     it("should deposit", async () => {

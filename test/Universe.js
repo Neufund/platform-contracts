@@ -3,7 +3,7 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import registerSingletons from "./helpers/registerSingletons";
-import { ZERO_ADDRESS } from "./helpers/constants";
+import { ZERO_ADDRESS, contractId } from "./helpers/constants";
 import { deployUniverse } from "./helpers/deployContracts";
 
 contract(
@@ -556,7 +556,12 @@ contract(
       });
       expect(await universe.getInterfacesOfInstance(other)).to.deep.eq([]);
     });
+
+    it("should introspect", async () => {
+      const cid = await universe.contractId();
+      expect(cid[0]).to.eq(contractId("Universe"));
+    });
+
     it("should revert on setting KNOWN_INTERFACE_UNIVERSE singleton");
-    it("several test for setCollectionsInterfaces");
   },
 );
