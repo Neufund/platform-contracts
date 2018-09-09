@@ -4,7 +4,6 @@ const createAccessPolicy = require("../test/helpers/createAccessPolicy").default
 const getDeployerAccount = require("./config").getDeployerAccount;
 const roles = require("../test/helpers/roles").default;
 const promisify = require("../test/helpers/evmCommands").promisify;
-const toBytes32 = require("../test/helpers/constants").toBytes32;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -15,7 +14,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const EuroTokenController = artifacts.require(CONFIG.artifacts.EURO_TOKEN_CONTROLLER);
   const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
-  const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
@@ -23,7 +21,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const tokenController = await EuroTokenController.at(await euroToken.tokenController());
     const simpleExchange = await SimpleExchange.at(await universe.gasExchange());
     const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-    const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
 
     console.log("give deployer permissions to various roles, to be relinquished later");
     const DEPLOYER = getDeployerAccount(network, accounts);
@@ -70,35 +67,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         });
       } else {
         console.log(`Service ${service} has ${serviceBalance.toNumber()} already`);
-      }
-    }
-
-    if (!CONFIG.isLiveDeployment || CONFIG.ISOLATED_UNIVERSE) {
-      console.log("make KYC for platform wallet");
-      await identityRegistry.setClaims(
-        CONFIG.addresses.PLATFORM_OPERATOR_WALLET,
-        "0",
-        toBytes32("0x5"),
-        {
-          from: DEPLOYER,
-        },
-      );
-
-      console.log("send ether to simple exchange");
-      await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
-    }
-
-    if (CONFIG.isLiveDeployment) {
-      if (!CONFIG.ISOLATED_UNIVERSE) {
-        console.log("---------------------------------------------");
-        console.log("On live network, enable LockedAccount migrations manually");
-        console.log(
-          `On live network, make sure PLATFORM_OPERATOR_WALLET ${
-            CONFIG.addresses.PLATFORM_OPERATOR_WALLET
-          } has KYC done`,
-        );
-        console.log(`On live network, send some ether to SimpleExchange`);
-        console.log("---------------------------------------------");
       }
     }
   });
