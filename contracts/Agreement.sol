@@ -169,7 +169,7 @@ contract Agreement is
     }
 
     //
-    // Internal interface
+    // MAgreement Internal interface (todo: extract)
     //
 
     /// default amend permission goes to ROLE_PLATFORM_OPERATOR_REPRESENTATIVE
