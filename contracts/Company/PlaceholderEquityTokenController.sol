@@ -8,6 +8,7 @@ import "./IEquityTokenController.sol";
 import "./IEquityToken.sol";
 import "./IControllerGovernance.sol";
 import "../ETO/IETOCommitment.sol";
+import "../Standards/IContractId.sol";
 
 
 /// @title placeholder for on-chain company management
@@ -20,6 +21,7 @@ import "../ETO/IETOCommitment.sol";
 contract PlaceholderEquityTokenController is
     IEquityTokenController,
     IControllerGovernance,
+    IContractId,
     Agreement,
     Reclaimable,
     KnownInterfaces
@@ -158,15 +160,17 @@ contract PlaceholderEquityTokenController is
             address[] lastOfferings
         )
     {
+        // no cap table before ETO completed
+        if (_state == GovState.Setup || _state == GovState.Offering) {
+            return;
+        }
         equityTokens = new address[](1);
         shares = new uint256[](1);
         lastOfferings = new address[](1);
 
         equityTokens[0] = _equityToken;
         lastOfferings[0] = _etoCommitment;
-        if (_equityToken != address(0)) {
-            shares[0] = _equityToken.sharesTotalSupply();
-        }
+        shares[0] = _equityToken.sharesTotalSupply();
     }
 
     function issueGeneralInformation(
@@ -329,6 +333,14 @@ contract PlaceholderEquityTokenController is
         }
     }
 
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 0);
+    }
+
     ////////////////////////
     // Internal functions
     ////////////////////////
@@ -367,7 +379,8 @@ contract PlaceholderEquityTokenController is
         _equityToken = equityToken;
         _etoCommitment = tokenOffering;
         _totalCompanyShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES();
-        _companyValuationEurUlps = _totalCompanyShares * tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
+        _companyValuationEurUlps = _totalCompanyShares * tokenOffering.
+            etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS() * equityToken.tokensPerShare();
 
         transitionTo(GovState.Offering);
         emit ResolutionExecuted(0, Action.RegisterOffer);
@@ -399,6 +412,10 @@ contract PlaceholderEquityTokenController is
         private
     {
         // we failed. may try again
+        _equityToken = IEquityToken(0);
+        _etoCommitment = IETOCommitment(0);
+        _totalCompanyShares = 0;
+        _companyValuationEurUlps = 0;
         transitionTo(GovState.Setup);
         emit LogOfferingFailed(tokenOffering, tokenOffering.equityToken());
     }
