@@ -9,6 +9,8 @@ import {
   deployNeumarkUniverse,
   deployEtherTokenUniverse,
   deploySimpleExchangeUniverse,
+  deployEtherTokenMigration,
+  deployEuroTokenMigration,
 } from "../helpers/deployContracts";
 import {
   deployShareholderRights,
@@ -25,7 +27,15 @@ import { latestTimestamp } from "../helpers/latestTime";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import { deserializeClaims } from "../helpers/identityClaims";
-import { ZERO_ADDRESS, Q18, dayInSeconds, toBytes32 } from "../helpers/constants";
+import {
+  ZERO_ADDRESS,
+  Q18,
+  dayInSeconds,
+  toBytes32,
+  contractId,
+  monthInSeconds,
+} from "../helpers/constants";
+import { expectLogFundsCommitted } from "../helpers/commitment";
 
 const EquityToken = artifacts.require("EquityToken");
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
@@ -55,7 +65,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   // tokens
   let etherToken;
   let euroToken;
-  // let euroTokenController;
+  let euroTokenController;
   let neumark;
   // token prices
   let rateOracle;
@@ -81,10 +91,18 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     // note that all deploy... functions also set up permissions and set singletons in universe
     identityRegistry = await deployIdentityRegistry(universe, admin, admin);
+    // set simple address (platform wallet) for fees disbursal
+    await universe.setSingleton(knownInterfaces.feeDisbursal, platformWallet, { from: admin });
+    // set simple address for platform portfolio
+    await universe.setSingleton(knownInterfaces.platformPortfolio, platformWallet, { from: admin });
+    // platform wallet is verified
+    await identityRegistry.setClaims(platformWallet, "0x0", toBytes32(web3.toHex(1)), {
+      from: admin,
+    });
     // deploy ether token
     etherToken = await deployEtherTokenUniverse(universe, admin);
     // euro token with default settings
-    [euroToken] = await deployEuroTokenUniverse(
+    [euroToken, euroTokenController] = await deployEuroTokenUniverse(
       universe,
       admin,
       admin,
@@ -149,11 +167,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         expect(v).to.be.bignumber.eq(0);
       }
       const ticket = await etoCommitment.investorTicket(investors[0]);
-      expect(ticket.length).to.eq(9);
-      for (const v of ticket.slice(0, -1)) {
+      expect(ticket.length).to.eq(10);
+      // skip two false flags
+      for (const v of ticket.slice(0, -2)) {
         expect(v).to.be.bignumber.eq(0);
       }
       await expectProperETOSetup(etoCommitment.address);
+      const cid = await etoCommitment.contractId();
+      expect(cid[0]).to.eq(contractId("ETOCommitment"));
     });
 
     it("should set start date", async () => {
@@ -240,38 +261,28 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // set start data to the past via mocker
       await etoCommitment._mockStartDate(etoTerms.address, equityToken.address, startDate);
       const tx = await etoCommitment.handleStateTransitions();
-      // actual block time and startDate may differ slightly
-      const whitelistTs = expectLogStateTransition(
-        tx,
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-        timestamp, // timestamp cannot be mocked
-      );
+      expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, startDate);
       // we should have correct state times
       const durTable = defaultDurationTable();
-      const publicStartOf = whitelistTs.add(durTable[CommitmentState.Whitelist]);
-      await expectStateStarts(
-        { Whitelist: whitelistTs, Public: publicStartOf, Refund: 0 },
-        durTable,
-      );
+      const publicStartOf = startDate.add(durTable[CommitmentState.Whitelist]);
+      await expectStateStarts({ Whitelist: startDate, Public: publicStartOf, Refund: 0 }, durTable);
       // mock public state directly
       const newPublicTs = publicStartOf.add(1000);
       await etoCommitment._mockPastTime(1, newPublicTs);
-      await expectStateStarts({ Whitelist: whitelistTs, Public: newPublicTs, Refund: 0 }, durTable);
+      await expectStateStarts({ Whitelist: startDate, Public: newPublicTs, Refund: 0 }, durTable);
       await etoCommitment._mockPastTime(1, publicStartOf);
       // rollback past so should transition to public
       const whitelistD = durTable[CommitmentState.Whitelist].add(1);
       await etoCommitment._mockShiftBackTime(whitelistD);
       await expectStateStarts(
         {
-          Whitelist: whitelistTs.sub(whitelistD),
+          Whitelist: startDate.sub(whitelistD),
           Public: publicStartOf.sub(whitelistD),
           Refund: 0,
         },
         durTable,
       );
-      // this will transition to public and invest
-      // await etoCommitment.handleStateTransitions();
+      // this will transition to public and invest (tokenFallback is self transitioning)
       await investAmount(investors[0], Q18.mul(23987.288912), "EUR");
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
     });
@@ -308,6 +319,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   it("should refund if company signs too late");
   it("should refund if nominee signs too late");
   it("should allow to fundraise again on the same token");
+  it("reverts on euro token overflow > 2**96");
   // simulates abandoned ETO
   it("go from Setup with start date to Refund with one large increase time");
   // this prevents situation that ETO fails because there is no ticket size that can bring it to min cap
@@ -335,213 +347,337 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   // describe("all public cases");
 
   describe("simulated cases", () => {
-    beforeEach(async () => {
-      await deployETO();
-    });
-
-    it("mixed currency and successful", async () => {
-      // add investor1 and investor2 to whitelist - no discount
-      await etoTerms.addWhitelisted(
-        [investors[0], investors[1]],
-        [0, 0],
-        [Q18.mul(1), Q18.mul(1)],
-        {
-          from: deployer,
-        },
-      );
-      let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
-      await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
-        from: company,
+    describe("with new money", () => {
+      beforeEach(async () => {
+        await deployETO();
       });
-      await skipTimeTo(startDate);
-      let tx = await etoCommitment.handleStateTransitions();
-      // actual block time and startDate may differ slightly
-      const whitelistTs = expectLogStateTransition(
-        tx,
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-        startDate,
-      );
-      // we should be in whitelist state now
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
-      // we should have correct state times
-      const durTable = defaultDurationTable();
-      const publicStartOf = whitelistTs.add(durTable[CommitmentState.Whitelist]);
-      await expectStateStarts(
-        { Whitelist: whitelistTs, Public: publicStartOf, Refund: 0 },
-        durTable,
-      );
-      // token controller should be in offering state and have preliminary entry in cap table
-      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
-      const capTable = await equityTokenController.capTable();
-      expect(capTable[0][0]).to.eq(equityToken.address);
-      expect(capTable[1][0]).to.be.bignumber.eq(0);
-      expect(capTable[2][0]).to.eq(etoCommitment.address);
-      const generalInfo = await equityTokenController.shareholderInformation();
-      expect(generalInfo[0]).to.be.bignumber.eq(etoTermsDict.EXISTING_COMPANY_SHARES);
-      expect(generalInfo[1]).to.be.bignumber.eq(
-        tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES),
-      );
-      expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
-      // apply whitelist general discount, fixed slots not tested here
-      const disountedPrice = discountedPrice(
-        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-        etoTermsDict.WHITELIST_DISCOUNT_FRAC,
-      );
-      // invest some
-      await investAmount(investors[0], Q18, "ETH", disountedPrice);
-      await investAmount(investors[0], Q18.mul(1.1289791), "ETH", disountedPrice);
-      await investAmount(investors[1], Q18.mul(0.9528763), "ETH", disountedPrice);
-      await investAmount(investors[0], Q18.mul(30876.18912), "EUR", disountedPrice);
-      const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
-      // console.log(new Date(publicStartDate * 1000));
-      await skipTimeTo(publicStartDate.add(1));
-      tx = await etoCommitment.handleStateTransitions();
-      // we should be in public state now
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
-      // actual block time and startDate may differ slightly
-      const publicTs = expectLogStateTransition(
-        tx,
-        CommitmentState.Whitelist,
-        CommitmentState.Public,
-        publicStartDate,
-      );
-      const signingStartOf = publicTs.add(durTable[CommitmentState.Public]);
-      await expectStateStarts(
-        { Whitelist: whitelistTs, Public: publicTs, Signing: signingStartOf, Refund: 0 },
-        durTable,
-      );
-      // we have constant price in this use case - no discounts
-      const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
-      // invest so we have min cap
-      await investAmount(investors[1], Q18.mul(130876.61721), "EUR", tokenprice);
-      // out of whitelist
-      await investAmount(investors[2], Q18.mul(1500.1721), "ETH", tokenprice);
-      await investAmount(investors[3], etoTermsDict.MAX_TICKET_EUR_ULPS.div(2), "EUR", tokenprice);
-      await investAmount(investors[4], Q18.mul(1000), "EUR", tokenprice);
-      // must still be public
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
-      const totalInvestment = await etoCommitment.totalInvestment();
-      // we must cross MIN CAP
-      if (tokenTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
-        const missingTokens = tokenTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
-        let missingAmount = missingTokens.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
-        if (missingAmount.lt(etoTermsDict.MIN_TICKET_EUR_ULPS)) {
-          missingAmount = etoTermsDict.MIN_TICKET_EUR_ULPS;
+      it("mixed currency and successful", async () => {
+        // add investor1 and investor2 to whitelist - no discount
+        await etoTerms.addWhitelisted(
+          [investors[0], investors[1]],
+          [0, 0],
+          [Q18.mul(1), Q18.mul(1)],
+          {
+            from: deployer,
+          },
+        );
+        let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
+        startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+        await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+          from: company,
+        });
+        // skip time to after start date to test state machine
+        await skipTimeTo(startDate.add(10));
+        let tx = await etoCommitment.handleStateTransitions();
+        // actual block time and startDate may differ slightly
+        expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, startDate);
+        const whitelistTs = new web3.BigNumber(await latestTimestamp());
+        // we should be in whitelist state now
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
+        // we should have correct state times
+        const durTable = defaultDurationTable();
+        const publicStartOf = startDate.add(durTable[CommitmentState.Whitelist]);
+        await expectStateStarts(
+          { Whitelist: startDate, Public: publicStartOf, Refund: 0 },
+          durTable,
+        );
+        // whitelist timestamp should come at least 10 seconds after startDate
+        expect(whitelistTs.sub(startDate)).to.be.bignumber.gte(10);
+        // token controller should be in offering state and have preliminary entry in cap table
+        expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
+        const capTable = await equityTokenController.capTable();
+        expect(capTable[0].length).to.eq(0);
+        expect(capTable[1].length).to.eq(0);
+        expect(capTable[2].length).to.eq(0);
+        const generalInfo = await equityTokenController.shareholderInformation();
+        expect(generalInfo[0]).to.be.bignumber.eq(etoTermsDict.EXISTING_COMPANY_SHARES);
+        expect(generalInfo[1]).to.be.bignumber.eq(
+          tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES).mul(
+            platformTermsDict.EQUITY_TOKENS_PER_SHARE,
+          ),
+        );
+        expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
+        // apply whitelist general discount, fixed slots not tested here
+        const disountedPrice = discountedPrice(
+          tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+        );
+        // invest some
+        await investAmount(investors[0], Q18, "ETH", disountedPrice);
+        await investAmount(investors[0], Q18.mul(1.1289791), "ETH", disountedPrice);
+        await investAmount(investors[1], Q18.mul(0.9528763), "ETH", disountedPrice);
+        await investAmount(investors[0], Q18.mul(30876.18912), "EUR", disountedPrice);
+        const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
+        // console.log(new Date(publicStartDate * 1000));
+        await skipTimeTo(publicStartDate.add(1));
+        tx = await etoCommitment.handleStateTransitions();
+        // we should be in public state now
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+        // actual block time and startDate may differ slightly
+        expectLogStateTransition(
+          tx,
+          CommitmentState.Whitelist,
+          CommitmentState.Public,
+          publicStartDate,
+        );
+        const signingStartOf = publicStartDate.add(durTable[CommitmentState.Public]);
+        await expectStateStarts(
+          { Whitelist: startDate, Public: publicStartDate, Signing: signingStartOf, Refund: 0 },
+          durTable,
+        );
+        // we have constant price in this use case - no discounts
+        const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
+        // invest so we have min cap
+        await investAmount(investors[1], Q18.mul(130876.61721), "EUR", tokenprice);
+        // out of whitelist
+        await investAmount(investors[2], Q18.mul(1500.1721), "ETH", tokenprice);
+        await investAmount(
+          investors[3],
+          etoTermsDict.MAX_TICKET_EUR_ULPS.div(2),
+          "EUR",
+          tokenprice,
+        );
+        await investAmount(investors[4], Q18.mul(1000), "EUR", tokenprice);
+        // must still be public
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+        const totalInvestment = await etoCommitment.totalInvestment();
+        // we must cross MIN CAP
+        if (tokenTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
+          const missingTokens = tokenTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
+          let missingAmount = missingTokens.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+          if (missingAmount.lt(etoTermsDict.MIN_TICKET_EUR_ULPS)) {
+            missingAmount = etoTermsDict.MIN_TICKET_EUR_ULPS;
+          }
+          // console.log(`min cap investment: ${missingTokens} ${missingAmount} EUR`);
+          await investAmount(investors[4], missingAmount, "EUR", tokenprice);
         }
-        // console.log(`min cap investment: ${missingTokens} ${missingAmount} EUR`);
-        await investAmount(investors[4], missingAmount, "EUR", tokenprice);
-      }
-      // go to signing
-      await skipTimeTo(signingStartOf.add(1));
-      tx = await etoCommitment.handleStateTransitions();
-      // we should be in public state now
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
-      // actual block time and startDate may differ slightly
-      const signingTs = expectLogStateTransition(
-        tx,
-        CommitmentState.Public,
-        CommitmentState.Signing,
-        signingStartOf,
-      );
-      const claimStartOf = signingTs.add(durTable[CommitmentState.Signing]);
-      await expectStateStarts(
-        {
-          Whitelist: whitelistTs,
-          Public: publicTs,
-          Signing: signingTs,
-          Claim: claimStartOf,
-          Refund: 0,
-        },
-        durTable,
-      );
-      // check various total before signing
-      const contribution = await expectValidSigningState(investors);
-      expectLogSigningStarted(tx, nominee, company, contribution[0], contribution[1]);
-      // sign
-      const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-      const companySignTx = await etoCommitment.companySignsInvestmentAgreement(
-        investmentAgreementUrl,
-        { from: company },
-      );
-      expectLogCompanySignedAgreement(companySignTx, company, nominee, investmentAgreementUrl);
-      // move time before nominee signs
-      await increaseTime(
-        durTermsDict.SIGNING_DURATION.div(2)
-          .round()
-          .toNumber(),
-      );
-      const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-        investmentAgreementUrl,
-        { from: nominee },
-      );
-      expectLogNomineeConfirmedAgreement(nomineeSignTx, nominee, company, investmentAgreementUrl);
-      // this is also state transition into claim
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Claim);
-      expect(await etoCommitment.signedInvestmentAgreementUrl()).to.eq(investmentAgreementUrl);
-      const claimTs = expectLogStateTransition(
-        nomineeSignTx,
-        CommitmentState.Signing,
-        CommitmentState.Claim,
-        signingTs.add(durTermsDict.SIGNING_DURATION.div(2).round()),
-      );
-      const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
-      await expectStateStarts(
-        {
-          Whitelist: whitelistTs,
-          Public: publicTs,
-          Signing: signingTs,
-          Claim: claimTs,
-          Payout: payoutStartOf,
-          Refund: 0,
-        },
-        durTable,
-      );
-      await expectValidClaimState(nomineeSignTx, contribution);
-      await claimInvestor(investors[0]);
-      await claimMultipleInvestors(investors.slice(1));
-      // everyone claimed so the only equity tokens left is the platform fee
-      expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
-        contribution[4],
-      );
-      // investors and platform operator got their neu
-      expect((await neumark.balanceOf(etoCommitment.address)).sub(8).abs()).to.be.bignumber.lt(10);
-      await skipTimeTo(payoutStartOf.add(1));
-      tx = await etoCommitment.handleStateTransitions();
-      const payoutTs = expectLogStateTransition(
-        tx,
-        CommitmentState.Claim,
-        CommitmentState.Payout,
-        payoutStartOf,
-      );
-      await expectStateStarts(
-        {
-          Whitelist: whitelistTs,
-          Public: publicTs,
-          Signing: signingTs,
-          Claim: claimTs,
-          Payout: payoutTs,
-          Refund: 0,
-        },
-        durTable,
-      );
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Payout);
-      await expectValidPayoutState(tx, contribution);
-      await expectValidPayoutStateFullClaim(tx);
-    });
+        // go to signing
+        await skipTimeTo(signingStartOf.add(1));
+        tx = await etoCommitment.handleStateTransitions();
+        // we should be in public state now
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+        // actual block time and startDate may differ slightly
+        expectLogStateTransition(
+          tx,
+          CommitmentState.Public,
+          CommitmentState.Signing,
+          signingStartOf,
+        );
+        const claimStartOf = signingStartOf.add(durTable[CommitmentState.Signing]);
+        await expectStateStarts(
+          {
+            Whitelist: startDate,
+            Public: publicStartDate,
+            Signing: signingStartOf,
+            Claim: claimStartOf,
+            Refund: 0,
+          },
+          durTable,
+        );
+        // check various total before signing
+        const contribution = await expectValidSigningState(investors);
+        expectLogSigningStarted(tx, nominee, company, contribution[0], contribution[1]);
+        // sign
+        const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
+        const companySignTx = await etoCommitment.companySignsInvestmentAgreement(
+          investmentAgreementUrl,
+          { from: company },
+        );
+        expectLogCompanySignedAgreement(companySignTx, company, nominee, investmentAgreementUrl);
+        // move time before nominee signs
+        await increaseTime(
+          durTermsDict.SIGNING_DURATION.div(2)
+            .round()
+            .toNumber(),
+        );
+        const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
+          investmentAgreementUrl,
+          { from: nominee },
+        );
+        expectLogNomineeConfirmedAgreement(nomineeSignTx, nominee, company, investmentAgreementUrl);
+        // this is also state transition into claim
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Claim);
+        expect(await etoCommitment.signedInvestmentAgreementUrl()).to.eq(investmentAgreementUrl);
+        const claimTs = new web3.BigNumber(await latestTimestamp());
+        expectLogStateTransition(
+          nomineeSignTx,
+          CommitmentState.Signing,
+          CommitmentState.Claim,
+          claimTs,
+        );
+        const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
+        await expectStateStarts(
+          {
+            Whitelist: startDate,
+            Public: publicStartDate,
+            Signing: signingStartOf,
+            Claim: claimTs,
+            Payout: payoutStartOf,
+            Refund: 0,
+          },
+          durTable,
+        );
+        await expectValidClaimState(nomineeSignTx, contribution);
+        await claimInvestor(investors[0]);
+        await claimMultipleInvestors(investors.slice(1));
+        // everyone claimed so the only equity tokens left is the platform fee
+        expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
+          contribution[4],
+        );
+        // investors and platform operator got their neu
+        expect((await neumark.balanceOf(etoCommitment.address)).sub(8).abs()).to.be.bignumber.lt(
+          10,
+        );
+        await skipTimeTo(payoutStartOf.add(1));
+        tx = await etoCommitment.handleStateTransitions();
+        expectLogStateTransition(tx, CommitmentState.Claim, CommitmentState.Payout, payoutStartOf);
+        await expectStateStarts(
+          {
+            Whitelist: startDate,
+            Public: publicStartDate,
+            Signing: signingStartOf,
+            Claim: claimTs,
+            Payout: payoutStartOf,
+            Refund: 0,
+          },
+          durTable,
+        );
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Payout);
+        await expectValidPayoutState(tx, contribution);
+        await expectValidPayoutStateFullClaim(tx);
+      });
 
-    it("mixed currency and refunded");
-    it("ether only and successful");
-    it("euro only and successful");
-    it("no min cap empty commitment");
-    it("with min cap empty commitment");
-    describe("with LockedAccount", () => {
-      it("mixed currency and successful");
       it("mixed currency and refunded");
       it("ether only and successful");
       it("euro only and successful");
+      it("no min cap empty commitment");
+      it("with min cap empty commitment");
     });
+
+    describe("with LockedAccount", () => {
+      beforeEach(async () => {
+        await deployLockedAccounts();
+        await deployETO();
+      });
+
+      it("mixed currency and successful", async () => {
+        await createLockedAccounts(investors.slice(0, 5));
+        const durTable = defaultDurationTable();
+        let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
+        startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+        await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+          from: company,
+        });
+        await skipTimeTo(startDate);
+        await etoCommitment.handleStateTransitions();
+        // apply whitelist general discount, fixed slots not tested here
+        const disountedPrice = discountedPrice(
+          tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+        );
+        // invest from ICBM contract
+        await investICBMAmount(investors[0], Q18, "ETH", disountedPrice);
+        await investICBMAmount(investors[0], Q18.mul(7.87261621), "ETH", disountedPrice);
+        await investICBMAmount(investors[1], Q18.mul(34.098171), "ETH", disountedPrice);
+        await investICBMAmount(investors[0], Q18.mul(73692.76198871), "EUR", disountedPrice);
+        const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
+        await skipTimeTo(publicStartDate.add(1));
+        await etoCommitment.handleStateTransitions();
+        // we have constant price in this use case - no discounts
+        const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
+        // invest so we have min cap
+        await investICBMAmount(investors[1], Q18.mul(611527.8172891), "EUR", tokenprice);
+        // out of whitelist
+        await investICBMAmount(investors[2], Q18.mul(417.817278172), "ETH", tokenprice);
+        await investICBMAmount(
+          investors[3],
+          etoTermsDict.MAX_TICKET_EUR_ULPS.div(2),
+          "EUR",
+          tokenprice,
+        );
+        await investICBMAmount(investors[4], Q18.mul(1000), "EUR", tokenprice);
+        // must still be public
+        expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+        const totalInvestment = await etoCommitment.totalInvestment();
+        // we must cross MIN CAP
+        if (tokenTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
+          const missingTokens = tokenTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
+          let missingAmount = missingTokens.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+          if (missingAmount.lt(etoTermsDict.MIN_TICKET_EUR_ULPS)) {
+            missingAmount = etoTermsDict.MIN_TICKET_EUR_ULPS;
+          }
+          // console.log(`min cap investment: ${missingTokens} ${missingAmount} EUR`);
+          await investICBMAmount(investors[4], missingAmount, "EUR", tokenprice);
+        }
+        // go to signing
+        const signingStartOf = publicStartDate.add(durTable[CommitmentState.Public]);
+        await skipTimeTo(signingStartOf.add(1));
+        await etoCommitment.handleStateTransitions();
+        // check various total before signing
+        const contribution = await expectValidSigningState(investors);
+        const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
+        await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
+          from: company,
+        });
+        const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
+          investmentAgreementUrl,
+          { from: nominee },
+        );
+        const claimTs = new web3.BigNumber(await latestTimestamp());
+        const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
+        await expectValidClaimState(nomineeSignTx, contribution);
+        await claimInvestor(investors[0]);
+        await claimMultipleInvestors(investors.slice(1));
+        await expectNoICBMPendingCommitments(investors);
+        // everyone claimed so the only equity tokens left is the platform fee
+        expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
+          contribution[4],
+        );
+        // investors and platform operator got their neu
+        expect((await neumark.balanceOf(etoCommitment.address)).sub(8).abs()).to.be.bignumber.lt(
+          10,
+        );
+        await skipTimeTo(payoutStartOf.add(1));
+        const tx = await etoCommitment.handleStateTransitions();
+        await expectValidPayoutState(tx, contribution);
+        await expectValidPayoutStateFullClaim(tx);
+      });
+
+      it("mixed currency and refunded", async () => {
+        const participatingInvestors = investors.slice(0, 3);
+        await createLockedAccounts(participatingInvestors);
+        let startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
+        startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+        await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+          from: company,
+        });
+        await skipTimeTo(startDate);
+        await etoCommitment.handleStateTransitions();
+        // apply whitelist general discount, fixed slots not tested here
+        const disountedPrice = discountedPrice(
+          tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+        );
+        // invest from ICBM contract
+        await investICBMAmount(investors[0], Q18, "ETH", disountedPrice);
+        await investICBMAmount(investors[1], Q18.mul(73692.76198871), "EUR", disountedPrice);
+        await investICBMAmount(investors[2], Q18.mul(367.7162812), "ETH", disountedPrice);
+        const refundStartDate = startDate
+          .add(durTermsDict.WHITELIST_DURATION)
+          .add(durTermsDict.PUBLIC_DURATION);
+        await skipTimeTo(refundStartDate.add(1));
+        const refundTx = await etoCommitment.handleStateTransitions();
+        await expectValidRefundState(refundTx, participatingInvestors);
+        await refundInvestor(investors[0]);
+        await refundMultipleInvestors(participatingInvestors.slice(1));
+        await expectNoICBMPendingCommitments(participatingInvestors);
+        await expectICBMFullWallets(participatingInvestors);
+      });
+
+      it("ether only and successful");
+      it("euro only and successful");
+    });
+
     describe("with LockedAccount and new money", () => {
       it("mixed currency and successful");
       it("mixed currency and refunded");
@@ -551,41 +687,126 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   });
 
   // helper functions here
-  async function expectValidPayoutState(tx, contribution) {
-    // contribution was validated previously and may be used as a reference
-    const disbursal = await universe.feeDisbursal();
-    const platformPortfolio = await universe.platformPortfolio();
-    expectLogPlatformFeePayout(tx, 0, etherToken.address, disbursal, contribution[5]);
-    expectLogPlatformFeePayout(tx, 1, euroToken.address, disbursal, contribution[6]);
-    expectLogPlatformPortfolioPayout(tx, equityToken.address, platformPortfolio, contribution[4]);
-    // fee disbursal must have fees
-    expect(await etherToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[5]);
-    expect(await euroToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[6]);
-    // platform portfolio must have tokens
-    expect(await equityToken.balanceOf(platformPortfolio)).to.be.bignumber.eq(contribution[4]);
-    // eto commitment must have no funds
-    expect(await etherToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
-    expect(await euroToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+  let euroLockedAccount;
+  let etherLockedAccount;
+  let icbmEuroLockedAccount;
+  let icbmEtherLockedAccount;
+  let icbmEuroToken;
+  let icbmEtherToken;
+  let icbmEuroController;
+  let icbmEtherController;
+
+  async function deployLockedAccounts() {
+    const LOCK_PERIOD = 18 * monthInSeconds;
+    const UNLOCK_PENALTY_FRACTION = Q18.mul(0.1).round(0, 0);
+    [
+      etherLockedAccount,
+      icbmEtherLockedAccount,
+      icbmEtherToken,
+      icbmEtherController,
+    ] = await deployEtherTokenMigration(
+      universe,
+      admin,
+      platformWallet,
+      LOCK_PERIOD,
+      UNLOCK_PENALTY_FRACTION,
+    );
+    await icbmEtherLockedAccount.enableMigration(etherLockedAccount.address, {
+      from: admin,
+    });
+    [
+      euroLockedAccount,
+      icbmEuroLockedAccount,
+      icbmEuroToken,
+      icbmEuroController,
+    ] = await deployEuroTokenMigration(
+      universe,
+      admin,
+      platformWallet,
+      LOCK_PERIOD,
+      UNLOCK_PENALTY_FRACTION,
+    );
+    await icbmEuroLockedAccount.enableMigration(euroLockedAccount.address, {
+      from: admin,
+    });
+    // reload euro lock settings
+    await euroTokenController.applySettings(
+      minDepositAmountEurUlps,
+      minWithdrawAmountEurUlps,
+      maxSimpleExchangeAllowanceEurUlps,
+      { from: admin },
+    );
   }
 
-  async function expectValidPayoutStateFullClaim() {
-    // eto commitment must have no equity tokens
-    expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
-    // just remainder of NEU
-    expect((await neumark.balanceOf(etoCommitment.address)).sub(8).abs()).to.be.bignumber.lt(10);
+  async function expectNoICBMPendingCommitments(investorsSlice) {
+    for (const investor of investorsSlice) {
+      const eurPending = await euroLockedAccount.pendingCommitments(
+        etoCommitment.address,
+        investor,
+      );
+      expect(eurPending[0]).to.be.bignumber.eq(0);
+      const ethPending = await etherLockedAccount.pendingCommitments(
+        etoCommitment.address,
+        investor,
+      );
+      expect(ethPending[0]).to.be.bignumber.eq(0);
+    }
   }
 
-  async function claimInvestor(investor) {
-    const tx = await etoCommitment.claim({ from: investor });
-    await expectValidInvestorClaim(tx, investor);
+  const initialICBMEthBalance = Q18.mul(500);
+  const initialICBMEurBalance = Q18.mul(5000000);
+  const initialICBMNeuRate = 3.25;
+
+  async function expectICBMFullWallets(investorsSlice) {
+    for (const investor of investorsSlice) {
+      const eurBalance = await euroLockedAccount.balanceOf(investor);
+      expect(eurBalance[0]).to.be.bignumber.eq(initialICBMEurBalance);
+      expect(eurBalance[1]).to.be.bignumber.eq(initialICBMEurBalance.mul(initialICBMNeuRate));
+      const ethBalance = await etherLockedAccount.balanceOf(investor);
+      expect(ethBalance[0]).to.be.bignumber.eq(initialICBMEthBalance);
+      expect(ethBalance[1]).to.be.bignumber.eq(initialICBMEthBalance.mul(initialICBMNeuRate));
+    }
   }
 
-  async function claimMultipleInvestors(investorsAddresses) {
-    const tx = await etoCommitment.claimMany(investorsAddresses);
-    let logIdx = 0;
-    for (const investor of investorsAddresses) {
-      await expectValidInvestorClaim(tx, investor, logIdx);
-      logIdx += 1;
+  async function createLockedAccounts(investorsSlice) {
+    async function makeDepositEth(from, to, amount) {
+      await icbmEtherToken.deposit({ from, value: amount });
+      if (from !== to) {
+        await icbmEtherToken.approve(to, amount, { from });
+      }
+    }
+
+    async function makeDepositEuro(from, to, amount) {
+      await icbmEuroToken.deposit(from, amount, { from: admin });
+      if (from !== to) {
+        await icbmEuroToken.approve(to, amount, { from });
+      }
+    }
+
+    async function migrateOne(icbmLockedAccount, controller, makeDeposit, ticket, investorAddress) {
+      const neumarks = ticket.mul(initialICBMNeuRate);
+      await makeDeposit(investorAddress, controller.address, ticket);
+      await controller.investToken(neumarks, { from: investorAddress });
+      await icbmLockedAccount.migrate({ from: investorAddress });
+    }
+    for (const investor of investorsSlice) {
+      // each investor gets 5 000 000  eur and 500 ether
+      await migrateOne(
+        icbmEtherLockedAccount,
+        icbmEtherController,
+        makeDepositEth,
+        initialICBMEthBalance,
+        investor,
+      );
+      await migrateOne(
+        icbmEuroLockedAccount,
+        icbmEuroController,
+        makeDepositEuro,
+        initialICBMEurBalance,
+        investor,
+      );
+      // simulate signing NEU agreement (todo: give real neu here)
+      await neumark.approve(investor, 0, { from: investor });
     }
   }
 
@@ -607,6 +828,36 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(await equityToken.balanceOf(investor)).to.be.bignumber.eq(ticket[2]);
     expect(await equityToken.agreementSignedAtBlock(investor)).to.be.bignumber.gt(0);
     expect(await neumark.agreementSignedAtBlock(investor)).to.be.bignumber.gt(0);
+  }
+
+  async function expectValidInvestorRefund(tx, investor, idx) {
+    const ticket = await etoCommitment.investorTicket(investor);
+    let logIdx = idx * 2;
+    if (idx === undefined) {
+      // there's just single investor in tx
+      expect(ticket[8]).to.be.true;
+      logIdx = 0;
+    } else {
+      const wasSettled = ticket[8];
+      if (!wasSettled) {
+        return;
+      }
+    }
+    // refund ether
+    expectLogFundsRefunded(tx, logIdx, investor, etherToken.address, ticket[6]);
+    // refund euro
+    expectLogFundsRefunded(tx, logIdx + 1, investor, euroToken.address, ticket[7]);
+
+    expect(await neumark.balanceOf(investor)).to.be.bignumber.eq(0);
+    expect(await equityToken.balanceOf(investor)).to.be.bignumber.eq(0);
+    expect(await equityToken.agreementSignedAtBlock(investor)).to.be.bignumber.eq(0);
+    // skip ICBM investors - they are signed to NEU previously
+    if (!ticket[9]) {
+      expect(await neumark.agreementSignedAtBlock(investor)).to.be.bignumber.eq(0);
+      // for non icbm investors - additional check (we do corresponding chekck for ICBM investors in expectFullICBMWallets)
+      expect(await etherToken.balanceOf(investor)).to.be.bignumber.eq(ticket[7]);
+      expect(await euroToken.balanceOf(investor)).to.be.bignumber.eq(ticket[6]);
+    }
   }
 
   async function deployETO(
@@ -664,10 +915,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     await createAccessPolicy(accessPolicy, [
       { role: roles.neumarkIssuer, object: neumark.address, subject: etoCommitment.address },
     ]);
-    // set simple address (platform wallet) for fees disbursal
-    await universe.setSingleton(knownInterfaces.feeDisbursal, platformWallet, { from: admin });
-    // set simple address for platform portfolio
-    await universe.setSingleton(knownInterfaces.platformPortfolio, platformWallet, { from: admin });
     // nominee is verified
     await identityRegistry.setClaims(nominee, "0x0", toBytes32(web3.toHex(1)), {
       from: admin,
@@ -676,11 +923,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     await identityRegistry.setClaims(company, "0x0", toBytes32(web3.toHex(1)), {
       from: admin,
     });
-    // platform wallet is verified
-    await identityRegistry.setClaims(platformWallet, "0x0", toBytes32(web3.toHex(1)), {
-      from: admin,
-    });
-    // we are good to go!
   }
 
   async function expectProperETOSetup(etoCommitmentAddress) {
@@ -750,7 +992,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       token = etherToken;
     } else if (currency === "EUR") {
       eurEquiv = amount;
-      await euroToken.deposit(investor, amount, { from: admin });
+      await euroToken.deposit(investor, amount, 0x0, { from: admin });
       token = euroToken;
     }
     const expectedNeu = investorShare(await neumark.incremental(eurEquiv));
@@ -796,6 +1038,70 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     return tx;
   }
 
+  async function investICBMAmount(investor, amount, currency, expectedPrice) {
+    // ticket verification
+    const oldTicket = await etoCommitment.investorTicket(investor);
+    // verify investor
+    const claims = new web3.BigNumber(await identityRegistry.getClaims(investor), 16);
+    let wallet;
+    let eurEquiv;
+    if (!claims.mod(2).eq(1)) {
+      await identityRegistry.setClaims(investor, claims, toBytes32(web3.toHex(claims.add(1))), {
+        from: admin,
+      });
+    }
+    if (currency === "ETH") {
+      // get current eth price
+      const ethRate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
+      eurEquiv = divRound(ethRate[0].mul(amount), Q18);
+      wallet = etherLockedAccount;
+    } else if (currency === "EUR") {
+      eurEquiv = amount;
+      wallet = euroLockedAccount;
+    }
+    // icbm investor already got NEU
+    const expectedNeu = new web3.BigNumber(0);
+    // investor sends money via wallet
+    const tx = await wallet.transfer(etoCommitment.address, amount, "", {
+      from: investor,
+    });
+    // console.log(`investor ${investor} gasUsed ${tx.receipt.gasUsed}`);
+    // validate investment
+    const ticket = await etoCommitment.investorTicket(investor);
+    // console.log(oldTicket);
+    // console.log(ticket);
+    expect(ticket[0]).to.be.bignumber.eq(eurEquiv.add(oldTicket[0]));
+    expect(ticket[1]).to.be.bignumber.eq(expectedNeu.add(oldTicket[1]));
+    // check only if expected token price was given
+    let expectedEquity;
+    if (expectedPrice) {
+      expectedEquity = divRound(eurEquiv, expectedPrice);
+    } else {
+      expectedEquity = ticket[2].sub(oldTicket[2]);
+    }
+    expect(ticket[2].sub(oldTicket[2])).to.be.bignumber.eq(expectedEquity);
+    if (currency === "ETH") {
+      expect(ticket[6]).to.be.bignumber.eq(amount.add(oldTicket[6]));
+    }
+    if (currency === "EUR") {
+      expect(ticket[7]).to.be.bignumber.eq(amount.add(oldTicket[7]));
+    }
+    // truffle will not decode events from other contract. we call payment token which calls eto commitment. so eto commitment events will not be decoded. do it explicitely
+    tx.logs = decodeLogs(tx, etoCommitment.address, etoCommitment.abi);
+    expectLogFundsCommitted(
+      tx,
+      investor,
+      wallet.address,
+      await wallet.paymentToken(),
+      amount,
+      eurEquiv,
+      expectedEquity,
+      equityToken.address,
+      expectedNeu,
+    );
+    return tx;
+  }
+
   async function expectValidSigningState(participatingInvestors) {
     const totalInvestment = await etoCommitment.totalInvestment();
     expect(totalInvestment[2]).to.be.bignumber.eq(5); // number of investors
@@ -805,6 +1111,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     let expectedAmountEth = new web3.BigNumber(0);
     let expectedAmountEur = new web3.BigNumber(0);
     let expectedShares = new web3.BigNumber(0);
+    let expectedNewMoneyEurEquiv = new web3.BigNumber(0);
     for (const investor of participatingInvestors) {
       const ticket = await etoCommitment.investorTicket(investor);
       expectedTokens = expectedTokens.add(ticket[2]);
@@ -813,16 +1120,23 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expectedAmountEth = expectedAmountEth.add(ticket[6]);
       expectedAmountEur = expectedAmountEur.add(ticket[7]);
       expectedShares = expectedShares.add(ticket[5]);
+      if (!ticket[9]) {
+        expectedNewMoneyEurEquiv = expectedNewMoneyEurEquiv.add(ticket[0]);
+      }
     }
     expect(expectedTokens).to.be.bignumber.eq(totalInvestment[1]);
     expect(expectedEurEquiv).to.be.bignumber.eq(totalInvestment[0]);
     // check NEU via taking expected amount directly from the curve
-    const expectedComputedNeu = await neumark.incremental["uint256,uint256"](0, expectedEurEquiv);
+    // assumes that no one invested with icbm money and new money in single ticket
+    const expectedComputedNeu = await neumark.incremental["uint256,uint256"](
+      0,
+      expectedNewMoneyEurEquiv,
+    );
     expect(await neumark.balanceOf(etoCommitment.address)).to.be.bignumber.eq(expectedComputedNeu);
     // this simulates our rounding trick where less one wei is distributed to investor
-    const investorShareNeu = investorShare(expectedComputedNeu);
+    const investorShareNeu = expectedComputedNeu.sub(platformShare(expectedComputedNeu));
+    expect(investorShareNeu).to.be.bignumber.gte(expectedInvestorNeu);
     // 8 below is number of investment transactions, each produces 1 wei decrease
-    expect(investorShareNeu).to.be.bignumber.gt(expectedInvestorNeu);
     expect(investorShareNeu.sub(expectedInvestorNeu)).to.be.bignumber.lt(8);
     // check capital contributions going to investment agreement
     // equity token supply must contain 2% fee rounded to integer number of shares
@@ -850,9 +1164,16 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(await etherToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(expectedAmountEth);
     const ethFee = divRound(expectedAmountEth.mul(platformTermsDict.PLATFORM_FEE_FRACTION), Q18);
     expect(contribution[2]).to.be.bignumber.eq(expectedAmountEth.sub(ethFee));
-    // eur additional contribution is eurAmount - fee - nominal value
-    expect(await euroToken.totalSupply()).to.be.bignumber.eq(expectedAmountEur);
+    // euro tokens has always all euro
+    let icbmEuroAmount = 0;
+    if (euroLockedAccount) {
+      icbmEuroAmount = await euroLockedAccount.totalLockedAmount();
+    }
+    expect((await euroToken.totalSupply()).sub(icbmEuroAmount)).to.be.bignumber.eq(
+      expectedAmountEur,
+    );
     const eurFee = divRound(expectedAmountEur.mul(platformTermsDict.PLATFORM_FEE_FRACTION), Q18);
+    // eur additional contribution is eurAmount - fee - nominal value
     expect(contribution[3]).to.be.bignumber.eq(expectedAmountEur.sub(nominalValueEur).sub(eurFee));
     // token fee check
     expect(contribution[4]).to.be.bignumber.eq(expectedTokenSupply.sub(expectedTokens));
@@ -861,6 +1182,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(contribution[6]).to.be.bignumber.eq(eurFee);
     // very important - effective share price to be used on investment agreement
     expect(contribution[7]).to.be.bignumber.eq(divRound(expectedEurEquiv, expectedNewShares));
+    // push new money information into contribution
+    contribution.push(expectedNewMoneyEurEquiv);
 
     return contribution;
   }
@@ -872,9 +1195,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expectLogAdditionalContribution(signedTx, 0, company, etherToken.address, contribution[2]);
     expect(await euroToken.balanceOf(company)).to.be.bignumber.eq(contribution[3]);
     expectLogAdditionalContribution(signedTx, 1, company, euroToken.address, contribution[3]);
-    // platform operator got their NEU
-    const totalInvestment = await etoCommitment.totalInvestment();
-    const expectedComputedNeu = await neumark.incremental["uint256,uint256"](0, totalInvestment[0]);
+    // platform operator got their NEU (contribution[8] contains amount of new money created)
+    const expectedComputedNeu = await neumark.incremental["uint256,uint256"](0, contribution[8]);
     expect(await neumark.balanceOf(platformWallet)).to.be.bignumber.eq(
       platformShare(expectedComputedNeu),
     );
@@ -886,7 +1208,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     );
     // eto is successful
     expect(await etoCommitment.success()).to.be.true;
-    expect(await etoCommitment.finalized()).to.be.false;
+    expect(await etoCommitment.finalized()).to.be.true;
     expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Funded);
     const generalInformation = await equityTokenController.shareholderInformation();
     const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(contribution[0]);
@@ -921,6 +1243,95 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     ];
   }
 
+  async function expectValidRefundState(refundTx, participatingInvestors) {
+    let expectedTokens = new web3.BigNumber(0);
+    let expectedNewMoneyEurEquiv = new web3.BigNumber(0);
+    for (const investor of participatingInvestors) {
+      const ticket = await etoCommitment.investorTicket(investor);
+      expectedTokens = expectedTokens.add(ticket[2]);
+      if (!ticket[9]) {
+        expectedNewMoneyEurEquiv = expectedNewMoneyEurEquiv.add(ticket[0]);
+      }
+    }
+    // assumes that no one invested with icbm money and new money in single ticket
+    const expectedComputedNeu = await neumark.incremental["uint256,uint256"](
+      0,
+      expectedNewMoneyEurEquiv,
+    );
+    expectLogRefundStarted(refundTx, equityToken.address, expectedTokens, expectedComputedNeu);
+    // all NEU burned
+    expect(await neumark.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+    // all equity token burned
+    expect(await equityToken.totalSupply()).to.be.bignumber.eq(0);
+    // equity token controller back in setup state
+    expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Setup);
+    // empty cap table
+    await expectEmptyTokenController();
+  }
+
+  async function expectValidPayoutState(tx, contribution) {
+    // contribution was validated previously and may be used as a reference
+    const disbursal = await universe.feeDisbursal();
+    const platformPortfolio = await universe.platformPortfolio();
+    expectLogPlatformFeePayout(tx, 0, etherToken.address, disbursal, contribution[5]);
+    expectLogPlatformFeePayout(tx, 1, euroToken.address, disbursal, contribution[6]);
+    expectLogPlatformPortfolioPayout(tx, equityToken.address, platformPortfolio, contribution[4]);
+    // fee disbursal must have fees
+    expect(await etherToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[5]);
+    expect(await euroToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[6]);
+    // platform portfolio must have tokens
+    expect(await equityToken.balanceOf(platformPortfolio)).to.be.bignumber.eq(contribution[4]);
+    // eto commitment must have no funds
+    expect(await etherToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+    expect(await euroToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+  }
+
+  async function expectValidPayoutStateFullClaim() {
+    // eto commitment must have no equity tokens
+    expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+    // just remainder of NEU
+    expect((await neumark.balanceOf(etoCommitment.address)).sub(8).abs()).to.be.bignumber.lt(10);
+  }
+
+  async function claimInvestor(investor) {
+    const tx = await etoCommitment.claim({ from: investor });
+    await expectValidInvestorClaim(tx, investor);
+  }
+
+  async function claimMultipleInvestors(investorsAddresses) {
+    const tx = await etoCommitment.claimMany(investorsAddresses);
+    let logIdx = 0;
+    for (const investor of investorsAddresses) {
+      await expectValidInvestorClaim(tx, investor, logIdx);
+      logIdx += 1;
+    }
+  }
+
+  async function refundInvestor(investor) {
+    const tx = await etoCommitment.refund({ from: investor });
+    await expectValidInvestorRefund(tx, investor, 0);
+  }
+
+  async function refundMultipleInvestors(investorsAddresses) {
+    const tx = await etoCommitment.refundMany(investorsAddresses);
+    let idx = 0;
+    for (const investor of investorsAddresses) {
+      await expectValidInvestorRefund(tx, investor, idx);
+      idx += 1;
+    }
+  }
+
+  async function expectEmptyTokenController() {
+    const capTable = await equityTokenController.capTable();
+    expect(capTable[0].length).to.eq(0);
+    expect(capTable[1].length).to.eq(0);
+    expect(capTable[2].length).to.eq(0);
+    const generalInfo = await equityTokenController.shareholderInformation();
+    expect(generalInfo[0]).to.be.bignumber.eq(0);
+    expect(generalInfo[1]).to.be.bignumber.eq(0);
+    expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
+  }
+
   async function expectStateStarts(pastStatesTable, durationTable) {
     const durTable = durationTable.slice();
     // add initial 0 to align with internal algorithm which looks to state - 1 to give start of current
@@ -936,6 +1347,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // console.log(`${state}:${expectedDate}:${new Date(expectedDate * 1000)}`);
       expect(await etoCommitment.startOf(CommitmentState[state])).to.be.bignumber.eq(expectedDate);
     }
+  }
+
+  function expectLogRefundStarted(tx, equityTokenAddress, burnedTokens, burnedNeu) {
+    const event = eventValue(tx, "LogRefundStarted");
+    expect(event).to.exist;
+    expect(event.args.assetToken).to.eq(equityTokenAddress);
+    expect(event.args.totalTokenAmountInt).to.be.bignumber.eq(burnedTokens);
+    expect(event.args.totalRewardNmkUlps).to.be.bignumber.eq(burnedNeu);
   }
 
   function expectLogTermsSet(tx, companyAddr, etoTermsAddr, equityTokenAddr) {
@@ -971,9 +1390,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(event).to.exist;
     expect(event.args.oldState).to.be.bignumber.eq(oldState);
     expect(event.args.newState).to.be.bignumber.eq(newState);
-    expect(event.args.timestamp.sub(ts).abs()).to.be.bignumber.lt(5);
-
-    return event.args.timestamp;
+    expect(event.args.timestamp).to.be.bignumber.eq(ts);
   }
 
   function expectLogSigningStarted(tx, nomineeAddr, companyAddr, newShares, nominalValue) {
@@ -1006,29 +1423,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(event.args.signedInvestmentAgreementUrl).to.eq(investmentAgreementUrl);
   }
 
-  function expectLogFundsCommitted(
-    tx,
-    investor,
-    wallet,
-    paymentTokenAddress,
-    amount,
-    eurEquiv,
-    expectedEquity,
-    equityTokenAddress,
-    expectedNeu,
-  ) {
-    const event = eventValue(tx, "LogFundsCommitted");
-    expect(event).to.exist;
-    expect(event.args.investor).to.eq(investor);
-    expect(event.args.wallet).to.eq(wallet);
-    expect(event.args.paymentToken).to.eq(paymentTokenAddress);
-    expect(event.args.amount).to.be.bignumber.eq(amount);
-    expect(event.args.eurEquivalent).to.be.bignumber.eq(eurEquiv);
-    expect(event.args.grantedAmount).to.be.bignumber.eq(expectedEquity);
-    expect(event.args.assetToken).to.eq(equityTokenAddress);
-    expect(event.args.nmkReward).to.be.bignumber.eq(expectedNeu);
-  }
-
   function expectLogAdditionalContribution(
     tx,
     logIdx,
@@ -1058,6 +1452,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(event.args.assetToken).to.eq(equityToken.address);
     expect(event.args.amount).to.be.bignumber.eq(equityAmount);
     expect(event.args.nmkReward).to.be.bignumber.eq(neuReward);
+  }
+
+  function expectLogFundsRefunded(tx, logIdx, investor, tokenAddress, amount) {
+    const event = eventWithIdxValue(tx, logIdx, "LogFundsRefunded");
+    expect(event).to.exist;
+    expect(event.args.investor).to.eq(investor);
+    expect(event.args.paymentToken).to.eq(tokenAddress);
+    expect(event.args.amount).to.be.bignumber.eq(amount);
   }
 
   function expectLogPlatformFeePayout(tx, logIdx, paymentTokenAddress, disbursal, feeAmount) {
