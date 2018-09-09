@@ -44,6 +44,38 @@ module.exports = function deployContracts(deployer, network, accounts) {
         } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
       );
       console.log("---------------------------------------------");
+      if (!CONFIG.ISOLATED_UNIVERSE) {
+        console.log("---------------------------------------------");
+        console.log("On live network, enable LockedAccount migrations manually");
+        console.log("On live network, set transfers from and to on ICBMEuroToken to EuroLock");
+        console.log(
+          `On live network, make sure PLATFORM_OPERATOR_WALLET ${
+            CONFIG.addresses.PLATFORM_OPERATOR_WALLET
+          } has KYC done`,
+        );
+        console.log(`On live network, send some ether to SimpleExchange`);
+        console.log(
+          `Must use ${
+            CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
+          } account to amend ToS agreement on Universe at ${universe.address}`,
+        );
+        console.log(
+          `Must use ${
+            CONFIG.addresses.EURT_LEGAL_MANAGER
+          } account to amend Euro Token agreement at ${await universe.euroToken()}`,
+        );
+        console.log(
+          `Must use ${
+            CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
+          } account to amend Euro Lock agreement at ${await universe.euroLock()}`,
+        );
+        console.log(
+          `Must use ${
+            CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
+          } account to amend Ether Lock agreement at ${await universe.etherLock()}`,
+        );
+        console.log("---------------------------------------------");
+      }
     }
 
     const endBlockNo = await promisify(web3.eth.getBlockNumber)();
