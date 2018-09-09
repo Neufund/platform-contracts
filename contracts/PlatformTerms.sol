@@ -1,10 +1,11 @@
 pragma solidity 0.4.24;
 
 import "./Math.sol";
+import "./Standards/IContractId.sol";
 
 
 /// @title set terms of Platform (investor's network) of the ETO
-contract PlatformTerms is Math {
+contract PlatformTerms is Math, IContractId {
 
     ////////////////////////
     // Constants
@@ -98,5 +99,13 @@ contract PlatformTerms is Math {
         returns (uint256)
     {
         return divRound(amount, EQUITY_TOKENS_PER_SHARE);
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x95482babc4e32de6c4dc3910ee7ae62c8e427efde6bc4e9ce0d6d93e24c39323, 0);
     }
 }

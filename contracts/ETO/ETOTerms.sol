@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
 import "./ETOTokenTerms.sol";
+import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
@@ -10,7 +11,7 @@ import "../Math.sol";
 /// @title base terms of Equity Token Offering
 /// encapsulates pricing, discounts and whitelisting mechanism
 /// @dev to be split is mixins
-contract ETOTerms is Math {
+contract ETOTerms is Math, IContractId {
 
     ////////////////////////
     // Types
@@ -28,7 +29,7 @@ contract ETOTerms is Math {
     // Constants state
     ////////////////////////
 
-    bytes32 private constant EMPTY_STRING_HASH = keccak256("");
+    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
     ////////////////////////
     // Immutable state
@@ -51,6 +52,9 @@ contract ETOTerms is Math {
     // maximum ticket for simple investors
     uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
+    // transfers are always disabled during token offering
+    // if set to False transfers on Equity Token will remain disabled after offering
+    // once those terms are on-chain this flags fully controls token transferability
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
     // says if we work under crowdfunding regulation
     bool public IS_CROWDFUNDING;
@@ -308,6 +312,14 @@ contract ETOTerms is Math {
 
         require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION_DAYS(), "ETO_TERMS_CLAIM_MIN");
         require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION_DAYS(), "ETO_TERMS_CLAIM_MAX");
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 0);
     }
 
     ////////////////////////

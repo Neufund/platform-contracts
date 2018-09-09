@@ -12,12 +12,14 @@ import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardSnapshotToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
+import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../Math.sol";
 
 
 contract EquityToken is
     IEquityToken,
+    IContractId,
     StandardSnapshotToken,
     Daily,
     TokenMetadata,
@@ -179,7 +181,6 @@ contract EquityToken is
     {
         // typically requires a valid migration in the old controller
         require(_tokenController.onChangeTokenController(msg.sender, newController));
-        // todo: this should be explicit without import loop
         _tokenController = IEquityTokenController(newController);
         emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }
@@ -242,6 +243,14 @@ contract EquityToken is
             IERC223Callback(to).tokenFallback(msg.sender, amount, data);
         }
         return true;
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x45a709aff6d5ae42cb70f87551d8d7dbec5235cf2baa71a009ed0a9795258d8f, 0);
     }
 
     ////////////////////////

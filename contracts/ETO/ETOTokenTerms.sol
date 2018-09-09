@@ -1,8 +1,10 @@
 pragma solidity 0.4.24;
 
+import "../Standards/IContractId.sol";
+
 
 /// @title sets terms for tokens in ETO
-contract ETOTokenTerms {
+contract ETOTokenTerms is IContractId {
 
     ////////////////////////
     // Immutable state
@@ -36,5 +38,13 @@ contract ETOTokenTerms {
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
         require(MAX_NUMBER_OF_TOKENS_IN_WHITELIST <= MAX_NUMBER_OF_TOKENS);
         require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x591e791aab2b14c80194b729a2abcba3e8cce1918be4061be170e7223357ae5c, 0);
     }
 }
