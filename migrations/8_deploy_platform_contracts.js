@@ -93,7 +93,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await deployer.deploy(EuroTokenController, universe.address);
     const tokenController = await EuroTokenController.deployed();
     console.log("Deploying EuroToken");
-    await deployer.deploy(EuroToken, accessPolicy.address, tokenController.address);
+    await deployer.deploy(
+      EuroToken,
+      accessPolicy.address,
+      forkArbiter.address,
+      tokenController.address,
+    );
     const euroToken = await EuroToken.deployed();
     console.log("Deploying LockedAccounts");
     await deployer.deploy(
