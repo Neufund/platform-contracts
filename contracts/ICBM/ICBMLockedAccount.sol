@@ -10,7 +10,7 @@ import "../Neumark.sol";
 import "../Standards/IERC677Token.sol";
 import "../Standards/IERC677Callback.sol";
 import "../Reclaimable.sol";
-import "../TimeSource.sol";
+import "./TimeSource.sol";
 import "../Math.sol";
 
 
