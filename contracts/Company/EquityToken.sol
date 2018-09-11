@@ -116,7 +116,7 @@ contract EquityToken is
         )
         TokenMetadata(
             etoTerms.EQUITY_TOKEN_NAME(),
-            PlatformTerms(universe.platformTerms()).EQUITY_TOKENS_PRECISION(),
+            etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION(),
             etoTerms.EQUITY_TOKEN_SYMBOL(),
             "1.0"
         )
@@ -124,7 +124,7 @@ contract EquityToken is
         Reclaimable()
         public
     {
-        TOKENS_PER_SHARE = PlatformTerms(universe.platformTerms()).EQUITY_TOKENS_PER_SHARE();
+        TOKENS_PER_SHARE = etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE();
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         SHARE_NOMINAL_VALUE_EUR_ULPS = etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
 

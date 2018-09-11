@@ -211,8 +211,8 @@ contract ETOCommitment is
         UNIVERSE = universe;
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
-        require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION());
-        require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE());
+        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
+        require(equityToken.tokensPerShare() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE());
         require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
 
@@ -523,7 +523,7 @@ contract ETOCommitment is
         equivEurUlps = ticket.equivEurUlps;
         rewardNmkUlps = ticket.rewardNmkUlps;
         equityTokenInt = ticket.equityTokenInt;
-        sharesInt = PLATFORM_TERMS.equityTokensToShares(ticket.equityTokenInt);
+        sharesInt = ETO_TERMS.equityTokensToShares(ticket.equityTokenInt);
         tokenPrice = equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0;
         neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
         amountEth = ticket.amountEth;

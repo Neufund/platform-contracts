@@ -18,6 +18,10 @@ contract ETOTokenTerms is IContractId {
     uint256 public TOKEN_PRICE_EUR_ULPS;
     // maximum number of tokens in whitelist phase
     uint256 public MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+    // equity tokens per share
+    uint256 public constant EQUITY_TOKENS_PER_SHARE = 10000;
+    // equity tokens decimals (precision)
+    uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
 
     ////////////////////////
