@@ -90,7 +90,7 @@ contract(
             expect(invRate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
         });
 
-        it.only("should set exchange rate after day", async () => {
+        it("should set exchange rate after day", async () => {
             const tx = await gasExchange.setExchangeRate(
                 etherToken.address,
                 euroToken.address,
@@ -184,6 +184,30 @@ contract(
             expect(invRates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
             expect(invRates[0][1]).to.be.bignumber.eq(Q18.mul(2.5));
             expect(invRates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+        });
+
+        it("should set same echanage rates multiple times", async () => {
+            const tx = await gasExchange.setExchangeRates(
+                [etherToken.address, euroToken.address],
+                [euroToken.address, etherToken.address],
+                [Q18.mul(100), Q18.mul(0.01)],
+                { from: tokenOracleManager },
+            );
+            expect(tx.logs.length).to.eq(4);
+
+            expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
+            expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
+            expectLogSetExchangeRate(tx.logs[3], etherToken.address, euroToken.address, Q18.mul(100));
+            expectLogSetExchangeRate(tx.logs[2], euroToken.address, etherToken.address, Q18.mul(0.01));
+
+            const rates = await rateOracle.getExchangeRates(
+                [etherToken.address, euroToken.address],
+                [euroToken.address, etherToken.address],
+            );
+
+            expect(rates[0][0]).to.be.bignumber.eq(Q18.mul(100));
+            expect(rates[0][1]).to.be.bignumber.eq(Q18.mul(0.01));
+            expect(rates[1][0]).to.be.bignumber.eq(rates[1][1]);
         });
 
         it("should revert on set exchange rate not from tokenOracleManager", async () => {
