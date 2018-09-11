@@ -17,6 +17,7 @@ import {
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
+  constTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -393,7 +394,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         expect(generalInfo[0]).to.be.bignumber.eq(etoTermsDict.EXISTING_COMPANY_SHARES);
         expect(generalInfo[1]).to.be.bignumber.eq(
           tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul(etoTermsDict.EXISTING_COMPANY_SHARES).mul(
-            platformTermsDict.EQUITY_TOKENS_PER_SHARE,
+            constTokenTerms.EQUITY_TOKENS_PER_SHARE,
           ),
         );
         expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
@@ -1144,13 +1145,13 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       divRound(expectedTokens.mul(platformTermsDict.TOKEN_PARTICIPATION_FEE_FRACTION), Q18),
     );
     // to have equal number of shares add the remainder
-    const tokenSharesRemainder = expectedTokenSupply.mod(platformTermsDict.EQUITY_TOKENS_PER_SHARE);
+    const tokenSharesRemainder = expectedTokenSupply.mod(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
     if (!tokenSharesRemainder.eq(0)) {
       expectedTokenSupply = expectedTokenSupply.add(
-        platformTermsDict.EQUITY_TOKENS_PER_SHARE.sub(tokenSharesRemainder),
+        constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(tokenSharesRemainder),
       );
     }
-    const expectedNewShares = expectedTokenSupply.div(platformTermsDict.EQUITY_TOKENS_PER_SHARE);
+    const expectedNewShares = expectedTokenSupply.div(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
     expect(await equityToken.totalSupply()).to.be.bignumber.eq(expectedTokenSupply);
     const contribution = await etoCommitment.contributionSummary();
     expect(contribution[0]).to.be.bignumber.eq(expectedNewShares);

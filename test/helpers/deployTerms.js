@@ -19,6 +19,11 @@ export const defDurTerms = {
   CLAIM_DURATION: new web3.BigNumber(daysToSeconds(10)),
 };
 
+export const constTokenTerms = {
+  EQUITY_TOKENS_PRECISION: new web3.BigNumber(0),
+  EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
+};
+
 export const defTokenTerms = {
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
@@ -33,7 +38,6 @@ export const defEtoTerms = {
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
   ENABLE_TRANSFERS_ON_SUCCESS: true,
-  IS_CROWDFUNDING: false,
   INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
   PROSPECTUS_URL: "893289290300923809jdkljoi3",
   SHAREHOLDER_RIGHTS: null,
