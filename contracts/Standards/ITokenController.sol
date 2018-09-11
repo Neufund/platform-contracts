@@ -26,16 +26,6 @@ contract ITokenController {
         constant
         returns (bool allow);
 
-    /// @notice returns true to override spender allowance for declared amount
-    ///   in that case allowance processing in token contract should be skipped
-    ///   and transferFrom executed
-    /// intended to be used by "service contracts" like gas exchange to always be able
-    /// to broker token transfer (within amount)
-    function hasPermanentAllowance(address spender, uint256 amount)
-        public
-        constant
-        returns (bool yes);
-
     /// @notice see MTokenMint
     function onGenerateTokens(address sender, address owner, uint256 amount)
         public
@@ -47,4 +37,11 @@ contract ITokenController {
         public
         constant
         returns (bool allow);
+
+    /// @notice controls if sender can change controller to newController
+    /// @dev for this to succeed TYPICALLY current controller must be already migrated to a new one
+    function onChangeTokenController(address sender, address newController)
+        public
+        constant
+        returns (bool);
 }
