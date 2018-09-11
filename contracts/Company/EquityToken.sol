@@ -176,15 +176,6 @@ contract EquityToken is
         emit LogTokenClosed(_tokenController, msg.sender);
     }
 
-    function changeEquityTokenController(address newController)
-        public
-    {
-        // typically requires a valid migration in the old controller
-        require(_tokenController.onChangeTokenController(msg.sender, newController));
-        _tokenController = IEquityTokenController(newController);
-        emit LogChangeTokenController(_tokenController, newController, msg.sender);
-    }
-
     function changeNominee(address newNominee)
         public
     {
@@ -215,16 +206,29 @@ contract EquityToken is
         return SHARE_NOMINAL_VALUE_EUR_ULPS;
     }
 
-    function equityTokenController() public constant returns (IEquityTokenController) {
-        return _tokenController;
-    }
-
     function nominee() public constant returns (address) {
         return _nominee;
     }
 
     function companyLegalRepresentative() public constant returns (address) {
         return COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
+    //
+    // Implements ITokenControllerHook
+    //
+
+    function changeTokenController(address newController)
+        public
+    {
+        // typically requires a valid migration in the old controller
+        require(_tokenController.onChangeTokenController(msg.sender, newController));
+        _tokenController = IEquityTokenController(newController);
+        emit LogChangeTokenController(_tokenController, newController, msg.sender);
+    }
+
+    function tokenController() public constant returns (address) {
+        return _tokenController;
     }
 
     //

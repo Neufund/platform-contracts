@@ -245,14 +245,6 @@ contract PlaceholderEquityTokenController is
         return true;
     }
 
-    function hasPermanentAllowance(address, uint256)
-        public
-        constant
-        returns (bool yes)
-    {
-        return false;
-    }
-
     function onGenerateTokens(address sender, address, uint256)
         public
         constant
@@ -269,6 +261,14 @@ contract PlaceholderEquityTokenController is
         return sender == address(_etoCommitment) && _state == GovState.Offering;
     }
 
+    function onChangeTokenController(address /*sender*/, address newController)
+        public
+        constant
+        returns (bool)
+    {
+        return newController == _newController;
+    }
+
     //
     // Implements IEquityTokenController
     //
@@ -279,14 +279,6 @@ contract PlaceholderEquityTokenController is
         returns (bool)
     {
         return false;
-    }
-
-    function onChangeTokenController(address /*sender*/, address newController)
-        public
-        constant
-        returns (bool)
-    {
-        return newController == _newController;
     }
 
     function onChangeNominee(address, address, address)
@@ -368,7 +360,7 @@ contract PlaceholderEquityTokenController is
         // require nominee match and agreement signature
         (address legalRepToken,,,) = equityToken.currentAgreement();
         // require token controller match
-        require(equityToken.equityTokenController() == address(this), "NDT_ET_TC_MIS");
+        require(equityToken.tokenController() == address(this), "NDT_ET_TC_MIS");
         // require nominee and agreement match
         (address legalRepOffering,,,) = tokenOffering.currentAgreement();
         require(legalRepOffering == legalRepToken, "NDT_ETO_A_MIS");
