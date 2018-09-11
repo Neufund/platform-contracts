@@ -206,6 +206,7 @@ contract SimpleExchange is
     )
         private
     {
+        require(numeratorToken != denominatorToken, "SEX_SAME_N_D");
         assert(rateFraction > 0);
         assert(rateFraction < 2**128);
         uint256 invRateFraction = proportion(10**18, 10**18, rateFraction);

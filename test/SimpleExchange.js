@@ -231,6 +231,14 @@ contract(
             expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
         });
 
+        it("should revert on set exchange rate when setting ", async () => {
+            await expect(
+                gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
+                    from: tokenOracleManager
+                })
+            ).to.revert;
+        });
+
         it("should exchange EuroToken to gas", async () => {
             const decimalExchangeAmount = 20;
             const exchangedAmount = Q18.mul(decimalExchangeAmount);
