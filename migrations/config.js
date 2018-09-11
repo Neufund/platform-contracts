@@ -95,6 +95,7 @@ export function getConfig(web3, network, accounts) {
     roleMapping.UNIVERSE_MANAGER = DEPLOYER;
     roleMapping.EURT_LEGAL_MANAGER = DEPLOYER;
     roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
+    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = DEPLOYER;
   }
 
   // finally override addresses and artifacts from truffle.js
@@ -140,7 +141,7 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
-    INV_ETH_EUR_ICBM_HAS_KYC: makeAccount(
+    INV_ETH_EUR_ICBM_M_HAS_KYC: makeAccount(
       "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
       "investor",
       true,

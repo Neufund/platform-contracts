@@ -1,7 +1,7 @@
 pragma solidity 0.4.24;
 import "./Neumark.sol";
 import "./KnownInterfaces.sol";
-import "./AccessRoles.sol";
+import "./Agreement.sol";
 
 import "./Identity/IIdentityRegistry.sol";
 import "./Standards/IERC223Token.sol";
@@ -9,6 +9,7 @@ import "./Standards/ITokenExchangeRateOracle.sol";
 import "./Standards/IFeeDisbursal.sol";
 import "./Standards/IPlatformPortfolio.sol";
 import "./Standards/IEthereumForkArbiter.sol";
+import "./Standards/IContractId.sol";
 
 
 /// @title root of trust and singletons + known interface registry
@@ -17,9 +18,9 @@ import "./Standards/IEthereumForkArbiter.sol";
 /// collections of known instances of interfaces
 /// @dev interfaces are identified by bytes4, see KnownInterfaces.sol
 contract Universe is
-    AccessControlled,
-    KnownInterfaces,
-    AccessRoles
+    Agreement,
+    IContractId,
+    KnownInterfaces
 {
     ////////////////////////
     // Events
@@ -63,7 +64,7 @@ contract Universe is
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter
     )
-        AccessControlled(accessPolicy)
+        Agreement(accessPolicy, forkArbiter)
         public
     {
         setSingletonPrivate(KNOWN_INTERFACE_ACCESS_POLICY, accessPolicy);
@@ -192,6 +193,14 @@ contract Universe is
             setCollectionPrivate(interfaceIds[idx], instances[idx], set_flags[idx]);
             idx += 1;
         }
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x8b57bfe21a3ef4854e19d702063b6cea03fa514162f8ff43fde551f06372fefd, 0);
     }
 
     ////////////////////////

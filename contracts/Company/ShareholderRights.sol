@@ -1,7 +1,9 @@
 pragma solidity 0.4.24;
 
+import "../Standards/IContractId.sol";
 
-contract ShareholderRights {
+
+contract ShareholderRights is IContractId {
 
     enum VotingRule {
         // nominee has no voting rights
@@ -71,5 +73,13 @@ contract ShareholderRights {
         VOTING_FINALIZATION_DURATION = votingFinalizationDuration;
         TOKENHOLDERS_QUORUM_FRAC = tokenholdersQuorumFrac;
         VOTING_MAJORITY_FRAC = votingMajorityFrac;
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x7f46caed28b4e7a90dc4db9bba18d1565e6c4824f0dc1b96b3b88d730da56e57, 0);
     }
 }

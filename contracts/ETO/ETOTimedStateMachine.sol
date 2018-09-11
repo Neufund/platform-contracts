@@ -97,7 +97,7 @@ contract ETOTimedStateMachine is
         constant
         returns (bool)
     {
-        return (_state == ETOState.Refund || _state == ETOState.Payout);
+        return (_state == ETOState.Refund || _state == ETOState.Payout || _state == ETOState.Claim);
     }
 
     // says if state is success
@@ -267,16 +267,22 @@ contract ETOTimedStateMachine is
         // require(validTransition(oldState, effectiveNewState));
 
         _state = effectiveNewState;
+        // store deadline for previous state
+        uint32 deadline = _pastStateTransitionTimes[uint256(oldState)];
+        // if transition came before deadline, count time from timestamp, if after always count from deadline
+        if (uint32(block.timestamp) < deadline) {
+            deadline = uint32(block.timestamp);
+        }
         // we have 60+ years for 2^32 overflow on epoch so disregard
-        _pastStateTransitionTimes[uint256(oldState)] = uint32(block.timestamp);
-        _pastStateTransitionTimes[uint256(effectiveNewState)] = uint32(block.timestamp) + ETO_STATE_DURATIONS[uint256(effectiveNewState)];
-        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState), uint32(block.timestamp));
-
+        _pastStateTransitionTimes[uint256(oldState)] = deadline;
+        // set deadline on next state
+        _pastStateTransitionTimes[uint256(effectiveNewState)] = deadline + ETO_STATE_DURATIONS[uint256(effectiveNewState)];
         // should not change _state
         mAfterTransition(oldState, effectiveNewState);
         assert(_state == effectiveNewState);
-        // should notify observer
-        COMMITMENT_OBSERVER.onStateTransition(oldState, newState);
+        // should notify observer after internal state is settled
+        COMMITMENT_OBSERVER.onStateTransition(oldState, effectiveNewState);
+        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState), deadline);
     }
 
     /*function validTransition(ETOState oldState, ETOState newState)

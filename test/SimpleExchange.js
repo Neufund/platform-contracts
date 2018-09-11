@@ -14,7 +14,7 @@ import {
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { divRound } from "./helpers/unitConverter";
-import { toBytes32, Q18 } from "./helpers/constants";
+import { toBytes32, Q18, contractId } from "./helpers/constants";
 
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
 const gasExchangeFee = Q18.mul(0.07);
@@ -67,6 +67,7 @@ contract(
 
     it("should deploy", async () => {
       await prettyPrintGasCost("SimpleExchange deploy", simpleExchange);
+      expect((await simpleExchange.contractId())[0]).to.eq(contractId("SimpleExchange"));
     });
 
     it("should set exchange rate", async () => {
@@ -380,7 +381,7 @@ contract(
       await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {
         from: admin,
       });
-      await euroToken.deposit(recipient, amount, { from: admin });
+      await euroToken.deposit(recipient, amount, 0x0, { from: admin });
     }
 
     async function sendEtherToExchange(sender, amount) {

@@ -1,9 +1,12 @@
 pragma solidity 0.4.24;
 
 import "../Neumark.sol";
+import "../Standards/IWithdrawableToken.sol";
 
 
-contract TestNeumark is Neumark
+contract TestNeumark is
+    Neumark,
+    IWithdrawableToken
 {
 
     ////////////////////////
