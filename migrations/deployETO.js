@@ -33,6 +33,7 @@ export async function deployETO(
   ovrTokenTerms,
 ) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
+  const Neumark = artifacts.require(config.artifacts.NEUMARK);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
   const PlaceholderEquityTokenController = artifacts.require(
     config.artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER,
@@ -45,9 +46,15 @@ export async function deployETO(
   const ShareholderRights = artifacts.require(config.artifacts.STANDARD_SHAREHOLDER_RIGHTS);
 
   // preliminary checks
-  const neumarkAddress = await universe.neumark();
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-  const canControlNeu = await accessPolicy.allowed.call(
+  const neumarkAddress = await universe.neumark();
+  const neumark = await Neumark.at(neumarkAddress);
+  // neumark may have a separate access control in isolated universe
+  const neuAccessPolicy = await RoleBasedAccessPolicy.at(await neumark.accessPolicy());
+  console.log(
+    `Isolated universe...${neuAccessPolicy.address === accessPolicy.address ? "NO" : "YES"}`,
+  );
+  const canControlNeu = await neuAccessPolicy.allowed.call(
     deployer,
     roles.accessController,
     neumarkAddress,
@@ -77,7 +84,7 @@ export async function deployETO(
       : wrong(deployerBalanceEth.toNumber())),
   );
 
-  if (!canControlNeu || !canManageUniverse || !deployerHasBalance) {
+  if (!canManageUniverse || !deployerHasBalance) {
     throw new Error("Initial checks failed");
   }
   // deployment
@@ -140,17 +147,24 @@ export async function deployETO(
     [true, true, true],
     { from: deployer },
   );
-  console.log("neu token manager allows ETOCommitment to issue NEU");
-  await createAccessPolicy(accessPolicy, [
-    { role: roles.neumarkIssuer, object: neumarkAddress, subject: etoCommitment.address },
-  ]);
+  if (canControlNeu) {
+    console.log("neu token manager allows ETOCommitment to issue NEU");
+    await createAccessPolicy(accessPolicy, [
+      { role: roles.neumarkIssuer, object: neumarkAddress, subject: etoCommitment.address },
+    ]);
+  }
   console.log("-------------------------------------------");
   console.log("ETO COMMITMENT ADDRESS:", ...good(etoCommitment.address));
   // nominee sets legal agreements
-  // await equityToken.amendAgreement("AGREEMENT#HASH", {from: nominee});
-  // await etoCommitment.amendAgreement("AGREEMENT#HASH", {from: nominee});
   console.log(`${nominee} must call amendAgreement on EquityToken ${equityToken.address}`);
   console.log(`${nominee} must call amendAgreement on ETOCommitment ${etoCommitment.address}`);
+  if (!canControlNeu) {
+    console.log(
+      `Must give role ${roles.neumarkIssuer} on neumark ${neumarkAddress} to ETOCommitment ${
+        etoCommitment.address
+      }`,
+    );
+  }
   console.log("-------------------------------------------");
   return [etoCommitment, equityToken, equityTokenController, etoTerms];
 }
@@ -163,6 +177,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const ITokenExchangeRateOracle = artifacts.require(config.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
   const PlatformTerms = artifacts.require(config.artifacts.PLATFORM_TERMS);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
+  const Neumark = artifacts.require(config.artifacts.NEUMARK);
 
   console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
   const eto = await ETOCommitment.at(etoCommitmentAddress);
@@ -175,6 +190,13 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log("IdentityRegistry discovered at ", ...good(identityRegistry.address));
   const platformTerms = await PlatformTerms.at(singletons[3]);
   console.log("PlatformTerms discovered at ", ...good(platformTerms.address));
+  const neumarkAddress = await universe.neumark();
+  const neumark = await Neumark.at(neumarkAddress);
+  // neumark may have a separate access control in isolated universe
+  const neuAccessPolicy = await RoleBasedAccessPolicy.at(await neumark.accessPolicy());
+  console.log(
+    `Isolated universe...${neuAccessPolicy.address === accessPolicy.address ? "NO" : "YES"}`,
+  );
   // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
   console.log("------------------------------------------------------");
   const state = await eto.state();
@@ -199,8 +221,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const thaUrl = thaCount.eq(0) ? "NOT SET" : (await equityToken.currentAgreement())[2];
   console.log("Equity Token THA URL", ...(thaCount.eq(0) ? wrong(thaUrl) : good(thaUrl)));
   console.log("------------------------------------------------------");
-  const neumarkAddress = await universe.neumark();
-  const canIssueNEU = await accessPolicy.allowed.call(
+  const canIssueNEU = await neuAccessPolicy.allowed.call(
     etoCommitmentAddress,
     roles.neumarkIssuer,
     neumarkAddress,
