@@ -95,6 +95,7 @@ export function getConfig(web3, network, accounts) {
     roleMapping.UNIVERSE_MANAGER = DEPLOYER;
     roleMapping.EURT_LEGAL_MANAGER = DEPLOYER;
     roleMapping.PLATFORM_OPERATOR_WALLET = DEPLOYER;
+    roleMapping.PLATFORM_OPERATOR_REPRESENTATIVE = DEPLOYER;
   }
 
   // finally override addresses and artifacts from truffle.js

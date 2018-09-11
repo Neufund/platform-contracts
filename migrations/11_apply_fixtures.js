@@ -4,13 +4,15 @@ const getFixtureAccounts = require("./config").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const promisify = require("../test/helpers/evmCommands").promisify;
 const toBytes32 = require("../test/helpers/constants").toBytes32;
+const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
+const roles = require("../test/helpers/roles").default;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
 
-  const fas = getFixtureAccounts(accounts);
   const DEPLOYER = getDeployerAccount(network, accounts);
+
   const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
@@ -20,12 +22,15 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
   const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
 
   deployer.then(async () => {
     // skip for pure live deployment
     if (CONFIG.isLiveDeployment && !CONFIG.ISOLATED_UNIVERSE) return;
     // executed in test deployment and in ISOLATED_UNIVERSE
+
     const universe = await Universe.deployed();
+    const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
     const euroToken = await EuroToken.at(await universe.euroToken());
     const etherToken = await EtherToken.at(await universe.etherToken());
     const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
@@ -46,10 +51,21 @@ module.exports = function deployContracts(deployer, network, accounts) {
       },
     );
 
+    console.log("set platform operator rep global role (req by isolated universe)");
+    await createAccessPolicy(accessPolicy, [
+      // global role for legal rep
+      {
+        subject: CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE,
+        role: roles.platformOperatorRepresentative,
+      },
+    ]);
+
     console.log("send ether to simple exchange");
     await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
 
-    console.log("amending agreement for EuroToken and Universe");
+    console.log(
+      `amending agreement for EuroToken ${euroToken.address} and Universe ${universe.address}`,
+    );
     await euroToken.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
     await universe.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
 
@@ -59,6 +75,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     if (CONFIG.ISOLATED_UNIVERSE) return;
     // executed only in test deployment
+    const fas = getFixtureAccounts(accounts);
     console.log("set Euro LockedAccount migration");
     await icbmEuroLock.enableMigration(euroLock.address);
     if ((await icbmEuroLock.currentMigrationTarget()) !== euroLock.address) {

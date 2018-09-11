@@ -23,28 +23,28 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const universe = await Universe.deployed();
     if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-
-      console.log("Dropping temporary permissions");
-      await createAccessPolicy(accessPolicy, [
-        { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
-        { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
-        { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
-        {
-          subject: DEPLOYER,
-          role: roles.universeManager,
-          object: universe.address,
-          state: TriState.Unset,
-        },
-      ]);
-
-      console.log("---------------------------------------------");
-      console.log(
-        `ACCESS_CONTROLLER ${
-          CONFIG.addresses.ACCESS_CONTROLLER
-        } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
-      );
-      console.log("---------------------------------------------");
       if (!CONFIG.ISOLATED_UNIVERSE) {
+        console.log("Dropping temporary permissions");
+        await createAccessPolicy(accessPolicy, [
+          { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
+          { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
+          { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
+          {
+            subject: DEPLOYER,
+            role: roles.universeManager,
+            object: universe.address,
+            state: TriState.Unset,
+          },
+        ]);
+
+        console.log("---------------------------------------------");
+        console.log(
+          `ACCESS_CONTROLLER ${
+            CONFIG.addresses.ACCESS_CONTROLLER
+          } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
+        );
+        console.log("---------------------------------------------");
+
         console.log("---------------------------------------------");
         console.log("On live network, enable LockedAccount migrations manually");
         console.log("On live network, set transfers from and to on ICBMEuroToken to EuroLock");
