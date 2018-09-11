@@ -249,14 +249,22 @@ contract EuroToken is
     /// @notice convenience function to deposit and immediately transfer amount
     /// @param depositTo which account to deposit to and then transfer from
     /// @param transferTo where to transfer after deposit
-    /// @param amount total amount to transfer, must be <= balance after deposit
+    /// @param depositAmount amount to deposit
+    /// @param transferAmount total amount to transfer, must be <= balance after deposit
     /// @dev intended to deposit from bank account and invest in ETO
-    function depositAndTransfer(address depositTo, address transferTo, uint256 amount, bytes data, bytes32 reference)
+    function depositAndTransfer(
+        address depositTo,
+        address transferTo,
+        uint256 depositAmount,
+        uint256 transferAmount,
+        bytes data,
+        bytes32 reference
+    )
         public
         returns (bool success)
     {
-        deposit(depositTo, amount, reference);
-        return ierc223TransferInternal(depositTo, transferTo, amount, data);
+        deposit(depositTo, depositAmount, reference);
+        return ierc223TransferInternal(depositTo, transferTo, transferAmount, data);
     }
 
     //
