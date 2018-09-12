@@ -1,12 +1,12 @@
 pragma solidity 0.4.24;
 
-import "../Standards/ITokenController.sol";
 import "../Standards/IContractId.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../AccessRoles.sol";
 import "../KnownInterfaces.sol";
 import "../Universe.sol";
 import "../Identity/IIdentityRegistry.sol";
+import "./IEuroTokenController.sol";
 
 
 /// @title token controller for EuroToken
@@ -16,7 +16,7 @@ import "../Identity/IIdentityRegistry.sol";
 ///  whitelist several known singleton contracts from Universe to be able to receive and send EUR-T
 /// @dev if contracts are replaced in universe, `applySettings` function must be called
 contract EuroTokenController is
-    ITokenController,
+    IEuroTokenController,
     IContractId,
     AccessControlled,
     AccessRoles,
@@ -199,16 +199,6 @@ contract EuroTokenController is
         return true;
     }
 
-    /// simple exchange contract has permanent allowance within amount eur ulps
-    function hasPermanentAllowance(address spender, uint256 amount)
-        public
-        constant
-        returns (bool yes)
-    {
-        address exchange = UNIVERSE.gasExchange();
-        return spender == address(exchange) && amount <= _maxSimpleExchangeAllowanceEurUlps;
-    }
-
     /// allows to deposit if user has kyc and deposit is >= minimum
     function onGenerateTokens(address /*sender*/, address owner, uint256 amount)
         public
@@ -239,6 +229,30 @@ contract EuroTokenController is
         }
         IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
+    }
+
+    /// @dev here we could have a whole procedure to change of the controller, currently TOKEN LEGAL REP can do it
+    /// todo: could move all the access control here
+    function onChangeTokenController(address /*sender*/, address newController)
+        public
+        constant
+        returns (bool)
+    {
+        return newController != address(0x0);
+    }
+
+    //
+    // Implements IEuroTokenController
+    //
+
+    /// simple exchange contract has permanent allowance within amount eur ulps
+    function hasPermanentAllowance(address spender, uint256 amount)
+        public
+        constant
+        returns (bool yes)
+    {
+        address exchange = UNIVERSE.gasExchange();
+        return spender == address(exchange) && amount <= _maxSimpleExchangeAllowanceEurUlps;
     }
 
     //

@@ -5,12 +5,14 @@ import "../Standards/IERC677Token.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IClonedTokenParent.sol";
 import "./IEquityTokenController.sol";
+import "../Standards/ITokenControllerHook.sol";
 
 
 contract IEquityToken is
     IAgreement,
     IClonedTokenParent,
-    IERC223Token
+    IERC223Token,
+    ITokenControllerHook
 {
     /// @dev equity token is not divisible (Decimals == 0) but single share is represented by
     ///  tokensPerShare tokens
@@ -27,12 +29,6 @@ contract IEquityToken is
 
     // returns company legal representative account that never changes
     function companyLegalRepresentative() public constant returns (address);
-
-    /// @notice returns associated token controller
-    function equityTokenController() public constant returns (IEquityTokenController);
-
-    /// @dev only by previous token controller
-    function changeEquityTokenController(address newController) public;
 
     /// returns current nominee which is contract legal rep
     function nominee() public constant returns (address);
