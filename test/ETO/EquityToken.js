@@ -6,6 +6,7 @@ import {
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
+  constTokenTerms,
 } from "../helpers/deployTerms";
 import {
   basicTokenTests,
@@ -22,7 +23,7 @@ import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { increaseTime } from "../helpers/evmCommands";
-import { ZERO_ADDRESS } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
@@ -37,16 +38,16 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let equityTokenController;
   let accessPolicy;
   let universe;
-  let platformTermsDict;
   let etoTerms, etoTermsDict;
+  let tokenTerms;
 
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.reclaimer }]);
-    [, platformTermsDict] = await deployPlatformTerms(universe, admin);
+    await deployPlatformTerms(universe, admin);
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
-    const [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
+    [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
     [etoTerms, etoTermsDict] = await deployETOTerms(
       ETOTerms,
       durationTerms,
@@ -70,7 +71,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       // check properties of equity token
       expect(await equityToken.isTokenClosed()).to.be.false;
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(
-        platformTermsDict.EQUITY_TOKENS_PER_SHARE,
+        constTokenTerms.EQUITY_TOKENS_PER_SHARE,
       );
       expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
         etoTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS,
@@ -81,8 +82,10 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 
-      // todo: TokenMetadata should be set from EtoTerms -> test it
+      expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
     });
+
+    it("should contain token metadata from terms");
 
     it("should deposit", async () => {
       // remember: equity tokens are not divisible
@@ -124,6 +127,8 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should convert equity token amount to shares");
 
     it("should set token symbol and other metadata from eto terms correctly");
+
+    it("reverts on reclaming itself");
   });
 
   describe("IEquityTokenController tests", () => {

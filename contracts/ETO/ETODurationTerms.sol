@@ -1,8 +1,10 @@
 pragma solidity 0.4.24;
 
+import "../Standards/IContractId.sol";
+
 
 /// @title sets duration of states in ETO
-contract ETODurationTerms {
+contract ETODurationTerms is IContractId {
 
     ////////////////////////
     // Immutable state
@@ -36,5 +38,13 @@ contract ETODurationTerms {
         PUBLIC_DURATION = publicDuration;
         SIGNING_DURATION = signingDuration;
         CLAIM_DURATION = claimDuration;
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x5fb50201b453799d95f8a80291b940f1c543537b95bff2e3c78c2e36070494c0, 0);
     }
 }

@@ -1,10 +1,11 @@
 pragma solidity 0.4.24;
 
 import "./Math.sol";
+import "./Standards/IContractId.sol";
 
 
 /// @title set terms of Platform (investor's network) of the ETO
-contract PlatformTerms is Math {
+contract PlatformTerms is Math, IContractId {
 
     ////////////////////////
     // Constants
@@ -20,22 +21,12 @@ contract PlatformTerms is Math {
     uint256 public constant PLATFORM_NEUMARK_SHARE = 2; // 50:50 division
     // ICBM investors whitelisted by default
     bool public constant IS_ICBM_INVESTOR_WHITELISTED = true;
-    // equity tokens per share
-    uint256 public constant EQUITY_TOKENS_PER_SHARE = 10000; // move it to platform
-    // equity tokens decimals (precision)
-    uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
     // minimum ticket size Platform accepts in EUR ULPS
     uint256 public constant MIN_TICKET_EUR_ULPS = 100 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
     // no max ticket in general prospectus regulation
     // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
-    // maximum ticket size for sophisiticated investor under crowdfunding regulations
-    uint256 public constant MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS = 10000 * 10**18;
-    // maximum ticket size for simple investor under crowdfunding regulations
-    uint256 public constant MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS = 1000 * 10**18;
-    // maximum raised amount for crowdfunding regulation
-    uint256 public constant MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS = 2500000 * 10**18;
 
     // min duration from setting the date to ETO start
     uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 14 days;
@@ -43,21 +34,21 @@ contract PlatformTerms is Math {
     uint256 public constant TOKEN_RATE_EXPIRES_AFTER = 4 hours;
 
     // duration constraints
-    uint256 public constant MIN_WHITELIST_DURATION_DAYS = 0 days;
-    uint256 public constant MAX_WHITELIST_DURATION_DAYS = 30 days;
-    uint256 public constant MIN_PUBLIC_DURATION_DAYS = 0 days;
-    uint256 public constant MAX_PUBLIC_DURATION_DAYS = 60 days;
+    uint256 public constant MIN_WHITELIST_DURATION = 0 days;
+    uint256 public constant MAX_WHITELIST_DURATION = 30 days;
+    uint256 public constant MIN_PUBLIC_DURATION = 0 days;
+    uint256 public constant MAX_PUBLIC_DURATION = 60 days;
 
     // minimum length of whole offer
-    uint256 public constant MIN_OFFER_DURATION_DAYS = 1 days;
+    uint256 public constant MIN_OFFER_DURATION = 1 days;
     // quarter should be enough for everyone
-    uint256 public constant MAX_OFFER_DURATION_DAYS = 90 days;
+    uint256 public constant MAX_OFFER_DURATION = 90 days;
 
-    uint256 public constant MIN_SIGNING_DURATION_DAYS = 14 days;
-    uint256 public constant MAX_SIGNING_DURATION_DAYS = 30 days;
+    uint256 public constant MIN_SIGNING_DURATION = 14 days;
+    uint256 public constant MAX_SIGNING_DURATION = 30 days;
 
-    uint256 public constant MIN_CLAIM_DURATION_DAYS = 7 days;
-    uint256 public constant MAX_CLAIM_DURATION_DAYS = 30 days;
+    uint256 public constant MIN_CLAIM_DURATION = 7 days;
+    uint256 public constant MAX_CLAIM_DURATION = 30 days;
 
     ////////////////////////
     // Public Function
@@ -92,11 +83,11 @@ contract PlatformTerms is Math {
         return decimalFraction(amount, PLATFORM_FEE_FRACTION);
     }
 
-    function equityTokensToShares(uint256 amount)
-        public
-        pure
-        returns (uint256)
-    {
-        return divRound(amount, EQUITY_TOKENS_PER_SHARE);
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x95482babc4e32de6c4dc3910ee7ae62c8e427efde6bc4e9ce0d6d93e24c39323, 0);
     }
 }

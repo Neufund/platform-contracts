@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "../Standards/ITokenController.sol";
+import "../Standards/IContractId.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../AccessRoles.sol";
 import "../KnownInterfaces.sol";
@@ -16,6 +17,7 @@ import "../Identity/IIdentityRegistry.sol";
 /// @dev if contracts are replaced in universe, `applySettings` function must be called
 contract EuroTokenController is
     ITokenController,
+    IContractId,
     AccessControlled,
     AccessRoles,
     IdentityRecord,
@@ -237,6 +239,14 @@ contract EuroTokenController is
         }
         IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0xddc22bc86ca8ebf8229756d3fd83791c143630f28e301fef65bbe3070a377f2a, 0);
     }
 
     ////////////////////////

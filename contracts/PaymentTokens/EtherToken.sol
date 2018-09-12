@@ -3,16 +3,20 @@ pragma solidity 0.4.24;
 import "../AccessControl/AccessControlled.sol";
 import "../Reclaimable.sol";
 import "../IsContract.sol";
+import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
+import "../Standards/IContractId.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../Zeppelin/StandardToken.sol";
 
 
 contract EtherToken is
     IsContract,
+    IContractId,
     AccessControlled,
     StandardToken,
+    IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
     Reclaimable
@@ -106,8 +110,6 @@ contract EtherToken is
     {
         // must send at least what is in msg.value to being another deposit function
         require(amount >= msg.value);
-        // must send to simple address
-        require(!isContract(sendTo));
         if (amount > msg.value) {
             uint256 withdrawRemainder = amount - msg.value;
             withdrawPrivate(withdrawRemainder);
@@ -147,6 +149,14 @@ contract EtherToken is
         // forbid reclaiming ETH hold in this contract.
         require(token != RECLAIM_ETHER);
         Reclaimable.reclaim(token);
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x75b86bc24f77738576716a36431588ae768d80d077231d1661c2bea674c6373a, 0);
     }
 
     ////////////////////////

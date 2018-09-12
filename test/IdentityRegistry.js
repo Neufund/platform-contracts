@@ -3,7 +3,7 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import { referenceClaims, deserializeClaims } from "./helpers/identityClaims";
-import { toBytes32 } from "./helpers/constants";
+import { contractId, toBytes32 } from "./helpers/constants";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
 const TestUpdatedIdentityRecord = artifacts.require("TestUpdatedIdentityRecord");
@@ -80,6 +80,11 @@ contract(
       expect(event.args.oldClaims).to.be.bytes32(oldClaims);
       expect(event.args.newClaims).to.be.bytes32(newClaims);
     }
+
+    it("should deploy", async () => {
+      await prettyPrintGasCost("IdentityRegistry deploy", identityRegistry);
+      expect((await identityRegistry.contractId())[0]).to.eq(contractId("IdentityRegistry"));
+    });
 
     it("should set claims", async () => {
       const newClaims = toBytes32("0x10298A90192083091920F90192809380");

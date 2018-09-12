@@ -3,6 +3,7 @@ pragma solidity 0.4.24;
 import "../AccessControl/AccessControlled.sol";
 import "../Reclaimable.sol";
 import "../IsContract.sol";
+import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223LegacyCallback.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
@@ -13,6 +14,7 @@ contract ICBMEtherToken is
     IsContract,
     AccessControlled,
     StandardToken,
+    IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
     Reclaimable

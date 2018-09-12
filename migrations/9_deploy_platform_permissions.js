@@ -19,6 +19,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const neumarkAddress = await universe.neumark();
     const tokenOracleAddress = await universe.tokenExchangeRateOracle();
     const gasExchangeAddress = await universe.gasExchange();
+    const euroLockAddress = await universe.euroLock();
+    const euroTokenAddress = await universe.euroToken();
 
     if (!CONFIG.ISOLATED_UNIVERSE) {
       console.log("drop permissions from icbm contracts");
@@ -46,6 +48,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       { subject: CONFIG.addresses.EURT_LEGAL_MANAGER, role: roles.eurtLegalManager },
       // global role for euro token deposit manager
       { subject: CONFIG.addresses.EURT_DEPOSIT_MANAGER, role: roles.eurtDepositManager },
+      // euro lock may create deposits during euro token migration
+      { subject: euroLockAddress, role: roles.eurtDepositManager, object: euroTokenAddress },
       {
         subject: CONFIG.addresses.TOKEN_RATE_ORACLE,
         role: roles.tokenRateOracle,

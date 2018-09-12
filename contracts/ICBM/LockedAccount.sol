@@ -1,6 +1,7 @@
 pragma solidity 0.4.24;
 
 import "../Universe.sol";
+import "../Agreement.sol";
 import "./ICBMRoles.sol";
 import "../PaymentTokens/EtherToken.sol";
 import "../PaymentTokens/EuroToken.sol";
@@ -8,35 +9,26 @@ import "../MigrationSource.sol";
 import "./ICBMLockedAccount.sol";
 import "./ICBMLockedAccountMigration.sol";
 import "../Standards/IERC677Callback.sol";
+import "../Standards/IContractId.sol";
 import "../Reclaimable.sol";
 import "../KnownInterfaces.sol";
 import "../Serialization.sol";
 import "../Identity/IIdentityRegistry.sol";
-import "../ETO/ICommitment.sol";
 
 
 contract LockedAccount is
-    AccessControlled,
-    ICBMRoles,
+    Agreement,
     Math,
     Serialization,
-    // MigrationSource,
     ICBMLockedAccountMigration,
     IdentityRecord,
     KnownInterfaces,
-    Reclaimable
+    Reclaimable,
+    IContractId
 {
     ////////////////////////
     // Type declarations
     ////////////////////////
-
-    /// state space of LockedAccount
-    enum LockState {
-        // funds may be unlocked and invested, final state
-        AcceptingUnlocks,
-        // funds may be unlocked by investors, without any constraints, final state
-        ReleaseAll
-    }
 
     /// represents locked account of the investor
     struct Account {
@@ -81,6 +73,9 @@ contract LockedAccount is
     // icbm locked account which is migration source
     ICBMLockedAccount private MIGRATION_SOURCE;
 
+    // old payment token
+    IERC677Token private OLD_PAYMENT_TOKEN;
+
     ////////////////////////
     // Mutable state
     ////////////////////////
@@ -91,14 +86,11 @@ contract LockedAccount is
     // total number of locked investors
     uint256 internal _totalInvestors;
 
-    // current state of the locking contract
-    LockState private _lockState;
-
     // all accounts
     mapping(address => Account) internal _accounts;
 
     // tracks investment to be able to control refunds (commitment => investor => account)
-    mapping(address => mapping(address => Account)) internal _investments;
+    mapping(address => mapping(address => Account)) internal _commitments;
 
     // account migration destinations
     mapping(address => Destination[]) private _destinations;
@@ -109,12 +101,12 @@ contract LockedAccount is
 
     /// @notice logged when funds are committed to token offering
     /// @param investor address
-    /// @param tokeOffering commitment contract where funds were sent
+    /// @param commitment commitment contract where funds were sent
     /// @param amount amount of invested funds
     /// @param amount of corresponging Neumarks that successful offering will "unlock"
     event LogFundsCommitted(
         address indexed investor,
-        address indexed tokeOffering,
+        address indexed commitment,
         uint256 amount,
         uint256 neumarks
     );
@@ -143,19 +135,19 @@ contract LockedAccount is
     /// @param oldInvestor current address
     /// @param newInvestor destination address
     /// @dev see move function for comments
-    event LogInvestorMoved(
+    /*event LogInvestorMoved(
         address indexed oldInvestor,
         address indexed newInvestor
-    );
+    );*/
 
     /// @notice logged when funds are locked as a refund by commitment contract
     /// @param investor address of refunded investor
-    /// @param refundedBy commitment contract sending the refund
+    /// @param commitment commitment contract sending the refund
     /// @param amount refund amount
     /// @param amount of neumarks corresponding to the refund
     event LogFundsRefunded(
         address indexed investor,
-        address indexed refundedBy,
+        address indexed commitment,
         uint256 amount,
         uint256 neumarks
     );
@@ -173,19 +165,6 @@ contract LockedAccount is
         address paymentToken
     );
 
-    /// @notice logs Locked Account state transitions
-    event LogLockStateTransition(
-        LockState oldState,
-        LockState newState
-    );
-
-    event LogInvestorMigrated(
-        address indexed investor,
-        uint256 amount,
-        uint256 neumarks,
-        uint256 unlockDate
-    );
-
     event LogMigrationDestination(
         address indexed investor,
         address indexed destination,
@@ -196,14 +175,9 @@ contract LockedAccount is
     // Modifiers
     ////////////////////////
 
-    modifier onlyState(LockState state) {
-        require(_lockState == state);
-        _;
-    }
-
     modifier onlyIfCommitment(address commitment) {
         // is allowed token offering
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment));
+        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment), "LOCKED_ONLY_COMMITMENT");
         _;
     }
 
@@ -221,13 +195,13 @@ contract LockedAccount is
         IERC223Token paymentToken,
         ICBMLockedAccount migrationSource
     )
-        AccessControlled(universe.accessPolicy())
-        // MigrationSource(policy, ROLE_LOCKED_ACCOUNT_ADMIN)
+        Agreement(universe.accessPolicy(), universe.forkArbiter())
         Reclaimable()
         public
     {
         PAYMENT_TOKEN = paymentToken;
         MIGRATION_SOURCE = migrationSource;
+        OLD_PAYMENT_TOKEN = MIGRATION_SOURCE.assetToken();
         UNIVERSE = universe;
         NEUMARK = neumark;
         LOCK_PERIOD = migrationSource.lockPeriod();
@@ -238,18 +212,18 @@ contract LockedAccount is
     // Public functions
     ////////////////////////
 
-    /// @notice invests funds in one of offerings on the platform
+    /// @notice commits funds in one of offerings on the platform
     /// @param commitment commitment contract with token offering
     /// @param amount amount of funds to invest
+    /// @dev data ignored, to keep compatibility with ERC223
     /// @dev happens via ERC223 transfer and callback
-    function invest(ICommitment commitment,  uint112 amount)
+    function transfer(address commitment, uint256 amount, bytes /*data*/)
         public
-        onlyState(LockState.AcceptingUnlocks)
         onlyIfCommitment(commitment)
     {
-        require(amount > 0);
+        require(amount > 0, "LOCKED_NO_ZERO");
         Account storage account = _accounts[msg.sender];
-        require(account.balance >= amount);
+        require(account.balance >= amount, "LOCKED_NO_FUNDS");
         // calculate unlocked NEU as proportion of invested amount to account balance
         uint112 unlockedNmkUlps = uint112(
             proportion(
@@ -258,12 +232,12 @@ contract LockedAccount is
                 account.balance
             )
         );
-        account.balance = subBalance(account.balance, amount);
+        account.balance = subBalance(account.balance, uint112(amount));
         // will not overflow as amount < account.balance so unlockedNmkUlps must be >= account.neumarksDue
         account.neumarksDue -= unlockedNmkUlps;
         // track investment
-        Account storage investment = _investments[address(commitment)][msg.sender];
-        investment.balance += amount;
+        Account storage investment = _commitments[address(commitment)][msg.sender];
+        investment.balance += uint112(amount);
         investment.neumarksDue += unlockedNmkUlps;
         // invest via ERC223 interface
         assert(PAYMENT_TOKEN.transfer(commitment, amount, abi.encodePacked(msg.sender)));
@@ -284,13 +258,12 @@ contract LockedAccount is
     ///     allows to unlock and allow neumarks to be burned in one transaction
     function receiveApproval(address from, uint256, address _token, bytes _data)
         public
-        onlyState(LockState.AcceptingUnlocks)
         returns (bool)
     {
         require(msg.sender == _token);
         require(_data.length == 0);
         // only from neumarks
-        require(_token == address(NEUMARK));
+        require(_token == address(NEUMARK), "ONLY_NEU");
         // this will check if allowance was made and if _amount is enough to
         //  unlock, reverts on any error condition
         unlockInvestor(from);
@@ -301,9 +274,10 @@ contract LockedAccount is
     /// @param newInvestor where to move funds and obligations
     /// @dev destination account must be empty. method intended for easy migration or way out of unsuccessful migration
     /// @dev receiving refunds to old address will not be possible. those will remain in commitment contract
-    function move(address newInvestor)
+    /*function move(address newInvestor)
         public
     {
+        // todo: prevent move when there is unclaimed/unrefunded investment or remove this method
         // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(newInvestor));
@@ -318,24 +292,24 @@ contract LockedAccount is
         delete _accounts[msg.sender];
         emit LogInvestorMoved(msg.sender, newInvestor);
         emit LogFundsLocked(newInvestor, newAccount.balance, newAccount.neumarksDue);
-    }
+    }*/
 
     /// @notice refunds investor in case of failed offering
     /// @param investor funds owner
-    /// @dev callable only by ETO contract, bookkeeping in LockedAccount::_investments
+    /// @dev callable only by ETO contract, bookkeeping in LockedAccount::_commitments
     /// @dev expected that ETO makes allowance for transferFrom
     function refunded(address investor)
         public
     {
-        Account memory investment = _investments[msg.sender][investor];
+        Account memory investment = _commitments[msg.sender][investor];
         // return silently when there is no refund (so commitment contracts can blank-call, less gas used)
         if (investment.balance == 0)
             return;
         // free gas here
-        delete _investments[msg.sender][investor];
+        delete _commitments[msg.sender][investor];
         Account storage account = _accounts[investor];
         // account must exist
-        assert(account.unlockDate > 0);
+        require(account.unlockDate > 0, "LOCKED_ACCOUNT_LIQUIDATED");
         // add refunded amount
         account.balance = addBalance(account.balance, investment.balance);
         account.neumarksDue = add112(account.neumarksDue, investment.neumarksDue);
@@ -347,17 +321,16 @@ contract LockedAccount is
     /// @notice may be used by commitment contract to refund gas for commitment bookkeeping
     /// @dev https://gastoken.io/ (15000 - 900 for a call)
     function claimed(address investor) public {
-        delete _investments[msg.sender][investor];
+        delete _commitments[msg.sender][investor];
     }
 
-    /// checks the amount of investment made from locked account
-    /// @dev caller is an ETO
-    function investment(address commitment, address investor)
+    /// checks commitments made from locked account that were not settled by ETO via refunded or claimed functions
+    function pendingCommitments(address commitment, address investor)
         public
         constant
         returns (uint256 balance, uint256 neumarkDue)
     {
-        Account storage i = _investments[commitment][investor];
+        Account storage i = _commitments[commitment][investor];
         return (i.balance, i.neumarksDue);
     }
 
@@ -373,6 +346,7 @@ contract LockedAccount is
     )
         public
         onlyMigrationSource()
+        acceptAgreement(investor)
     {
         // internally we use 112 bits to store amounts
         require(balance256 < 2**112);
@@ -382,18 +356,15 @@ contract LockedAccount is
         require(unlockDate256 < 2**32);
         uint32 unlockDate = uint32(unlockDate256);
 
-        IERC677Token oldToken = MIGRATION_SOURCE.assetToken();
         // transfer assets
-        require(oldToken.transferFrom(msg.sender, address(this), balance));
-        // withdraw - this is common method so just cast to any concrete token
-        // TODO: create withdrawable interface...
-        EtherToken(oldToken).withdraw(balance);
+        require(OLD_PAYMENT_TOKEN.transferFrom(msg.sender, address(this), balance));
+        IWithdrawableToken(OLD_PAYMENT_TOKEN).withdraw(balance);
         // migrate previous asset token depends on token type, unfortunatelly deposit function differs so we have to cast. this is weak...
         if (PAYMENT_TOKEN == UNIVERSE.etherToken()) {
             // after EtherToken withdraw, deposit ether into new token
             EtherToken(PAYMENT_TOKEN).deposit.value(balance)();
         } else {
-            EuroToken(PAYMENT_TOKEN).deposit(this, balance);
+            EuroToken(PAYMENT_TOKEN).deposit(this, balance, 0x0);
         }
         Destination[] storage destinations = _destinations[investor];
         if (destinations.length == 0) {
@@ -427,10 +398,12 @@ contract LockedAccount is
             assert(balance == 0);
             assert(neumarksDue == 0);
         }
-        emit LogInvestorMigrated(investor, balance, neumarksDue, unlockDate);
     }
 
-    function setInvestorMigrationWallet(address wallet)
+    /// @notice changes migration destination for msg.sender
+    /// @param destinationWallet where migrate funds to, must have valid verification claims
+    /// @dev msg.sender has funds in old icbm wallet and calls this function on new icbm wallet before s/he migrates
+    function setInvestorMigrationWallet(address destinationWallet)
         public
     {
         Destination[] storage destinations = _destinations[msg.sender];
@@ -439,7 +412,7 @@ contract LockedAccount is
             delete _destinations[msg.sender];
         }
         // new destination for the whole amount
-        addDestination(destinations, wallet, 0);
+        addDestination(destinations, destinationWallet, 0);
     }
 
     function setInvestorMigrationWallets(address[] wallets, uint112[] amounts)
@@ -471,46 +444,22 @@ contract LockedAccount is
     }
 
     //
-    // Overrides migration source
+    // Implements IContractId
     //
 
-    /// enables migration to new LockedAccount instance
-    /// it can be set only once to prevent setting temporary migrations that let
-    /// just one investor out
-    /*function enableMigration(IMigrationTarget migration)
-        public
-        onlyState(LockState.AcceptingUnlocks)
-    {
-        // will enforce other access controls
-        MigrationSource.enableMigration(migration);
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x15fbe12e85e3698f22c35480f7c66bc38590bb8cfe18cbd6dc3d49355670e561, 0);
     }
 
-    /// migrates single investor
-    function migrate()
+    //
+    // Payable default function to receive ether during migration
+    //
+    function ()
         public
-        onlyMigrationEnabled()
+        payable
     {
-        // migrates
-        Account memory account = _accounts[msg.sender];
-
-        // return on non existing accounts silently
-        if (account.balance == 0) {
-            return;
-        }
-
-        // this will clear investor storage
-        removeInvestor(msg.sender, account.balance);
-
-        // let migration target to own asset balance that belongs to investor
-        assert(PAYMENT_TOKEN.approve(address(_migration), account.balance));
-        LockedAccountMigration(_migration).migrateInvestor(
-            msg.sender,
-            account.balance,
-            account.neumarksDue,
-            account.unlockDate
-        );
-        emit LogInvestorMigrated(msg.sender, account.balance, account.neumarksDue, account.unlockDate);
-    }*/
+        require(msg.sender == address(OLD_PAYMENT_TOKEN));
+    }
 
     //
     // Overrides Reclaimable
@@ -523,7 +472,7 @@ contract LockedAccount is
         public
     {
         // forbid reclaiming locked tokens
-        require(token != PAYMENT_TOKEN);
+        require(token != PAYMENT_TOKEN, "NO_PAYMENT_TOKEN_RECLAIM");
         Reclaimable.reclaim(token);
     }
 
@@ -572,14 +521,6 @@ contract LockedAccount is
         return (account.balance, account.neumarksDue, account.unlockDate);
     }
 
-    function lockState()
-        public
-        constant
-        returns (LockState)
-    {
-        return _lockState;
-    }
-
     function totalLockedAmount()
         public
         constant
@@ -617,8 +558,8 @@ contract LockedAccount is
         private
         returns (uint112)
     {
-        _totalLockedAmount = add112(_totalLockedAmount, amount);
-        return add112(balance, amount);
+        _totalLockedAmount = sub112(_totalLockedAmount, amount);
+        return sub112(balance, amount);
     }
 
     function removeInvestor(address investor, uint112 balance)
@@ -629,20 +570,11 @@ contract LockedAccount is
         delete _accounts[investor];
     }
 
-    function changeState(LockState newState)
-        private
-    {
-        assert(newState != _lockState);
-        emit LogLockStateTransition(_lockState, newState);
-        _lockState = newState;
-    }
-
     /// @notice unlocks 'investor' tokens by making them withdrawable from paymentToken
     /// @dev expects number of neumarks that is due on investor's account to be approved for LockedAccount for transfer
     /// @dev there are 3 unlock modes depending on contract and investor state
     ///     in 'AcceptingUnlocks' state Neumarks due will be burned and funds transferred to investors address in paymentToken,
     ///         before unlockDate, penalty is deduced and distributed
-    ///     in 'ReleaseAll' neumarks are not burned and unlockDate is not observed, funds are unlocked unconditionally
     function unlockInvestor(address investor)
         private
     {
@@ -656,31 +588,25 @@ contract LockedAccount is
         // remove investor account before external calls
         removeInvestor(investor, accountInMem.balance);
 
-        // Neumark burning and penalty processing only in AcceptingUnlocks state
-        if (_lockState == LockState.AcceptingUnlocks) {
-            // transfer Neumarks to be burned to itself via allowance mechanism
-            //  not enough allowance results in revert which is acceptable state so 'require' is used
-            require(NEUMARK.transferFrom(investor, address(this), accountInMem.neumarksDue));
+        // transfer Neumarks to be burned to itself via allowance mechanism
+        //  not enough allowance results in revert which is acceptable state so 'require' is used
+        require(NEUMARK.transferFrom(investor, address(this), accountInMem.neumarksDue));
 
-            // burn neumarks corresponding to unspent funds
-            NEUMARK.burn(accountInMem.neumarksDue);
+        // burn neumarks corresponding to unspent funds
+        NEUMARK.burn(accountInMem.neumarksDue);
 
-            // take the penalty if before unlockDate
-            if (block.timestamp < accountInMem.unlockDate) {
-                address penaltyDisbursalAddress = UNIVERSE.feeDisbursal();
-                require(penaltyDisbursalAddress != address(0));
-                uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
-                // distribution via ERC223 to contract or simple address
-                assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, ""));
-                emit LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
-                accountInMem.balance -= penalty;
-            }
-        }
-        if (_lockState == LockState.ReleaseAll) {
-            accountInMem.neumarksDue = 0;
+        // take the penalty if before unlockDate
+        if (block.timestamp < accountInMem.unlockDate) {
+            address penaltyDisbursalAddress = UNIVERSE.feeDisbursal();
+            require(penaltyDisbursalAddress != address(0));
+            uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
+            // distribution via ERC223 to contract or simple address
+            assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, ""));
+            emit LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
+            accountInMem.balance -= penalty;
         }
         // transfer amount back to investor - now it can withdraw
-        assert(PAYMENT_TOKEN.transfer(investor, accountInMem.balance));
+        assert(PAYMENT_TOKEN.transfer(investor, accountInMem.balance, ""));
         emit LogFundsUnlocked(investor, accountInMem.balance, accountInMem.neumarksDue);
     }
 
@@ -717,7 +643,7 @@ contract LockedAccount is
     {
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
-        require(claims.isVerified && !claims.accountFrozen);
+        require(claims.isVerified && !claims.accountFrozen, "DEST_VERIFICATION");
 
         destinations.push(
             Destination({investor: wallet, amount: amount})

@@ -1,7 +1,37 @@
-// import { expect } from "chai";
+import { expect } from "chai";
+import { deployUniverse } from "../helpers/deployContracts";
+import { contractId } from "../helpers/constants";
+import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { GovState } from "../helpers/govState";
 
-contract("PlaceholderEquityTokenController", ([_]) => {
-  it("should deploy and check initial state");
+const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
+
+contract("PlaceholderEquityTokenController", ([_, admin, company]) => {
+  let universe;
+  // let accessPolicy;
+  let tokenController;
+
+  beforeEach(async () => {
+    [universe] = await deployUniverse(admin, admin);
+    tokenController = await PlaceholderEquityTokenController.new(universe.address, company);
+  });
+
+  it("should deploy and check initial state", async () => {
+    await prettyPrintGasCost("PlaceholderEquityTokenController deploy", tokenController);
+    expect(await tokenController.state()).to.be.bignumber.eq(GovState.Setup);
+    const shareholderInfo = await tokenController.shareholderInformation();
+    for (const v of shareholderInfo) {
+      expect(v).to.be.bignumber.eq(0);
+    }
+    const capTable = await tokenController.capTable();
+    expect(capTable[0].length).to.eq(0);
+    expect(capTable[1].length).to.eq(0);
+    expect(capTable[2].length).to.eq(0);
+    expect((await tokenController.contractId())[0]).to.eq(
+      contractId("PlaceholderEquityTokenController"),
+    );
+  });
+
   // startResolution, executeResolution, closeCompany, cancelCompanyClosing
   it("reverts on voting rights");
   // tokenFallback is used to pay dividend in full implementation
@@ -24,7 +54,7 @@ contract("PlaceholderEquityTokenController", ([_]) => {
   it("should allow changing token controller");
 
   // a set of IETOCommitmentObserver tests where mocked IETOCommitment impl. will be required
-  // for each test all state data should be obtained from the contract and compated to what we want
+  // for each test all state data should be obtained from the contract and compared to what we want
   it("should register ETO start");
   it("rejects register ETO start from ETO not in universe");
 

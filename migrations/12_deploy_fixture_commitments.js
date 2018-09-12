@@ -10,7 +10,9 @@ const deployWhitelist = require("./deployETO").deployWhitelist;
 const prepareEtoTerms = require("./configETOFixtures").prepareEtoTerms;
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
+const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
+const promisify = require("../test/helpers/evmCommands").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -53,15 +55,86 @@ module.exports = function deployContracts(deployer, network, accounts) {
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
       // write eto fixtures description
-      const desc = await describeETO(etoCommitment, etoTerms, await etoCommitment.state());
+      const desc = await describeETO(
+        CONFIG,
+        fas,
+        etoCommitment,
+        etoTerms,
+        await etoCommitment.state(),
+      );
       describedETOs[etoCommitment.address] = stringify(desc);
     }
 
-    const path = join(__dirname, "../build/eto_fixtures.json");
-    fs.writeFile(path, JSON.stringify(describedETOs, null, 2), err => {
+    const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
+    fs.writeFile(etoFixturesPath, JSON.stringify(describedETOs, null, 2), err => {
       if (err) throw new Error(err);
     });
-    console.log(`ETOs described in ${path}`);
+    console.log(`ETOs described in ${etoFixturesPath}`);
+
+    const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
+    const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
+    const ICBMEtherToken = artifacts.require(CONFIG.artifacts.ICBM_ETHER_TOKEN);
+    const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
+    const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
+    const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
+    const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
+    const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
+
+    const euroToken = await EuroToken.at(await universe.euroToken());
+    const etherToken = await EtherToken.at(await universe.etherToken());
+    const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
+    const euroLock = await LockedAccount.at(await universe.euroLock());
+    const etherLock = await LockedAccount.at(await universe.etherLock());
+    const neumark = await Neumark.at(await universe.neumark());
+    const icbmEuroLock = await ICBMLockedAccount.at(await universe.icbmEuroLock());
+    const icbmEtherLock = await ICBMLockedAccount.at(await universe.icbmEtherLock());
+    const icbmEuroToken = await ICBMEuroToken.at(await icbmEuroLock.assetToken());
+    const icbmEtherToken = await ICBMEtherToken.at(await icbmEtherLock.assetToken());
+
+    const describeFixture = async address => {
+      // get balances: ETH, neu, euro tokens, ethertokens
+      const ethBalance = await promisify(web3.eth.getBalance)(address);
+      const neuBalance = await neumark.balanceOf(address);
+      const euroBalance = await euroToken.balanceOf(address);
+      const ethTokenBalance = await etherToken.balanceOf(address);
+      const icbmEuroBalance = await icbmEuroToken.balanceOf(address);
+      const icbmEthTokenBalance = await icbmEtherToken.balanceOf(address);
+      // get statuses of locked accounts
+      const euroLockBalance = await euroLock.balanceOf(address);
+      const etherLockBalance = await etherLock.balanceOf(address);
+      const icbmEuroLockBalance = await icbmEuroLock.balanceOf(address);
+      const icbmEtherLockBalance = await icbmEtherLock.balanceOf(address);
+      // get identity claims
+      const identityClaims = await identityRegistry.getClaims(address);
+
+      return {
+        ethBalance,
+        neuBalance,
+        euroBalance,
+        ethTokenBalance,
+        icbmEuroBalance,
+        icbmEthTokenBalance,
+        euroLockBalance,
+        etherLockBalance,
+        icbmEuroLockBalance,
+        icbmEtherLockBalance,
+        identityClaims,
+      };
+    };
+
+    const describedFixtures = {};
+    for (const f of Object.keys(fas)) {
+      const desc = await describeFixture(fas[f].address);
+      desc.name = f;
+      desc.type = fas[f].type;
+      describedFixtures[fas[f].address] = stringify(desc);
+    }
+
+    const fixturesPath = join(__dirname, "../build/fixtures.json");
+    fs.writeFile(fixturesPath, JSON.stringify(describedFixtures, null, 2), err => {
+      if (err) throw new Error(err);
+    });
+    console.log(`Fixtures described in ${fixturesPath}`);
   });
 };
 
@@ -93,7 +166,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
 
   const whitelist = [
     { address: fas.INV_HAS_EUR_HAS_KYC.address, discountAmount: 0, priceFrac: 1 },
-    { address: fas.INV_ETH_EUR_ICBM_HAS_KYC.address, discountAmount: 500000, priceFrac: 0.5 },
+    { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, discountAmount: 500000, priceFrac: 0.5 },
   ];
   await deployWhitelist(artifacts, CONFIG, etoCommitment.address, whitelist);
   if (final === CommitmentState.Setup) {
@@ -112,7 +185,22 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
-  // todo: invest from whitelist
+  await investAmount(
+    fas.INV_HAS_EUR_HAS_KYC.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    Q18.mul(1.71621),
+    "ETH",
+  );
+  await investICBMAmount(
+    fas.INV_ICBM_EUR_M_HAS_KYC.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    Q18.mul(768),
+    "EUR",
+  );
   if (final === CommitmentState.Whitelist) {
     return etoCommitment;
   }
@@ -121,7 +209,14 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
-  // todo: public investments
+  await investICBMAmount(
+    fas.INV_ICBM_ETH_M_HAS_KYC.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    Q18.mul(3.71621),
+    "ETH",
+  );
   if (final === CommitmentState.Public) {
     return etoCommitment;
   }
@@ -188,22 +283,38 @@ async function ensureState(etoCommitment, requiredState) {
 }
 
 async function investAmount(investor, CONFIG, universe, etoCommitment, amount, currency) {
+  console.log(`deposit ${investor} ${amount} ${currency}`);
+  let token;
   if (currency === "EUR") {
     const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
-    const euroToken = await EuroToken.at(await universe.euroToken());
-    console.log(`deposit ${investor} ${amount}`);
-    await euroToken.deposit(investor, amount);
-    console.log("transfer");
-    await euroToken.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
-      from: investor,
-    });
-    console.log("transfer done");
+    token = await EuroToken.at(await universe.euroToken());
+    await token.deposit(investor, amount, "0x0");
   } else {
-    throw new Error("currency not impl");
+    const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
+    token = await EtherToken.at(await universe.etherToken());
+    await token.deposit({ from: investor, value: amount });
   }
+  await token.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
+    from: investor,
+  });
 }
 
-async function describeETO(etoCommitment, etoDefinition, state, whitelist, investors) {
+async function investICBMAmount(investor, CONFIG, universe, etoCommitment, amount, currency) {
+  console.log(`ICBM wallet ${investor} ${amount} ${currency}`);
+  const LockedAccount = artifacts.require(CONFIG.artifacts.LOCKED_ACCOUNT);
+  let wallet;
+  if (currency === "EUR") {
+    wallet = await LockedAccount.at(await universe.euroLock());
+  } else {
+    wallet = await LockedAccount.at(await universe.etherLock());
+  }
+  console.log(amount);
+  await wallet.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
+    from: investor,
+  });
+}
+
+async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
   const desc = {
     address: etoCommitment.address,
     name: etoDefinition.name,
@@ -213,11 +324,24 @@ async function describeETO(etoCommitment, etoDefinition, state, whitelist, inves
     company: await etoCommitment.companyLegalRep(),
     definition: etoDefinition,
   };
-  if (whitelist) {
-    desc.whitelist = whitelist;
+  const whitelist = {};
+  const investors = {};
+  const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
+  const etoTerms = await ETOTerms.at(await etoCommitment.etoTerms());
+  for (const addr of Object.keys(fas)) {
+    const f = fas[addr];
+    if (f.type === "investor" && f.verified) {
+      const ticket = await etoCommitment.investorTicket(f.address);
+      if (ticket[0] > 0) {
+        investors[f.address] = ticket;
+      }
+    }
+    const wl = await etoTerms.whitelistTicket(f.address);
+    if (wl[0]) {
+      whitelist[f.address] = wl;
+    }
   }
-  if (investors) {
-    desc.investors = investors;
-  }
+  desc.whitelist = whitelist;
+  desc.investors = investors;
   return desc;
 }

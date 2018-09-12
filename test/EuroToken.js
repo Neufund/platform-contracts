@@ -21,7 +21,9 @@ import {
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
 import { identityClaims } from "./helpers/identityClaims";
-import { ZERO_ADDRESS, toBytes32, Q18 } from "./helpers/constants";
+import { ZERO_ADDRESS, toBytes32, Q18, contractId } from "./helpers/constants";
+import createAccessPolicy from "./helpers/createAccessPolicy";
+import roles from "./helpers/roles";
 
 const EuroToken = artifacts.require("EuroToken");
 const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
@@ -30,15 +32,18 @@ const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
 
+const defaultDepositRef = toBytes32(0x123);
+
 contract(
   "EuroToken",
   ([_, masterManager, depositManager, eurtLegalManager, gasExchange, ...investors]) => {
     let accessControl;
+    let forkArbiter;
     let euroToken;
     let universe;
 
     before(async () => {
-      [universe, accessControl] = await deployUniverse(masterManager, masterManager);
+      [universe, accessControl, forkArbiter] = await deployUniverse(masterManager, masterManager);
       await universe.setSingleton(knownInterfaces.gasExchange, gasExchange, {
         from: masterManager,
       });
@@ -61,11 +66,12 @@ contract(
         );
       });
 
-      function expectDepositEvent(tx, owner, amount) {
+      function expectDepositEvent(tx, owner, amount, reference = defaultDepositRef) {
         const event = eventValue(tx, "LogDeposit");
         expect(event).to.exist;
         expect(event.args.to).to.eq(owner);
         expect(event.args.amount).to.be.bignumber.eq(amount);
+        expect(event.args.reference).to.be.bignumber.eq(reference);
       }
 
       function expectDepositEventAtIndex(tx, index, owner, amount) {
@@ -83,9 +89,22 @@ contract(
         expect(event.args.amount).to.be.bignumber.eq(amount);
       }
 
+      function expectLogWithdrawSettled(tx, from, by, amount, originalAmount, origTx, reference) {
+        const event = eventValue(tx, "LogWithdrawSettled");
+        expect(event).to.exist;
+        expect(event.args.from).to.eq(from);
+        expect(event.args.by).to.eq(by);
+        expect(event.args.amount).to.be.bignumber.eq(amount);
+        expect(event.args.originalAmount).to.be.bignumber.eq(originalAmount);
+        expect(event.args.withdrawTxHash).to.eq(origTx);
+        expect(event.args.reference).to.eq(reference);
+      }
+
       it("should deploy", async () => {
         await prettyPrintGasCost("EuroToken deploy", euroToken);
         expect(await euroToken.tokenController()).to.be.eq(tokenController.address);
+        expect((await euroToken.contractId())[0]).to.eq(contractId("EuroToken"));
+        expect((await tokenController.contractId())[0]).to.eq(contractId("EuroTokenController"));
       });
 
       it("should deposit", async () => {
@@ -99,15 +118,16 @@ contract(
             from: masterManager,
           },
         );
-        const tx = await euroToken.deposit(investors[0], initialBalance, {
+        const tx = await euroToken.deposit(investors[0], initialBalance, toBytes32(0x19872), {
           from: depositManager,
         });
-        expectDepositEvent(tx, investors[0], initialBalance);
+        expectDepositEvent(tx, investors[0], initialBalance, toBytes32(0x19872));
         expectTransferEvent(tx, ZERO_ADDRESS, investors[0], initialBalance);
         const totalSupply = await euroToken.totalSupply.call();
         expect(totalSupply).to.be.bignumber.eq(initialBalance);
         const balance = await euroToken.balanceOf(investors[0]);
         expect(balance).to.be.bignumber.eq(initialBalance);
+        expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
       });
 
       it("should reject too low deposit", async () => {
@@ -124,7 +144,7 @@ contract(
         );
 
         await expect(
-          euroToken.deposit(investors[0], initialBalance, {
+          euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
             from: depositManager,
           }),
         ).to.revert;
@@ -154,13 +174,14 @@ contract(
         const tx = await euroToken.depositMany(
           investors.slice(0, 3),
           [initialBalance1, initialBalance2, initialBalance3],
+          [0x1, 0x2, 0x3],
           {
             from: depositManager,
           },
         );
-        expectDepositEventAtIndex(tx, 0, investors[0], initialBalance1);
-        expectDepositEventAtIndex(tx, 1, investors[1], initialBalance2);
-        expectDepositEventAtIndex(tx, 2, investors[2], initialBalance3);
+        expectDepositEventAtIndex(tx, 0, investors[0], initialBalance1, 0x1);
+        expectDepositEventAtIndex(tx, 1, investors[1], initialBalance2, 0x2);
+        expectDepositEventAtIndex(tx, 2, investors[2], initialBalance3, 0x3);
         expectTransferEventAtIndex(tx, 0, ZERO_ADDRESS, investors[0], initialBalance1);
         expectTransferEventAtIndex(tx, 1, ZERO_ADDRESS, investors[1], initialBalance2);
         expectTransferEventAtIndex(tx, 2, ZERO_ADDRESS, investors[2], initialBalance3);
@@ -174,6 +195,9 @@ contract(
         expect(balance).to.be.bignumber.eq(initialBalance2);
         balance = await euroToken.balanceOf(investors[2]);
         expect(balance).to.be.bignumber.eq(initialBalance3);
+        expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
+        expect(await euroToken.agreementSignedAtBlock(investors[1])).to.be.bignumber.not.eq(0);
+        expect(await euroToken.agreementSignedAtBlock(investors[2])).to.be.bignumber.not.eq(0);
       });
 
       it("should fail deposit many if one investor has no kyc", async () => {
@@ -200,6 +224,7 @@ contract(
           euroToken.depositMany(
             investors.slice(0, 3),
             [initialBalance1, initialBalance2, initialBalance3],
+            [defaultDepositRef, defaultDepositRef, defaultDepositRef],
             {
               from: depositManager,
             },
@@ -231,6 +256,7 @@ contract(
           euroToken.depositMany(
             investors.slice(0, 2),
             [initialBalance1, initialBalance2, initialBalance3],
+            [defaultDepositRef, defaultDepositRef, defaultDepositRef],
             {
               from: depositManager,
             },
@@ -262,6 +288,7 @@ contract(
           euroToken.depositMany(
             investors.slice(0, 3),
             [initialBalance1, initialBalance2, initialBalance3],
+            [defaultDepositRef, defaultDepositRef, defaultDepositRef],
             {
               from: gasExchange,
             },
@@ -293,6 +320,7 @@ contract(
           euroToken.depositMany(
             investors.slice(0, 3),
             [initialBalance1, initialBalance2, initialBalance3],
+            [defaultDepositRef, defaultDepositRef, defaultDepositRef],
             {
               from: depositManager,
             },
@@ -311,7 +339,7 @@ contract(
             from: masterManager,
           },
         );
-        await euroToken.deposit(investors[0], initialBalance, {
+        await euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
           from: depositManager,
         });
         await identityRegistry.setClaims(
@@ -323,7 +351,7 @@ contract(
           },
         );
         await expect(
-          euroToken.deposit(investors[1], initialBalance, {
+          euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           }),
         ).to.be.rejectedWith(EvmError);
@@ -335,7 +363,7 @@ contract(
           from: eurtLegalManager,
         });
         await expect(
-          euroToken.deposit(investors[0], initialBalance, { from: gasExchange }),
+          euroToken.deposit(investors[0], initialBalance, defaultDepositRef, { from: gasExchange }),
         ).to.be.rejectedWith(EvmError);
       });
 
@@ -345,7 +373,7 @@ contract(
           from: eurtLegalManager,
         });
         await expect(
-          euroToken.deposit(ZERO_ADDRESS, initialBalance, {
+          euroToken.deposit(ZERO_ADDRESS, initialBalance, defaultDepositRef, {
             from: depositManager,
           }),
         ).to.be.rejectedWith(EvmError);
@@ -361,10 +389,10 @@ contract(
             from: masterManager,
           },
         );
-        await euroToken.deposit(from, initialBalance, {
+        await euroToken.deposit(from, initialBalance, defaultDepositRef, {
           from: depositManager,
         });
-        await euroToken.deposit(to, initialBalance, {
+        await euroToken.deposit(to, initialBalance, defaultDepositRef, {
           from: depositManager,
         });
         await euroToken.approve(gasExchange, amount, { from });
@@ -438,7 +466,7 @@ contract(
             from: masterManager,
           },
         );
-        await euroToken.deposit(investor, initialBalance, {
+        await euroToken.deposit(investor, initialBalance, defaultDepositRef, {
           from: depositManager,
         });
 
@@ -534,13 +562,13 @@ contract(
 
         // deposit should faile here
         await expect(
-          euroToken.deposit(investors[0], balance, {
+          euroToken.deposit(investors[0], balance, defaultDepositRef, {
             from: depositManager,
           }),
         ).to.revert;
       });
 
-      it("should disallow withdraw for non KYC, non bank account or with forzen account or not explicit", async () => {
+      it("should disallow withdraw for non KYC, non bank account or with frozen account or not explicit", async () => {
         const balance = etherToWei(minDepositAmountEurUlps);
 
         // make verified
@@ -554,7 +582,7 @@ contract(
         );
 
         // deposit should work
-        await euroToken.deposit(investors[0], balance, {
+        await euroToken.deposit(investors[0], balance, defaultDepositRef, {
           from: depositManager,
         });
 
@@ -633,7 +661,7 @@ contract(
 
         // deposit to first investor should not work, she is not verifed
         await expect(
-          euroToken.deposit(investors[0], balance, {
+          euroToken.deposit(investors[0], balance, defaultDepositRef, {
             from: depositManager,
           }),
         ).to.revert;
@@ -645,7 +673,7 @@ contract(
         });
 
         // verify that the new controller works by making a deposit just like that
-        await euroToken.deposit(investors[0], balance, {
+        await euroToken.deposit(investors[0], balance, defaultDepositRef, {
           from: depositManager,
         });
         const fetchedBalance = await euroToken.balanceOf(investors[0]);
@@ -677,7 +705,7 @@ contract(
         );
 
         // deposit here
-        await euroToken.deposit(investors[0], initialBalance, {
+        await euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
           from: depositManager,
         });
         const balance = await euroToken.balanceOf(investors[0]);
@@ -708,7 +736,7 @@ contract(
         );
 
         // deposit here
-        await euroToken.deposit(investors[0], balance, {
+        await euroToken.deposit(investors[0], balance, defaultDepositRef, {
           from: depositManager,
         });
 
@@ -734,7 +762,7 @@ contract(
         );
 
         // deposit here
-        await euroToken.deposit(investors[0], initialBalance, {
+        await euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
           from: depositManager,
         });
 
@@ -772,6 +800,7 @@ contract(
           etoAddress,
           initialBalance,
           "",
+          defaultDepositRef,
           {
             from: depositManager,
           },
@@ -786,6 +815,8 @@ contract(
         expect(balance).to.be.bignumber.eq(0);
         balance = await euroToken.balanceOf(etoAddress);
         expect(balance).to.be.bignumber.eq(initialBalance);
+        expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
+        expect(await euroToken.agreementSignedAtBlock(etoAddress)).to.be.bignumber.eq(0);
       });
 
       it("should reject deposit and transfer if claims are not set", async () => {
@@ -800,9 +831,16 @@ contract(
         );
 
         await expect(
-          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
-            from: depositManager,
-          }),
+          euroToken.depositAndTransfer(
+            investors[0],
+            etoAddress,
+            initialBalance,
+            "",
+            defaultDepositRef,
+            {
+              from: depositManager,
+            },
+          ),
         ).to.revert;
       });
 
@@ -828,9 +866,16 @@ contract(
         );
 
         await expect(
-          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
-            from: depositManager,
-          }),
+          euroToken.depositAndTransfer(
+            investors[0],
+            etoAddress,
+            initialBalance,
+            "",
+            defaultDepositRef,
+            {
+              from: depositManager,
+            },
+          ),
         ).to.revert;
       });
 
@@ -856,9 +901,16 @@ contract(
         );
 
         await expect(
-          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
-            from: depositManager,
-          }),
+          euroToken.depositAndTransfer(
+            investors[0],
+            etoAddress,
+            initialBalance,
+            "",
+            defaultDepositRef,
+            {
+              from: depositManager,
+            },
+          ),
         ).to.revert;
       });
 
@@ -884,10 +936,113 @@ contract(
         );
 
         await expect(
-          euroToken.depositAndTransfer(investors[0], etoAddress, initialBalance, "", {
-            from: investors[1],
-          }),
+          euroToken.depositAndTransfer(
+            investors[0],
+            etoAddress,
+            initialBalance,
+            "",
+            defaultDepositRef,
+            {
+              from: investors[1],
+            },
+          ),
         ).to.revert;
+      });
+
+      it("should accept agreement", async () => {
+        const balance = Q18.mul(11281.128901);
+        await identityRegistry.setClaims(
+          investors[0],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
+          {
+            from: masterManager,
+          },
+        );
+        await tokenController.setAllowedTransferFrom(investors[0], true, {
+          from: eurtLegalManager,
+        });
+        await tokenController.setAllowedTransferTo(investors[1], true, {
+          from: eurtLegalManager,
+        });
+        await tokenController.setAllowedTransferFrom(investors[1], true, {
+          from: eurtLegalManager,
+        });
+        await tokenController.setAllowedTransferTo(investors[2], true, {
+          from: eurtLegalManager,
+        });
+        await tokenController.setAllowedTransferTo(investors[3], true, {
+          from: eurtLegalManager,
+        });
+        await tokenController.setAllowedTransferFrom(investors[2], true, {
+          from: eurtLegalManager,
+        });
+        await euroToken.deposit(investors[0], balance, defaultDepositRef, {
+          from: depositManager,
+        });
+        // should sign at deposit
+        expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
+        await euroToken.transfer(investors[1], balance, { from: investors[0] });
+        // transfer recipient does not implicitly sign
+        expect(await euroToken.agreementSignedAtBlock(investors[1])).to.be.bignumber.eq(0);
+        await euroToken.transfer(investors[2], balance, { from: investors[1] });
+        // sender signs
+        expect(await euroToken.agreementSignedAtBlock(investors[1])).to.be.bignumber.not.eq(0);
+        await euroToken.approve(investors[0], balance, { from: investors[2] });
+        // approve signs
+        expect(await euroToken.agreementSignedAtBlock(investors[2])).to.be.bignumber.not.eq(0);
+        await euroToken.transfer(investors[3], balance, { from: investors[2] });
+
+        // also add bank account
+        await identityRegistry.setClaims(
+          investors[3],
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified | identityClaims.hasBankAccount),
+          {
+            from: masterManager,
+          },
+        );
+        await euroToken.withdraw(balance, {
+          from: investors[3],
+        });
+        // signs on withdraw
+        expect(await euroToken.agreementSignedAtBlock(investors[2])).to.be.bignumber.not.eq(3);
+      });
+
+      it("rejects amend agreement not from eurt legal manager", async () => {
+        await expect(euroToken.amendAgreement("", { from: depositManager })).to.be.rejectedWith(
+          EvmError,
+        );
+      });
+
+      it("should emit withdraw settlement event", async () => {
+        const tx = await euroToken.settleWithdraw(
+          investors[0],
+          Q18.mul(998.181),
+          Q18.mul(1000),
+          toBytes32(0x981182),
+          toBytes32(0x111626262),
+          { from: depositManager },
+        );
+        expectLogWithdrawSettled(
+          tx,
+          investors[0],
+          depositManager,
+          Q18.mul(998.181),
+          Q18.mul(1000),
+          toBytes32(0x981182),
+          toBytes32(0x111626262),
+        );
+        await expect(
+          euroToken.settleWithdraw(
+            investors[0],
+            Q18.mul(998.181),
+            Q18.mul(1000),
+            toBytes32(0x981182),
+            toBytes32(0x111626262),
+            { from: eurtLegalManager },
+          ),
+        ).to.be.rejectedWith(EvmError);
       });
     });
 
@@ -923,7 +1078,7 @@ contract(
           await tokenController.setAllowedTransferTo(0x0, true, {
             from: eurtLegalManager,
           });
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -950,7 +1105,7 @@ contract(
           await tokenController.setAllowedTransferTo(0x0, true, {
             from: eurtLegalManager,
           });
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -977,7 +1132,7 @@ contract(
           await tokenController.setAllowedTransferTo(erc667cb.address, true, {
             from: eurtLegalManager,
           });
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1007,7 +1162,7 @@ contract(
           await tokenController.setAllowedTransferTo(erc223cb.address, true, {
             from: eurtLegalManager,
           });
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1026,7 +1181,7 @@ contract(
           await tokenController.setAllowedTransferFrom(investors[0], true, {
             from: eurtLegalManager,
           });
-          await euroToken.deposit(investors[0], initialBalance, {
+          await euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1038,7 +1193,16 @@ contract(
     describe("pass through controller", () => {
       beforeEach(async () => {
         const controller = await TestEuroTokenControllerPassThrough.new();
-        euroToken = await EuroToken.new(accessControl.address, controller.address);
+        euroToken = await EuroToken.new(
+          accessControl.address,
+          forkArbiter.address,
+          controller.address,
+        );
+        await createAccessPolicy(accessControl, [
+          { subject: depositManager, role: roles.eurtDepositManager },
+          { subject: eurtLegalManager, role: roles.eurtLegalManager },
+        ]);
+        await euroToken.amendAgreement("0x0", { from: eurtLegalManager });
       });
 
       describe("IBasicToken tests", () => {
@@ -1046,7 +1210,7 @@ contract(
         const getToken = () => euroToken;
 
         beforeEach(async () => {
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1059,7 +1223,7 @@ contract(
         const getToken = () => euroToken;
 
         beforeEach(async () => {
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1075,7 +1239,7 @@ contract(
 
         beforeEach(async () => {
           erc667cb = await deployTestErc677Callback();
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1091,7 +1255,7 @@ contract(
 
         beforeEach(async () => {
           erc223cb = await deployTestErc223Callback();
-          await euroToken.deposit(investors[1], initialBalance, {
+          await euroToken.deposit(investors[1], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });
@@ -1104,7 +1268,7 @@ contract(
         const getToken = () => euroToken;
 
         beforeEach(async () => {
-          await euroToken.deposit(investors[0], initialBalance, {
+          await euroToken.deposit(investors[0], initialBalance, defaultDepositRef, {
             from: depositManager,
           });
         });

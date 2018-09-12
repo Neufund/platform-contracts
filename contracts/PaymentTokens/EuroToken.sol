@@ -1,23 +1,27 @@
 pragma solidity 0.4.24;
 
 import "../AccessControl/AccessControlled.sol";
+import "../Agreement.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../Zeppelin/StandardToken.sol";
+import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
 import "../Standards/ITokenController.sol";
+import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../AccessRoles.sol";
 
 
 contract EuroToken is
+    Agreement,
     IERC677Token,
-    AccessControlled,
     StandardToken,
+    IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
-    AccessRoles,
-    IsContract
+    IsContract,
+    IContractId
 {
     ////////////////////////
     // Constants
@@ -44,12 +48,24 @@ contract EuroToken is
     event LogDeposit(
         address indexed to,
         address by,
-        uint256 amount
+        uint256 amount,
+        bytes32 reference
     );
 
+    // proof of requested deposit initiated by token holder
     event LogWithdrawal(
         address indexed from,
         uint256 amount
+    );
+
+    // proof of settled deposit
+    event LogWithdrawSettled(
+        address from,
+        address by, // who settled
+        uint256 amount, // settled amount, after fees, negative interest rates etc.
+        uint256 originalAmount, // original amount withdrawn
+        bytes32 withdrawTxHash, // hash of withdraw transaction
+        bytes32 reference // reference number of withdraw operation at deposit manager
     );
 
     /// on destroying the tokens without withdraw (see `destroyTokens` function below)
@@ -94,9 +110,10 @@ contract EuroToken is
 
     constructor(
         IAccessPolicy accessPolicy,
+        IEthereumForkArbiter forkArbiter,
         ITokenController tokenController
     )
-        AccessControlled(accessPolicy)
+        Agreement(accessPolicy, forkArbiter)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         public
@@ -109,42 +126,55 @@ contract EuroToken is
     // Public functions
     ////////////////////////
 
-    /// @notice deposit 'amount' of EUR-T to address 'to'
+    /// @notice deposit 'amount' of EUR-T to address 'to', attaching correlating `reference` to LogDeposit event
     /// @dev deposit may happen only in case 'to' can receive transfer in token controller
     ///     by default KYC is required to receive deposits
-    function deposit(address to, uint256 amount)
+    function deposit(address to, uint256 amount, bytes32 reference)
         public
         only(ROLE_EURT_DEPOSIT_MANAGER)
         onlyIfDepositAllowed(to, amount)
+        acceptAgreement(to)
     {
         require(to != address(0));
         _balances[to] = add(_balances[to], amount);
         _totalSupply = add(_totalSupply, amount);
-        emit LogDeposit(to, msg.sender, amount);
+        emit LogDeposit(to, msg.sender, amount, reference);
         emit Transfer(address(0), to, amount);
     }
 
     /// @notice runs many deposits within one transaction
     /// @dev deposit may happen only in case 'to' can receive transfer in token controller
     ///     by default KYC is required to receive deposits
-    function depositMany(address[] to, uint256[] amount)
+    function depositMany(address[] to, uint256[] amount, bytes32[] reference)
         public
     {
         require(to.length == amount.length);
+        require(to.length == reference.length);
         for (uint256 i = 0; i < to.length; i++) {
-            deposit(to[i], amount[i]);
+            deposit(to[i], amount[i], reference[i]);
         }
     }
 
     /// @notice withdraws 'amount' of EUR-T by burning required amount and providing a proof of whithdrawal
-    /// @dev proof is provided in form of log entry. based on that proof backend will make a bank transfer
+    /// @dev proof is provided in form of log entry. based on that proof deposit manager will make a bank transfer
     ///     by default controller will check the following: KYC and existence of working bank account
     function withdraw(uint256 amount)
         public
         onlyIfWithdrawAllowed(msg.sender, amount)
+        acceptAgreement(msg.sender)
     {
         destroyTokensPrivate(msg.sender, amount);
         emit LogWithdrawal(msg.sender, amount);
+    }
+
+    /// @notice issued by deposit manager when withdraw request was settled. typicaly amount that could be settled will be lower
+    ///         than amount withdrawn: banks charge negative interest rates and various fees that must be deduced
+    ///         reference number is attached that may be used to identify withdraw operation at deposit manager
+    function settleWithdraw(address from, uint256 amount, uint256 originalAmount, bytes32 withdrawTxHash, bytes32 reference)
+        public
+        only(ROLE_EURT_DEPOSIT_MANAGER)
+    {
+        emit LogWithdrawSettled(from, msg.sender, amount, originalAmount, withdrawTxHash, reference);
     }
 
     /// @notice this method allows to destroy EUR-T belonging to any account
@@ -224,12 +254,52 @@ contract EuroToken is
     /// @param transferTo where to transfer after deposit
     /// @param amount total amount to transfer, must be <= balance after deposit
     /// @dev intended to deposit from bank account and invest in ETO
-    function depositAndTransfer(address depositTo, address transferTo, uint256 amount, bytes data)
+    function depositAndTransfer(address depositTo, address transferTo, uint256 amount, bytes data, bytes32 reference)
         public
         returns (bool success)
     {
-        deposit(depositTo, amount);
+        deposit(depositTo, amount, reference);
         return ierc223TransferInternal(depositTo, transferTo, amount, data);
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0xfb5c7e43558c4f3f5a2d87885881c9b10ff4be37e3308579c178bf4eaa2c29cd, 0);
+    }
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    /// @dev overriden to support signing of token holder agreement
+    function transferInternal(address from, address to, uint256 amount)
+        internal
+        acceptAgreement(from)
+    {
+        BasicToken.transferInternal(from, to, amount);
+    }
+
+    /// @dev overriden to support signing of token holder agreement
+    function approveInternal(address owner, address spender, uint256 amount)
+        internal
+        acceptAgreement(owner)
+    {
+        StandardToken.approveInternal(owner, spender, amount);
+    }
+
+    //
+    // Observes MAgreement internal interface
+    //
+
+    /// @notice euro token is legally represented by separate entity ROLE_EURT_LEGAL_MANAGER
+    function mCanAmend(address legalRepresentative)
+        internal
+        returns (bool)
+    {
+        return accessPolicy().allowed(legalRepresentative, ROLE_EURT_LEGAL_MANAGER, this, msg.sig);
     }
 
     ////////////////////////

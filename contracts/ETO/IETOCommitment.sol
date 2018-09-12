@@ -161,6 +161,7 @@ contract IETOCommitment is
             uint256 neuRate,
             uint256 amountEth,
             uint256 amountEurUlps,
-            bool claimOrRefundSettled
+            bool claimOrRefundSettled,
+            bool usedLockedAccount
         );
 }

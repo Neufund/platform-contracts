@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound } from "./helpers/unitConverter";
 import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
-import { Q18 } from "./helpers/constants";
+import { contractId, Q18 } from "./helpers/constants";
 
 contract("PlatformTerms", ([_, admin]) => {
   let platformTerms;
@@ -31,6 +31,7 @@ contract("PlatformTerms", ([_, admin]) => {
 
   it("should have all the constants", async () => {
     await verifyTerms(platformTerms, termsKeys, defaultTerms);
+    expect((await platformTerms.contractId())[0]).to.eq(contractId("PlatformTerms"));
   });
 
   it("should calculate platform fee correctly", async () => {
@@ -49,7 +50,4 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   it("should calculate neumark share");
-
-  // should be a set of tests with different rounding, we should be able to run it on equity token as well
-  it("should convert equity token amount to shares");
 });

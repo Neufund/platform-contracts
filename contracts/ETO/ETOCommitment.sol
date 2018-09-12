@@ -7,7 +7,6 @@ import "../Company/IEquityToken.sol";
 import "../ICBM/LockedAccount.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
-import "../Reclaimable.sol";
 import "../Math.sol";
 import "../Serialization.sol";
 
@@ -22,10 +21,10 @@ contract ETOCommitment is
     AccessControlled,
     Agreement,
     ETOTimedStateMachine,
-    Reclaimable,
     IdentityRecord,
     Math,
-    Serialization
+    Serialization,
+    IContractId
 {
 
     ////////////////////////
@@ -212,8 +211,8 @@ contract ETOCommitment is
         UNIVERSE = universe;
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
-        require(equityToken.decimals() == PLATFORM_TERMS.EQUITY_TOKENS_PRECISION());
-        require(equityToken.tokensPerShare() == PLATFORM_TERMS.EQUITY_TOKENS_PER_SHARE());
+        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
+        require(equityToken.tokensPerShare() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE());
         require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
 
@@ -316,31 +315,27 @@ contract ETOCommitment is
         withStateTransition()
         onlyStates(ETOState.Whitelist, ETOState.Public)
     {
-        require(amount < 2**96);
+        uint256 equivEurUlps = amount;
+        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
+        bool isEtherInvestment = msg.sender == address(ETHER_TOKEN);
         // we trust only tokens below
-        require(msg.sender == address(ETHER_TOKEN) || msg.sender == address(EURO_TOKEN));
+        require(isEtherInvestment || isEuroInvestment);
         // check if LockedAccount
         bool isLockedAccount = (wallet == address(ETHER_LOCK) || wallet == address(EURO_LOCK));
         address investor = wallet;
         if (isLockedAccount) {
             // data contains investor address
-            investor = decodeAddress(data); // solium-disable-line security/no-assign-params
+            investor = decodeAddress(data);
         }
-        // kick out on KYC, EURO_TOKEN will check it during transfer, so do not repeat
-        if (msg.sender == address(ETHER_TOKEN)) {
-            IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
-            require(claims.isVerified && !claims.accountFrozen);
-        }
-        bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
-        uint96 equivEurUlps;
-        // compute EUR eurEquivalent via oracle if ether
-        if (!isEuroInvestment) {
+        // kick out on KYC
+        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
+        require(claims.isVerified && !claims.accountFrozen, "ETO_INV_NOT_VER");
+        if (isEtherInvestment) {
+            // compute EUR eurEquivalent via oracle if ether
             (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
             // require if rate older than 4 hours
-            require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER);
-            equivEurUlps = uint96(decimalFraction(amount, rate));
-        } else {
-            equivEurUlps = uint96(amount);
+            require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER, "ETO_INVALID_ETH_RATE");
+            equivEurUlps = decimalFraction(amount, rate);
         }
         // agreement accepted by act of reserving funds in this function
         acceptAgreementInternal(investor);
@@ -519,7 +514,8 @@ contract ETOCommitment is
             uint256 neuRate,
             uint256 amountEth,
             uint256 amountEurUlps,
-            bool claimedOrRefunded
+            bool claimedOrRefunded,
+            bool usedLockedAccount
         )
     {
         InvestmentTicket storage ticket = _tickets[investor];
@@ -527,12 +523,21 @@ contract ETOCommitment is
         equivEurUlps = ticket.equivEurUlps;
         rewardNmkUlps = ticket.rewardNmkUlps;
         equityTokenInt = ticket.equityTokenInt;
-        sharesInt = PLATFORM_TERMS.equityTokensToShares(ticket.equityTokenInt);
+        sharesInt = ETO_TERMS.equityTokensToShares(ticket.equityTokenInt);
         tokenPrice = equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0;
         neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
         amountEth = ticket.amountEth;
         amountEurUlps = ticket.amountEurUlps;
         claimedOrRefunded = ticket.claimOrRefundSettled;
+        usedLockedAccount = ticket.usedLockedAccount;
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 0);
     }
 
     ////////////////////////
@@ -736,7 +741,7 @@ contract ETOCommitment is
         address investor,
         address wallet,
         uint256 amount,
-        uint96 equivEurUlps,
+        uint256 equivEurUlps,
         bool isEuroInvestment
     )
         private
@@ -757,7 +762,7 @@ contract ETOCommitment is
         // kick on minimum ticket
         require(equivEurUlps >= minTicketEurUlps, "ETO_MIN_TICKET");
         // kick on max ticket exceeded
-        require(ticket.equivEurUlps + equivEurUlps <= maxTicketEurUlps, "ETO_MAX_TICKET");
+        require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "ETO_MAX_TICKET");
         // kick on cap exceeded
         require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
@@ -779,14 +784,17 @@ contract ETOCommitment is
             }
         }
         // issue equity token
+        assert(equityTokenInt256 + ticket.equityTokenInt < 2**32);
+        assert(equivEurUlps + ticket.equivEurUlps < 2**96);
+        assert(amount < 2**96);
         EQUITY_TOKEN.issueTokens(uint32(equityTokenInt256));
         // update total investment
-        _totalEquivEurUlps += equivEurUlps;
+        _totalEquivEurUlps += uint96(equivEurUlps);
         _totalTokensInt += uint32(equityTokenInt256);
         _totalFixedSlotsTokensInt += uint32(fixedSlotEquityTokenInt256);
         _totalInvestors += ticket.equivEurUlps == 0 ? 1 : 0;
         // write new ticket values
-        ticket.equivEurUlps += equivEurUlps;
+        ticket.equivEurUlps += uint96(equivEurUlps);
         // uint96 is much more than 1.5 bln of NEU so no overflow
         ticket.rewardNmkUlps += uint96(investorNmk);
         ticket.equityTokenInt += uint32(equityTokenInt256);
@@ -803,9 +811,9 @@ contract ETOCommitment is
             msg.sender,
             amount,
             equivEurUlps,
-            uint32(equityTokenInt256),
+            equityTokenInt256,
             EQUITY_TOKEN,
-            uint96(investorNmk)
+            investorNmk
         );
     }
 
@@ -878,7 +886,7 @@ contract ETOCommitment is
         uint256 a = amount;
         // possible partial refund to locked account
         if (usedLockedAccount) {
-            (uint256 balance,) = lockedAccount.investment(this, investor);
+            (uint256 balance,) = lockedAccount.pendingCommitments(this, investor);
             assert(balance <= a);
             if (balance > 0) {
                 assert(token.approve(address(lockedAccount), balance));

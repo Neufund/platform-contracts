@@ -5,6 +5,7 @@ import "./Standards/ITokenExchangeRateOracle.sol";
 import "./Standards/IGasExchange.sol";
 import "./Reclaimable.sol";
 import "./Math.sol";
+import "./Standards/IContractId.sol";
 
 
 /// @title simple exchange providing EUR to ETH exchange rate and gas exchange
@@ -12,6 +13,7 @@ import "./Math.sol";
 contract SimpleExchange is
     ITokenExchangeRateOracle,
     IGasExchange,
+    IContractId,
     Reclaimable,
     Math
 {
@@ -147,6 +149,14 @@ contract SimpleExchange is
             timestamps[idx] = timestamp;
             idx += 1;
         }
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x434a1a753d1d39381c462f37c155e520ae6f86ad79289abca9cde354a0cebd68, 0);
     }
 
     //

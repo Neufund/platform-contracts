@@ -14,7 +14,7 @@ contract MigrationTarget is
 
     // intended to be applied on migration receiving function
     modifier onlyMigrationSource() {
-        require(msg.sender == currentMigrationSource());
+        require(msg.sender == currentMigrationSource(), "INV_SOURCE");
         _;
     }
 }

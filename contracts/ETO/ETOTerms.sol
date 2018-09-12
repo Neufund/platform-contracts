@@ -2,6 +2,7 @@ pragma solidity 0.4.24;
 
 import "./ETODurationTerms.sol";
 import "./ETOTokenTerms.sol";
+import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
@@ -10,7 +11,7 @@ import "../Math.sol";
 /// @title base terms of Equity Token Offering
 /// encapsulates pricing, discounts and whitelisting mechanism
 /// @dev to be split is mixins
-contract ETOTerms is Math {
+contract ETOTerms is Math, IContractId {
 
     ////////////////////////
     // Types
@@ -28,7 +29,7 @@ contract ETOTerms is Math {
     // Constants state
     ////////////////////////
 
-    bytes32 private constant EMPTY_STRING_HASH = keccak256("");
+    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
     ////////////////////////
     // Immutable state
@@ -51,9 +52,10 @@ contract ETOTerms is Math {
     // maximum ticket for simple investors
     uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
+    // transfers are always disabled during token offering
+    // if set to False transfers on Equity Token will remain disabled after offering
+    // once those terms are on-chain this flags fully controls token transferability
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
-    // says if we work under crowdfunding regulation
-    bool public IS_CROWDFUNDING;
     // represents the discount % for whitelist participants
     uint256 public WHITELIST_DISCOUNT_FRAC;
 
@@ -118,7 +120,6 @@ contract ETOTerms is Math {
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
-        bool isCrowdfunding,
         string investmentAgreementTemplateUrl,
         string prospectusUrl,
         ShareholderRights shareholderRights,
@@ -153,7 +154,6 @@ contract ETOTerms is Math {
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
-        IS_CROWDFUNDING = isCrowdfunding;
         INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
         PROSPECTUS_URL = prospectusUrl;
         SHAREHOLDER_RIGHTS = shareholderRights;
@@ -277,6 +277,13 @@ contract ETOTerms is Math {
         equityTokenInt += fixedSlotEquityTokenInt;
     }
 
+    function equityTokensToShares(uint256 amount)
+        public
+        constant
+        returns (uint256)
+    {
+        return divRound(amount, TOKEN_TERMS.EQUITY_TOKENS_PER_SHARE());
+    }
 
     /// @notice checks terms against platform terms, reverts on invalid
     function requireValidTerms(PlatformTerms platformTerms)
@@ -284,30 +291,32 @@ contract ETOTerms is Math {
         constant
     {
         require(MIN_TICKET_EUR_ULPS >= platformTerms.MIN_TICKET_EUR_ULPS(), "ETO_TERMS_MIN_TICKET_EUR_ULPS");
-        if (IS_CROWDFUNDING) {
-            // additional checks for caps
-            require(ESTIMATED_MAX_CAP_EUR_ULPS() <= platformTerms.MAX_TOTAL_AMOUNT_CROWDFUNDING_EUR_ULPS(), "ETO_TERMS_CROWDF_TOTAL");
-            require(MAX_TICKET_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS(), "ETO_TERMS_MAX_TICKET_EUR_ULPS");
-            require(MAX_TICKET_SIMPLE_EUR_ULPS <= platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS(), "ETO_TERMS_MAX_S_TICKET_EUR_ULPS");
-        }
         // at least one share sold
-        require(MIN_NUMBER_OF_TOKENS >= platformTerms.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
+        require(MIN_NUMBER_OF_TOKENS >= TOKEN_TERMS.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
         // duration checks
-        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MIN");
-        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION_DAYS(), "ETO_TERMS_WL_D_MAX");
+        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION(), "ETO_TERMS_WL_D_MIN");
+        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION(), "ETO_TERMS_WL_D_MAX");
 
-        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION_DAYS(), "ETO_TERMS_PUB_D_MIN");
-        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION_DAYS(), "ETO_TERMS_PUB_D_MAX");
+        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION(), "ETO_TERMS_PUB_D_MIN");
+        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION(), "ETO_TERMS_PUB_D_MAX");
 
         uint256 totalDuration = DURATION_TERMS.WHITELIST_DURATION() + DURATION_TERMS.PUBLIC_DURATION();
-        require(totalDuration >= platformTerms.MIN_OFFER_DURATION_DAYS(), "ETO_TERMS_TOT_O_MIN");
-        require(totalDuration <= platformTerms.MAX_OFFER_DURATION_DAYS(), "ETO_TERMS_TOT_O_MIN");
+        require(totalDuration >= platformTerms.MIN_OFFER_DURATION(), "ETO_TERMS_TOT_O_MIN");
+        require(totalDuration <= platformTerms.MAX_OFFER_DURATION(), "ETO_TERMS_TOT_O_MAX");
 
-        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION_DAYS(), "ETO_TERMS_SIG_MIN");
-        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION_DAYS(), "ETO_TERMS_SIG_MAX");
+        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION(), "ETO_TERMS_SIG_MIN");
+        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION(), "ETO_TERMS_SIG_MAX");
 
-        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION_DAYS(), "ETO_TERMS_CLAIM_MIN");
-        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION_DAYS(), "ETO_TERMS_CLAIM_MAX");
+        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION(), "ETO_TERMS_CLAIM_MIN");
+        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION(), "ETO_TERMS_CLAIM_MAX");
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 0);
     }
 
     ////////////////////////

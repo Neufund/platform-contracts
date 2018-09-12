@@ -4,12 +4,14 @@ import "../AccessControl/AccessControlled.sol";
 import "../AccessRoles.sol";
 import "../Universe.sol";
 import "./IIdentityRegistry.sol";
+import "../Standards/IContractId.sol";
 
 
 contract IdentityRegistry is
     IIdentityRegistry,
     AccessControlled,
-    AccessRoles
+    AccessRoles,
+    IContractId
 {
 
     ////////////////////////
@@ -78,5 +80,13 @@ contract IdentityRegistry is
             emit LogSetClaims(identities[idx], oldClaims[idx], newClaims[idx]);
             idx += 1;
         }
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x5b9788bf65445f2230fa661a463fab851bece5fa9629bbacc6eb011af53b777f, 0);
     }
 }

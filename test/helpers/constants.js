@@ -7,6 +7,7 @@ export const hourInSeconds = 60 * 60;
 export const dayInSeconds = 24 * hourInSeconds;
 export const monthInSeconds = 30 * dayInSeconds;
 export const daysToSeconds = sec => sec * dayInSeconds;
+export const hoursToSeconds = sec => sec * hourInSeconds;
 
 export function toBytes32(hexOrNumber) {
   let strippedHex = "0";
@@ -49,3 +50,7 @@ export const stringify = o => {
   }
   return op;
 };
+
+export function contractId(contractName) {
+  return web3.sha3(`neufund-platform:${contractName}`);
+}

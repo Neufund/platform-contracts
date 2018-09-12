@@ -1,12 +1,12 @@
 pragma solidity 0.4.24;
 
-import "../Universe.sol";
+/*import "../Universe.sol";
 import "../Agreement.sol";
 import "../Reclaimable.sol";
 import "../ETO/IETOCommitment.sol";
 import "./IEquityTokenController.sol";
 import "./MEquityTokenController.sol";
-import "./IControllerGovernance.sol";
+import "./IControllerGovernance.sol";*/
 
 
 /// @title abstract equity token controller
