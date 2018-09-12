@@ -194,9 +194,19 @@ contract SimpleExchange is
         constant
         returns (uint256 rateFraction, uint256 timestamp)
     {
-        TokenRate storage rate = _rates[numeratorToken][denominatorToken];
-        require(rate.timestamp > 0, "SEX_NO_RATE_INFO");
-        return (rate.rateFraction, rate.timestamp);
+        TokenRate storage requested_rate = _rates[numeratorToken][denominatorToken];
+        TokenRate storage inversed_requested_rate = _rates[denominatorToken][numeratorToken];
+        require((requested_rate.timestamp > 0 || inversed_requested_rate.timestamp > 0), "SEX_NO_RATE_INFO");
+
+        if (requested_rate.timestamp > 0) {
+            return (requested_rate.rateFraction, requested_rate.timestamp);
+        }
+        else {
+            uint256 invRateFraction = proportion(10**18, 10**18, inversed_requested_rate.rateFraction);
+            require(invRateFraction < 2**128, "SEX_OVR_INV");
+
+            return (invRateFraction, inversed_requested_rate.timestamp);
+        }
     }
 
     function setExchangeRatePrivate(
@@ -206,22 +216,26 @@ contract SimpleExchange is
     )
         private
     {
+        require(numeratorToken != denominatorToken, "SEX_SAME_N_D");
         assert(rateFraction > 0);
         assert(rateFraction < 2**128);
         uint256 invRateFraction = proportion(10**18, 10**18, rateFraction);
         require(invRateFraction < 2**128, "SEX_OVR_INV");
         require(denominatorToken.decimals() == numeratorToken.decimals(), "SEX_DECIMALS");
         // TODO: protect against outliers
-        _rates[numeratorToken][denominatorToken] = TokenRate({
-            rateFraction: uint128(rateFraction),
-            timestamp: uint128(block.timestamp)
-        });
-        // todo: compute invesrse on the fly!
-        // also store the invesrse
-        _rates[denominatorToken][numeratorToken] = TokenRate({
-            rateFraction: uint128(invRateFraction),
-            timestamp: uint128(block.timestamp)
-        });
+
+        if (_rates[denominatorToken][numeratorToken].timestamp > 0) {
+            _rates[denominatorToken][numeratorToken] = TokenRate({
+                rateFraction: uint128(invRateFraction),
+                timestamp: uint128(block.timestamp)
+            });
+        }
+        else {
+            _rates[numeratorToken][denominatorToken] = TokenRate({
+                rateFraction: uint128(rateFraction),
+                timestamp: uint128(block.timestamp)
+            });
+        }
 
         emit LogSetExchangeRate(numeratorToken, denominatorToken, rateFraction);
         emit LogSetExchangeRate(denominatorToken, numeratorToken, invRateFraction);
