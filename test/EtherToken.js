@@ -9,6 +9,7 @@ import {
   erc223TokenTests,
   expectTransferEvent,
   testWithdrawal,
+  expectWithdrawEvent,
   deployTestErc223Callback,
 } from "./helpers/tokenTestCases";
 import { eventValue } from "./helpers/events";
@@ -17,7 +18,9 @@ import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
 import EvmError from "./helpers/EVMThrow";
 import { contractId, ZERO_ADDRESS } from "./helpers/constants";
+import { promisify } from "./helpers/evmCommands";
 
+const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
 const EtherToken = artifacts.require("EtherToken");
 
 contract("EtherToken", ([broker, reclaimer, ...investors]) => {
@@ -283,12 +286,177 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       });
     });
 
+    function expectWithdrawAndSendEvent(tx, to, amount) {
+      const event = eventValue(tx, "LogWithdrawAndSend");
+      expect(event).to.exist;
+      expect(event.args.to).to.eq(to);
+      expect(event.args.amount).to.be.bignumber.eq(amount);
+    }
+
     testWithdrawal(getToken, investors[0], initialBalance);
 
-    it("should withdraw and send");
-    it("should withdraw and send with 0 wei payable");
-    it("should withdraw and send with 0 initial balance");
-    it("should reject withdraw and send over balance");
-    it("should reject when withdraw amount less than payable");
+    it("should withdraw and send whole balance", async () => {
+      const initialSenderEthBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      const initialReceiverEthBalance = await promisify(web3.eth.getBalance)(investors[1]);
+      const amountToWithdrawAndSend = initialBalance;
+      const tx = await etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+        from: investors[0],
+        value: 0,
+        gasPrice,
+      });
+
+      expectWithdrawAndSendEvent(tx, investors[1], amountToWithdrawAndSend);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(0);
+
+      const senderTokenBalance = await etherToken.balanceOf(investors[0]);
+      expect(senderTokenBalance).to.be.bignumber.eq(0);
+
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const senderEthBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      expect(senderEthBalance).to.be.bignumber.eq(initialSenderEthBalance.minus(gasCost));
+
+      const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
+      expect(reciverTokenBalance).to.be.bignumber.eq(0);
+
+      const reciverEtherBalance = await promisify(web3.eth.getBalance)(investors[1]);
+      expect(reciverEtherBalance).to.be.bignumber.eq(
+        initialReceiverEthBalance.plus(amountToWithdrawAndSend),
+      );
+    });
+
+    it("should withdraw part of balance and send some amount", async () => {
+      const initialSenderEthBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      const initialReceiverEthBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      const amountToWithdrawAndSend = etherToWei(1);
+      const additionalAmountToSend = etherToWei(0.4);
+      const amountToWithdraw = amountToWithdrawAndSend.minus(additionalAmountToSend);
+
+      const tx = await etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+        from: investors[0],
+        value: additionalAmountToSend,
+        gasPrice,
+      });
+
+      expectWithdrawAndSendEvent(tx, investors[1], amountToWithdrawAndSend);
+      expectWithdrawEvent(tx, investors[0], amountToWithdraw);
+      expectTransferEvent(tx, investors[0], ZERO_ADDRESS, amountToWithdraw);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance.minus(amountToWithdraw));
+
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const senderTokenBalance = await etherToken.balanceOf(investors[0]);
+      const senderEtherBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
+      const reciverEtherBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      expect(reciverTokenBalance).to.be.bignumber.eq(0);
+      expect(reciverEtherBalance).to.be.bignumber.eq(
+        initialReceiverEthBalance.plus(amountToWithdrawAndSend),
+      );
+      expect(senderTokenBalance).to.be.bignumber.eq(initialBalance.minus(amountToWithdraw));
+      expect(senderEtherBalance).to.be.bignumber.eq(
+        initialSenderEthBalance.minus(additionalAmountToSend).minus(gasCost),
+      );
+    });
+
+    it("should withdraw nothing and send nothing", async () => {
+      const initialSenderEthBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      const initialReceiverEthBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      const amountToWithdrawAndSend = etherToWei(0);
+      const additionalAmountToSend = etherToWei(0);
+
+      const tx = await etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+        from: investors[0],
+        value: additionalAmountToSend,
+        gasPrice,
+      });
+
+      expectWithdrawAndSendEvent(tx, investors[1], amountToWithdrawAndSend);
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance.minus(additionalAmountToSend));
+
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const senderTokenBalance = await etherToken.balanceOf(investors[0]);
+      const senderEtherBalance = await promisify(web3.eth.getBalance)(investors[0]);
+      const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
+      const reciverEtherBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      expect(reciverTokenBalance).to.be.bignumber.eq(0);
+      expect(reciverEtherBalance).to.be.bignumber.eq(
+        initialReceiverEthBalance.plus(amountToWithdrawAndSend),
+      );
+      expect(senderTokenBalance).to.be.bignumber.eq(initialBalance.minus(additionalAmountToSend));
+      expect(senderEtherBalance).to.be.bignumber.eq(
+        initialSenderEthBalance.minus(amountToWithdrawAndSend).minus(gasCost),
+      );
+    });
+
+    it("should withdraw and send with 0 initial balance", async () => {
+      const investorWithNoEtherTokens = investors[3];
+      const initialSenderEthBalance = await promisify(web3.eth.getBalance)(
+        investorWithNoEtherTokens,
+      );
+      const initialReceiverEthBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      const additionalAmountToSend = etherToWei(10);
+      const amountToWithdrawAndSend = additionalAmountToSend;
+
+      const tx = await etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+        from: investorWithNoEtherTokens,
+        value: additionalAmountToSend,
+        gasPrice,
+      });
+
+      const totalSupply = await etherToken.totalSupply.call();
+      expect(totalSupply).to.be.bignumber.eq(initialBalance);
+
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const senderTokenBalance = await etherToken.balanceOf(investorWithNoEtherTokens);
+      const senderEtherBalance = await promisify(web3.eth.getBalance)(investorWithNoEtherTokens);
+
+      const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
+      const reciverEtherBalance = await promisify(web3.eth.getBalance)(investors[1]);
+
+      expect(reciverTokenBalance).to.be.bignumber.eq(0);
+      expect(reciverEtherBalance).to.be.bignumber.eq(
+        initialReceiverEthBalance.plus(amountToWithdrawAndSend),
+      );
+      expect(senderTokenBalance).to.be.bignumber.eq(0);
+      expect(senderEtherBalance).to.be.bignumber.eq(
+        initialSenderEthBalance.minus(amountToWithdrawAndSend).minus(gasCost),
+      );
+    });
+
+    it("should reject withdraw and send over balance", async () => {
+      const amountToWithdrawAndSend = initialBalance.plus(etherToWei(0.5));
+      const additionalAmountToSend = etherToWei(0);
+
+      await expect(
+        etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+          from: investors[0],
+          value: additionalAmountToSend,
+          gasPrice,
+        }),
+      ).to.revert;
+    });
+
+    it("should reject when withdraw amount less than payable", async () => {
+      const amountToWithdrawAndSend = etherToWei(0.5);
+      const additionalAmountToSend = etherToWei(1);
+
+      await expect(
+        etherToken.withdrawAndSend(investors[1], amountToWithdrawAndSend, {
+          from: investors[0],
+          value: additionalAmountToSend,
+          gasPrice,
+        }),
+      ).to.revert;
+    });
   });
 });
