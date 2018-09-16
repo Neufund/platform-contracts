@@ -138,6 +138,17 @@ contract ETOTimedStateMachine is
         return startOfInternal(s);
     }
 
+    // returns time induced state which differs from storage state if transition is overdue
+    function timedState()
+        external
+        constant
+        returns (ETOState)
+    {
+        // below we change state but function is constant. the intention is to force this function to be eth_called
+        advanceTimedState();
+        return _state;
+    }
+
     function startOfStates()
         public
         constant
