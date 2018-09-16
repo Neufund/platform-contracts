@@ -165,6 +165,7 @@ contract LockedAccount is
         address paymentToken
     );
 
+    /// @notice logged when migration destination is set for an investor
     event LogMigrationDestination(
         address indexed investor,
         address indexed destination,
@@ -223,6 +224,7 @@ contract LockedAccount is
     {
         require(amount > 0, "LOCKED_NO_ZERO");
         Account storage account = _accounts[msg.sender];
+        // no overflow with account.balance which is uint112
         require(account.balance >= amount, "LOCKED_NO_FUNDS");
         // calculate unlocked NEU as proportion of invested amount to account balance
         uint112 unlockedNmkUlps = uint112(
@@ -377,7 +379,7 @@ contract LockedAccount is
                 Destination storage destination = destinations[idx];
                 // get partial amount to migrate, if 0 specified then take all, as a result 0 must be the last destination
                 uint112 partialAmount = destination.amount == 0 ? balance : destination.amount;
-                require(partialAmount <= balance);
+                require(partialAmount <= balance, "LOCKED_ACCOUNT_SPLIT_OVERSPENT");
                 // compute corresponding NEU proportionally, result < 10**18 as partialAmount <= balance
                 uint112 partialNmkUlps = uint112(
                     proportion(
@@ -395,7 +397,7 @@ contract LockedAccount is
                 idx += 1;
             }
             // all funds and NEU must be migrated
-            assert(balance == 0);
+            require(balance == 0, "LOCKED_ACCOUNT_SPLIT_UNDERSPENT");
             assert(neumarksDue == 0);
         }
     }
@@ -515,7 +517,7 @@ contract LockedAccount is
     function balanceOf(address investor)
         public
         constant
-        returns (uint112 balance, uint112 neumarksDue, uint32 unlockDate)
+        returns (uint256 balance, uint256 neumarksDue, uint32 unlockDate)
     {
         Account storage account = _accounts[investor];
         return (account.balance, account.neumarksDue, account.unlockDate);
@@ -641,9 +643,15 @@ contract LockedAccount is
     function addDestination(Destination[] storage destinations, address wallet, uint112 amount)
         private
     {
+        // only verified destinations
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
-        require(claims.isVerified && !claims.accountFrozen, "DEST_VERIFICATION");
+        require(claims.isVerified && !claims.accountFrozen, "DEST_NO_VERIFICATION");
+        if (wallet != msg.sender) {
+            // prevent squatting - cannot set destination for not yet migrated investor
+            (,,uint256 unlockDate) = MIGRATION_SOURCE.balanceOf(wallet);
+            require(unlockDate == 0, "DEST_NO_SQUATTING");
+        }
 
         destinations.push(
             Destination({investor: wallet, amount: amount})
