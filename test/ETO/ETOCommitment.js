@@ -369,6 +369,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         });
         // skip time to after start date to test state machine
         await skipTimeTo(startDate.add(10));
+        expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Whitelist);
         let tx = await etoCommitment.handleStateTransitions();
         // actual block time and startDate may differ slightly
         expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, startDate);
@@ -411,6 +412,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
         // console.log(new Date(publicStartDate * 1000));
         await skipTimeTo(publicStartDate.add(1));
+        expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Public);
         tx = await etoCommitment.handleStateTransitions();
         // we should be in public state now
         expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
@@ -454,6 +456,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         }
         // go to signing
         await skipTimeTo(signingStartOf.add(1));
+        expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Signing);
         tx = await etoCommitment.handleStateTransitions();
         // we should be in public state now
         expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
@@ -530,6 +533,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           10,
         );
         await skipTimeTo(payoutStartOf.add(1));
+        expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Payout);
         tx = await etoCommitment.handleStateTransitions();
         expectLogStateTransition(tx, CommitmentState.Claim, CommitmentState.Payout, payoutStartOf);
         await expectStateStarts(
@@ -667,6 +671,11 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           .add(durTermsDict.WHITELIST_DURATION)
           .add(durTermsDict.PUBLIC_DURATION);
         await skipTimeTo(refundStartDate.add(1));
+        // timed state shows what the state should be
+        expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Refund);
+        // state shows state as in storage
+        expect(await etoCommitment.state.call()).to.be.bignumber.eq(CommitmentState.Whitelist);
+        // now move the state
         const refundTx = await etoCommitment.handleStateTransitions();
         await expectValidRefundState(refundTx, participatingInvestors);
         await refundInvestor(investors[0]);
