@@ -774,15 +774,12 @@ contract(
         ).to.revert;
       });
 
-      it("should deposit and transfer", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(50);
-        const etoAddress = investors[1];
-
+      async function prepareDepositAndTransfer(investor, etoAddress) {
         // deposit only to KYC investors
-        await identityRegistry.setMultipleClaims(
-          investors.slice(0, 1),
-          [toBytes32(identityClaims.isNone)],
-          [toBytes32(identityClaims.isVerified)],
+        await identityRegistry.setClaims(
+          investor,
+          toBytes32(identityClaims.isNone),
+          toBytes32(identityClaims.isVerified),
           {
             from: masterManager,
           },
@@ -794,29 +791,125 @@ contract(
           true,
           { from: masterManager },
         );
+      }
+
+      async function depositAndTransferCase(
+        investor,
+        etoAddress,
+        preDepositAmount,
+        depositAmount,
+        transferAmount,
+      ) {
+        await prepareDepositAndTransfer(investor, etoAddress);
+        if (preDepositAmount.gt(0)) {
+          await euroToken.deposit(investor, preDepositAmount, defaultDepositRef, {
+            from: depositManager,
+          });
+        }
 
         const tx = await euroToken.depositAndTransfer(
-          investors[0],
+          investor,
           etoAddress,
-          initialBalance,
+          depositAmount,
+          transferAmount,
           "",
           defaultDepositRef,
           {
             from: depositManager,
           },
         );
-        expectDepositEvent(tx, investors[0], initialBalance);
-        expectTransferEventAtIndex(tx, 0, ZERO_ADDRESS, investors[0], initialBalance);
-        expectTransferEventAtIndex(tx, 1, investors[0], etoAddress, initialBalance);
+        expectDepositEvent(tx, investor, depositAmount);
+        expectTransferEventAtIndex(tx, 0, ZERO_ADDRESS, investor, depositAmount);
+        expectTransferEventAtIndex(tx, 1, investor, etoAddress, transferAmount);
 
         const totalSupply = await euroToken.totalSupply.call();
-        expect(totalSupply).to.be.bignumber.eq(initialBalance);
-        let balance = await euroToken.balanceOf(investors[0]);
-        expect(balance).to.be.bignumber.eq(0);
+        const totalDeposit = depositAmount.add(preDepositAmount);
+        expect(totalSupply).to.be.bignumber.eq(totalDeposit);
+        let balance = await euroToken.balanceOf(investor);
+        expect(balance).to.be.bignumber.eq(totalDeposit.sub(transferAmount));
         balance = await euroToken.balanceOf(etoAddress);
-        expect(balance).to.be.bignumber.eq(initialBalance);
-        expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
+        expect(balance).to.be.bignumber.eq(transferAmount);
+        expect(await euroToken.agreementSignedAtBlock(investor)).to.be.bignumber.not.eq(0);
         expect(await euroToken.agreementSignedAtBlock(etoAddress)).to.be.bignumber.eq(0);
+      }
+
+      it("should deposit and transfer all", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(50.29190129));
+        await depositAndTransferCase(
+          investors[0],
+          investors[1],
+          new web3.BigNumber(0),
+          initialBalance,
+          initialBalance,
+        );
+      });
+
+      it("should deposit and transfer less", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        await depositAndTransferCase(
+          investors[0],
+          investors[1],
+          new web3.BigNumber(0),
+          initialBalance,
+          initialBalance.sub(1),
+        );
+      });
+
+      it("should pre deposit, deposit and transfer 1 wei more", async () => {
+        await tokenController.applySettings(0, 0, 0, { from: eurtLegalManager });
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        await depositAndTransferCase(
+          investors[0],
+          investors[1],
+          new web3.BigNumber(2),
+          initialBalance,
+          initialBalance.add(1),
+        );
+      });
+
+      it("should pre deposit, deposit and transfer more", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        await depositAndTransferCase(
+          investors[0],
+          investors[1],
+          Q18.mul(76219.2812),
+          initialBalance,
+          initialBalance.add(Q18.mul(6271.112)),
+        );
+      });
+
+      it("should pre deposit, deposit and transfer all", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        const preDeposit = Q18.mul(8212.9121074);
+        await depositAndTransferCase(
+          investors[0],
+          investors[1],
+          preDeposit,
+          initialBalance,
+          initialBalance.add(preDeposit),
+        );
+      });
+
+      it("should revert on deposit and transfer above balance", async () => {
+        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(50.29190129));
+        await expect(
+          depositAndTransferCase(
+            investors[0],
+            investors[1],
+            new web3.BigNumber(0),
+            initialBalance,
+            initialBalance.add(1),
+          ),
+        ).to.be.rejectedWith(EvmError);
+        await expect(
+          depositAndTransferCase(
+            investors[0],
+            investors[1],
+            minDepositAmountEurUlps,
+            initialBalance,
+            initialBalance.add(minDepositAmountEurUlps).add(1),
+          ),
+        ).to.be.rejectedWith(EvmError);
       });
 
       it("should reject deposit and transfer if claims are not set", async () => {
@@ -835,6 +928,7 @@ contract(
             investors[0],
             etoAddress,
             initialBalance,
+            initialBalance,
             "",
             defaultDepositRef,
             {
@@ -844,7 +938,7 @@ contract(
         ).to.revert;
       });
 
-      it("should reject deposit and transfer if transfer to address is not known", async () => {
+      it("should reject deposit and transfer if transfer to address is not eto", async () => {
         const initialBalance = minDepositAmountEurUlps.add(50);
         const etoAddress = investors[1];
 
@@ -870,6 +964,7 @@ contract(
             investors[0],
             etoAddress,
             initialBalance,
+            initialBalance,
             "",
             defaultDepositRef,
             {
@@ -883,27 +978,13 @@ contract(
         const initialBalance = minDepositAmountEurUlps.sub(50);
         const etoAddress = investors[1];
 
-        // deposit only to KYC investors
-        await identityRegistry.setMultipleClaims(
-          investors.slice(0, 1),
-          [toBytes32(identityClaims.isNone)],
-          [toBytes32(identityClaims.isVerified)],
-          {
-            from: masterManager,
-          },
-        );
-
-        await universe.setCollectionInterface(
-          knownInterfaces.commitmentInterface,
-          etoAddress,
-          true,
-          { from: masterManager },
-        );
+        await prepareDepositAndTransfer(investors[0], etoAddress);
 
         await expect(
           euroToken.depositAndTransfer(
             investors[0],
             etoAddress,
+            initialBalance,
             initialBalance,
             "",
             defaultDepositRef,
@@ -918,27 +999,13 @@ contract(
         const initialBalance = minDepositAmountEurUlps.add(50);
         const etoAddress = investors[1];
 
-        // deposit only to KYC investors
-        await identityRegistry.setMultipleClaims(
-          investors.slice(0, 1),
-          [toBytes32(identityClaims.isNone)],
-          [toBytes32(identityClaims.isVerified)],
-          {
-            from: masterManager,
-          },
-        );
-
-        await universe.setCollectionInterface(
-          knownInterfaces.commitmentInterface,
-          etoAddress,
-          true,
-          { from: masterManager },
-        );
+        await prepareDepositAndTransfer(investors[0], etoAddress);
 
         await expect(
           euroToken.depositAndTransfer(
             investors[0],
             etoAddress,
+            initialBalance,
             initialBalance,
             "",
             defaultDepositRef,

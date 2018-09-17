@@ -242,7 +242,7 @@ contract ETOCommitment is
 
         setupStateMachine(
             ETO_TERMS.DURATION_TERMS(),
-            IETOCommitmentObserver(EQUITY_TOKEN.equityTokenController())
+            IETOCommitmentObserver(EQUITY_TOKEN.tokenController())
         );
     }
 

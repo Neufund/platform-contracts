@@ -76,9 +76,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
         etoTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS,
       );
-      expect(await equityToken.equityTokenController()).to.be.bignumber.eq(
-        equityTokenController.address,
-      );
+      expect(await equityToken.tokenController()).to.be.bignumber.eq(equityTokenController.address);
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 

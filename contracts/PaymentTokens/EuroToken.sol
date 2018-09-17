@@ -7,10 +7,11 @@ import "../Zeppelin/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
-import "../Standards/ITokenController.sol";
 import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../AccessRoles.sol";
+import "../Standards/ITokenControllerHook.sol";
+import "./IEuroTokenController.sol";
 
 
 contract EuroToken is
@@ -18,6 +19,7 @@ contract EuroToken is
     IERC677Token,
     StandardToken,
     IWithdrawableToken,
+    ITokenControllerHook,
     TokenMetadata,
     IERC223Token,
     IsContract,
@@ -37,7 +39,7 @@ contract EuroToken is
     // Mutable state
     ////////////////////////
 
-    ITokenController private _tokenController;
+    IEuroTokenController private _tokenController;
 
     ////////////////////////
     // Events
@@ -75,11 +77,6 @@ contract EuroToken is
         uint256 amount
     );
 
-    event LogChangeTokenController(
-        address oldController,
-        address newController
-    );
-
     ////////////////////////
     // Modifiers
     ////////////////////////
@@ -111,14 +108,14 @@ contract EuroToken is
     constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
-        ITokenController tokenController
+        IEuroTokenController tokenController
     )
         Agreement(accessPolicy, forkArbiter)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         public
     {
-        require(tokenController != ITokenController(0x0));
+        require(tokenController != IEuroTokenController(0x0));
         _tokenController = tokenController;
     }
 
@@ -190,22 +187,22 @@ contract EuroToken is
     }
 
     //
-    // Controlls the controller
+    // Implements ITokenControllerHook
     //
 
-    function changeTokenController(ITokenController newController)
+    function changeTokenController(address newController)
         public
         only(ROLE_EURT_LEGAL_MANAGER)
     {
-        require(newController != ITokenController(0x0));
-        _tokenController = newController;
-        emit LogChangeTokenController(_tokenController, newController);
+        require(_tokenController.onChangeTokenController(msg.sender, newController));
+        _tokenController = IEuroTokenController(newController);
+        emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }
 
     function tokenController()
         public
         constant
-        returns (ITokenController)
+        returns (address)
     {
         return _tokenController;
     }
@@ -252,14 +249,22 @@ contract EuroToken is
     /// @notice convenience function to deposit and immediately transfer amount
     /// @param depositTo which account to deposit to and then transfer from
     /// @param transferTo where to transfer after deposit
-    /// @param amount total amount to transfer, must be <= balance after deposit
+    /// @param depositAmount amount to deposit
+    /// @param transferAmount total amount to transfer, must be <= balance after deposit
     /// @dev intended to deposit from bank account and invest in ETO
-    function depositAndTransfer(address depositTo, address transferTo, uint256 amount, bytes data, bytes32 reference)
+    function depositAndTransfer(
+        address depositTo,
+        address transferTo,
+        uint256 depositAmount,
+        uint256 transferAmount,
+        bytes data,
+        bytes32 reference
+    )
         public
         returns (bool success)
     {
-        deposit(depositTo, amount, reference);
-        return ierc223TransferInternal(depositTo, transferTo, amount, data);
+        deposit(depositTo, depositAmount, reference);
+        return ierc223TransferInternal(depositTo, transferTo, transferAmount, data);
     }
 
     //
