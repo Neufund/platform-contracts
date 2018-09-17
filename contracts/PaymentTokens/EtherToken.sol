@@ -109,7 +109,7 @@ contract EtherToken is
         payable
     {
         // must send at least what is in msg.value to being another deposit function
-        require(amount >= msg.value);
+        require(amount >= msg.value, "ET_NO_DEPOSIT");
         if (amount > msg.value) {
             uint256 withdrawRemainder = amount - msg.value;
             withdrawPrivate(withdrawRemainder);
