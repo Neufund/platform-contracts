@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
-import { divRound } from "./helpers/unitConverter";
+import { divRound, etherToWei } from "./helpers/unitConverter";
 import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
 import { contractId, Q18 } from "./helpers/constants";
 
@@ -49,5 +49,57 @@ contract("PlatformTerms", ([_, admin]) => {
     expect(feeAmount).to.be.bignumber.eq(amountInt.mul(fee.div(Q18)).round(0, 4));
   });
 
-  it("should calculate neumark share");
+  it("should calculate neumark share when reward is 0 wei", async () => {
+    const reward = 0;
+    const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(reward);
+
+    expect(shares.plus(platformShares)).to.be.bignumber.eq(reward);
+    expect(shares).to.be.bignumber.eq(0);
+    expect(platformShares).to.be.bignumber.eq(0);
+  });
+  it("should calculate neumark share when reward is 1 wei", async () => {
+    const reward = 1;
+    const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(1);
+
+    expect(shares.plus(platformShares)).to.be.bignumber.eq(reward);
+    expect(shares).to.be.bignumber.eq(1);
+    expect(platformShares).to.be.bignumber.eq(0);
+  });
+
+  it("should calculate neumark share when reward is 1 ether", async () => {
+    const reward = etherToWei(1);
+    const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(reward);
+
+    expect(shares.plus(platformShares)).to.be.bignumber.eq(reward);
+    expect(shares).to.be.bignumber.eq(etherToWei(0.5));
+    expect(platformShares).to.be.bignumber.eq(etherToWei(0.5));
+  });
+
+  it("should calculate neumark share when reward is undevisible", async () => {
+    const reward = etherToWei(1).plus(1);
+    const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(reward);
+
+    expect(shares.plus(platformShares)).to.be.bignumber.eq(reward);
+    expect(shares)
+      .to.be.bignumber.eq(etherToWei(0.5).plus(1))
+      .gt(platformShares);
+    expect(platformShares).to.be.bignumber.eq(etherToWei(0.5));
+  });
+
+  const upTo40DecimalPlacesList = [...Array(41).keys()];
+  const BigNumber = web3.BigNumber;
+  upTo40DecimalPlacesList.forEach(decimalPlaces => {
+    it(`should set distribution when reward has ${decimalPlaces} decimals`, async () => {
+      BigNumber.config({ DECIMAL_PLACES: decimalPlaces });
+      const randomReward = BigNumber.random().times(new BigNumber(10).pow(decimalPlaces));
+
+      const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(
+        randomReward,
+      );
+
+      expect(shares.plus(platformShares)).to.be.bignumber.eq(randomReward);
+      expect(shares).to.be.bignumber.gte(platformShares);
+      expect(platformShares).to.be.bignumber.lte(shares);
+    });
+  });
 });
