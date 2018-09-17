@@ -31,7 +31,7 @@ function expectApproveEvent(tx, owner, spender, amount) {
   expect(event.args.amount).to.be.bignumber.eq(amount);
 }
 
-function expectWithdrawEvent(tx, owner, amount) {
+export function expectWithdrawEvent(tx, owner, amount) {
   const event = eventValue(tx, "LogWithdrawal");
   expect(event).to.exist;
   expect(event.args.from).to.eq(owner);
