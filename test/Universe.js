@@ -563,12 +563,19 @@ contract(
     });
 
     it("should revert on setting KNOWN_INTERFACE_UNIVERSE singleton", async () => {
-      await expect(universe.setSingleton(knownInterfaces.universe, universe.address)).to.revert;
+      await expect(
+        universe.setSingleton(knownInterfaces.universe, universe.address, {
+          from: universeManager,
+        }),
+      ).to.rejectedWith("UNI_NO_UNIVERSE_SINGLETON");
     });
 
     it("should revert on setting KNOWN_INTERFACE_UNIVERSE singleton when setting many singletos", async () => {
-      await expect(universe.setManySingletons([knownInterfaces.universe], [universe.address])).to
-        .revert;
+      await expect(
+        universe.setManySingletons([knownInterfaces.universe], [universe.address], {
+          from: universeManager,
+        }),
+      ).to.to.rejectedWith("UNI_NO_UNIVERSE_SINGLETON");
     });
   },
 );
