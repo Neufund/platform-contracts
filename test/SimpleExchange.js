@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { prettyPrintGasCost } from "./helpers/gasUtils";
+import { prettyPrintGasCost, gasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { promisify } from "./helpers/evmCommands";
 import { latestTimestamp } from "./helpers/latestTime";
@@ -11,9 +11,10 @@ import {
   deployNeumarkUniverse,
   deployIdentityRegistry,
 } from "./helpers/deployContracts";
+import { expectTransferEvent } from "./helpers/tokenTestCases";
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
-import { divRound } from "./helpers/unitConverter";
+import { divRound, etherToWei } from "./helpers/unitConverter";
 import increaseTime from "./helpers/increaseTime";
 import { toBytes32, Q18, contractId, ZERO_ADDRESS } from "./helpers/constants";
 
@@ -502,7 +503,39 @@ contract(
       ).to.revert;
     });
 
-    it("should reclaim ether from SimpleExchange");
+    it("should reclaim ether from SimpleExchange", async () => {
+      const gasPrice = new web3.BigNumber(0x01);
+      const etherAmount = etherToWei(10);
+
+      await sendEtherToExchange(_, etherAmount);
+      const initalBalance = await promisify(web3.eth.getBalance)(platformWallet);
+      const initialExchangeBalance = await promisify(web3.eth.getBalance)(simpleExchange.address);
+
+      await createAccessPolicy(accessPolicy, [
+        {
+          subject: platformWallet,
+          role: roles.reclaimer,
+          object: simpleExchange.address,
+        },
+      ]);
+
+      await identityRegistry.setClaims(platformWallet, "0", hasKYCandHasAccount, {
+        from: admin,
+      });
+
+      const tx = await simpleExchange.reclaim(ZERO_ADDRESS, {
+        from: platformWallet,
+        gasPrice,
+      });
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+
+      const exchangeBalaceAfter = await promisify(web3.eth.getBalance)(simpleExchange.address);
+      expect(exchangeBalaceAfter).to.be.bignumber.eq(0);
+
+      const expectedBalance = initalBalance.plus(initialExchangeBalance).minus(gasCost);
+      const balanceAfter = await promisify(web3.eth.getBalance)(platformWallet);
+      expect(balanceAfter).to.be.bignumber.eq(expectedBalance);
+    });
 
     async function setGasExchangeRateAndAllowance(rate, allowanceEurUlps) {
       await gasExchange.setExchangeRate(etherToken.address, euroToken.address, rate, {
@@ -537,6 +570,21 @@ contract(
         from: admin,
       });
       return simpleExchange.reclaim(euroToken.address, { from: recipient });
+      // TODO: Check
+    }
+
+    async function reclaimEtherFromExchange(recipient) {
+      await createAccessPolicy(accessPolicy, [
+        {
+          subject: recipient,
+          role: roles.reclaimer,
+          object: gasExchange.address,
+        },
+      ]);
+      await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {
+        from: admin,
+      });
+      return simpleExchange.reclaim(etherToken.address, { from: recipient });
     }
 
     function expectLogSetExchangeRate(event, numToken, denToken, rate) {
