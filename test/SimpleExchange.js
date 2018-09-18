@@ -229,7 +229,7 @@ contract(
       expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
     });
 
-    it("should revert on set exchange rate when setting ", async () => {
+    it("should revert on set exchange rate when setting", async () => {
       await expect(
         gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
           from: tokenOracleManager,
@@ -388,7 +388,43 @@ contract(
       ).to.revert;
     });
 
-    it("should revert on exchange if rate older than 1 hour");
+    it("should revert on exchange if rate older than 1 hour", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      const hour = 60 * 60;
+      increaseTime(hour);
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.rejectedWith("SEX_OLD_RATE");
+    });
+
+    it("should revert on multi exchange if rate older than 1 hour", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      const hour = 60 * 60;
+      increaseTime(hour);
+
+      await expect(
+        gasExchange.gasExchangeMultiple([gasRecipient], [exchangedAmount], gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.rejectedWith("SEX_OLD_RATE");
+    });
 
     // there is permanent allowance but still investor can increase  allowance by `approve` on euro token
     // gasExchange (in fact euro token controller) should disregard that

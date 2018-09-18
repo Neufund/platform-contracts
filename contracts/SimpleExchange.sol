@@ -77,7 +77,7 @@ contract SimpleExchange is
         assert(exchangeFeeFraction < 10**18);
         (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
-        require(block.timestamp - rateTimestamp < 1 hours);
+        require(block.timestamp - rateTimestamp < 1 hours, "SEX_OLD_RATE");
         gasExchangePrivate(gasRecipient, amountEurUlps, exchangeFeeFraction, rate);
     }
 
@@ -94,7 +94,7 @@ contract SimpleExchange is
         require(gasRecipients.length == amountsEurUlps.length);
         (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
-        require(block.timestamp - rateTimestamp < 1 hours);
+        require(block.timestamp - rateTimestamp < 1 hours, "SEX_OLD_RATE");
         uint256 idx;
         while(idx < gasRecipients.length) {
             gasExchangePrivate(gasRecipients[idx], amountsEurUlps[idx], exchangeFeeFraction, rate);
