@@ -379,7 +379,7 @@ contract(
       const rate = Q18.mul(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -442,11 +442,18 @@ contract(
         from: gasRecipient,
       });
 
-      await expect(
-        gasExchange.gasExchange(gasRecipient, exchangedAmountMoreThanAllowance, gasExchangeFee, {
+      await gasExchange.gasExchange(
+        gasRecipient,
+        exchangedAmountMoreThanAllowance,
+        gasExchangeFee,
+        {
           from: gasExchangeManager,
-        }),
-      ).to.revert;
+        },
+      );
+
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
+        exchangedAmountMoreThanAllowance,
+      );
     });
 
     it("should revert on multi exchange bigger than permanent allowance if investor increased allowance", async () => {
@@ -461,16 +468,17 @@ contract(
         from: gasRecipient,
       });
 
-      await expect(
-        gasExchange.gasExchangeMultiple(
-          [gasRecipient],
-          [exchangedAmountMoreThanAllowance],
-          gasExchangeFee,
-          {
-            from: gasExchangeManager,
-          },
-        ),
-      ).to.revert;
+      await gasExchange.gasExchangeMultiple(
+        [gasRecipient],
+        [exchangedAmountMoreThanAllowance],
+        gasExchangeFee,
+        {
+          from: gasExchangeManager,
+        },
+      );
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
+        exchangedAmountMoreThanAllowance,
+      );
     });
 
     it("should revert on exchange not from gasExchangeManager", async () => {
@@ -611,21 +619,6 @@ contract(
         from: admin,
       });
       return simpleExchange.reclaim(euroToken.address, { from: recipient });
-      // TODO: Check
-    }
-
-    async function reclaimEtherFromExchange(recipient) {
-      await createAccessPolicy(accessPolicy, [
-        {
-          subject: recipient,
-          role: roles.reclaimer,
-          object: gasExchange.address,
-        },
-      ]);
-      await identityRegistry.setClaims(recipient, "0", hasKYCandHasAccount, {
-        from: admin,
-      });
-      return simpleExchange.reclaim(etherToken.address, { from: recipient });
     }
 
     function expectLogSetExchangeRate(event, numToken, denToken, rate) {
