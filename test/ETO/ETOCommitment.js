@@ -258,13 +258,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await deployETO(MockETOCommitment);
       await prettyPrintGasCost("MockETOCommitment deploy", etoCommitment);
       const timestamp = await latestTimestamp();
+      const durTable = defaultDurationTable();
+      const whitelistD = durTable[CommitmentState.Whitelist].add(1);
       const startDate = new web3.BigNumber(timestamp - 3 * dayInSeconds);
       // set start data to the past via mocker
-      await etoCommitment._mockStartDate(etoTerms.address, equityToken.address, startDate);
+      const startTx = await etoCommitment._mockStartDate(
+        etoTerms.address,
+        equityToken.address,
+        startDate,
+        startDate.add(whitelistD),
+        { from: company },
+      );
+      expectLogETOStartDateSet(startTx, company, 0, startDate.add(whitelistD));
       const tx = await etoCommitment.handleStateTransitions();
       expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, startDate);
       // we should have correct state times
-      const durTable = defaultDurationTable();
       const publicStartOf = startDate.add(durTable[CommitmentState.Whitelist]);
       await expectStateStarts({ Whitelist: startDate, Public: publicStartOf, Refund: 0 }, durTable);
       // mock public state directly
@@ -273,7 +281,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectStateStarts({ Whitelist: startDate, Public: newPublicTs, Refund: 0 }, durTable);
       await etoCommitment._mockPastTime(1, publicStartOf);
       // rollback past so should transition to public
-      const whitelistD = durTable[CommitmentState.Whitelist].add(1);
       await etoCommitment._mockShiftBackTime(whitelistD);
       await expectStateStarts(
         {
