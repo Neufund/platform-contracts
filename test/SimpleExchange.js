@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { prettyPrintGasCost, gasCost } from "./helpers/gasUtils";
+import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { promisify } from "./helpers/evmCommands";
 import { latestTimestamp } from "./helpers/latestTime";
@@ -11,7 +11,6 @@ import {
   deployNeumarkUniverse,
   deployIdentityRegistry,
 } from "./helpers/deployContracts";
-import { expectTransferEvent } from "./helpers/tokenTestCases";
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { divRound, etherToWei } from "./helpers/unitConverter";
