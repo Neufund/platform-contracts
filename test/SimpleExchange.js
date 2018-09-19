@@ -430,7 +430,48 @@ contract(
     // there is permanent allowance but still investor can increase  allowance by `approve` on euro token
     // gasExchange (in fact euro token controller) should disregard that
     // IMO this will fail. I didn't take such case into account
-    it("should revert on exchange bigger than permanent allowance if investor increased allowance");
+    it("should revert on exchange bigger than permanent allowance if investor increased allowance", async () => {
+      const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
+      await sendEtherToExchange(_, Q18);
+
+      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+        from: gasRecipient,
+      });
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmountMoreThanAllowance, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on multi exchange bigger than permanent allowance if investor increased allowance", async () => {
+      const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
+      await sendEtherToExchange(_, Q18);
+
+      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+        from: gasRecipient,
+      });
+
+      await expect(
+        gasExchange.gasExchangeMultiple(
+          [gasRecipient],
+          [exchangedAmountMoreThanAllowance],
+          gasExchangeFee,
+          {
+            from: gasExchangeManager,
+          },
+        ),
+      ).to.revert;
+    });
 
     it("should revert on exchange not from gasExchangeManager", async () => {
       const decimalExchangeAmount = 20;
