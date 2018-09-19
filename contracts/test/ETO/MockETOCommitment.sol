@@ -52,7 +52,8 @@ contract MockETOCommitment is
     function _mockStartDate(
         ETOTerms etoTerms,
         IEquityToken equityToken,
-        uint256 startDate
+        uint256 startDate,
+        uint256 logStartDate
     )
         external
     {
@@ -62,6 +63,6 @@ contract MockETOCommitment is
         runStateMachine(uint32(startDate));
 
         emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
-        emit LogETOStartDateSet(msg.sender, startAt, startDate);
+        emit LogETOStartDateSet(msg.sender, startAt, logStartDate);
     }
 }
