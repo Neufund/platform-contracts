@@ -180,7 +180,39 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   // mock start date if we intend to move to next state
   const startDate = new web3.BigNumber(Math.floor(new Date() / 1000) - 3 * dayInSeconds);
-  await etoCommitment._mockStartDate(etoTerms.address, equityToken.address, startDate);
+  // mock log event start date
+  const whitelistD = etoDefiniton.durTerms.WHITELIST_DURATION.add(1);
+  const publicD = etoDefiniton.durTerms.PUBLIC_DURATION.add(1);
+  const signingDelay = etoDefiniton.durTerms.SIGNING_DURATION.div(2).round();
+  const claimD = etoDefiniton.durTerms.CLAIM_DURATION.add(1);
+  let logStartDate = startDate;
+  if (final >= CommitmentState.Public) {
+    logStartDate = logStartDate.sub(whitelistD);
+  }
+  if (final === CommitmentState.Refund) {
+    logStartDate = logStartDate.sub(publicD);
+  } else {
+    if (final >= CommitmentState.Signing) {
+      logStartDate = logStartDate.sub(publicD);
+    }
+    if (final >= CommitmentState.Claim) {
+      logStartDate = logStartDate.sub(signingDelay);
+    }
+    if (final >= CommitmentState.Payout) {
+      logStartDate = logStartDate.sub(claimD);
+    }
+  }
+  console.log(
+    `Setting start date ${startDate.toNumber()} and log date ${logStartDate.toNumber()}
+     with diff ${startDate.sub(logStartDate).toNumber()}`,
+  );
+  await etoCommitment._mockStartDate(
+    etoTerms.address,
+    equityToken.address,
+    startDate,
+    logStartDate,
+    { from: issuer.address },
+  );
 
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
@@ -205,7 +237,6 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     return etoCommitment;
   }
   console.log("Going to public");
-  const whitelistD = etoDefiniton.durTerms.WHITELIST_DURATION.add(1);
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
@@ -220,10 +251,9 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   if (final === CommitmentState.Public) {
     return etoCommitment;
   }
-  const whitelistP = etoDefiniton.durTerms.PUBLIC_DURATION.add(1);
   if (final === CommitmentState.Refund) {
     console.log("Going to Refund");
-    await etoCommitment._mockShiftBackTime(whitelistP);
+    await etoCommitment._mockShiftBackTime(publicD);
     await etoCommitment.handleStateTransitions();
     await ensureState(etoCommitment, CommitmentState.Refund);
     return etoCommitment;
@@ -241,7 +271,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     amountMinTokensEur,
     "EUR",
   );
-  await etoCommitment._mockShiftBackTime(whitelistP);
+  await etoCommitment._mockShiftBackTime(publicD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Signing);
   if (final === CommitmentState.Signing) {
@@ -252,6 +282,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
       etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL
     }`,
   );
+  await etoCommitment._mockShiftBackTime(signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
     etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
@@ -265,8 +296,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     return etoCommitment;
   }
   console.log("Going to payout");
-  const whitelistC = etoDefiniton.durTerms.CLAIM_DURATION.add(1);
-  await etoCommitment._mockShiftBackTime(whitelistC);
+  await etoCommitment._mockShiftBackTime(claimD);
   // no need to check state afterwards, payout ensures it
   await etoCommitment.payout();
   // console.log(await etoCommitment.startOfStates());
