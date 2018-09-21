@@ -272,30 +272,6 @@ contract LockedAccount is
         return true;
     }
 
-    /// @notice moves funds and obligations to another wallet
-    /// @param newInvestor where to move funds and obligations
-    /// @dev destination account must be empty. method intended for easy migration or way out of unsuccessful migration
-    /// @dev receiving refunds to old address will not be possible. those will remain in commitment contract
-    /*function move(address newInvestor)
-        public
-    {
-        // todo: prevent move when there is unclaimed/unrefunded investment or remove this method
-        // require KYC to move to new investor. this also makes sure that newInvestor is a valid address with private key
-        IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
-        IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(newInvestor));
-        require(claims.isVerified && !claims.accountFrozen);
-        Account storage newAccount = _accounts[newInvestor];
-        // only to empty accounts
-        require(newAccount.unlockDate == 0);
-        Account storage account = _accounts[msg.sender];
-        // only non empty account
-        require(account.balance > 0);
-        newAccount = account;
-        delete _accounts[msg.sender];
-        emit LogInvestorMoved(msg.sender, newInvestor);
-        emit LogFundsLocked(newInvestor, newAccount.balance, newAccount.neumarksDue);
-    }*/
-
     /// @notice refunds investor in case of failed offering
     /// @param investor funds owner
     /// @dev callable only by ETO contract, bookkeeping in LockedAccount::_commitments
@@ -348,14 +324,13 @@ contract LockedAccount is
     )
         public
         onlyMigrationSource()
-        acceptAgreement(investor)
     {
         // internally we use 112 bits to store amounts
-        require(balance256 < 2**112);
+        require(balance256 < 2**112, "OVR");
         uint112 balance = uint112(balance256);
-        require(neumarksDue256 < 2**112);
+        assert(neumarksDue256 < 2**112);
         uint112 neumarksDue = uint112(neumarksDue256);
-        require(unlockDate256 < 2**32);
+        assert(unlockDate256 < 2**32);
         uint32 unlockDate = uint32(unlockDate256);
 
         // transfer assets
@@ -399,6 +374,8 @@ contract LockedAccount is
             // all funds and NEU must be migrated
             require(balance == 0, "LOCKED_ACCOUNT_SPLIT_UNDERSPENT");
             assert(neumarksDue == 0);
+            // free up gas
+            delete _destinations[investor];
         }
     }
 
@@ -417,6 +394,8 @@ contract LockedAccount is
         addDestination(destinations, destinationWallet, 0);
     }
 
+    /// @dev if one of amounts is > 2**112, solidity will pass modulo value, so for 2**112 + 1, we'll get 1
+    ///      and that's fine
     function setInvestorMigrationWallets(address[] wallets, uint112[] amounts)
         public
     {
@@ -429,6 +408,23 @@ contract LockedAccount is
         uint256 idx;
         while(idx < wallets.length) {
             addDestination(destinations, wallets[idx], amounts[idx]);
+            idx += 1;
+        }
+    }
+
+    /// @notice returns current set of destination wallets for investor migration
+    function getInvestorMigrationWallets(address investor)
+        public
+        constant
+        returns (address[] wallets, uint112[] amounts)
+    {
+        Destination[] storage destinations = _destinations[investor];
+        wallets = new address[](destinations.length);
+        amounts = new uint112[](destinations.length);
+        uint256 idx;
+        while(idx < destinations.length) {
+            wallets[idx] = destinations[idx].investor;
+            amounts[idx] = destinations[idx].amount;
             idx += 1;
         }
     }
@@ -603,7 +599,7 @@ contract LockedAccount is
             require(penaltyDisbursalAddress != address(0));
             uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
             // distribution via ERC223 to contract or simple address
-            assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, ""));
+            assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, abi.encodePacked(NEUMARK)));
             emit LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
             accountInMem.balance -= penalty;
         }
@@ -620,6 +616,7 @@ contract LockedAccount is
     /// @dev used only by migration
     function lock(address investor, uint112 amount, uint112 neumarks, uint32 unlockDate)
         private
+        acceptAgreement(investor)
     {
         require(amount > 0);
         Account storage account = _accounts[investor];
