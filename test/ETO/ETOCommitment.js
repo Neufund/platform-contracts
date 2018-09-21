@@ -46,6 +46,7 @@ const ETOTerms = artifacts.require("ETOTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
+const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 
 const PLATFORM_SHARE = web3.toBigNumber("2");
 const minDepositAmountEurUlps = Q18.mul(500);
@@ -63,6 +64,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   let universe;
   let identityRegistry;
   let accessPolicy;
+  let testDisbursal;
   // tokens
   let etherToken;
   let euroToken;
@@ -92,8 +94,11 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     // note that all deploy... functions also set up permissions and set singletons in universe
     identityRegistry = await deployIdentityRegistry(universe, admin, admin);
-    // set simple address (platform wallet) for fees disbursal
-    await universe.setSingleton(knownInterfaces.feeDisbursal, platformWallet, { from: admin });
+    // deploy test fee disbursal
+    testDisbursal = await TestFeeDistributionPool.new();
+    await universe.setSingleton(knownInterfaces.feeDisbursal, testDisbursal.address, {
+      from: admin,
+    });
     // set simple address for platform portfolio
     await universe.setSingleton(knownInterfaces.platformPortfolio, platformWallet, { from: admin });
     // platform wallet is verified
@@ -412,8 +417,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           etoTermsDict.WHITELIST_DISCOUNT_FRAC,
         );
         // invest some
-        await investAmount(investors[0], Q18, "ETH", disountedPrice);
-        await investAmount(investors[0], Q18.mul(1.1289791), "ETH", disountedPrice);
+        await investAmount(investors[0], Q18.add(1), "ETH", disountedPrice);
+        await investAmount(investors[0], Q18.mul(1.1289791).sub(1), "ETH", disountedPrice);
         await investAmount(investors[1], Q18.mul(0.9528763), "ETH", disountedPrice);
         await investAmount(investors[0], Q18.mul(30876.18912), "EUR", disountedPrice);
         const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
@@ -588,10 +593,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           etoTermsDict.WHITELIST_DISCOUNT_FRAC,
         );
         // invest from ICBM contract
-        await investICBMAmount(investors[0], Q18, "ETH", disountedPrice);
-        await investICBMAmount(investors[0], Q18.mul(7.87261621), "ETH", disountedPrice);
+        await investICBMAmount(investors[0], Q18.add(1), "ETH", disountedPrice);
+        await investICBMAmount(investors[0], Q18.mul(7.87261621).sub(1), "ETH", disountedPrice);
         await investICBMAmount(investors[1], Q18.mul(34.098171), "ETH", disountedPrice);
-        await investICBMAmount(investors[0], Q18.mul(73692.76198871), "EUR", disountedPrice);
+        await investICBMAmount(investors[0], Q18.mul(73692.76198871).add(1), "EUR", disountedPrice);
         const publicStartDate = startDate.add(durTermsDict.WHITELIST_DURATION);
         await skipTimeTo(publicStartDate.add(1));
         await etoCommitment.handleStateTransitions();
@@ -607,7 +612,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           "EUR",
           tokenprice,
         );
-        await investICBMAmount(investors[4], Q18.mul(1000), "EUR", tokenprice);
+        await investICBMAmount(investors[4], Q18.mul(1000).sub(1), "EUR", tokenprice);
         // must still be public
         expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
         const totalInvestment = await etoCommitment.totalInvestment();
@@ -1293,6 +1298,25 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expectLogPlatformFeePayout(tx, 0, etherToken.address, disbursal, contribution[5]);
     expectLogPlatformFeePayout(tx, 1, euroToken.address, disbursal, contribution[6]);
     expectLogPlatformPortfolioPayout(tx, equityToken.address, platformPortfolio, contribution[4]);
+    // fee disbursal must have valid snapshot token address which is sent as additional bytes parameter
+    const logs = decodeLogs(tx, testDisbursal.address, testDisbursal.abi);
+    tx.logs.push(...logs);
+    expectLogTestReceiveTransfer(
+      tx,
+      0,
+      etherToken.address,
+      neumark.address,
+      etoCommitment.address,
+      contribution[5],
+    );
+    expectLogTestReceiveTransfer(
+      tx,
+      1,
+      euroToken.address,
+      neumark.address,
+      etoCommitment.address,
+      contribution[6],
+    );
     // fee disbursal must have fees
     expect(await etherToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[5]);
     expect(await euroToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[6]);
@@ -1364,6 +1388,22 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // console.log(`${state}:${expectedDate}:${new Date(expectedDate * 1000)}`);
       expect(await etoCommitment.startOf(CommitmentState[state])).to.be.bignumber.eq(expectedDate);
     }
+  }
+
+  function expectLogTestReceiveTransfer(
+    tx,
+    logIdx,
+    tokenAddress,
+    snapshotTokenAddress,
+    from,
+    amount,
+  ) {
+    const event = eventWithIdxValue(tx, logIdx, "LogTestReceiveTransfer");
+    expect(event).to.exist;
+    expect(event.args.paymentToken).to.be.equal(tokenAddress);
+    expect(event.args.snapshotToken).to.be.equal(snapshotTokenAddress);
+    expect(event.args.amount).to.be.bignumber.equal(amount);
+    expect(event.args.from).to.be.equal(from);
   }
 
   function expectLogRefundStarted(tx, equityTokenAddress, burnedTokens, burnedNeu) {
