@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 
 /// @title hooks token controller to token contract and allows to replace it

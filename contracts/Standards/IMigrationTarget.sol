@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 
 /// @notice implemented in the contract that is the target of state migration

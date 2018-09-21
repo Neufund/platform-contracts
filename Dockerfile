@@ -17,7 +17,7 @@ RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contract
 WORKDIR /usr/src/platform-contracts
 ADD .babelrc mocha.js nanoWeb3Provider.js package.json truffle.js yarn.lock ./
 RUN yarn
-ADD bin/solc.4.24 /usr/bin/
+ADD bin/solc.4.25 /usr/bin/
 ADD scripts scripts
 RUN ./scripts/solctruffle.sh
 ADD contracts contracts

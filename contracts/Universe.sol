@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 import "./Neumark.sol";
 import "./KnownInterfaces.sol";
 import "./Agreement.sol";
