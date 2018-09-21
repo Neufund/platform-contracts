@@ -719,7 +719,7 @@ contract ETOCommitment is
         assert(disbursal != address(0));
         address platformPortfolio = UNIVERSE.platformPortfolio();
         assert(platformPortfolio != address(0));
-        bytes memory serializedAddress = abi.encodePacked(address(NEUMARK));// addressToBytes(address(NEUMARK));
+        bytes memory serializedAddress = abi.encodePacked(address(NEUMARK));
         // assert(decodeAddress(serializedAddress) == address(NEUMARK));
         if (_platformFeeEth > 0) {
             // disburse via ERC223, where we encode token used to provide pro-rata in `data` parameter

@@ -36,7 +36,7 @@ contract IEquityToken is
     /// only by previous nominee
     function changeNominee(address newNominee) public;
 
-    /// controlled, always issues to self
+    /// controlled, always issues to msg.sender
     function issueTokens(uint256 amount) public;
 
     /// controlled, may send tokens even when transfer are disabled: to active ETO only
