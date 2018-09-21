@@ -70,8 +70,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   it("should verify terms in ETOTerms", async () => {
     await verifyTerms(etoTerms, termsKeys, terms);
-    // todo: also verify parameters that are not set but part of interface
   });
+
+  it("ETOTerms: also verify constant parameters that are not set but part of interface");
 
   it("should verify terms in ETODurationTerms", async () => {
     await verifyTerms(durationTerms, durationTermsKeys, durTerms);
@@ -83,8 +84,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   it("should verify terms in ShareholderRights", async () => {
     await verifyTerms(shareholderRights, shareholderTermsKeys, shareholderTerms);
-    // todo: also verify constant parameters
   });
+
+  it("ShareholderRights todo: also verify constant parameters");
 
   it("should verify default eto terms against platform terms", async () => {
     await etoTerms.requireValidTerms(platformTerms.address);
@@ -93,249 +95,263 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   // should be a set of tests with different rounding, we should be able to run it on equity token as well
   it("should convert equity token amount to shares");
 
-  it("should reject on platform terms with minimum ticket too small", async () => {
-    // change to sub(0) for this test to fail
-    terms.MIN_TICKET_EUR_ULPS = (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1);
-    const termsValues = termsKeys.map(v => terms[v]);
-    // console.log(termsValues);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
-  });
-
-  /*
-  it("should reject on platform terms with max ticket in crowdfunding too large", async () => {
-    // change to sub(0) for this test to fail
-    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS();
-    terms.MAX_TICKET_EUR_ULPS = oldValue.add(1);
-    terms.IS_CROWDFUNDING = true;
-    const termsValues = termsKeys.map(v => terms[v]);
-    // console.log(termsValues);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
-  });
-
-  it("should reject on platform terms with simple max ticket in crowdfunding too large", async () => {
-    // change to sub(0) for this test to fail
-    const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS();
-    terms.MAX_TICKET_SIMPLE_EUR_ULPS = oldValue.add(1);
-    terms.IS_CROWDFUNDING = true;
-    const termsValues = termsKeys.map(v => terms[v]);
-    // console.log(termsValues);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
-  });
-  */
-
-  it("should accept new duration terms", async () => {
-    // change to sub(0) for this test to fail
-
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).add(1),
+  describe("terms validation", () => {
+    it("should reject on platform terms with minimum ticket too small", async () => {
+      // change to sub(0) for this test to fail
+      terms.MIN_TICKET_EUR_ULPS = (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1);
+      const termsValues = termsKeys.map(v => terms[v]);
+      // console.log(termsValues);
+      etoTerms = await ETOTerms.new.apply(this, termsValues);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
     });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
 
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await etoTerms.requireValidTerms(platformTerms.address);
-  });
+    /*
+    it("should reject on platform terms with max ticket in crowdfunding too large", async () => {
+      // change to sub(0) for this test to fail
+      const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SOPHISTICATED_EUR_ULPS();
+      terms.MAX_TICKET_EUR_ULPS = oldValue.add(1);
+      terms.IS_CROWDFUNDING = true;
+      const termsValues = termsKeys.map(v => terms[v]);
+      // console.log(termsValues);
+      etoTerms = await ETOTerms.new.apply(this, termsValues);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+    });
 
-  it("should reject on platform terms with whitelist duration too small", async () => {
-    const minWhitelistDuration = await platformTerms.MIN_WHITELIST_DURATION();
-    // minimum limit must be > 0
-    if (minWhitelistDuration.gt(0)) {
+    it("should reject on platform terms with simple max ticket in crowdfunding too large", async () => {
+      // change to sub(0) for this test to fail
+      const oldValue = await platformTerms.MAX_TICKET_CROWFUNDING_SIMPLE_EUR_ULPS();
+      terms.MAX_TICKET_SIMPLE_EUR_ULPS = oldValue.add(1);
+      terms.IS_CROWDFUNDING = true;
+      const termsValues = termsKeys.map(v => terms[v]);
+      // console.log(termsValues);
+      etoTerms = await ETOTerms.new.apply(this, termsValues);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(EvmError);
+    });
+    */
+
+    it("should accept new duration terms", async () => {
+      // change to sub(0) for this test to fail
+
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).sub(1),
+        WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).add(1),
+      });
+      terms.DURATION_TERMS = durationTerms.address;
+      const values = termsKeys.map(v => terms[v]);
+
+      etoTerms = await ETOTerms.new.apply(this, values);
+      await etoTerms.requireValidTerms(platformTerms.address);
+    });
+
+    it("should reject on platform terms with whitelist duration too small", async () => {
+      const minWhitelistDuration = await platformTerms.MIN_WHITELIST_DURATION();
+      // minimum limit must be > 0
+      if (minWhitelistDuration.gt(0)) {
+        [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+          WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).sub(1),
+        });
+        terms.DURATION_TERMS = durationTerms.address;
+        const values = termsKeys.map(v => terms[v]);
+
+        etoTerms = await ETOTerms.new.apply(this, values);
+        await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+          "ETO_TERMS_WL_D_MIN",
+        );
+      }
+    });
+
+    it("should reject on platform terms with whitelist duration too large", async () => {
+      [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+        WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).add(1),
       });
       terms.DURATION_TERMS = durationTerms.address;
       const values = termsKeys.map(v => terms[v]);
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_WL_D_MIN",
+        "ETO_TERMS_WL_D_MAX",
       );
-    }
-  });
-
-  it("should reject on platform terms with whitelist duration too large", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).add(1),
     });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
 
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_WL_D_MAX",
-    );
-  });
+    it("should reject on platform terms with public duration too small", async () => {
+      const minPublicDuration = await platformTerms.MIN_PUBLIC_DURATION();
+      if (minPublicDuration.gt(0)) {
+        [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+          PUBLIC_DURATION: minPublicDuration.sub(1),
+        });
+        terms.DURATION_TERMS = durationTerms.address;
+        const values = termsKeys.map(v => terms[v]);
 
-  it("should reject on platform terms with public duration too small", async () => {
-    const minPublicDuration = await platformTerms.MIN_PUBLIC_DURATION();
-    if (minPublicDuration.gt(0)) {
+        etoTerms = await ETOTerms.new.apply(this, values);
+        await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+          "ETO_TERMS_PUB_D_MIN",
+        );
+      }
+    });
+
+    it("should reject on platform terms with public duration too large", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        PUBLIC_DURATION: minPublicDuration.sub(1),
+        PUBLIC_DURATION: (await platformTerms.MAX_PUBLIC_DURATION()).add(1),
       });
       terms.DURATION_TERMS = durationTerms.address;
       const values = termsKeys.map(v => terms[v]);
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_PUB_D_MIN",
+        "ETO_TERMS_PUB_D_MAX",
       );
-    }
-  });
-
-  it("should reject on platform terms with public duration too large", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      PUBLIC_DURATION: (await platformTerms.MAX_PUBLIC_DURATION()).add(1),
     });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
 
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_PUB_D_MAX",
-    );
-  });
-
-  it("should reject on platform terms with signing duration too small", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      SIGNING_DURATION: (await platformTerms.MIN_SIGNING_DURATION()).sub(1),
-    });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
-
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_SIG_MIN",
-    );
-  });
-
-  it("should reject on platform terms with signing duration too large", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      SIGNING_DURATION: (await platformTerms.MAX_SIGNING_DURATION()).add(1),
-    });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
-
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_SIG_MAX",
-    );
-  });
-
-  it("should reject on platform terms with claim duration too small", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      CLAIM_DURATION: (await platformTerms.MIN_CLAIM_DURATION()).sub(1),
-    });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
-
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_CLAIM_MIN",
-    );
-  });
-
-  it("should reject on platform terms with claim duration too large", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      CLAIM_DURATION: (await platformTerms.MAX_CLAIM_DURATION()).add(1),
-    });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
-
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_CLAIM_MAX",
-    );
-  });
-
-  it("should reject on platform terms with total duration too small", async () => {
-    [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-      WHITELIST_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2),
-      PUBLIC_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2).sub(1),
-    });
-    terms.DURATION_TERMS = durationTerms.address;
-    const values = termsKeys.map(v => terms[v]);
-
-    etoTerms = await ETOTerms.new.apply(this, values);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_TOT_O_MIN",
-    );
-  });
-
-  it("should reject on platform terms with total duration too large", async () => {
-    const maxOfferDuration = await platformTerms.MAX_OFFER_DURATION();
-    const maxWlPubDuration = (await platformTerms.MAX_WHITELIST_DURATION()).add(
-      await platformTerms.MAX_PUBLIC_DURATION(),
-    );
-    if (maxWlPubDuration.gt(maxOfferDuration)) {
-      // todo: this test has many internal cases and needs improvement, with current platform settings it will not be executed
+    it("should reject on platform terms with signing duration too small", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).sub(1),
+        SIGNING_DURATION: (await platformTerms.MIN_SIGNING_DURATION()).sub(1),
       });
       terms.DURATION_TERMS = durationTerms.address;
       const values = termsKeys.map(v => terms[v]);
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_TOT_O_MAX",
+        "ETO_TERMS_SIG_MIN",
       );
-    }
-  });
-
-  it("should reject on platform terms with minimum number of tokens too small", async () => {
-    // change to sub(0) for this test to fail
-    [tokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-      MIN_NUMBER_OF_TOKENS: constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
     });
-    terms.TOKEN_TERMS = tokenTerms.address;
-    const termsValues = termsKeys.map(v => terms[v]);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_ONE_SHARE",
-    );
+
+    it("should reject on platform terms with signing duration too large", async () => {
+      [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+        SIGNING_DURATION: (await platformTerms.MAX_SIGNING_DURATION()).add(1),
+      });
+      terms.DURATION_TERMS = durationTerms.address;
+      const values = termsKeys.map(v => terms[v]);
+
+      etoTerms = await ETOTerms.new.apply(this, values);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_SIG_MAX",
+      );
+    });
+
+    it("should reject on platform terms with claim duration too small", async () => {
+      [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+        CLAIM_DURATION: (await platformTerms.MIN_CLAIM_DURATION()).sub(1),
+      });
+      terms.DURATION_TERMS = durationTerms.address;
+      const values = termsKeys.map(v => terms[v]);
+
+      etoTerms = await ETOTerms.new.apply(this, values);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_CLAIM_MIN",
+      );
+    });
+
+    it("should reject on platform terms with claim duration too large", async () => {
+      [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+        CLAIM_DURATION: (await platformTerms.MAX_CLAIM_DURATION()).add(1),
+      });
+      terms.DURATION_TERMS = durationTerms.address;
+      const values = termsKeys.map(v => terms[v]);
+
+      etoTerms = await ETOTerms.new.apply(this, values);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_CLAIM_MAX",
+      );
+    });
+
+    it("should reject on platform terms with total duration too small", async () => {
+      [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+        WHITELIST_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2),
+        PUBLIC_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2).sub(1),
+      });
+      terms.DURATION_TERMS = durationTerms.address;
+      const values = termsKeys.map(v => terms[v]);
+
+      etoTerms = await ETOTerms.new.apply(this, values);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_TOT_O_MIN",
+      );
+    });
+
+    it("should reject on platform terms with total duration too large", async () => {
+      const maxOfferDuration = await platformTerms.MAX_OFFER_DURATION();
+      const maxWlPubDuration = (await platformTerms.MAX_WHITELIST_DURATION()).add(
+        await platformTerms.MAX_PUBLIC_DURATION(),
+      );
+      if (maxWlPubDuration.gt(maxOfferDuration)) {
+        // todo: this test has many internal cases and needs improvement, with current platform settings it will not be executed
+        [durationTerms] = await deployDurationTerms(ETODurationTerms, {
+          WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).sub(1),
+        });
+        terms.DURATION_TERMS = durationTerms.address;
+        const values = termsKeys.map(v => terms[v]);
+
+        etoTerms = await ETOTerms.new.apply(this, values);
+        await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+          "ETO_TERMS_TOT_O_MAX",
+        );
+      }
+    });
+
+    it("should reject on platform terms with minimum number of tokens too small", async () => {
+      // change to sub(0) for this test to fail
+      [tokenTerms] = await deployTokenTerms(ETOTokenTerms, {
+        MIN_NUMBER_OF_TOKENS: constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
+      });
+      terms.TOKEN_TERMS = tokenTerms.address;
+      const termsValues = termsKeys.map(v => terms[v]);
+      etoTerms = await ETOTerms.new.apply(this, termsValues);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_ONE_SHARE",
+      );
+    });
+
+    it("should reject on minimum ticket too small", async () => {
+      terms.MIN_TICKET_EUR_ULPS = (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1);
+      const termsValues = termsKeys.map(v => terms[v]);
+      etoTerms = await ETOTerms.new.apply(this, termsValues);
+      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
+        "ETO_TERMS_MIN_TICKET_EUR_ULPS",
+      );
+    });
   });
 
-  it("should reject on minimum ticket too small", async () => {
-    terms.MIN_TICKET_EUR_ULPS = (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1);
-    const termsValues = termsKeys.map(v => terms[v]);
-    etoTerms = await ETOTerms.new.apply(this, termsValues);
-    await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-      "ETO_TERMS_MIN_TICKET_EUR_ULPS",
-    );
-  });
+  describe("general calculations", async () => {
+    it("should compute estimated max cap and min cap in eur", async () => {
+      // simple flat pricing without discounts
+      const maxCap = await etoTerms.ESTIMATED_MAX_CAP_EUR_ULPS();
+      expect(maxCap).to.be.bignumber.eq(
+        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MAX_NUMBER_OF_TOKENS),
+      );
+      const minCap = await etoTerms.ESTIMATED_MIN_CAP_EUR_ULPS();
+      expect(minCap).to.be.bignumber.eq(
+        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MIN_NUMBER_OF_TOKENS),
+      );
+    });
 
-  it("should compute estimated max cap and min cap in eur", async () => {
-    // simple flat pricing without discounts
-    const maxCap = await etoTerms.ESTIMATED_MAX_CAP_EUR_ULPS();
-    expect(maxCap).to.be.bignumber.eq(
-      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MAX_NUMBER_OF_TOKENS),
-    );
-    const minCap = await etoTerms.ESTIMATED_MIN_CAP_EUR_ULPS();
-    expect(minCap).to.be.bignumber.eq(
-      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MIN_NUMBER_OF_TOKENS),
-    );
-  });
+    it("should compute tokens from eur", async () => {
+      expect(
+        await etoTerms.calculateTokenAmount(0, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+      ).to.be.bignumber.eq(1);
+      expect(await etoTerms.calculateTokenAmount(0, 0)).to.be.bignumber.eq(0);
+      const ticket = Q18.mul(717271).add(1);
+      expect(await etoTerms.calculateTokenAmount(0, ticket)).to.be.bignumber.eq(
+        divRound(ticket, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+      );
+      const ticket2 = Q18.mul(7162.129821);
+      expect(await etoTerms.calculateTokenAmount(0, ticket2)).to.be.bignumber.eq(
+        divRound(ticket2, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+      );
+    });
 
-  it("should compute tokens from eur", async () => {
-    expect(
-      await etoTerms.calculateTokenAmount(0, tokenTerms.TOKEN_PRICE_EUR_ULPS),
-    ).to.be.bignumber.eq(1);
-    expect(await etoTerms.calculateTokenAmount(0, 0)).to.be.bignumber.eq(0);
-    expect(await etoTerms.calculateTokenAmount(0, Q18.mul(717271))).to.be.bignumber.eq(
-      divRound(Q18.mul(717271), tokenTerms.TOKEN_PRICE_EUR_ULPS),
-    );
-  });
-
-  it("should compute eurs from tokens", async () => {
-    expect(await etoTerms.calculateEurUlpsAmount(0, 1)).to.be.bignumber.eq(
-      tokenTerms.TOKEN_PRICE_EUR_ULPS,
-    );
-    expect(await etoTerms.calculateEurUlpsAmount(0, 0)).to.be.bignumber.eq(0);
-    expect(await etoTerms.calculateEurUlpsAmount(0, 9812791)).to.be.bignumber.eq(
-      tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(9812791),
-    );
+    it("should compute eurs from tokens", async () => {
+      expect(await etoTerms.calculateEurUlpsAmount(0, 1)).to.be.bignumber.eq(
+        tokenTerms.TOKEN_PRICE_EUR_ULPS,
+      );
+      expect(await etoTerms.calculateEurUlpsAmount(0, 0)).to.be.bignumber.eq(0);
+      const ticket = new web3.BigNumber(9812791);
+      expect(await etoTerms.calculateEurUlpsAmount(0, ticket)).to.be.bignumber.eq(
+        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(ticket),
+      );
+      const ticket2 = new web3.BigNumber(9812791);
+      expect(await etoTerms.calculateEurUlpsAmount(0, ticket2)).to.be.bignumber.eq(
+        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(ticket2),
+      );
+    });
   });
 
   describe("whitelist tests", () => {
@@ -349,17 +365,18 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(ticket[2]).to.be.bignumber.eq(Q18);
 
       // with discount of 60% with ticket 500000
-      tx = await etoTerms.addWhitelisted([investorDiscount], [Q18.mul(500000)], [Q18.mul(0.6)], {
+      const whitelistedAmount = Q18.mul(500000).add(1);
+      const discount = Q18.mul(0.6).sub(1);
+      tx = await etoTerms.addWhitelisted([investorDiscount], [whitelistedAmount], [discount], {
         from: deployer,
       });
-      expectLogInvestorWhitelisted(tx.logs[0], investorDiscount, Q18.mul(500000), Q18.mul(0.6));
+      expectLogInvestorWhitelisted(tx.logs[0], investorDiscount, whitelistedAmount, discount);
       ticket = await etoTerms.whitelistTicket(investorDiscount);
       expect(ticket[0]).to.be.true;
-      expect(ticket[1]).to.be.bignumber.eq(Q18.mul(500000));
-      expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.6));
+      expect(ticket[1]).to.be.bignumber.eq(whitelistedAmount);
+      expect(ticket[2]).to.be.bignumber.eq(discount);
     });
 
-    // todo: use generator from ICBMCommitment
     it("add many investors", async () => {
       const tx = await etoTerms.addWhitelisted(
         [investors[0], investors[1], investors[2]],
@@ -589,9 +606,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
         from: deployer,
       });
-      await amountNoFixedSlot(0, Q18.mul(8129.1991));
+      await amountNoFixedSlot(0, Q18.mul(8129.1991).add(1));
       // invest again
-      await amountNoFixedSlot(Q18.mul(8129.1991), Q18.mul(29811.18981));
+      await amountNoFixedSlot(Q18.mul(8129.1991).sub(1), Q18.mul(29811.18981));
     });
 
     it("with amount crossing max ticket no discount", async () => {
@@ -602,7 +619,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     });
 
     it("with no amount and discount", async () => {
-      const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
+      const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2).add(1);
       const priceFrac = Q18.mul(0.6);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
@@ -646,7 +663,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     });
 
     it("with amount over discount", async () => {
-      const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
+      const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2).sub(1);
       const priceFrac = Q18.mul(0.6);
       const amount = discountAmount.add(Q18);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
@@ -666,7 +683,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("with amount over discount in multiple steps", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const priceFrac = Q18.mul(0.321);
+      const priceFrac = Q18.mul(0.321).add(1);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: deployer,
       });
@@ -687,7 +704,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(info[4]).to.be.bignumber.eq(expDiscountedTokens);
 
       // next amount is without discount
-      const amount3 = Q18.mul(19209.111);
+      const amount3 = Q18.mul(19209.111).add(1);
       const total = amount.add(amount2);
       info = await etoTerms.calculateContribution(investorDiscount, total, total, amount3, true);
       expect(info[3]).to.be.bignumber.eq(tokenPrice(total, amount3, fullPriceFraction));
