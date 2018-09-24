@@ -1049,6 +1049,7 @@ contract(
         });
         // should sign at deposit
         expect(await euroToken.agreementSignedAtBlock(investors[0])).to.be.bignumber.not.eq(0);
+
         await euroToken.transfer(investors[1], balance, { from: investors[0] });
         // transfer recipient does not implicitly sign
         expect(await euroToken.agreementSignedAtBlock(investors[1])).to.be.bignumber.eq(0);

@@ -518,7 +518,7 @@ contract ICBMLockedAccount is
                 // distribute penalty
                 if (isContract(_penaltyDisbursalAddress)) {
                     require(
-                        ASSET_TOKEN.approveAndCall(_penaltyDisbursalAddress,penalty, "")
+                        ASSET_TOKEN.approveAndCall(_penaltyDisbursalAddress, penalty, "")
                     );
                 } else {
                     // transfer to simple address

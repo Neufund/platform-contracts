@@ -15,7 +15,7 @@ import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { divRound } from "./helpers/unitConverter";
 import increaseTime from "./helpers/increaseTime";
-import { toBytes32, Q18, contractId } from "./helpers/constants";
+import { toBytes32, Q18, contractId, ZERO_ADDRESS } from "./helpers/constants";
 
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
 const gasExchangeFee = Q18.mul(0.07);
@@ -234,7 +234,12 @@ contract(
         gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
           from: tokenOracleManager,
         }),
-      ).to.revert;
+      ).to.be.rejectedWith("SEX_SAME_N_D");
+    });
+
+    it("should return 0 timestamp on unknown rate", async () => {
+      const rate = await rateOracle.getExchangeRate(ZERO_ADDRESS, ZERO_ADDRESS);
+      expect(rate[1]).to.be.bignumber.eq(0);
     });
 
     it("should exchange EuroToken to gas", async () => {

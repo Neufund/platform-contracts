@@ -242,10 +242,9 @@ Currently default files are
 
 **Executing transactions that revert with status string**
 
-In solidity 0.4.22 it is now possible to return a status string. this is not supported by tooling
-yet. keep an eye on: https://github.com/ethereum/solidity/issues/1686
-https://github.com/ethereum/solidity/pull/3364 https://github.com/ethereum/remix/pull/760 (remix
-provides those codes)
+Ganache-cli finally returns revert codes in exception string, this also applies to reverts in
+`eth_call`. **Parity however has undefined behavior on eth_call with revert - AFAIK it returns whole
+EVM stack frame**
 
 ### Test coverage -to be fixed soon-
 

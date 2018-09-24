@@ -3,11 +3,13 @@ pragma solidity 0.4.24;
 import "../../Standards/IERC677Callback.sol";
 import "../../Standards/IERC223Callback.sol";
 import "../../Standards/IERC677Token.sol";
+import "../../Serialization.sol";
 
 
 contract TestFeeDistributionPool is
     IERC677Callback,
-    IERC223Callback
+    IERC223Callback,
+    Serialization
 {
 
     ////////////////////////
@@ -20,9 +22,10 @@ contract TestFeeDistributionPool is
     );
 
     event LogTestReceiveTransfer(
-        address token,
-        address from,
-        uint256 amount
+        address paymentToken,
+        address snapshotToken,
+        uint256 amount,
+        address from
     );
 
     ////////////////////////
@@ -52,9 +55,10 @@ contract TestFeeDistributionPool is
     // Implements IERC223Callback
     //
 
-    function tokenFallback(address from, uint256 amount, bytes)
+    function tokenFallback(address from, uint256 amount, bytes snapshotTokenEncoded)
         public
     {
-        emit LogTestReceiveTransfer(msg.sender, from, amount);
+        address snapshotToken = decodeAddress(snapshotTokenEncoded);
+        emit LogTestReceiveTransfer(msg.sender, snapshotToken, amount, from);
     }
 }

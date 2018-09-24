@@ -67,6 +67,10 @@ contract("PlaceholderEquityTokenController", ([_, admin, company]) => {
   it("should allow generating equity tokens via ETO contract");
   it("should allow destroying equity tokens via ETO contract");
   it("should set transfers on approval according to ShareholderRights of ETOTerms");
+  // there are many rejection cases: like not from registered ETO, not from ETO, from other ETO in universe but not registered, from registered ETO but in Offering state
+  it(
+    "should allow transfer if transfers disabled only from registered ETO and only in Offering state",
+  );
 
   // a set of tests vs EquityToken
   // first -> run a full test suite for tokens as in EquityToken.js for Placeholder controller with enabled transfers.

@@ -196,17 +196,14 @@ contract SimpleExchange is
     {
         TokenRate storage requested_rate = _rates[numeratorToken][denominatorToken];
         TokenRate storage inversed_requested_rate = _rates[denominatorToken][numeratorToken];
-        require((requested_rate.timestamp > 0 || inversed_requested_rate.timestamp > 0), "SEX_NO_RATE_INFO");
-
         if (requested_rate.timestamp > 0) {
             return (requested_rate.rateFraction, requested_rate.timestamp);
         }
-        else {
+        else if (inversed_requested_rate.timestamp > 0) {
             uint256 invRateFraction = proportion(10**18, 10**18, inversed_requested_rate.rateFraction);
-            require(invRateFraction < 2**128, "SEX_OVR_INV");
-
             return (invRateFraction, inversed_requested_rate.timestamp);
         }
+        // will return (0, 0) == (rateFraction, timestamp)
     }
 
     function setExchangeRatePrivate(
