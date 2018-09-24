@@ -38,7 +38,7 @@
     "replace-string": "^1.1.0",
     "solium": "^1.1.7",
     "swarm-js": "^0.1.35",
-    "truffle": "Neufund/truffle#593601f2eb0607db439a395673233c7370b1ebfc",
+    "truffle": "Neufund/truffle#e15ee6b4b92162bd30702dc3f5dbd683066516b4",
     "truffle-flattener": "Neufund/truffle-flattener",
     "web3": "0.20.1",
     "web3-provider-engine": "^13.3.2"

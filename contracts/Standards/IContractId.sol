@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 /// @title uniquely identifies deployable (non-abstract) platform contract
 /// @notice cheap way of assigning implementations to knownInterfaces which represent system services

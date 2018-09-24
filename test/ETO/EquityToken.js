@@ -111,16 +111,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     it("should change nominee");
 
-    it("should sign agreement on transfer");
-
-    it("should not sign agreement on receiving transfer");
-
-    it("should sign agreement on approve");
-
-    it("should sign agreement on distributeTokens for receiver");
-
-    it("should sign agreement explicitely");
-
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
 
@@ -130,6 +120,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IEquityTokenController tests", () => {
+    // extend implementation of TestNullEquityTokenController to be able to control all operations via mocks
     it("can block transfers");
     it("can block distribute");
     it("can block issueTokens");
@@ -137,6 +128,18 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("can block closeToken");
     it("can block changing equity token controller");
     it("can block changing nominee");
+    // look for       it("should accept agreement", async () => { in EuroToken
+    it("should change token controller");
+    it("should change nominee");
+    it("should sign agreement on transfer");
+
+    it("should not sign agreement on receiving transfer");
+
+    it("should sign agreement on approve");
+
+    it("should sign agreement on distributeTokens for receiver");
+
+    it("should sign agreement explicitely");
   });
 
   describe("IBasicToken tests", () => {

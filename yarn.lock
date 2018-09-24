@@ -258,7 +258,7 @@ async-eventemitter@^0.2.2:
   dependencies:
     async "^2.4.0"
 
-"async-eventemitter@github:ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c":
+async-eventemitter@ahultgren/async-eventemitter#fa06e39e56786ba541c180061dbf2c0a5bbf951c:
   version "0.2.3"
   resolved "https://codeload.github.com/ahultgren/async-eventemitter/tar.gz/fa06e39e56786ba541c180061dbf2c0a5bbf951c"
   dependencies:
@@ -5766,6 +5766,16 @@ solc@0.4.24, solc@^0.4.2:
     semver "^5.3.0"
     yargs "^4.7.1"
 
+solc@0.4.25:
+  version "0.4.25"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.4.25.tgz#06b8321f7112d95b4b903639b1138a4d292f5faa"
+  dependencies:
+    fs-extra "^0.30.0"
+    memorystream "^0.3.1"
+    require-from-string "^1.1.0"
+    semver "^5.3.0"
+    yargs "^4.7.1"
+
 solidity-coverage@^0.5.11:
   version "0.5.11"
   resolved "https://registry.yarnpkg.com/solidity-coverage/-/solidity-coverage-0.5.11.tgz#1ee45f6d98b75a615aadb8f9aa7db4a2b32258e7"
@@ -6317,13 +6327,13 @@ truffle-resolver@^4.0.1:
     truffle-expect "^0.0.4"
     truffle-provisioner "^0.1.1"
 
-truffle@Neufund/truffle#593601f2eb0607db439a395673233c7370b1ebfc:
+truffle@Neufund/truffle#e15ee6b4b92162bd30702dc3f5dbd683066516b4:
   version "3.4.9"
-  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/593601f2eb0607db439a395673233c7370b1ebfc"
+  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/e15ee6b4b92162bd30702dc3f5dbd683066516b4"
   dependencies:
     mocha "^3.4.2"
     original-require "^1.0.1"
-    solc "0.4.24"
+    solc "0.4.25"
 
 tsort@0.0.1:
   version "0.0.1"

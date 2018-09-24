@@ -8,21 +8,21 @@ jobs:
       docker_layer_caching: true
 
     working_directory: /home/circleci/app
-    
+
     steps:
-      - checkout  
+      - checkout
       - run: ./.circleci/install-yarn.sh
       - restore_cache:
           keys:
-          - v1-deps-{{ checksum "package.json" }}
-          - v1-deps-
+          - v2-deps-{{ checksum "package.json" }}
+          - v2-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn
       - run: source /opt/circleci/.nvm/nvm.sh && yarn lint
       - run: source /opt/circleci/.nvm/nvm.sh && yarn build
       - save_cache:
           paths:
             - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+          key: v2-deps-{{ checksum "package.json" }}
 
   test-container:
     machine:
@@ -49,14 +49,14 @@ jobs:
       - run: ./.circleci/install-yarn.sh
       - restore_cache:
           keys:
-          - v1-deps-{{ checksum "package.json" }}
-          - v1-deps-
+          - v2-deps-{{ checksum "package.json" }}
+          - v2-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn
       - run: source /opt/circleci/.nvm/nvm.sh && yarn test
       - save_cache:
           paths:
             - node_modules
-          key: v1-deps-{{ checksum "package.json" }}
+          key: v2-deps-{{ checksum "package.json" }}
 
 workflows:
   version: 2
@@ -66,7 +66,7 @@ workflows:
       - lint-and-build
       - test-container
       - tests
-      
+
   nightly:
     triggers:
       - schedule:
