@@ -229,12 +229,57 @@ contract(
       expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
     });
 
-    it("should revert on set exchange rate when setting", async () => {
+    it("should revert on set exchange rate when setting same nominator and denominator", async () => {
       await expect(
         gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
           from: tokenOracleManager,
         }),
       ).to.be.rejectedWith("SEX_SAME_N_D");
+    });
+
+    it("should revert when trying to set rate for addres that is not erc223 token", async () => {
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, randomAddress, Q18.mul(1), {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert when inversed rate is more than uint256 max, but because after inversion it equal to zero", async () => {
+      const maxUInt128 = web3
+        .toBigNumber(2)
+        .pow(128)
+        .plus(1);
+
+      const invRateThatOverflows = divRound(Q18.mul(Q18), maxUInt128);
+      expect(invRateThatOverflows).to.be.bignumber.eq(0);
+
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, invRateThatOverflows, {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on set rate to 0", async () => {
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, 0, {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on set rate to more than uint128 max", async () => {
+      const moreThanMaxUInt128 = web3
+        .toBigNumber(2)
+        .pow(128)
+        .plus(1);
+
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, moreThanMaxUInt128, {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
     });
 
     it("should return 0 timestamp on unknown rate", async () => {
