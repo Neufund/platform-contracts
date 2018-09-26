@@ -217,7 +217,9 @@ contract SimpleExchange is
         assert(rateFraction > 0);
         assert(rateFraction < 2**128);
         uint256 invRateFraction = proportion(10**18, 10**18, rateFraction);
-        require(invRateFraction < 2**128, "SEX_OVR_INV");
+
+        // Inversion of rate biger than 10**36 is not possible and it will always be 0.
+        // require(invRateFraction < 2**128, "SEX_OVR_INV");
         require(denominatorToken.decimals() == numeratorToken.decimals(), "SEX_DECIMALS");
         // TODO: protect against outliers
 
