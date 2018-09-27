@@ -13,7 +13,7 @@ import {
 } from "./helpers/deployContracts";
 import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
-import { divRound } from "./helpers/unitConverter";
+import { divRound, etherToWei } from "./helpers/unitConverter";
 import increaseTime from "./helpers/increaseTime";
 import { toBytes32, Q18, contractId, ZERO_ADDRESS } from "./helpers/constants";
 
@@ -208,6 +208,27 @@ contract(
       expect(rates[1][0]).to.be.bignumber.eq(rates[1][1]);
     });
 
+    it("should store when inversed rate is maximum possible stored value for 18 decimals tokens", async () => {
+      const maximumPossibleRate = web3.toBigNumber(10).pow(36);
+      const inversionOfMaximumPossibleRate = divRound(Q18.mul(Q18), maximumPossibleRate);
+      expect(inversionOfMaximumPossibleRate).to.be.bignumber.eq(1);
+
+      await gasExchange.setExchangeRate(
+        etherToken.address,
+        euroToken.address,
+        inversionOfMaximumPossibleRate,
+        {
+          from: tokenOracleManager,
+        },
+      );
+
+      const rate = await rateOracle.getExchangeRate(euroToken.address, etherToken.address);
+      expect(rate[0]).to.be.bignumber.eq(maximumPossibleRate);
+
+      const inversedRate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
+      expect(inversedRate[0]).to.be.bignumber.eq(inversionOfMaximumPossibleRate);
+    });
+
     it("should revert on set exchange rate not from tokenOracleManager", async () => {
       // this should work
       gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
@@ -229,12 +250,41 @@ contract(
       expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
     });
 
-    it("should revert on set exchange rate when setting ", async () => {
+    it("should revert on set exchange rate when setting same nominator and denominator", async () => {
       await expect(
         gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
           from: tokenOracleManager,
         }),
       ).to.be.rejectedWith("SEX_SAME_N_D");
+    });
+
+    it("should revert when trying to set rate for addres that is not erc223 token", async () => {
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, randomAddress, Q18.mul(1), {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on set rate to 0", async () => {
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, 0, {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
+    });
+
+    it("should revert on set rate to more than uint128 max", async () => {
+      const moreThanMaxUInt128 = web3
+        .toBigNumber(2)
+        .pow(128)
+        .plus(1);
+
+      await expect(
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, moreThanMaxUInt128, {
+          from: tokenOracleManager,
+        }),
+      ).to.revert;
     });
 
     it("should return 0 timestamp on unknown rate", async () => {
@@ -378,7 +428,7 @@ contract(
       const rate = Q18.mul(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -388,12 +438,97 @@ contract(
       ).to.revert;
     });
 
-    it("should revert on exchange if rate older than 1 hour");
+    it("should revert on exchange if rate older than 1 hour", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      const hour = 60 * 60;
+      increaseTime(hour);
+
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.rejectedWith("SEX_OLD_RATE");
+    });
+
+    it("should revert on multi exchange if rate older than 1 hour", async () => {
+      const decimalExchangeAmount = 20;
+      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await sendEtherToExchange(_, Q18);
+
+      const hour = 60 * 60;
+      increaseTime(hour);
+
+      await expect(
+        gasExchange.gasExchangeMultiple([gasRecipient], [exchangedAmount], gasExchangeFee, {
+          from: gasExchangeManager,
+        }),
+      ).to.rejectedWith("SEX_OLD_RATE");
+    });
 
     // there is permanent allowance but still investor can increase  allowance by `approve` on euro token
     // gasExchange (in fact euro token controller) should disregard that
     // IMO this will fail. I didn't take such case into account
-    it("should revert on exchange bigger than permanent allowance if investor increased allowance");
+    it("should revert on exchange bigger than permanent allowance if investor increased allowance", async () => {
+      const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
+      await sendEtherToExchange(_, Q18);
+
+      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+        from: gasRecipient,
+      });
+
+      await gasExchange.gasExchange(
+        gasRecipient,
+        exchangedAmountMoreThanAllowance,
+        gasExchangeFee,
+        {
+          from: gasExchangeManager,
+        },
+      );
+
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
+        exchangedAmountMoreThanAllowance,
+      );
+    });
+
+    it("should revert on multi exchange bigger than permanent allowance if investor increased allowance", async () => {
+      const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
+      const rate = Q18.mul(601.65123);
+
+      await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
+      await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
+      await sendEtherToExchange(_, Q18);
+
+      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+        from: gasRecipient,
+      });
+
+      await gasExchange.gasExchangeMultiple(
+        [gasRecipient],
+        [exchangedAmountMoreThanAllowance],
+        gasExchangeFee,
+        {
+          from: gasExchangeManager,
+        },
+      );
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
+        exchangedAmountMoreThanAllowance,
+      );
+    });
 
     it("should revert on exchange not from gasExchangeManager", async () => {
       const decimalExchangeAmount = 20;
@@ -466,7 +601,39 @@ contract(
       ).to.revert;
     });
 
-    it("should reclaim ether from SimpleExchange");
+    it("should reclaim ether from SimpleExchange", async () => {
+      const gasPrice = new web3.BigNumber(0x01);
+      const etherAmount = etherToWei(10);
+
+      await sendEtherToExchange(_, etherAmount);
+      const initalBalance = await promisify(web3.eth.getBalance)(platformWallet);
+      const initialExchangeBalance = await promisify(web3.eth.getBalance)(simpleExchange.address);
+
+      await createAccessPolicy(accessPolicy, [
+        {
+          subject: platformWallet,
+          role: roles.reclaimer,
+          object: simpleExchange.address,
+        },
+      ]);
+
+      await identityRegistry.setClaims(platformWallet, "0", hasKYCandHasAccount, {
+        from: admin,
+      });
+
+      const tx = await simpleExchange.reclaim(ZERO_ADDRESS, {
+        from: platformWallet,
+        gasPrice,
+      });
+      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+
+      const exchangeBalaceAfter = await promisify(web3.eth.getBalance)(simpleExchange.address);
+      expect(exchangeBalaceAfter).to.be.bignumber.eq(0);
+
+      const expectedBalance = initalBalance.plus(initialExchangeBalance).minus(gasCost);
+      const balanceAfter = await promisify(web3.eth.getBalance)(platformWallet);
+      expect(balanceAfter).to.be.bignumber.eq(expectedBalance);
+    });
 
     async function setGasExchangeRateAndAllowance(rate, allowanceEurUlps) {
       await gasExchange.setExchangeRate(etherToken.address, euroToken.address, rate, {
