@@ -208,6 +208,27 @@ contract(
       expect(rates[1][0]).to.be.bignumber.eq(rates[1][1]);
     });
 
+    it("should store when inversed rate is maximum possible stored value for 18 decimals tokens", async () => {
+      const maximumPossibleRate = web3.toBigNumber(10).pow(36);
+      const inversionOfMaximumPossibleRate = divRound(Q18.mul(Q18), maximumPossibleRate);
+      expect(inversionOfMaximumPossibleRate).to.be.bignumber.eq(1);
+
+      await gasExchange.setExchangeRate(
+        etherToken.address,
+        euroToken.address,
+        inversionOfMaximumPossibleRate,
+        {
+          from: tokenOracleManager,
+        },
+      );
+
+      const rate = await rateOracle.getExchangeRate(euroToken.address, etherToken.address);
+      expect(rate[0]).to.be.bignumber.eq(maximumPossibleRate);
+
+      const inversedRate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
+      expect(inversedRate[0]).to.be.bignumber.eq(inversionOfMaximumPossibleRate);
+    });
+
     it("should revert on set exchange rate not from tokenOracleManager", async () => {
       // this should work
       gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
@@ -240,22 +261,6 @@ contract(
     it("should revert when trying to set rate for addres that is not erc223 token", async () => {
       await expect(
         gasExchange.setExchangeRate(etherToken.address, randomAddress, Q18.mul(1), {
-          from: tokenOracleManager,
-        }),
-      ).to.revert;
-    });
-
-    it("should revert when inversed rate is more than uint256 max, but because after inversion it equal to zero", async () => {
-      const maxUInt128 = web3
-        .toBigNumber(2)
-        .pow(128)
-        .plus(1);
-
-      const invRateThatOverflows = divRound(Q18.mul(Q18), maxUInt128);
-      expect(invRateThatOverflows).to.be.bignumber.eq(0);
-
-      await expect(
-        gasExchange.setExchangeRate(etherToken.address, euroToken.address, invRateThatOverflows, {
           from: tokenOracleManager,
         }),
       ).to.revert;
