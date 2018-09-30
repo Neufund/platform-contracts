@@ -266,6 +266,8 @@ contract ETOTimedStateMachine is
         ETOState newState = mAdavanceLogicState(_state);
         if (_state != newState) {
             transitionTo(newState);
+            // if we had state transition, we may have another
+            advanceLogicState();
         }
     }
 
