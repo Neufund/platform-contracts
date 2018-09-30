@@ -16,7 +16,7 @@ jobs:
           keys:
           - v2-deps-{{ checksum "package.json" }}
           - v2-deps-
-      - run: source /opt/circleci/.nvm/nvm.sh && yarn
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
       - run: source /opt/circleci/.nvm/nvm.sh && yarn lint
       - run: source /opt/circleci/.nvm/nvm.sh && yarn build
       - save_cache:
@@ -51,7 +51,7 @@ jobs:
           keys:
           - v2-deps-{{ checksum "package.json" }}
           - v2-deps-
-      - run: source /opt/circleci/.nvm/nvm.sh && yarn
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
       - run: source /opt/circleci/.nvm/nvm.sh && yarn test
       - save_cache:
           paths:

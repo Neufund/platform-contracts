@@ -66,6 +66,15 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
     },
+    nf_private_io: {
+      host: "dev02.neudev.net",
+      port: 8545,
+      network_id: "17",
+      gas: 6700000,
+      gasPrice: 21000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+    },
     coverage: {
       network_id: "*",
       gas: 0xfffffffffff,
@@ -81,6 +90,16 @@ module.exports = {
       gasPrice: 5000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
+    },
+    forked_live_nano: {
+      network_id: 72,
+      gas: 6500000,
+      provider: nanoProvider(
+        "http://ethexp-node.neustg.net:8545",
+        "44'/60'/105'/0",
+        "forked_live_nano",
+      ),
+      gasPrice: 10000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",
