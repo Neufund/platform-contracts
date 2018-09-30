@@ -15,6 +15,7 @@ export const interfaceToArtifacts = {
   [keyToKey.identityRegistry]: [artifacts.IDENTITY_REGISTRY],
   [keyToKey.etherToken]: [artifacts.ETHER_TOKEN],
   [keyToKey.euroToken]: [artifacts.EURO_TOKEN],
+  [keyToKey.euroTokenController]: [artifacts.EURO_TOKEN_CONTROLLER],
   [keyToKey.etherLock]: [artifacts.LOCKED_ACCOUNT],
   [keyToKey.euroLock]: [artifacts.LOCKED_ACCOUNT],
   [keyToKey.neumark]: [artifacts.NEUMARK],
@@ -34,6 +35,7 @@ export const interfaceToArtifacts = {
   [keyToKey.commitmentInterface]: [artifacts.STANDARD_ETO_COMMITMENT, ""],
   [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN, ""],
   [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER, ""],
+  [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
 };
 
 // verify all known interfaces are mapped

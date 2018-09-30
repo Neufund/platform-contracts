@@ -11,6 +11,7 @@ export const knownInterfaces = {
   neumark: sha3("Neumark").slice(0, 10),
   etherToken: sha3("EtherToken").slice(0, 10),
   euroToken: sha3("EuroToken").slice(0, 10),
+  euroTokenController: sha3("EuroTokenController").slice(0, 10),
   identityRegistry: sha3("IIdentityRegistry").slice(0, 10),
   tokenExchangeRateOracle: sha3("ITokenExchangeRateOracle").slice(0, 10),
   feeDisbursal: sha3("IFeeDisbursal").slice(0, 10),
@@ -29,4 +30,5 @@ export const knownInterfaces = {
   commitmentInterface: sha3("ICommitment").slice(0, 10),
   equityTokenInterface: sha3("IEquityToken").slice(0, 10),
   equityTokenControllerInterface: sha3("IEquityTokenController").slice(0, 10),
+  termsInterface: sha3("IOfferingTerms").slice(0, 10),
 };
