@@ -28,7 +28,7 @@ export const defTokenTerms = {
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
   TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
-  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(5000 * 10000),
+  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(4000 * 10000),
 };
 
 export const defEtoTerms = {
@@ -49,39 +49,44 @@ export const defEtoTerms = {
 
 export function validateTerms(artifact, terms) {
   const constructor = findConstructor(artifact);
-  const termsKeys = Object.keys(terms);
-  const termsValues = termsKeys.map(v => terms[v]);
-  if (termsKeys.length !== constructor.inputs.length) {
+  const camelTerms = {};
+  // could not find any good way to do dictionary comprehension
+  Object.keys(terms).map(k => {
+    camelTerms[camelCase(k)] = terms[k];
+    return k;
+  });
+  if (Object.keys(terms).length !== constructor.inputs.length) {
     throw new Error(
       `No. params in terms not equal no. inputs in constructor of ${artifact.contract_name}`,
     );
   }
+  const termsValues = [];
   let idx = 0;
   for (const input of constructor.inputs) {
-    const keyName = camelCase(termsKeys[idx]);
-    if (input.name !== keyName) {
+    if (!(input.name in camelTerms)) {
       throw new Error(
-        `Input at ${idx} name in terms "${keyName}" vs name in constructor "${input.name}" of ${
+        `Input at ${idx} name in constructor "${input.name} could not be found in terms" of ${
           artifact.contract_name
         }`,
       );
     }
     let typeMatch = false;
+    const termValue = camelTerms[input.name];
     switch (input.type) {
       case "address":
       case "string":
-        typeMatch = typeof termsValues[idx] === "string";
+        typeMatch = typeof termValue === "string";
         break;
       case "uint8":
       case "uint32":
       case "uint256":
       case "uint128":
-        if (typeof termsValues[idx] === "object") {
-          typeMatch = termsValues[idx].constructor.name.includes("BigNumber");
+        if (typeof termValue === "object") {
+          typeMatch = termValue.constructor.name.includes("BigNumber");
         }
         break;
       case "bool":
-        typeMatch = typeof termsValues[idx] === "boolean";
+        typeMatch = typeof termValue === "boolean";
         break;
       default:
         throw new Error(
@@ -90,32 +95,36 @@ export function validateTerms(artifact, terms) {
     }
     if (!typeMatch) {
       throw new Error(
-        `Type mismatch type ${input.type} name ${input.name} value ${termsValues[idx]} of ${
+        `Type mismatch type ${input.type} name ${input.name} value ${termValue} of ${
           artifact.contract_name
         }`,
       );
     }
+    termsValues.push(termValue);
     idx += 1;
   }
-  return [termsKeys, termsValues];
+  return [Object.keys(terms), termsValues];
 }
 
-export async function deployShareholderRights(artifact, overrideTerms) {
-  const shareholderTerms = Object.assign({}, defaultShareholderTerms, overrideTerms || {});
+export async function deployShareholderRights(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defaultShareholderTerms;
+  const shareholderTerms = Object.assign({}, defaults, terms || {});
   const [shareholderTermsKeys, shareholderTermsValues] = validateTerms(artifact, shareholderTerms);
   const shareholderRights = await artifact.new.apply(this, shareholderTermsValues);
   return [shareholderRights, shareholderTerms, shareholderTermsKeys, shareholderTermsValues];
 }
 
-export async function deployDurationTerms(artifact, overrideTerms) {
-  const durTerms = Object.assign({}, defDurTerms, overrideTerms || {});
+export async function deployDurationTerms(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defDurTerms;
+  const durTerms = Object.assign({}, defaults, terms || {});
   const [durationTermsKeys, durationTermsValues] = validateTerms(artifact, durTerms);
   const etoDurationTerms = await artifact.new.apply(this, durationTermsValues);
   return [etoDurationTerms, durTerms, durationTermsKeys, durationTermsValues];
 }
 
-export async function deployTokenTerms(artifact, overrideTerms) {
-  const tokenTerms = Object.assign({}, defTokenTerms, overrideTerms || {});
+export async function deployTokenTerms(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defTokenTerms;
+  const tokenTerms = Object.assign({}, defaults, terms || {});
   const [tokenTermsKeys, tokenTermsValues] = validateTerms(artifact, tokenTerms);
   const etoTokenTerms = await artifact.new.apply(this, tokenTermsValues);
   return [etoTokenTerms, tokenTerms, tokenTermsKeys, tokenTermsValues];
@@ -126,13 +135,15 @@ export async function deployETOTerms(
   durationTerms,
   tokenTerms,
   shareholderRights,
-  overrideTerms,
+  terms,
+  fullTerms,
 ) {
-  const terms = Object.assign({}, defEtoTerms, overrideTerms || {});
-  terms.DURATION_TERMS = durationTerms.address;
-  terms.TOKEN_TERMS = tokenTerms.address;
-  terms.SHAREHOLDER_RIGHTS = shareholderRights.address;
-  const [termsKeys, termsValues] = validateTerms(artifact, terms);
-  const etoTerms = await artifact.new.apply(this, termsValues);
-  return [etoTerms, terms, termsKeys, termsValues];
+  const defaults = fullTerms ? {} : defEtoTerms;
+  const etoTerms = Object.assign({}, defaults, terms || {});
+  etoTerms.DURATION_TERMS = durationTerms.address;
+  etoTerms.TOKEN_TERMS = tokenTerms.address;
+  etoTerms.SHAREHOLDER_RIGHTS = shareholderRights.address;
+  const [termsKeys, termsValues] = validateTerms(artifact, etoTerms);
+  const deployedTerms = await artifact.new.apply(this, termsValues);
+  return [deployedTerms, etoTerms, termsKeys, termsValues];
 }

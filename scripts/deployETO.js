@@ -1,20 +1,115 @@
+/* eslint-disable no-console */
+/* eslint-disable no-continue */
+
 require("babel-register");
+const commandLineArgs = require("command-line-args");
+const confirm = require("node-ask").confirm;
+const fs = require("fs");
+const { join } = require("path");
 const deployETO = require("../migrations/deployETO").deployETO;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 
 module.exports = async function deploy() {
-  const CONFIG = getConfig(web3, "forked_live", []);
-  const DEPLOYER = getDeployerAccount("forked_live", []);
-  const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
-  const universe = await Universe.at("0x560687db44b19ce8347a2d35873dd95269ddf6bc");
+  const optionDefinitions = [
+    { name: "network", type: String },
+    { name: "universe", type: String },
+    { name: "definition", type: String },
+    { name: "exec", type: String, multiple: true, defaultOption: true },
+  ];
 
-  await deployETO(
-    artifacts,
-    DEPLOYER,
-    CONFIG,
-    universe,
-    "0x00b1da87c22608f90f1e34759cd1291c8a4e4b25",
-    "0x04befe8ab2ab7ce71c610a5dae0cbf826b6c4f7a",
-  );
+  let options;
+  try {
+    options = commandLineArgs(optionDefinitions);
+  } catch (e) {
+    console.log(`Invalid command line: ${e}`);
+    console.log(`Expected parameters:`);
+    console.log(optionDefinitions);
+    throw e;
+  }
+
+  const CONFIG = getConfig(web3, options.network, []);
+  const DEPLOYER = getDeployerAccount(options.network, []);
+  const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  // "0x466351dba572e15a6defec46da61abee4b8472c4"
+  const universe = await Universe.at(options.universe);
+  const Q18 = CONFIG.Q18;
+
+  const path = join(__dirname, "..", options.definition);
+  const contents = fs.readFileSync(path);
+  const parsed = JSON.parse(contents);
+
+  // recover bignumbers
+
+  function recoverBigNumbers(terms) {
+    const mod = {};
+    for (const k of Object.keys(terms)) {
+      if (typeof terms[k] === "string") {
+        try {
+          mod[k] = new web3.BigNumber(terms[k]);
+        } catch (e) {
+          mod[k] = terms[k];
+        }
+        continue;
+      }
+      if (typeof terms[k] === "boolean") {
+        mod[k] = terms[k];
+        continue;
+      }
+      throw new Error(
+        `Only boolean and string types are allowed in terms! Integers must be strings: ${k}`,
+      );
+    }
+    return mod;
+  }
+
+  function explainTerms(name, terms) {
+    console.log(`\n${name}:`);
+    for (const k of Object.keys(terms)) {
+      if (typeof terms[k] === "object" && terms[k].constructor.name.includes("BigNumber")) {
+        if (terms[k].gte(Q18.div(1000))) {
+          console.log(
+            `${k}: ${terms[k].toString(10)} == ${terms[k].div(Q18).toString(10)} * 10**18`,
+          );
+        } else {
+          console.log(`${k}: ${terms[k].toString(10)}`);
+        }
+      } else {
+        console.log(`${k}: ${terms[k]}`);
+      }
+    }
+  }
+
+  const etoTerms = recoverBigNumbers(parsed.etoTerms);
+  const shareholderTerms = recoverBigNumbers(parsed.shareholderTerms);
+  const durTerms = recoverBigNumbers(parsed.durTerms);
+  const tokenTerms = recoverBigNumbers(parsed.tokenTerms);
+
+  explainTerms("etoTerms", etoTerms);
+  explainTerms("shareholderTerms", shareholderTerms);
+  explainTerms("durTerms", durTerms);
+  explainTerms("tokenTerms", tokenTerms);
+  console.log(`\ncompany: ${parsed.company}`);
+  console.log(`nominee: ${parsed.nominee}`);
+  if (!(await confirm("Are you sure you want to deploy? [y/n] "))) {
+    throw new Error("Aborting!");
+  }
+
+  try {
+    await deployETO(
+      artifacts,
+      DEPLOYER,
+      CONFIG,
+      universe,
+      parsed.nominee,
+      parsed.company,
+      etoTerms,
+      shareholderTerms,
+      durTerms,
+      tokenTerms,
+    );
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
 };

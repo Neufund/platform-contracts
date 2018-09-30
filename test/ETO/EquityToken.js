@@ -69,7 +69,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should deploy", async () => {
       await prettyPrintGasCost("EquityToken deploy", equityToken);
       // check properties of equity token
-      expect(await equityToken.isTokenClosed()).to.be.false;
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(
         constTokenTerms.EQUITY_TOKENS_PER_SHARE,
       );

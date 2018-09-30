@@ -79,4 +79,5 @@ contract("PlaceholderEquityTokenController", ([_, admin, company]) => {
   it("rejects closing token");
   it("rejects nominee change");
   it("should change token controller if old controller properly migrated");
+  it("revert on receive ether and euro tokens with NOT_IMPL");
 });

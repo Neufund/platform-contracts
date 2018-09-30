@@ -19,7 +19,7 @@ contract ITokenControllerHook {
     ////////////////////////
 
     /// @notice replace current token controller
-    /// @dev please not that this process is also controlled by existing controller
+    /// @dev please note that this process is also controlled by existing controller
     function changeTokenController(address newController)
         public;
 

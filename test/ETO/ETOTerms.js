@@ -330,11 +330,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(await etoTerms.calculateTokenAmount(0, 0)).to.be.bignumber.eq(0);
       const ticket = Q18.mul(717271).add(1);
       expect(await etoTerms.calculateTokenAmount(0, ticket)).to.be.bignumber.eq(
-        divRound(ticket, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+        ticket.div(tokenTerms.TOKEN_PRICE_EUR_ULPS).floor(),
       );
       const ticket2 = Q18.mul(7162.129821);
       expect(await etoTerms.calculateTokenAmount(0, ticket2)).to.be.bignumber.eq(
-        divRound(ticket2, tokenTerms.TOKEN_PRICE_EUR_ULPS),
+        ticket2.div(tokenTerms.TOKEN_PRICE_EUR_ULPS).floor(),
       );
     });
 
@@ -536,7 +536,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
   describe("contribution calculation without discount", () => {
     function tokenPrice(_, amount) {
-      return divRound(amount, tokenTerms.TOKEN_PRICE_EUR_ULPS);
+      return amount.div(tokenTerms.TOKEN_PRICE_EUR_ULPS).floor();
     }
 
     async function fullAmount(total, amount) {
@@ -577,7 +577,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     function tokenPrice(_, amount, priceFraction = Q18) {
       // here we need to reproduce exact rounding as in smart contract
       const discountedPrice = divRound(tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(priceFraction), Q18);
-      return divRound(amount, discountedPrice);
+      return amount.div(discountedPrice).floor();
     }
 
     async function amountNoFixedSlot(total, amount) {
@@ -599,7 +599,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
         from: deployer,
       });
-      await amountNoFixedSlot(0, 0);
+      await amountNoFixedSlot(new web3.BigNumber(0), new web3.BigNumber(0));
     });
 
     it("with amount no discount", async () => {
@@ -628,7 +628,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(info[0]).to.be.true;
       expect(info[1]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[2]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[3]).to.be.bignumber.eq(tokenPrice(0, 0, fullPriceFraction));
+      expect(info[3]).to.be.bignumber.eq(
+        tokenPrice(new web3.BigNumber(0), new web3.BigNumber(0), fullPriceFraction),
+      );
       expect(info[4]).to.be.bignumber.eq(0);
     });
 

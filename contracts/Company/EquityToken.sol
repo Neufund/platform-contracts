@@ -47,8 +47,6 @@ contract EquityToken is
     address private _nominee;
     // company management contract
     IEquityTokenController private _tokenController;
-    // irreversibly blocks all transfers
-    bool private _isTokenClosed;
 
     ////////////////////////
     // Events
@@ -64,11 +62,6 @@ contract EquityToken is
         address indexed holder,
         address controller,
         uint256 amount
-    );
-
-    event LogTokenClosed(
-        address tokenController,
-        address by
     );
 
     event LogChangeTokenController(
@@ -89,12 +82,12 @@ contract EquityToken is
     ////////////////////////
 
     modifier onlyIfIssueAllowed(address to, uint256 amount) {
-        require(_tokenController.onGenerateTokens(msg.sender, to, amount));
+        require(_tokenController.onGenerateTokens(msg.sender, to, amount), "EQTOKEN_NO_GENERATE");
         _;
     }
 
     modifier onlyIfDestroyAllowed(address owner, uint256 amount) {
-        require(_tokenController.onDestroyTokens(msg.sender, owner, amount));
+        require(_tokenController.onDestroyTokens(msg.sender, owner, amount), "EQTOKEN_NO_DESTROY");
         _;
     }
 
@@ -166,16 +159,6 @@ contract EquityToken is
         emit LogTokensDestroyed(msg.sender, _tokenController, amount);
     }
 
-    /// controlled, irreversibly blocks transferable rights
-    function closeToken()
-        public
-    {
-        // can token be closed? in most cases shareholder resolution is needed and additional conditions apply
-        require(_tokenController.onCloseToken(msg.sender));
-        _isTokenClosed = true;
-        emit LogTokenClosed(_tokenController, msg.sender);
-    }
-
     function changeNominee(address newNominee)
         public
     {
@@ -183,10 +166,6 @@ contract EquityToken is
         require(_tokenController.onChangeNominee(msg.sender, _nominee, newNominee));
         _nominee = newNominee;
         emit LogChangeNominee(_nominee, newNominee, _tokenController, msg.sender);
-    }
-
-    function isTokenClosed() public constant returns (bool) {
-        return _isTokenClosed;
     }
 
     function tokensPerShare() public constant returns (uint256) {
@@ -275,7 +254,7 @@ contract EquityToken is
         returns (bool allow)
     {
         // token controller allows transfer and token is not closed
-        return _tokenController.onTransfer(from, to, amount) && !_isTokenClosed;
+        return _tokenController.onTransfer(from, to, amount);
     }
 
     function mOnApprove(

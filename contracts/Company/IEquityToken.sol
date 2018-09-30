@@ -44,9 +44,4 @@ contract IEquityToken is
 
     // controlled, msg.sender is typically failed ETO
     function destroyTokens(uint256 amount) public;
-
-    /// controlled, irreversibly blocks transferable rights
-    function closeToken() public;
-
-    function isTokenClosed() public constant returns (bool);
 }

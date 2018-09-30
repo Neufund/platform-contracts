@@ -27,10 +27,10 @@ export async function deployETO(
   universe,
   nominee,
   company,
-  ovrETOTerms,
-  ovrShareholderRights,
-  ovrDurations,
-  ovrTokenTerms,
+  defETOTerms,
+  defShareholderRights,
+  defDurations,
+  defTokenTerms,
 ) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Neumark = artifacts.require(config.artifacts.NEUMARK);
@@ -39,7 +39,6 @@ export async function deployETO(
     config.artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER,
   );
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
-  // todo: add to artifacts
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
   const ETOTokenTerms = artifacts.require(config.artifacts.STANDARD_TOKEN_TERMS);
@@ -91,14 +90,15 @@ export async function deployETO(
   console.log("Deploying ShareholderRights");
   const [shareholderRights] = await deployShareholderRights(
     ShareholderRights,
-    ovrShareholderRights,
+    defShareholderRights,
+    true,
   );
   logDeployed(shareholderRights);
   console.log("Deploying ETODurationTerms");
-  const [durationTerms] = await deployDurationTerms(ETODurationTerms, ovrDurations);
+  const [durationTerms] = await deployDurationTerms(ETODurationTerms, defDurations, true);
   logDeployed(durationTerms);
   console.log("Deploying ETOTokenTerms");
-  const [tokenTerms] = await deployTokenTerms(ETOTokenTerms, ovrTokenTerms);
+  const [tokenTerms] = await deployTokenTerms(ETOTokenTerms, defTokenTerms, true);
   logDeployed(tokenTerms);
   console.log("Deploying ETOTerms");
   const [etoTerms] = await deployETOTerms(
@@ -106,7 +106,8 @@ export async function deployETO(
     durationTerms,
     tokenTerms,
     shareholderRights,
-    ovrETOTerms,
+    defETOTerms,
+    true,
   );
   logDeployed(etoTerms);
   // deploy equity token controller which is company management contract
@@ -142,9 +143,10 @@ export async function deployETO(
       knownInterfaces.commitmentInterface,
       knownInterfaces.equityTokenInterface,
       knownInterfaces.equityTokenControllerInterface,
+      knownInterfaces.termsInterface,
     ],
-    [etoCommitment.address, equityToken.address, equityTokenController.address],
-    [true, true, true],
+    [etoCommitment.address, equityToken.address, equityTokenController.address, etoTerms.address],
+    [true, true, true, true],
     { from: deployer },
   );
   if (canControlNeu) {
@@ -249,6 +251,14 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
     "Checking if Controller in Universe",
     ...(controllerInUniverse ? good("YES") : wrong("NO")),
   );
+  const termsInUniverse = await universe.isInterfaceCollectionInstance(
+    knownInterfaces.termsInterface,
+    await eto.etoTerms(),
+  );
+  console.log(
+    "Checking if Offering Terms in Universe",
+    ...(termsInUniverse ? good("YES") : wrong("NO")),
+  );
 
   const hasDisbursal = (await universe.feeDisbursal()) !== ZERO_ADDRESS;
   const hasPlatformPortfolio = (await universe.platformPortfolio()) !== ZERO_ADDRESS;
@@ -276,11 +286,11 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const etherTokenAddress = await universe.etherToken();
   const euroTokenAddress = await universe.euroToken();
   const ethRate = await rateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress);
-  const rateExpiration = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
-  const now = Math.floor(new Date() / 1000);
+  const rateExpirationDelta = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
+  const now = new web3.BigNumber(Math.floor(new Date() / 1000));
   console.log("Obtained eth to eur rate ", ethRate);
-  const isRateExpired = ethRate[1].gte(rateExpiration.add(now));
-  console.log("Checking if rate valid", ...(!isRateExpired ? good("YES") : wrong("NO")));
+  const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
+  console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   const feeDisbursal = await universe.feeDisbursal();
   console.log(
     "Universe has fee disbursal",
@@ -291,6 +301,12 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
     "Universe has platform portfolio",
     ...(platformPortfolio === ZERO_ADDRESS ? wrong("NO") : good(platformPortfolio)),
   );
+  const contribution = await eto.calculateContribution(
+    "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
+    false,
+    Q18.mul(3),
+  );
+  console.log(`Example contribution ${contribution}`);
 }
 
 export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist) {

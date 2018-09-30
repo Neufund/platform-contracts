@@ -16,7 +16,7 @@ RUN apk --update add git openssh make gcc g++ python bash && \
 RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contracts
 WORKDIR /usr/src/platform-contracts
 ADD .babelrc mocha.js nanoWeb3Provider.js package.json truffle.js yarn.lock ./
-RUN yarn
+RUN yarn --production
 ADD bin/solc.4.25 /usr/bin/
 ADD scripts scripts
 RUN ./scripts/solctruffle.sh

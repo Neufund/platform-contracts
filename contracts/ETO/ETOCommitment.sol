@@ -212,8 +212,6 @@ contract ETOCommitment is
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
-        require(equityToken.tokensPerShare() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE());
-        require(equityToken.shareNominalValueEurUlps() == etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
 
         etoTerms.requireValidTerms(PLATFORM_TERMS);
@@ -319,7 +317,7 @@ contract ETOCommitment is
         bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
         bool isEtherInvestment = msg.sender == address(ETHER_TOKEN);
         // we trust only tokens below
-        require(isEtherInvestment || isEuroInvestment);
+        require(isEtherInvestment || isEuroInvestment, "ETO_UNK_TOKEN");
         // check if LockedAccount
         bool isLockedAccount = (wallet == address(ETHER_LOCK) || wallet == address(EURO_LOCK));
         address investor = wallet;
@@ -496,7 +494,7 @@ contract ETOCommitment is
         );
         isWhitelisted = isWhitelisted || fromIcbmWallet;
         if (!fromIcbmWallet) {
-            (,neuRewardUlps) = calculateNeumarkDistribution(newInvestorContributionEurUlps);
+            (,neuRewardUlps) = calculateNeumarkDistribution(NEUMARK.incremental(newInvestorContributionEurUlps));
         }
         // crossing max cap can always happen
         maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt);
@@ -554,7 +552,8 @@ contract ETOCommitment is
         returns (ETOState)
     {
         bool isWhitelist = oldState == ETOState.Whitelist;
-        bool capExceeded = isCapExceeded(isWhitelist, MIN_TICKET_TOKENS - 1, 0);
+        // add 1 to MIN_TICKET_TOKEN because it was produced by floor
+        bool capExceeded = isCapExceeded(isWhitelist, MIN_TICKET_TOKENS + 1, 0);
         if (isWhitelist && capExceeded) {
             return ETOState.Public;
         }
@@ -658,8 +657,6 @@ contract ETOCommitment is
         // compute additional contributions to be sent on claim transition
         _additionalContributionEth = uint96(etherBalance) - _platformFeeEth;
         _additionalContributionEurUlps = uint96(euroBalance) - _platformFeeEurUlps;
-        // issue missing tokens
-        EQUITY_TOKEN.issueTokens(tokenParticipationFeeInt);
         // nominee gets nominal share value immediately to be added to cap table
         uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
@@ -688,6 +685,8 @@ contract ETOCommitment is
         if (_additionalContributionEurUlps > 0) {
             assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEurUlps, ""));
         }
+        // issue missing tokens
+        EQUITY_TOKEN.issueTokens(_tokenParticipationFeeInt);
         emit LogPlatformNeuReward(PLATFORM_WALLET, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
