@@ -154,4 +154,9 @@ contract IControllerGovernance {
     // this will cancel closing of the company due to obligations not met in time
     // being able to cancel closing should not depend on who is calling the function.
     function cancelCompanyClosing() public;
+
+    /// @notice replace current token controller
+    /// @dev please note that this process is also controlled by existing controller
+    function changeTokenController(address newController)
+        public;
 }

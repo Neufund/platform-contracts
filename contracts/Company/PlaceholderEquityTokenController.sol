@@ -110,19 +110,6 @@ contract PlaceholderEquityTokenController is
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
     }
 
-    function changeTokenController(address newController)
-        public
-        onlyStates(GovState.Funded, GovState.Migrated)
-        onlyCompany
-    {
-        require(newController != address(0));
-        require(newController != address(this));
-        _newController = newController;
-        transitionTo(GovState.Migrated);
-        emit ResolutionExecuted(0, Action.ChangeTokenController);
-        emit LogMigratedTokenController(0, newController);
-    }
-
     //
     // Implements IControllerGovernance
     //
@@ -216,6 +203,19 @@ contract PlaceholderEquityTokenController is
         revert();
     }
 
+    function changeTokenController(address newController)
+        public
+        onlyStates(GovState.Funded, GovState.Migrated)
+        onlyCompany
+    {
+        require(newController != address(0));
+        require(newController != address(this));
+        _newController = newController;
+        transitionTo(GovState.Migrated);
+        emit ResolutionExecuted(0, Action.ChangeTokenController);
+        emit LogMigratedTokenController(0, newController);
+    }
+
     //
     // Implements ITokenController
     //
@@ -273,14 +273,6 @@ contract PlaceholderEquityTokenController is
     // Implements IEquityTokenController
     //
 
-    function onCloseToken(address)
-        public
-        constant
-        returns (bool)
-    {
-        return false;
-    }
-
     function onChangeNominee(address, address, address)
         public
         constant
@@ -297,7 +289,7 @@ contract PlaceholderEquityTokenController is
     function tokenFallback(address, uint256, bytes)
         public
     {
-        revert();
+        revert("NOT_IMPL");
     }
 
     //
@@ -309,18 +301,18 @@ contract PlaceholderEquityTokenController is
         onlyETO
     {
         if (newState == ETOState.Whitelist) {
-            require(_state == GovState.Setup);
+            require(_state == GovState.Setup, "ETC_BAD_STATE");
             registerTokenOfferingPrivate(IETOCommitment(msg.sender));
             return;
         }
         // must be same eto that started offering
-        require(msg.sender == address(_etoCommitment));
+        require(msg.sender == address(_etoCommitment), "ETC_UNREG_COMMITMENT");
         if (newState == ETOState.Claim) {
-            require(_state == GovState.Offering);
+            require(_state == GovState.Offering, "ETC_BAD_STATE");
             aproveTokenOfferingPrivate(IETOCommitment(msg.sender));
         }
         if (newState == ETOState.Refund) {
-            require(_state == GovState.Offering);
+            require(_state == GovState.Offering, "ETC_BAD_STATE");
             failTokenOfferingPrivate(IETOCommitment(msg.sender));
         }
     }
