@@ -1,4 +1,5 @@
 require("babel-register");
+const confirm = require("node-ask").confirm;
 const registerSingletons = require("../test/helpers/registerSingletons").default;
 const roles = require("../test/helpers/roles").default;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
@@ -75,7 +76,15 @@ module.exports = function deployContracts(deployer, network, accounts) {
       "",
     );
     if (!hasAccess === true) {
-      throw new Error(`DEPLOYER needs ${roles.accessController} to run this script`);
+      throw new Error(
+        `DEPLOYER needs ${roles.accessController} on ${accessPolicy.address} to run this script`,
+      );
+    }
+    if (CONFIG.isLiveDeployment) {
+      console.log("LIVE DEPLOYMENT");
+      if (!(await confirm("Are you sure you want to deploy? [y/n] "))) {
+        throw new Error("Aborting!");
+      }
     }
     console.log("Universe deploying...");
     await deployer.deploy(Universe, accessPolicy.address, forkArbiter.address);
@@ -149,6 +158,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       {
         ki: knownInterfaces.euroToken,
         addr: euroToken.address,
+      },
+      {
+        ki: knownInterfaces.euroTokenController,
+        addr: tokenController.address,
       },
       {
         ki: knownInterfaces.euroLock,
