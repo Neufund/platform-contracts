@@ -29,22 +29,6 @@ contract TestNullEquityTokenController is
     // Implements IEquityTokenController
     //
 
-    function onCloseToken(address)
-        public
-        constant
-        returns (bool)
-    {
-        return true;
-    }
-
-    function onChangeTokenController(address, address)
-        public
-        constant
-        returns (bool)
-    {
-        return true;
-    }
-
     function onChangeNominee(address, address, address)
         public
         constant
