@@ -142,6 +142,7 @@ contract ETOTerms is Math, IContractId {
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(shareNominalValueEurUlps > 0);
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
+        require(minTicketEurUlps<=maxTicketEurUlps);
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
@@ -175,8 +176,8 @@ contract ETOTerms is Math, IContractId {
         constant
         returns (uint256 tokenAmountInt)
     {
-        // we may disregard totalEurUlps as curve is flat
-        return divRound(committedEurUlps, TOKEN_PRICE_EUR_ULPS);
+        // we may disregard totalEurUlps as curve is flat, round down when calculating tokens
+        return committedEurUlps / TOKEN_PRICE_EUR_ULPS;
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
@@ -258,7 +259,8 @@ contract ETOTerms is Math, IContractId {
                 discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
                 // discount is fixed so use base token price
                 if (discountedAmount > 0) {
-                    fixedSlotEquityTokenInt = divRound(discountedAmount, decimalFraction(wlTicket.fullTokenPriceFrac, TOKEN_PRICE_EUR_ULPS));
+                    // always round down when calculating tokens
+                    fixedSlotEquityTokenInt = discountedAmount / decimalFraction(wlTicket.fullTokenPriceFrac, TOKEN_PRICE_EUR_ULPS);
                 }
             }
         }
@@ -266,8 +268,8 @@ contract ETOTerms is Math, IContractId {
         uint256 remainingAmount = newInvestorContributionEurUlps - discountedAmount;
         if (remainingAmount > 0) {
             if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
-                // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor
-                equityTokenInt = divRound(remainingAmount, decimalFraction(10**18 - WHITELIST_DISCOUNT_FRAC, TOKEN_PRICE_EUR_ULPS));
+                // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor, also round down
+                equityTokenInt = remainingAmount / decimalFraction(10**18 - WHITELIST_DISCOUNT_FRAC, TOKEN_PRICE_EUR_ULPS);
             } else {
                 // use pricing along the curve
                 equityTokenInt = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
