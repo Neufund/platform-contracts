@@ -816,7 +816,7 @@ contract(
       });
 
       it("should reclaim neumarks", async () => {
-        const ticket1 = etherToWei(9.18781092183);
+        const ticket1 = etherToWei(9.18781092183).add(1);
         const neumarks1 = await lock(investor, ticket1);
         await enableUnlocks();
         await neumark.transfer(lockedAccount.address, neumarks1, {
