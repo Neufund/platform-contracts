@@ -29,7 +29,7 @@ contract PlatformTerms is Math, IContractId {
     // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
 
     // min duration from setting the date to ETO start
-    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 14 days;
+    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 7 days;
     // token rate expires after
     uint256 public constant TOKEN_RATE_EXPIRES_AFTER = 4 hours;
 
