@@ -27,7 +27,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await createAccessPolicy(
       accessPolicy,
       [
-        { subject: DEPLOYER, role: roles.eurtDepositManager },
+        { subject: DEPLOYER, role: roles.eurtLegalManager },
         { subject: DEPLOYER, role: roles.identityManager },
         { subject: DEPLOYER, role: roles.tokenRateOracle },
       ],

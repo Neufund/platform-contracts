@@ -27,6 +27,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         console.log("Dropping temporary permissions");
         await createAccessPolicy(accessPolicy, [
           { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
+          { subject: DEPLOYER, role: roles.eurtLegalManager, state: TriState.Unset },
           { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
           { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
           {
@@ -43,8 +44,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
             CONFIG.addresses.ACCESS_CONTROLLER
           } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
         );
-        console.log("---------------------------------------------");
-
         console.log("---------------------------------------------");
         console.log("On live network, enable LockedAccount migrations manually");
         console.log("On live network, set transfers from and to on ICBMEuroToken to EuroLock");
