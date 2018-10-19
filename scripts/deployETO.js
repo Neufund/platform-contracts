@@ -91,6 +91,7 @@ module.exports = async function deploy() {
   explainTerms("tokenTerms", tokenTerms);
   console.log(`\ncompany: ${parsed.company}`);
   console.log(`nominee: ${parsed.nominee}`);
+  console.log(`DEPLOYER is ${DEPLOYER}`);
   if (!(await confirm("Are you sure you want to deploy? [y/n] "))) {
     throw new Error("Aborting!");
   }

@@ -11,6 +11,7 @@ import {
   deployTokenTerms,
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
+import { prettyPrintGasCost } from "../test/helpers/gasUtils";
 
 const Web3 = require("web3");
 
@@ -306,10 +307,16 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
     false,
     Q18.mul(3),
   );
+  console.log("------------------------------------------------------");
   console.log(`Example contribution ${contribution}`);
+  console.log("------------------------------------------------------");
+  console.log("ETO Components");
+  console.log(`Equity Token: ${equityToken.address}`);
+  console.log(`Token Controller: ${await eto.commitmentObserver()}`);
+  console.log(`ETO Terms: ${await eto.etoTerms()}`);
 }
 
-export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist) {
+export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist, dryRun) {
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
@@ -322,7 +329,7 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
   for (const ticket of whitelist) {
     ensureAddress(ticket.address);
     const parsedDiscountAmount = parseStrToNumStrict(ticket.discountAmount);
-    const parsedPriceFrac = parseStrToNumStrict(ticket.priceFrac);
+    const parsedPriceFrac = 1 - parseStrToNumStrict(ticket.discount);
     if (Number.isNaN(parsedDiscountAmount) || Number.isNaN(parsedPriceFrac)) {
       throw new Error(`Investor ${ticket.address} amount or price fraction could not be parsed`);
     }
@@ -341,7 +348,12 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
     }
     const existingTicket = await etoTerms.whitelistTicket(ticket.address);
     if (existingTicket[0]) {
-      throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
+      console.log(
+        `Investor ${ticket.address} already on whitelist with fixed slot ${existingTicket[1]
+          .div(Q18)
+          .toNumber()} and price fraction ${existingTicket[2].div(Q18).toNumber()}`,
+      );
+      // throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
     }
     addresses.push(ticket.address);
     amounts.push(Q18.mul(parsedDiscountAmount));
@@ -352,7 +364,22 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
       } with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
     );
   }
-  await etoTerms.addWhitelisted(addresses, amounts, priceFracs);
+  console.log(`Adding ${addresses.length}`);
+  if (!dryRun) {
+    const chunk = 150;
+    for (let i = 0; i < addresses.length; i += chunk) {
+      console.log(`Adding chunk of size ${addresses.slice(i, i + chunk).length}`);
+      const tx = await etoTerms.addWhitelisted(
+        addresses.slice(i, i + chunk),
+        amounts.slice(i, i + chunk),
+        priceFracs.slice(i, i + chunk),
+      );
+      await prettyPrintGasCost("addWhitelist", tx);
+    }
+  } else {
+    console.log("skipped due to dry run");
+  }
+  console.log("DONE");
 }
 
 function wrong(s) {
