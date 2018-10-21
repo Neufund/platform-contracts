@@ -75,6 +75,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     if (CONFIG.ISOLATED_UNIVERSE) return;
     // executed only in test deployment
+    await createAccessPolicy(
+      accessPolicy,
+      [{ subject: DEPLOYER, role: roles.eurtDepositManager }],
+      [],
+    );
     const fas = getFixtureAccounts(accounts);
     console.log("set Euro LockedAccount migration");
     await icbmEuroLock.enableMigration(euroLock.address);
