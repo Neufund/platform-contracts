@@ -187,7 +187,7 @@ export async function deployPlatformTerms(universe, universeManager, overrideTer
     PLATFORM_NEUMARK_SHARE: new web3.BigNumber(2),
     IS_ICBM_INVESTOR_WHITELISTED: true,
     MIN_TICKET_EUR_ULPS: Q18.mul(100),
-    DATE_TO_WHITELIST_MIN_DURATION: daysToSeconds(14),
+    DATE_TO_WHITELIST_MIN_DURATION: daysToSeconds(7),
     TOKEN_RATE_EXPIRES_AFTER: hoursToSeconds(4),
     MIN_WHITELIST_DURATION: daysToSeconds(0),
     MAX_WHITELIST_DURATION: daysToSeconds(30),
