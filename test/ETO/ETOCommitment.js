@@ -529,10 +529,19 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         etoTermsDict.WHITELIST_DISCOUNT_FRAC,
       );
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS_IN_WHITELIST.mul(dp);
-      const tx = await investAmount(investors[0], missingAmount, "EUR", dp);
+      let tx = await investAmount(investors[0], missingAmount, "EUR", dp);
       // we need to ignore timestamp due to ganache bug (https://github.com/trufflesuite/ganache-core/issues/111)
       expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore", 0);
-      expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 1);
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
+      // investing min ticket reverts
+      await expect(
+        investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp),
+      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      // wait for public phase
+      await setTimeTo(publicStartDate);
+      tx = await etoCommitment.handleStateTransitions();
+      // we are in public phase now
+      expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 0);
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
     });
 
@@ -645,7 +654,18 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
       await investAmount(investors[1], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp);
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
+      // normal whitelist investor cannot invest
+      await expect(
+        investAmount(investors[1], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp),
+      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      // fixed slot still can invest
+      await investAmount(
+        investors[0],
+        etoTermsDict.MIN_TICKET_EUR_ULPS,
+        "EUR",
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+      );
     });
 
     it("revert on going above whitelist cap", async () => {
@@ -854,6 +874,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it(
       "should transition to signing if total investment amount below min cap but within minimum ticket to max cap",
     );
+    it(
+      "should allow company to call companySignsInvestmentAgreement many times until nominee confirms",
+    );
   });
 
   describe("special ETO configurations", () => {
@@ -883,6 +906,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("calculate contribution in whitelist (with discounts)");
     it("calculate contribution in whitelist when fixed slots");
     it("max cap flag exceeded should be set in whitelist and public");
+    it("max cap flag exceeded should be not be set if within fixed slot");
   });
   // describe("all whitelist cases");
   // describe("all public cases");
@@ -1259,6 +1283,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
         const totalInvestment = await etoCommitment.totalInvestment();
         // we must cross MIN CAP
+        const wasEurUsed = (await euroToken.balanceOf(etoCommitment.address)).gt(0);
+        const wasEthUsed = (await etherToken.balanceOf(etoCommitment.address)).gt(0);
         if (tokenTermsDict.MIN_NUMBER_OF_TOKENS.gt(totalInvestment[1])) {
           const missingTokens = tokenTermsDict.MIN_NUMBER_OF_TOKENS.sub(totalInvestment[1]);
           let missingAmount = missingTokens.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
@@ -1266,7 +1292,12 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             missingAmount = etoTermsDict.MIN_TICKET_EUR_ULPS;
           }
           // console.log(`min cap investment: ${missingTokens} ${missingAmount} EUR`);
-          await investAmount(regularInvestors[0], missingAmount, "EUR");
+          // check if finalize with ETH or EUR
+          if (wasEurUsed) {
+            await investAmount(regularInvestors[0], missingAmount, "EUR");
+          } else {
+            await investAmount(regularInvestors[0], eurToEth(missingAmount), "ETH");
+          }
         }
         // go to signing
         const signingStartOf = publicStartDate.add(durTable[CommitmentState.Public]);
@@ -1300,7 +1331,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         );
         await skipTimeTo(payoutStartOf.add(1));
         const tx = await etoCommitment.handleStateTransitions();
-        await expectValidPayoutState(tx, contribution);
+        await expectValidPayoutState(tx, contribution, {
+          expectsEther: wasEthUsed,
+          expectsEuro: wasEurUsed,
+        });
         await expectValidPayoutStateFullClaim(tx);
       }
 
@@ -1529,10 +1563,158 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         await claimCase(investment);
       });
 
-      it("ether only and successful");
-      it("euro only and successful");
+      it("ether only and successful", async () => {
+        async function investment(regularInvestors, icbmInvestors) {
+          // allow to cross max cap from whitelist (fixed-slot)
+          await etoTerms.addWhitelisted(
+            [icbmInvestors[0], icbmInvestors[1], regularInvestors[0]],
+            [Q18.mul(10000), Q18.mul(0), Q18.mul(16000)],
+            [Q18.mul(0.4), Q18.mul(1), Q18.mul(0.3)],
+            {
+              from: deployer,
+            },
+          );
+          const dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+          );
+          const icbmInvestor0Dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            Q18.sub(Q18.mul(0.4)),
+          );
+          // first icbm so we can measure euro
+          await investICBMAmount(icbmInvestors[0], Q18.mul(10), "ETH", icbmInvestor0Dp);
+          await investICBMAmount(icbmInvestors[1], Q18.mul(172).add(1), "ETH", dp);
+          const icbmEurEquiv = (await etoCommitment.totalInvestment())[0];
+          // 10000 from slot, 2000 from wl, then icbm
+          const inv02Balance = (await etoCommitment.investorTicket(icbmInvestors[0]))[0];
+          await investAmount(
+            icbmInvestors[0],
+            eurToEth(Q18.mul(10000).sub(inv02Balance)),
+            "ETH",
+            icbmInvestor0Dp,
+          );
+          await investAmount(icbmInvestors[0], eurToEth(Q18.mul(2000)), "ETH", dp);
+          // whitelist and icbm
+          const regularInvestor0Dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            Q18.sub(Q18.mul(0.3)),
+          );
+          const expectedPrice = calculateMixedTranchePrice(
+            Q18.mul(78197.121).add(1),
+            Q18.mul(16000),
+            regularInvestor0Dp,
+            dp,
+          );
+          await investAmount(
+            regularInvestors[0],
+            eurToEth(Q18.mul(78197.121).add(1)),
+            "ETH",
+            expectedPrice,
+          );
+          //
+          await skipTimeTo(publicStartDate.add(1));
+          // same amounts in public
+          await investAmount(
+            regularInvestors[0],
+            Q18.mul(872.182).add(1),
+            "ETH",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+          await investAmount(
+            icbmInvestors[0],
+            Q18.mul(212.21982),
+            "ETH",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+          await investAmount(
+            regularInvestors[1],
+            Q18.mul(121).sub(1),
+            "ETH",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+
+          expect(await euroToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
+
+          return icbmEurEquiv;
+        }
+        await claimCase(investment);
+      });
+
+      it("euro only and successful", async () => {
+        async function investment(regularInvestors, icbmInvestors) {
+          // allow to cross max cap from whitelist (fixed-slot)
+          await etoTerms.addWhitelisted(
+            [icbmInvestors[0], regularInvestors[0]],
+            [Q18.mul(10000), Q18.mul(16000)],
+            [Q18.mul(0.4), Q18.mul(0.3)],
+            {
+              from: deployer,
+            },
+          );
+          const dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+          );
+          const icbmInvestor0Dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            Q18.sub(Q18.mul(0.4)),
+          );
+          // first icbm so we can measure euro
+          await investICBMAmount(icbmInvestors[0], Q18.mul(7611).add(1), "EUR", icbmInvestor0Dp);
+          const icbmEurEquiv = (await etoCommitment.totalInvestment())[0];
+          const inv02Balance = (await etoCommitment.investorTicket(icbmInvestors[0]))[0];
+          await investAmount(
+            icbmInvestors[0],
+            Q18.mul(10000).sub(inv02Balance),
+            "EUR",
+            icbmInvestor0Dp,
+          );
+          await investAmount(icbmInvestors[0], Q18.mul(2000), "EUR", dp);
+          // whitelist and icbm
+          const regularInvestor0Dp = discountedPrice(
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+            Q18.sub(Q18.mul(0.3)),
+          );
+          const expectedPrice = calculateMixedTranchePrice(
+            Q18.mul(58200.121).add(1),
+            Q18.mul(16000),
+            regularInvestor0Dp,
+            dp,
+          );
+          await investAmount(regularInvestors[0], Q18.mul(58200.121).add(1), "EUR", expectedPrice);
+          //
+          await skipTimeTo(publicStartDate.add(1));
+          // same amounts in public
+          await investAmount(
+            regularInvestors[0],
+            Q18.mul(872.182).add(1),
+            "EUR",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+          await investAmount(
+            icbmInvestors[1],
+            Q18.mul(1212.21982),
+            "EUR",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+          await investAmount(
+            regularInvestors[1],
+            Q18.mul(1211).sub(1),
+            "EUR",
+            tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+          );
+
+          return icbmEurEquiv;
+        }
+        await claimCase(investment);
+      });
     });
   });
+
+  function eurToEth(amount) {
+    return divRound(amount, defEthPrice);
+  }
 
   // helper functions here
   async function deployLockedAccounts() {
@@ -1932,7 +2114,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     const tx = await wallet.transfer(etoCommitment.address, amount, "", {
       from: investor,
     });
-    // console.log(`investor ${investor} gasUsed ${tx.receipt.gasUsed}`);
+    // console.log(`ICBM investor ${investor} gasUsed ${tx.receipt.gasUsed}`);
     // validate investment
     const ticket = await etoCommitment.investorTicket(investor);
     // console.log(oldTicket);
@@ -2164,7 +2346,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     await expectEmptyTokenController();
   }
 
-  async function expectValidPayoutState(tx, contribution) {
+  async function expectValidPayoutState(tx, contribution, options) {
+    const opts = Object.assign({ expectsEther: true, expectsEuro: true }, options);
     // contribution was validated previously and may be used as a reference
     const disbursal = await universe.feeDisbursal();
     const platformPortfolio = await universe.platformPortfolio();
@@ -2174,22 +2357,28 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     // fee disbursal must have valid snapshot token address which is sent as additional bytes parameter
     const logs = decodeLogs(tx, testDisbursal.address, testDisbursal.abi);
     tx.logs.push(...logs);
-    expectLogTestReceiveTransfer(
-      tx,
-      0,
-      etherToken.address,
-      neumark.address,
-      etoCommitment.address,
-      contribution[5],
-    );
-    expectLogTestReceiveTransfer(
-      tx,
-      1,
-      euroToken.address,
-      neumark.address,
-      etoCommitment.address,
-      contribution[6],
-    );
+    let disbursalRcvIdx = 0;
+    if (opts.expectsEther) {
+      expectLogTestReceiveTransfer(
+        tx,
+        disbursalRcvIdx,
+        etherToken.address,
+        neumark.address,
+        etoCommitment.address,
+        contribution[5],
+      );
+      disbursalRcvIdx += 1;
+    }
+    if (opts.expectsEuro) {
+      expectLogTestReceiveTransfer(
+        tx,
+        disbursalRcvIdx,
+        euroToken.address,
+        neumark.address,
+        etoCommitment.address,
+        contribution[6],
+      );
+    }
     // fee disbursal must have fees
     expect(await etherToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[5]);
     expect(await euroToken.balanceOf(disbursal)).to.be.bignumber.eq(contribution[6]);
