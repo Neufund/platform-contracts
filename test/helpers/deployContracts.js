@@ -196,7 +196,7 @@ export async function deployPlatformTerms(universe, universeManager, overrideTer
     MIN_OFFER_DURATION: daysToSeconds(1),
     MAX_OFFER_DURATION: daysToSeconds(90),
     MIN_SIGNING_DURATION: daysToSeconds(14),
-    MAX_SIGNING_DURATION: daysToSeconds(30),
+    MAX_SIGNING_DURATION: daysToSeconds(60),
     MIN_CLAIM_DURATION: daysToSeconds(7),
     MAX_CLAIM_DURATION: daysToSeconds(30),
   };

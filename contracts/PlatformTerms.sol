@@ -45,7 +45,7 @@ contract PlatformTerms is Math, IContractId {
     uint256 public constant MAX_OFFER_DURATION = 90 days;
 
     uint256 public constant MIN_SIGNING_DURATION = 14 days;
-    uint256 public constant MAX_SIGNING_DURATION = 30 days;
+    uint256 public constant MAX_SIGNING_DURATION = 60 days;
 
     uint256 public constant MIN_CLAIM_DURATION = 7 days;
     uint256 public constant MAX_CLAIM_DURATION = 30 days;

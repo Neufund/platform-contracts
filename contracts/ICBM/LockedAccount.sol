@@ -10,6 +10,7 @@ import "./ICBMLockedAccount.sol";
 import "./ICBMLockedAccountMigration.sol";
 import "../Standards/IERC677Callback.sol";
 import "../Standards/IContractId.sol";
+import "../Standards/ITokenMetadata.sol";
 import "../Reclaimable.sol";
 import "../KnownInterfaces.sol";
 import "../Serialization.sol";
@@ -207,6 +208,9 @@ contract LockedAccount is
         NEUMARK = neumark;
         LOCK_PERIOD = migrationSource.lockPeriod();
         PENALTY_FRACTION = migrationSource.penaltyFraction();
+        // this is not super sexy but it's very practical against attaching ETH wallet to EUR wallet
+        // we decrease chances of migration lethal setup errors in non migrated wallets
+        require(keccak256(abi.encodePacked(ITokenMetadata(OLD_PAYMENT_TOKEN).symbol())) == keccak256(abi.encodePacked(PAYMENT_TOKEN.symbol())));
     }
 
     ////////////////////////

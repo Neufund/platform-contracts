@@ -404,7 +404,6 @@ contract ETOCommitment is
         constant
         returns (string)
     {
-        require(_nomineeSignedInvestmentAgreementUrlHash != bytes32(0));
         return _signedInvestmentAgreementUrl;
     }
 
@@ -551,14 +550,16 @@ contract ETOCommitment is
         constant
         returns (ETOState)
     {
-        bool isWhitelist = oldState == ETOState.Whitelist;
-        // add 1 to MIN_TICKET_TOKEN because it was produced by floor
-        bool capExceeded = isCapExceeded(isWhitelist, MIN_TICKET_TOKENS + 1, 0);
-        if (isWhitelist && capExceeded) {
-            return ETOState.Public;
-        }
-        if (oldState == ETOState.Public && capExceeded) {
-            return ETOState.Signing;
+        // add 1 to MIN_TICKET_TOKEN because it was produced by floor and check only MAX CAP
+        // WHITELIST CAP will not induce state transition as fixed slots should be able to invest till the end of Whitelist
+        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0);
+        if (capExceeded) {
+            if (oldState == ETOState.Whitelist) {
+                return ETOState.Public;
+            }
+            if (oldState == ETOState.Public) {
+                return ETOState.Signing;
+            }
         }
         if (oldState == ETOState.Signing && _nomineeSignedInvestmentAgreementUrlHash != bytes32(0)) {
             return ETOState.Claim;

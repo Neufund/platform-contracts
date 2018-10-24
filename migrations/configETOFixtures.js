@@ -4,7 +4,7 @@ const defEtoTerms = {
   shareholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
-    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0),
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0.5),
     HAS_FOUNDERS_VESTING: true,
     GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
     RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
