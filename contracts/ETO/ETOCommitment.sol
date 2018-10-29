@@ -269,8 +269,9 @@ contract ETOCommitment is
             "ETO_DATE_TOO_EARLY");
         // prevent re-setting start date if ETO starts too soon
         uint256 startAt = startOfInternal(ETOState.Whitelist);
+        // block.timestamp must be less than startAt, otherwise timed state transition is done
         require(
-            startAt == 0 || (startAt > block.timestamp && startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION()),
+            startAt == 0 || (startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION()),
             "ETO_START_TOO_SOON");
         runStateMachine(uint32(startDate));
         // todo: lock ETO_TERMS whitelist to be more trustless
@@ -472,6 +473,8 @@ contract ETOCommitment is
     function calculateContribution(address investor, bool fromIcbmWallet, uint256 newInvestorContributionEurUlps)
         external
         constant
+        // use timed state so we show what should be
+        withStateTransition()
         returns (
             bool isWhitelisted,
             uint256 minTicketEurUlps,
@@ -482,6 +485,7 @@ contract ETOCommitment is
             )
     {
         InvestmentTicket storage ticket = _tickets[investor];
+        // we use state() here because time was forwarded by withStateTransition
         bool applyDiscounts = state() == ETOState.Whitelist;
         uint256 fixedSlotsEquityTokenInt;
         (isWhitelisted, minTicketEurUlps, maxTicketEurUlps, equityTokenInt, fixedSlotsEquityTokenInt) = ETO_TERMS.calculateContribution(
