@@ -23,7 +23,6 @@ contract PlaceholderEquityTokenController is
     IControllerGovernance,
     IContractId,
     Agreement,
-    Reclaimable,
     KnownInterfaces
 {
     ////////////////////////
@@ -59,7 +58,7 @@ contract PlaceholderEquityTokenController is
     IEquityToken private _equityToken;
 
     // ETO contract
-    IETOCommitment private _etoCommitment;
+    address private _commitment;
 
     // are transfers on token enabled
     bool private _transfersEnabled;
@@ -69,28 +68,28 @@ contract PlaceholderEquityTokenController is
     ////////////////////////
 
     // require caller is ETO in universe
-    modifier onlyETO() {
+    modifier onlyRegisteredETO() {
         require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "ETC_ETO_NOT_U");
         _;
     }
 
     modifier onlyCompany() {
-        require(msg.sender == COMPANY_LEGAL_REPRESENTATIVE);
+        require(msg.sender == COMPANY_LEGAL_REPRESENTATIVE, "ONLY_COMPANY");
         _;
     }
 
     modifier onlyOperational() {
-        require(_state == GovState.Offering || _state == GovState.Funded || _state == GovState.Closing);
+        require(_state == GovState.Offering || _state == GovState.Funded || _state == GovState.Closing, "INV_STATE");
         _;
     }
 
     modifier onlyState(GovState state) {
-        require(_state == state);
+        require(_state == state, "INV_STATE");
         _;
     }
 
     modifier onlyStates(GovState state1, GovState state2) {
-        require(_state == state1 || _state == state2);
+        require(_state == state1 || _state == state2, "INV_STATE");
         _;
     }
 
@@ -104,7 +103,6 @@ contract PlaceholderEquityTokenController is
     )
         public
         Agreement(universe.accessPolicy(), universe.forkArbiter())
-        Reclaimable()
     {
         UNIVERSE = universe;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
@@ -120,6 +118,14 @@ contract PlaceholderEquityTokenController is
         returns (GovState)
     {
         return _state;
+    }
+
+    function companyLegalRepresentative()
+        public
+        constant
+        returns (address)
+    {
+        return COMPANY_LEGAL_REPRESENTATIVE;
     }
 
     function shareholderInformation()
@@ -156,7 +162,7 @@ contract PlaceholderEquityTokenController is
         lastOfferings = new address[](1);
 
         equityTokens[0] = _equityToken;
-        lastOfferings[0] = _etoCommitment;
+        lastOfferings[0] = _commitment;
         shares[0] = _equityToken.sharesTotalSupply();
     }
 
@@ -205,27 +211,44 @@ contract PlaceholderEquityTokenController is
 
     function changeTokenController(address newController)
         public
-        onlyStates(GovState.Funded, GovState.Migrated)
+        onlyState(GovState.Funded)
         onlyCompany
     {
         require(newController != address(0));
         require(newController != address(this));
         _newController = newController;
         transitionTo(GovState.Migrated);
-        emit ResolutionExecuted(0, Action.ChangeTokenController);
+        emit LogResolutionExecuted(0, Action.ChangeTokenController);
         emit LogMigratedTokenController(0, newController);
+    }
+
+    function newTokenController()
+        public
+        constant
+        returns (address)
+    {
+        // _newController is set only in Migrated state, otherwise zero address is returned as required
+        return _newController;
+    }
+
+    function oldTokenController()
+        public
+        constant
+        returns (address)
+    {
+        return address(0);
     }
 
     //
     // Implements ITokenController
     //
 
-    function onTransfer(address, address ,uint256)
+    function onTransfer(address from, address ,uint256)
         public
         constant
         returns (bool allow)
     {
-        return _transfersEnabled;
+        return _transfersEnabled || from == _commitment;
     }
 
     function onTransferFrom(address, address, address, uint256)
@@ -250,7 +273,7 @@ contract PlaceholderEquityTokenController is
         constant
         returns (bool allow)
     {
-        return sender == address(_etoCommitment) && _state == GovState.Offering;
+        return sender == _commitment && _state == GovState.Offering;
     }
 
     function onDestroyTokens(address sender, address, uint256)
@@ -258,7 +281,7 @@ contract PlaceholderEquityTokenController is
         constant
         returns (bool allow)
     {
-        return sender == address(_etoCommitment) && _state == GovState.Offering;
+        return sender == _commitment && _state == GovState.Offering;
     }
 
     function onChangeTokenController(address /*sender*/, address newController)
@@ -296,9 +319,16 @@ contract PlaceholderEquityTokenController is
     // Implements IETOCommitmentObserver
     //
 
+    function commitmentObserver() public
+        constant
+        returns (address)
+    {
+        return _commitment;
+    }
+
     function onStateTransition(ETOState, ETOState newState)
         public
-        onlyETO
+        onlyRegisteredETO
     {
         if (newState == ETOState.Whitelist) {
             require(_state == GovState.Setup, "ETC_BAD_STATE");
@@ -306,7 +336,7 @@ contract PlaceholderEquityTokenController is
             return;
         }
         // must be same eto that started offering
-        require(msg.sender == address(_etoCommitment), "ETC_UNREG_COMMITMENT");
+        require(msg.sender == _commitment, "ETC_UNREG_COMMITMENT");
         if (newState == ETOState.Claim) {
             require(_state == GovState.Offering, "ETC_BAD_STATE");
             aproveTokenOfferingPrivate(IETOCommitment(msg.sender));
@@ -329,6 +359,53 @@ contract PlaceholderEquityTokenController is
     // Internal functions
     ////////////////////////
 
+    function newOffering(IEquityToken equityToken, address tokenOffering)
+        internal
+    {
+        _equityToken = equityToken;
+        _commitment = tokenOffering;
+
+        emit LogResolutionExecuted(0, Action.RegisterOffer);
+        emit LogOfferingRegistered(0, tokenOffering, equityToken);
+    }
+
+    function amendISHA(
+        string memory ISHAUrl,
+        uint256 totalShares,
+        uint256 companyValuationEurUlps,
+        ShareholderRights newShareholderRights
+    )
+        internal
+    {
+        // set ISHA. use this.<> to call externally so msg.sender is correct in mCanAmend
+        this.amendAgreement(ISHAUrl);
+        // set new number of shares
+        _totalCompanyShares = totalShares;
+        // set new valuation
+        _companyValuationEurUlps = companyValuationEurUlps;
+        // set shareholder rights corresponding to SHA part of ISHA
+        _shareholderRights = newShareholderRights;
+        emit LogResolutionExecuted(0, Action.AmendISHA);
+        emit LogISHAAmended(0, ISHAUrl, totalShares, companyValuationEurUlps, newShareholderRights);
+    }
+
+    function enableTransfers(bool transfersEnabled)
+        internal
+    {
+        if (_transfersEnabled != transfersEnabled) {
+            _transfersEnabled = transfersEnabled;
+        }
+        emit LogResolutionExecuted(0, transfersEnabled ? Action.StopToken : Action.ContinueToken);
+        emit LogTransfersStateChanged(0, _equityToken, transfersEnabled);
+    }
+
+    function transitionTo(GovState newState)
+        internal
+    {
+        emit LogGovStateTransition(uint32(_state), uint32(newState), uint32(block.timestamp));
+        _state = newState;
+    }
+
     //
     // Overrides Agreement
     //
@@ -350,25 +427,18 @@ contract PlaceholderEquityTokenController is
     {
         IEquityToken equityToken = tokenOffering.equityToken();
         // require nominee match and agreement signature
-        (address legalRepToken,,,) = equityToken.currentAgreement();
+        (address nomineeToken,,,) = equityToken.currentAgreement();
         // require token controller match
         require(equityToken.tokenController() == address(this), "NDT_ET_TC_MIS");
         // require nominee and agreement match
-        (address legalRepOffering,,,) = tokenOffering.currentAgreement();
-        require(legalRepOffering == legalRepToken, "NDT_ETO_A_MIS");
+        (address nomineOffering,,,) = tokenOffering.currentAgreement();
+        require(nomineOffering == nomineeToken, "NDT_ETO_A_MIS");
         // require terms set and legalRep match
-        require(tokenOffering.etoTerms() != address(0), "NDT_ETO_NO_TERMS");
+        require(tokenOffering.etoTerms() != address(0), "NDT_ETO_N  O_TERMS");
         require(tokenOffering.companyLegalRep() == COMPANY_LEGAL_REPRESENTATIVE, "NDT_ETO_LREP_MIS");
 
-        _equityToken = equityToken;
-        _etoCommitment = tokenOffering;
-        _totalCompanyShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES();
-        _companyValuationEurUlps = _totalCompanyShares * tokenOffering.
-            etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS() * equityToken.tokensPerShare();
-
+        newOffering(equityToken, tokenOffering);
         transitionTo(GovState.Offering);
-        emit ResolutionExecuted(0, Action.RegisterOffer);
-        emit LogOfferingRegistered(0, tokenOffering, equityToken);
     }
 
     function aproveTokenOfferingPrivate(IETOCommitment tokenOffering)
@@ -388,7 +458,6 @@ contract PlaceholderEquityTokenController is
         enableTransfers(tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS());
         // move state to funded
         transitionTo(GovState.Funded);
-
         emit LogOfferingSucceeded(tokenOffering, tokenOffering.equityToken(), newShares);
     }
 
@@ -397,47 +466,10 @@ contract PlaceholderEquityTokenController is
     {
         // we failed. may try again
         _equityToken = IEquityToken(0);
-        _etoCommitment = IETOCommitment(0);
+        _commitment = IETOCommitment(0);
         _totalCompanyShares = 0;
         _companyValuationEurUlps = 0;
         transitionTo(GovState.Setup);
         emit LogOfferingFailed(tokenOffering, tokenOffering.equityToken());
-    }
-
-    function amendISHA(
-        string memory ISHAUrl,
-        uint256 totalShares,
-        uint256 companyValuationEurUlps,
-        ShareholderRights newShareholderRights
-    )
-        private
-    {
-        // set ISHA. use this.<> to call externally so msg.sender is correct in mCanAmend
-        this.amendAgreement(ISHAUrl);
-        // set new number of shares
-        _totalCompanyShares = totalShares;
-        // set new valuation
-        _companyValuationEurUlps = companyValuationEurUlps;
-        // set shareholder rights corresponding to SHA part of ISHA
-        _shareholderRights = newShareholderRights;
-        emit ResolutionExecuted(0, Action.AmendISHA);
-        emit LogISHAAmended(0, ISHAUrl, totalShares, companyValuationEurUlps, newShareholderRights);
-    }
-
-    function enableTransfers(bool transfersEnabled)
-        private
-    {
-        if (_transfersEnabled != transfersEnabled) {
-            _transfersEnabled = transfersEnabled;
-        }
-        emit ResolutionExecuted(0, transfersEnabled ? Action.StopToken : Action.ContinueToken);
-        emit LogTransfersStateChanged(0, _equityToken, transfersEnabled);
-    }
-
-    function transitionTo(GovState newState)
-        private
-    {
-        emit LogGovStateTransition(uint32(_state), uint32(newState), uint32(block.timestamp));
-        _state = newState;
     }
 }

@@ -1,9 +1,12 @@
 pragma solidity 0.4.25;
 
+import "../Standards/IAgreement.sol";
 import "./ShareholderRights.sol";
 
 
-contract IControllerGovernance {
+contract IControllerGovernance is
+    IAgreement
+{
 
     ////////////////////////
     // Types
@@ -44,7 +47,7 @@ contract IControllerGovernance {
     );
 
     // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
-    event ResolutionExecuted(
+    event LogResolutionExecuted(
         bytes32 resolutionId,
         Action action
     );
@@ -107,6 +110,12 @@ contract IControllerGovernance {
         constant
         returns (GovState);
 
+    // address of company legal representative able to sign agreements
+    function companyLegalRepresentative()
+        public
+        constant
+        returns (address);
+
     // return basic shareholder information
     function shareholderInformation()
         public
@@ -156,7 +165,14 @@ contract IControllerGovernance {
     function cancelCompanyClosing() public;
 
     /// @notice replace current token controller
-    /// @dev please note that this process is also controlled by existing controller
-    function changeTokenController(address newController)
-        public;
+    /// @dev please note that this process is also controlled by existing controller so for example resolution may be required
+    function changeTokenController(address newController) public;
+
+    // in Migrated state - an address of actual token controller
+    /// @dev should return zero address on other states
+    function newTokenController() public constant returns (address);
+
+    // an address of previous controller (in Migrated state)
+    /// @dev should return zero address if is the first controller
+    function oldTokenController() public constant returns (address);
 }

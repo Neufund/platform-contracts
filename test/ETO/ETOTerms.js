@@ -289,15 +289,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("should reject on platform terms with minimum number of tokens too small", async () => {
       // change to sub(0) for this test to fail
-      [tokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-        MIN_NUMBER_OF_TOKENS: constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
-      });
-      terms.TOKEN_TERMS = tokenTerms.address;
-      const termsValues = termsKeys.map(v => terms[v]);
-      etoTerms = await ETOTerms.new.apply(this, termsValues);
-      await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_ONE_SHARE",
-      );
+      await expect(
+        deployTokenTerms(ETOTokenTerms, {
+          MIN_NUMBER_OF_TOKENS: constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
+        }),
+      ).to.be.rejectedWith("ETO_TERMS_ONE_SHARE");
     });
 
     it("should reject on minimum ticket too small", async () => {
@@ -308,6 +304,12 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         "ETO_TERMS_MIN_TICKET_EUR_ULPS",
       );
     });
+
+    // MIN_TICKET_LT_TOKEN_PRICE
+    it("should reject ETO TERMS on min ticket less than token price");
+    // MAX_FUNDS_LT_MIN_TICKET - otherwise it's impossible to succesfully complete ETO
+    it("should reject ETO TERMS if maxiumum funds collected less than min ticket");
+    it("should reject TOKEN TERMS on min cap less than one share");
   });
 
   describe("general calculations", async () => {

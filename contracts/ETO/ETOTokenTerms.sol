@@ -36,12 +36,15 @@ contract ETOTokenTerms is IContractId {
     )
         public
     {
+        require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens);
+        require(maxNumberOfTokens >= minNumberOfTokens);
+        // min cap must be > single share
+        require(minNumberOfTokens >= EQUITY_TOKENS_PER_SHARE, "ETO_TERMS_ONE_SHARE");
+
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
         TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
-        require(MAX_NUMBER_OF_TOKENS_IN_WHITELIST <= MAX_NUMBER_OF_TOKENS);
-        require(MAX_NUMBER_OF_TOKENS >= MIN_NUMBER_OF_TOKENS);
     }
 
     //

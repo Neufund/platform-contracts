@@ -51,6 +51,14 @@ contract TestNullEquityTokenController is
     // Implements IETOCommitmentObserver
     //
 
+    function commitmentObserver()
+        public
+        constant
+        returns (address)
+    {
+        return address(0);
+    }
+
     function onStateTransition(ETOState, ETOState)
         public
     {

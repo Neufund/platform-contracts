@@ -82,8 +82,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
     });
 
-    it("should contain token metadata from terms");
-
     it("should deposit", async () => {
       // remember: equity tokens are not divisible
       const initialBalance = 18201298;
@@ -100,9 +98,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     it("should overflow on deposit");
 
-    // transfers are disabled no matter controller settings -> may cases to test
-    it("should close tokens");
-
     // cases for successful destroy, rejected due to controller, not enough balance etc.
     it("should destroy tokens");
 
@@ -114,8 +109,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should convert equity token amount to shares");
 
     it("should set token symbol and other metadata from eto terms correctly");
-
-    it("reverts on reclaming itself");
   });
 
   describe("IEquityTokenController tests", () => {
@@ -127,9 +120,12 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("can block closeToken");
     it("can block changing equity token controller");
     it("can block changing nominee");
-    // look for       it("should accept agreement", async () => { in EuroToken
     it("should change token controller");
     it("should change nominee");
+  });
+
+  describe("agreement tests", () => {
+    // look for       it("should accept agreement", async () => { in EuroToken
     it("should sign agreement on transfer");
 
     it("should not sign agreement on receiving transfer");

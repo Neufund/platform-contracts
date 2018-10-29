@@ -143,6 +143,10 @@ contract ETOTerms is Math, IContractId {
         require(shareNominalValueEurUlps > 0);
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
+        // min ticket must be > token price
+        require(minTicketEurUlps >= tokenTerms.TOKEN_PRICE_EUR_ULPS(), "MIN_TICKET_LT_TOKEN_PRICE");
+        // it must be possible to collect more funds than max number of tokens
+        require(tokenTerms.MAX_NUMBER_OF_TOKENS() * tokenTerms.TOKEN_PRICE_EUR_ULPS() >= minTicketEurUlps, "MAX_FUNDS_LT_MIN_TICKET");
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
