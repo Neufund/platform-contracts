@@ -24,7 +24,6 @@ contract EquityToken is
     Daily,
     TokenMetadata,
     Agreement,
-    Reclaimable,
     IsContract,
     Math
 {
@@ -114,7 +113,6 @@ contract EquityToken is
             "1.0"
         )
         Daily(0)
-        Reclaimable()
         public
     {
         TOKENS_PER_SHARE = etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE();
@@ -201,7 +199,7 @@ contract EquityToken is
         public
     {
         // typically requires a valid migration in the old controller
-        require(_tokenController.onChangeTokenController(msg.sender, newController));
+        require(_tokenController.onChangeTokenController(msg.sender, newController), "ET_NO_PERM_NEW_CONTROLLER");
         _tokenController = IEquityTokenController(newController);
         emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }
