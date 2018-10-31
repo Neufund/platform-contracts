@@ -123,7 +123,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       await expect(
         testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist),
-      ).to.be.rejectedWith("ETC_ETO_NOT_U");
+      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
     });
 
     it("rejects duplicate register ETO start", async () => {
@@ -133,7 +133,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       await expect(
         testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist),
-      ).to.be.rejectedWith("ETC_BAD_STATE");
+      ).to.be.rejectedWith("NF_ETC_BAD_STATE");
     });
 
     it("rejects register ETO with mismatching terms, addresses, tokens");

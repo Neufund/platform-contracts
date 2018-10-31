@@ -255,7 +255,7 @@ contract(
         gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
           from: tokenOracleManager,
         }),
-      ).to.be.rejectedWith("SEX_SAME_N_D");
+      ).to.be.rejectedWith("NF_SEX_SAME_N_D");
     });
 
     it("should revert when trying to set rate for addres that is not erc223 token", async () => {
@@ -454,7 +454,7 @@ contract(
         gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
           from: gasExchangeManager,
         }),
-      ).to.rejectedWith("SEX_OLD_RATE");
+      ).to.rejectedWith("NF_SEX_OLD_RATE");
     });
 
     it("should revert on multi exchange if rate older than 1 hour", async () => {
@@ -473,7 +473,7 @@ contract(
         gasExchange.gasExchangeMultiple([gasRecipient], [exchangedAmount], gasExchangeFee, {
           from: gasExchangeManager,
         }),
-      ).to.rejectedWith("SEX_OLD_RATE");
+      ).to.rejectedWith("NF_SEX_OLD_RATE");
     });
 
     // there is permanent allowance but still investor can increase  allowance by `approve` on euro token

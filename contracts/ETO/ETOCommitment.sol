@@ -266,13 +266,13 @@ contract ETOCommitment is
         // must be more than 14 days (platform terms!)
         require(
             startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
-            "ETO_DATE_TOO_EARLY");
+            "NF_ETO_DATE_TOO_EARLY");
         // prevent re-setting start date if ETO starts too soon
         uint256 startAt = startOfInternal(ETOState.Whitelist);
         // block.timestamp must be less than startAt, otherwise timed state transition is done
         require(
             startAt == 0 || (startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION()),
-            "ETO_START_TOO_SOON");
+            "NF_ETO_START_TOO_SOON");
         runStateMachine(uint32(startDate));
         // todo: lock ETO_TERMS whitelist to be more trustless
 
@@ -297,7 +297,7 @@ contract ETOCommitment is
         onlyNominee
     {
         bytes32 nomineeHash = keccak256(abi.encodePacked(signedInvestmentAgreementUrl));
-        require(keccak256(abi.encodePacked(_signedInvestmentAgreementUrl)) == nomineeHash, "INV_HASH");
+        require(keccak256(abi.encodePacked(_signedInvestmentAgreementUrl)) == nomineeHash, "NF_INV_HASH");
         // setting this variable will induce state transition to Claim via mAdavanceLogicState
         _nomineeSignedInvestmentAgreementUrlHash = nomineeHash;
         emit LogNomineeConfirmedAgreement(msg.sender, COMPANY_LEGAL_REPRESENTATIVE, signedInvestmentAgreementUrl);
@@ -318,7 +318,7 @@ contract ETOCommitment is
         bool isEuroInvestment = msg.sender == address(EURO_TOKEN);
         bool isEtherInvestment = msg.sender == address(ETHER_TOKEN);
         // we trust only tokens below
-        require(isEtherInvestment || isEuroInvestment, "ETO_UNK_TOKEN");
+        require(isEtherInvestment || isEuroInvestment, "NF_ETO_UNK_TOKEN");
         // check if LockedAccount
         bool isLockedAccount = (wallet == address(ETHER_LOCK) || wallet == address(EURO_LOCK));
         address investor = wallet;
@@ -328,12 +328,12 @@ contract ETOCommitment is
         }
         // kick out on KYC
         IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
-        require(claims.isVerified && !claims.accountFrozen, "ETO_INV_NOT_VER");
+        require(claims.isVerified && !claims.accountFrozen, "NF_ETO_INV_NOT_VER");
         if (isEtherInvestment) {
             // compute EUR eurEquivalent via oracle if ether
             (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
             // require if rate older than 4 hours
-            require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER, "ETO_INVALID_ETH_RATE");
+            require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER, "NF_ETO_INVALID_ETH_RATE");
             equivEurUlps = decimalFraction(amount, rate);
         }
         // agreement accepted by act of reserving funds in this function
@@ -764,16 +764,16 @@ contract ETOCommitment is
         ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
         assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
         // kick on minimum ticket
-        require(equivEurUlps >= minTicketEurUlps, "ETO_MIN_TICKET");
+        require(equivEurUlps >= minTicketEurUlps, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
-        require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "ETO_MAX_TICKET");
+        require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
-        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "ETO_MAX_TOK_CAP");
+        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "NF_ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
         bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
         if (state() == ETOState.Whitelist) {
-            require(isWhitelisted || isLockedAccount, "ETO_NOT_ON_WL");
+            require(isWhitelisted || isLockedAccount, "NF_ETO_NOT_ON_WL");
         }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded

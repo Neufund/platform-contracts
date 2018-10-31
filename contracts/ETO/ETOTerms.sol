@@ -144,9 +144,9 @@ contract ETOTerms is Math, IContractId {
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
         // min ticket must be > token price
-        require(minTicketEurUlps >= tokenTerms.TOKEN_PRICE_EUR_ULPS(), "MIN_TICKET_LT_TOKEN_PRICE");
+        require(minTicketEurUlps >= tokenTerms.TOKEN_PRICE_EUR_ULPS(), "NF_MIN_TICKET_LT_TOKEN_PRICE");
         // it must be possible to collect more funds than max number of tokens
-        require(tokenTerms.MAX_NUMBER_OF_TOKENS() * tokenTerms.TOKEN_PRICE_EUR_ULPS() >= minTicketEurUlps, "MAX_FUNDS_LT_MIN_TICKET");
+        require(tokenTerms.MAX_NUMBER_OF_TOKENS() * tokenTerms.TOKEN_PRICE_EUR_ULPS() >= minTicketEurUlps, "NF_MAX_FUNDS_LT_MIN_TICKET");
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
@@ -296,25 +296,25 @@ contract ETOTerms is Math, IContractId {
         public
         constant
     {
-        require(MIN_TICKET_EUR_ULPS >= platformTerms.MIN_TICKET_EUR_ULPS(), "ETO_TERMS_MIN_TICKET_EUR_ULPS");
+        require(MIN_TICKET_EUR_ULPS >= platformTerms.MIN_TICKET_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
         // at least one share sold
-        require(MIN_NUMBER_OF_TOKENS >= TOKEN_TERMS.EQUITY_TOKENS_PER_SHARE(), "ETO_TERMS_ONE_SHARE");
+        require(MIN_NUMBER_OF_TOKENS >= TOKEN_TERMS.EQUITY_TOKENS_PER_SHARE(), "NF_ETO_TERMS_ONE_SHARE");
         // duration checks
-        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION(), "ETO_TERMS_WL_D_MIN");
-        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION(), "ETO_TERMS_WL_D_MAX");
+        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
+        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
 
-        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION(), "ETO_TERMS_PUB_D_MIN");
-        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION(), "ETO_TERMS_PUB_D_MAX");
+        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
+        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
 
         uint256 totalDuration = DURATION_TERMS.WHITELIST_DURATION() + DURATION_TERMS.PUBLIC_DURATION();
-        require(totalDuration >= platformTerms.MIN_OFFER_DURATION(), "ETO_TERMS_TOT_O_MIN");
-        require(totalDuration <= platformTerms.MAX_OFFER_DURATION(), "ETO_TERMS_TOT_O_MAX");
+        require(totalDuration >= platformTerms.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
+        require(totalDuration <= platformTerms.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
 
-        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION(), "ETO_TERMS_SIG_MIN");
-        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION(), "ETO_TERMS_SIG_MAX");
+        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
+        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
 
-        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION(), "ETO_TERMS_CLAIM_MIN");
-        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION(), "ETO_TERMS_CLAIM_MAX");
+        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
+        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
     }
 
     //
@@ -338,7 +338,7 @@ contract ETOTerms is Math, IContractId {
     {
         // Validate
         require(investor != address(0));
-        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac <= 10**18, "DISCOUNT_RANGE");
+        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac <= 10**18, "NF_DISCOUNT_RANGE");
         require(discountAmountEurUlps < 2**128);
 
 

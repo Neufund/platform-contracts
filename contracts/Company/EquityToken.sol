@@ -81,12 +81,12 @@ contract EquityToken is
     ////////////////////////
 
     modifier onlyIfIssueAllowed(address to, uint256 amount) {
-        require(_tokenController.onGenerateTokens(msg.sender, to, amount), "EQTOKEN_NO_GENERATE");
+        require(_tokenController.onGenerateTokens(msg.sender, to, amount), "NF_EQTOKEN_NO_GENERATE");
         _;
     }
 
     modifier onlyIfDestroyAllowed(address owner, uint256 amount) {
-        require(_tokenController.onDestroyTokens(msg.sender, owner, amount), "EQTOKEN_NO_DESTROY");
+        require(_tokenController.onDestroyTokens(msg.sender, owner, amount), "NF_EQTOKEN_NO_DESTROY");
         _;
     }
 
@@ -199,7 +199,7 @@ contract EquityToken is
         public
     {
         // typically requires a valid migration in the old controller
-        require(_tokenController.onChangeTokenController(msg.sender, newController), "ET_NO_PERM_NEW_CONTROLLER");
+        require(_tokenController.onChangeTokenController(msg.sender, newController), "NF_ET_NO_PERM_NEW_CONTROLLER");
         _tokenController = IEquityTokenController(newController);
         emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }

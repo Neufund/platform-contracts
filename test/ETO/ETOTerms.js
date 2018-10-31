@@ -154,7 +154,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
         etoTerms = await ETOTerms.new.apply(this, values);
         await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "ETO_TERMS_WL_D_MIN",
+          "NF_ETO_TERMS_WL_D_MIN",
         );
       }
     });
@@ -168,7 +168,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_WL_D_MAX",
+        "NF_ETO_TERMS_WL_D_MAX",
       );
     });
 
@@ -183,7 +183,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
         etoTerms = await ETOTerms.new.apply(this, values);
         await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "ETO_TERMS_PUB_D_MIN",
+          "NF_ETO_TERMS_PUB_D_MIN",
         );
       }
     });
@@ -197,7 +197,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_PUB_D_MAX",
+        "NF_ETO_TERMS_PUB_D_MAX",
       );
     });
 
@@ -210,7 +210,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_SIG_MIN",
+        "NF_ETO_TERMS_SIG_MIN",
       );
     });
 
@@ -223,7 +223,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_SIG_MAX",
+        "NF_ETO_TERMS_SIG_MAX",
       );
     });
 
@@ -236,7 +236,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_CLAIM_MIN",
+        "NF_ETO_TERMS_CLAIM_MIN",
       );
     });
 
@@ -249,7 +249,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_CLAIM_MAX",
+        "NF_ETO_TERMS_CLAIM_MAX",
       );
     });
 
@@ -263,7 +263,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
       etoTerms = await ETOTerms.new.apply(this, values);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_TOT_O_MIN",
+        "NF_ETO_TERMS_TOT_O_MIN",
       );
     });
 
@@ -282,7 +282,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
         etoTerms = await ETOTerms.new.apply(this, values);
         await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "ETO_TERMS_TOT_O_MAX",
+          "NF_ETO_TERMS_TOT_O_MAX",
         );
       }
     });
@@ -293,7 +293,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         deployTokenTerms(ETOTokenTerms, {
           MIN_NUMBER_OF_TOKENS: constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
         }),
-      ).to.be.rejectedWith("ETO_TERMS_ONE_SHARE");
+      ).to.be.rejectedWith("NF_ETO_TERMS_ONE_SHARE");
     });
 
     it("should reject on minimum ticket too small", async () => {
@@ -301,7 +301,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const termsValues = termsKeys.map(v => terms[v]);
       etoTerms = await ETOTerms.new.apply(this, termsValues);
       await expect(etoTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "ETO_TERMS_MIN_TICKET_EUR_ULPS",
+        "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS",
       );
     });
 
@@ -475,7 +475,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     it("fails on setting token price frac to 0", async () => {
       await expect(
         etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer }),
-      ).to.be.rejectedWith("DISCOUNT_RANGE");
+      ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
 
       // fail on set many
       await expect(
@@ -487,13 +487,13 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
             from: deployer,
           },
         ),
-      ).to.be.rejectedWith("DISCOUNT_RANGE");
+      ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
     });
 
     it("fails on setting token price frac > 1", async () => {
       await expect(
         etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18.add(1)], { from: deployer }),
-      ).to.be.rejectedWith("DISCOUNT_RANGE");
+      ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
 
       // fail on set many
       await expect(
@@ -505,7 +505,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
             from: deployer,
           },
         ),
-      ).to.be.rejectedWith("DISCOUNT_RANGE");
+      ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
     });
   });
 

@@ -164,7 +164,7 @@ contract NomineeDirectTokenController is {
         internal
     {
         // this is simple controller that can do offering only once
-        require(ETO_COMMITMENT == address(0), "NDT_ONE_OFFER");
+        require(ETO_COMMITMENT == address(0), "NF_NDT_ONE_OFFER");
 
         ETO_COMMITMENT = eto;
         EQUITY_TOKEN = et;

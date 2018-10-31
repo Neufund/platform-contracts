@@ -36,8 +36,8 @@ contract MockPlaceholderEquityTokenController is
         //onlyCompany
     {
         // must be migrated with us as a target
-        require(MIGRATED_CONTROLLER.state() == GovState.Migrated, "NOT_MIGRATED");
-        require(MIGRATED_CONTROLLER.newTokenController() == address(this), "NOT_MIGRATED_TO_US");
+        require(MIGRATED_CONTROLLER.state() == GovState.Migrated, "NF_NOT_MIGRATED");
+        require(MIGRATED_CONTROLLER.newTokenController() == address(this), "NF_NOT_MIGRATED_TO_US");
         // migrate cap table
         (address[] memory equityTokens, , address[] memory offerings) = MIGRATED_CONTROLLER.capTable();
         newOffering(IEquityToken(equityTokens[0]), offerings[0]);

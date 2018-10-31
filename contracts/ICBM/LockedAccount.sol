@@ -179,7 +179,7 @@ contract LockedAccount is
 
     modifier onlyIfCommitment(address commitment) {
         // is allowed token offering
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment), "LOCKED_ONLY_COMMITMENT");
+        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment), "NF_LOCKED_ONLY_COMMITMENT");
         _;
     }
 
@@ -226,10 +226,10 @@ contract LockedAccount is
         public
         onlyIfCommitment(commitment)
     {
-        require(amount > 0, "LOCKED_NO_ZERO");
+        require(amount > 0, "NF_LOCKED_NO_ZERO");
         Account storage account = _accounts[msg.sender];
         // no overflow with account.balance which is uint112
-        require(account.balance >= amount, "LOCKED_NO_FUNDS");
+        require(account.balance >= amount, "NF_LOCKED_NO_FUNDS");
         // calculate unlocked NEU as proportion of invested amount to account balance
         uint112 unlockedNmkUlps = uint112(
             proportion(
@@ -269,7 +269,7 @@ contract LockedAccount is
         require(msg.sender == _token);
         require(_data.length == 0);
         // only from neumarks
-        require(_token == address(NEUMARK), "ONLY_NEU");
+        require(_token == address(NEUMARK), "NF_ONLY_NEU");
         // this will check if allowance was made and if _amount is enough to
         //  unlock, reverts on any error condition
         unlockInvestor(from);
@@ -291,7 +291,7 @@ contract LockedAccount is
         delete _commitments[msg.sender][investor];
         Account storage account = _accounts[investor];
         // account must exist
-        require(account.unlockDate > 0, "LOCKED_ACCOUNT_LIQUIDATED");
+        require(account.unlockDate > 0, "NF_LOCKED_ACCOUNT_LIQUIDATED");
         // add refunded amount
         account.balance = addBalance(account.balance, investment.balance);
         account.neumarksDue = add112(account.neumarksDue, investment.neumarksDue);
@@ -330,7 +330,7 @@ contract LockedAccount is
         onlyMigrationSource()
     {
         // internally we use 112 bits to store amounts
-        require(balance256 < 2**112, "OVR");
+        require(balance256 < 2**112, "NF_OVR");
         uint112 balance = uint112(balance256);
         assert(neumarksDue256 < 2**112);
         uint112 neumarksDue = uint112(neumarksDue256);
@@ -358,7 +358,7 @@ contract LockedAccount is
                 Destination storage destination = destinations[idx];
                 // get partial amount to migrate, if 0 specified then take all, as a result 0 must be the last destination
                 uint112 partialAmount = destination.amount == 0 ? balance : destination.amount;
-                require(partialAmount <= balance, "LOCKED_ACCOUNT_SPLIT_OVERSPENT");
+                require(partialAmount <= balance, "NF_LOCKED_ACCOUNT_SPLIT_OVERSPENT");
                 // compute corresponding NEU proportionally, result < 10**18 as partialAmount <= balance
                 uint112 partialNmkUlps = uint112(
                     proportion(
@@ -376,7 +376,7 @@ contract LockedAccount is
                 idx += 1;
             }
             // all funds and NEU must be migrated
-            require(balance == 0, "LOCKED_ACCOUNT_SPLIT_UNDERSPENT");
+            require(balance == 0, "NF_LOCKED_ACCOUNT_SPLIT_UNDERSPENT");
             assert(neumarksDue == 0);
             // free up gas
             delete _destinations[investor];
@@ -647,11 +647,11 @@ contract LockedAccount is
         // only verified destinations
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
         IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
-        require(claims.isVerified && !claims.accountFrozen, "DEST_NO_VERIFICATION");
+        require(claims.isVerified && !claims.accountFrozen, "NF_DEST_NO_VERIFICATION");
         if (wallet != msg.sender) {
             // prevent squatting - cannot set destination for not yet migrated investor
             (,,uint256 unlockDate) = MIGRATION_SOURCE.balanceOf(wallet);
-            require(unlockDate == 0, "DEST_NO_SQUATTING");
+            require(unlockDate == 0, "NF_DEST_NO_SQUATTING");
         }
 
         destinations.push(
