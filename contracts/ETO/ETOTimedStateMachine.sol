@@ -171,7 +171,7 @@ contract ETOTimedStateMachine is
     function setupStateMachine(ETODurationTerms durationTerms, IETOCommitmentObserver observer)
         internal
     {
-        require(COMMITMENT_OBSERVER == address(0), "STM_SET_ONCE");
+        require(COMMITMENT_OBSERVER == address(0), "NF_STM_SET_ONCE");
         require(observer != address(0));
 
         COMMITMENT_OBSERVER = observer;

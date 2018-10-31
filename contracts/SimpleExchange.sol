@@ -77,7 +77,7 @@ contract SimpleExchange is
         assert(exchangeFeeFraction < 10**18);
         (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
-        require(block.timestamp - rateTimestamp < 1 hours, "SEX_OLD_RATE");
+        require(block.timestamp - rateTimestamp < 1 hours, "NF_SEX_OLD_RATE");
         gasExchangePrivate(gasRecipient, amountEurUlps, exchangeFeeFraction, rate);
     }
 
@@ -94,7 +94,7 @@ contract SimpleExchange is
         require(gasRecipients.length == amountsEurUlps.length);
         (uint256 rate, uint256 rateTimestamp) = getExchangeRatePrivate(EURO_TOKEN, ETHER_TOKEN);
         // require if rate older than 1 hours
-        require(block.timestamp - rateTimestamp < 1 hours, "SEX_OLD_RATE");
+        require(block.timestamp - rateTimestamp < 1 hours, "NF_SEX_OLD_RATE");
         uint256 idx;
         while(idx < gasRecipients.length) {
             gasExchangePrivate(gasRecipients[idx], amountsEurUlps[idx], exchangeFeeFraction, rate);
@@ -213,14 +213,14 @@ contract SimpleExchange is
     )
         private
     {
-        require(numeratorToken != denominatorToken, "SEX_SAME_N_D");
+        require(numeratorToken != denominatorToken, "NF_SEX_SAME_N_D");
         assert(rateFraction > 0);
         assert(rateFraction < 2**128);
         uint256 invRateFraction = proportion(10**18, 10**18, rateFraction);
 
         // Inversion of rate biger than 10**36 is not possible and it will always be 0.
-        // require(invRateFraction < 2**128, "SEX_OVR_INV");
-        require(denominatorToken.decimals() == numeratorToken.decimals(), "SEX_DECIMALS");
+        // require(invRateFraction < 2**128, "NF_SEX_OVR_INV");
+        require(denominatorToken.decimals() == numeratorToken.decimals(), "NF_SEX_DECIMALS");
         // TODO: protect against outliers
 
         if (_rates[denominatorToken][numeratorToken].timestamp > 0) {

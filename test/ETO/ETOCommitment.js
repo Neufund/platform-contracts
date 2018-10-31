@@ -251,7 +251,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: company,
         }),
-      ).to.be.rejectedWith("ETO_DATE_TOO_EARLY");
+      ).to.be.rejectedWith("NF_ETO_DATE_TOO_EARLY");
     });
 
     it("rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date", async () => {
@@ -271,7 +271,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             from: company,
           },
         ),
-      ).to.be.rejectedWith("ETO_START_TOO_SOON");
+      ).to.be.rejectedWith("NF_ETO_START_TOO_SOON");
     });
 
     it("rejects setting date not from company", async () => {
@@ -380,7 +380,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const ticket = Q18.mul(107.61721).add(1);
       await increaseTime(platformTermsDict.TOKEN_RATE_EXPIRES_AFTER);
       await expect(investAmount(investors[1], ticket, "ETH", tokenprice)).to.be.rejectedWith(
-        "ETO_INVALID_ETH_RATE",
+        "NF_ETO_INVALID_ETH_RATE",
       );
     });
 
@@ -393,7 +393,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         testSnapshotToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("ETO_UNK_TOKEN");
+      ).to.be.rejectedWith("NF_ETO_UNK_TOKEN");
     });
 
     // specific cases
@@ -404,7 +404,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         etherToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
       const ticket = Q18.mul(107.61721).add(1);
       await identityRegistry.setClaims(investors[1], toBytes32("0x0"), toBytes32("0x1"), {
         from: admin,
@@ -420,7 +420,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         euroLockedAccount.transfer["address,uint256,bytes"](etoCommitment.address, ticket, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
     });
 
     it("frozen investor cannot invest", async () => {
@@ -436,7 +436,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         etherToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
     });
     it("cannot invest when ETO not in Universe"); // drop working ETO from universe and invest
     it("cannot invest when ETO cannot issue NEU"); // drop NEU permission from working ETO
@@ -527,7 +527,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
       await expect(
         investAmount(investors[4], missingAmount.add(tokenTermsDict.TOKEN_PRICE_EUR_ULPS), "EUR"),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
     });
 
     it("go from whitelist to signing by reaching max cap", async () => {
@@ -565,7 +565,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // investing min ticket reverts
       await expect(
         investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
       // wait for public phase
       await skipTimeTo(publicStartDate);
       tx = await etoCommitment.handleStateTransitions();
@@ -591,7 +591,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await investAmount(investors[0], missingAmount.sub(gap).add(dp), "EUR", dp);
       await expect(
         investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
     });
 
     it("stay in whitelist if amount below maximum cap because of gap and no fixed slots", async () => {
@@ -642,7 +642,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // normal whitelist investor cannot invest
       await expect(
         investAmount(investors[1], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR", dp),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
       // fixed slot still can invest
       await investAmount(
         investors[0],
@@ -662,7 +662,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS_IN_WHITELIST.mul(dp);
       await expect(investAmount(investors[0], missingAmount.add(dp), "EUR", dp)).to.be.rejectedWith(
-        "ETO_MAX_TOK_CAP",
+        "NF_ETO_MAX_TOK_CAP",
       );
     });
 
@@ -717,7 +717,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Whitelist);
       await expect(
         investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS.mul(3), "EUR", dp),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
     });
 
     it("sign to claim with feeDisbursal as simple address");
@@ -918,7 +918,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // investing over max cap even with minimum ticket
       await expect(
         investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR"),
-      ).to.be.rejectedWith("ETO_MAX_TOK_CAP");
+      ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
       await skipTimeTo(publicStartDate);
       // OK to invest in public
       await investAmount(investors[0], etoTermsDict.MIN_TICKET_EUR_ULPS, "EUR");

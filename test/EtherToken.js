@@ -456,7 +456,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
           value: additionalAmountToSend,
           gasPrice,
         }),
-      ).to.rejectedWith("ET_NO_DEPOSIT");
+      ).to.rejectedWith("NF_ET_NO_DEPOSIT");
     });
   });
 });

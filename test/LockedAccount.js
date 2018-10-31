@@ -268,7 +268,7 @@ contract(
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(
           commitFunds(investor, balance.add(1), balance.add(1), neumarks),
-        ).to.be.rejectedWith("LOCKED_NO_FUNDS");
+        ).to.be.rejectedWith("NF_LOCKED_NO_FUNDS");
       });
 
       it("reverts on overflow 2**112", async () => {
@@ -276,7 +276,7 @@ contract(
         const ticket = new web3.BigNumber(2).pow(112).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(commitFunds(investor, ticket, balance, neumarks)).to.be.rejectedWith(
-          "LOCKED_NO_FUNDS",
+          "NF_LOCKED_NO_FUNDS",
         );
       });
 
@@ -284,7 +284,7 @@ contract(
         const balance = Q18.mul(7635.18727);
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(commitFunds(investor, 0, balance, neumarks)).to.be.rejectedWith(
-          "LOCKED_NO_ZERO",
+          "NF_LOCKED_NO_ZERO",
         );
       });
 
@@ -300,7 +300,7 @@ contract(
         );
         await expect(
           lockedAccount.transfer(commitment1.address, ticket, "", { from: investor }),
-        ).to.be.rejectedWith("LOCKED_ONLY_COMMITMENT");
+        ).to.be.rejectedWith("NF_LOCKED_ONLY_COMMITMENT");
       });
 
       it("should invest balance in tranches", async () => {
@@ -536,7 +536,7 @@ contract(
         await unlockWithApprove(investor, neumarks.sub(releasedNeu));
         await expect(
           commitment1.refund(lockedAccount.address, { from: investor }),
-        ).to.be.rejectedWith("LOCKED_ACCOUNT_LIQUIDATED");
+        ).to.be.rejectedWith("NF_LOCKED_ACCOUNT_LIQUIDATED");
       });
 
       it("should not refund after claim", async () => {
@@ -716,7 +716,7 @@ contract(
           lockedAccount.migrateInvestor(investor, Q18.mul(1), Q18.mul(1), startTimestamp, {
             from: admin,
           }),
-        ).to.be.rejectedWith("INV_SOURCE");
+        ).to.be.rejectedWith("NF_INV_SOURCE");
       });
 
       it("should migrate investor", async () => {
@@ -763,7 +763,7 @@ contract(
       it("reverts on migration to not verified destination address", async () => {
         await expect(
           lockedAccount.setInvestorMigrationWallet(investor2, { from: investor }),
-        ).to.be.rejectedWith("DEST_NO_VERIFICATION");
+        ).to.be.rejectedWith("NF_DEST_NO_VERIFICATION");
       });
 
       it("should not squat existing investor", async () => {
@@ -775,7 +775,7 @@ contract(
         // tries to occupy existing icbm investor2
         await expect(
           lockedAccount.setInvestorMigrationWallet(investor2, { from: investor }),
-        ).to.be.rejectedWith("DEST_NO_SQUATTING");
+        ).to.be.rejectedWith("NF_DEST_NO_SQUATTING");
         // investor2 migrates
         await migrateOne(ticket2, investor2, investor2);
         // now destination address can be set
@@ -867,13 +867,13 @@ contract(
           from: investor2,
         });
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
-          "LOCKED_ACCOUNT_SPLIT_OVERSPENT",
+          "NF_LOCKED_ACCOUNT_SPLIT_OVERSPENT",
         );
         await lockedAccount.setInvestorMigrationWallets([investor2, investor3], [ticket2, 1], {
           from: investor2,
         });
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
-          "LOCKED_ACCOUNT_SPLIT_OVERSPENT",
+          "NF_LOCKED_ACCOUNT_SPLIT_OVERSPENT",
         );
         // equal spend (in tranches) will pass
         const tranche1 = Q18.mul(0.289182);
@@ -897,7 +897,7 @@ contract(
           from: investor2,
         });
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
-          "LOCKED_ACCOUNT_SPLIT_UNDERSPENT",
+          "NF_LOCKED_ACCOUNT_SPLIT_UNDERSPENT",
         );
         await lockedAccount.setInvestorMigrationWallets(
           [investor2, investor3],
@@ -905,7 +905,7 @@ contract(
           { from: investor2 },
         );
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
-          "LOCKED_ACCOUNT_SPLIT_UNDERSPENT",
+          "NF_LOCKED_ACCOUNT_SPLIT_UNDERSPENT",
         );
         // equal spend (in tranches) will pass
         const tranche1 = Q18.mul(1.873289182);
@@ -1104,7 +1104,7 @@ contract(
         expectLogMigrationDestination(tx, 0, investor, investor, overflow);
         const destination = await lockedAccount.getInvestorMigrationWallets(investor);
         expect(destination[1][0]).to.be.bignumber.eq(overflow);
-        await expect(migrateOne(overflow, investor, investor)).to.be.rejectedWith("OVR");
+        await expect(migrateOne(overflow, investor, investor)).to.be.rejectedWith("NF_OVR");
       });
     }
 
@@ -1505,7 +1505,7 @@ contract(
         assetToken.approveAndCall(lockedAccount.address, neumarkToBurn, "", {
           from: investorAddress,
         }),
-      ).to.be.rejectedWith("ONLY_NEU");
+      ).to.be.rejectedWith("NF_ONLY_NEU");
     }
 
     async function calculateUnlockPenalty(ticket) {

@@ -567,7 +567,7 @@ contract(
         universe.setSingleton(knownInterfaces.universe, universe.address, {
           from: universeManager,
         }),
-      ).to.rejectedWith("UNI_NO_UNIVERSE_SINGLETON");
+      ).to.rejectedWith("NF_UNI_NO_UNIVERSE_SINGLETON");
     });
 
     it("should revert on setting KNOWN_INTERFACE_UNIVERSE singleton when setting many singletos", async () => {
@@ -575,7 +575,7 @@ contract(
         universe.setManySingletons([knownInterfaces.universe], [universe.address], {
           from: universeManager,
         }),
-      ).to.to.rejectedWith("UNI_NO_UNIVERSE_SINGLETON");
+      ).to.to.rejectedWith("NF_UNI_NO_UNIVERSE_SINGLETON");
     });
   },
 );

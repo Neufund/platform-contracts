@@ -278,7 +278,7 @@ contract Universe is
     function setSingletonPrivate(bytes4 interfaceId, address instance)
         private
     {
-        require(interfaceId != KNOWN_INTERFACE_UNIVERSE, "UNI_NO_UNIVERSE_SINGLETON");
+        require(interfaceId != KNOWN_INTERFACE_UNIVERSE, "NF_UNI_NO_UNIVERSE_SINGLETON");
         address replacedInstance = _singletons[interfaceId];
         // do nothing if not changing
         if (replacedInstance != instance) {

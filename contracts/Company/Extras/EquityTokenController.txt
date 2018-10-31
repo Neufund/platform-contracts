@@ -60,16 +60,16 @@ contract EquityTokenController is
 
     // require caller is ETO in universe
     modifier onlyETO() {
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "ETC_ETO_NOT_U");
+        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "NF_ETC_ETO_NOT_U");
         _;
     }
 
     // require caller is last (active) ETO
     modifier onlyLastETO() {
         // must be still pending
-        require(!IETOCommitment(msg.sender).finalized(), "ETC_ETO_NOT_FIN");
+        require(!IETOCommitment(msg.sender).finalized(), "NF_ETC_ETO_NOT_FIN");
         // must be known ETO
-        require(mIsRegisteredOffering(msg.sender), "ETC_ETO_NK");
+        require(mIsRegisteredOffering(msg.sender), "NF_ETC_ETO_NK");
         _;
     }
 
@@ -240,7 +240,7 @@ contract EquityTokenController is
         onlyCompany
     {
         // only legal rep can send proceeds
-        require(from == COMPANY_LEGAL_REPRESENTATIVE, "ETC_TF_O_LEGALREP");
+        require(from == COMPANY_LEGAL_REPRESENTATIVE, "NF_ETC_TF_O_LEGALREP");
         // only ether and euro tokens
         address[] memory singletons = UNIVERSE.getManySingletons(
             [KNOWN_INTERFACE_ETHER_TOKEN, KNOWN_INTERFACE_EURO_TOKEN, KNOWN_INTERFACE_FEE_DISBURSAL]
@@ -250,9 +250,9 @@ contract EquityTokenController is
         uint256 expectedAmount = msg.sender == singletons[0] ? _expectedProceedsEth : _expectedProceedsEurUlps;
         // when closing all proceeds must be paid in one go
         if(_state == GovState.Closing) {
-            require(expectedAmount == amount, "ETC_PROC_CLS_FULL");
+            require(expectedAmount == amount, "NF_ETC_PROC_CLS_FULL");
         } else {
-            require(expectedAmount >= amount, "ETC_PROC_EXC");
+            require(expectedAmount >= amount, "NF_ETC_PROC_EXC");
         }
         // bookeeping
         if (msg.sender == singletons[0]) {
@@ -344,9 +344,9 @@ contract EquityTokenController is
         onlyState(GovState.Closing)
     {
         // revert if can cancel company closing (deadline for payments expired)
-        require(!canCancelCompanyClosing(), "ETC_CLOSE_CAN_CANCEL");
+        require(!canCancelCompanyClosing(), "NF_ETC_CLOSE_CAN_CANCEL");
         // revert if there any pending obligations (currently proceeds)
-        require(canCloseCompany(), "ETC_CLOSE_OBLIG");
+        require(canCloseCompany(), "NF_ETC_CLOSE_OBLIG");
 
         closeCompanyPrivate();
     }
@@ -357,7 +357,7 @@ contract EquityTokenController is
         public
         onlyState(GovState.Closing)
     {
-        require(canCancelCompanyClosing(), "ETC_CLOSE_CANNOT_CANCEL");
+        require(canCancelCompanyClosing(), "NF_ETC_CLOSE_CANNOT_CANCEL");
         // will enable transfers if necessary
         cancelCompanyClosingPrivate();
     }
@@ -424,7 +424,7 @@ contract EquityTokenController is
             address equityToken;
             changeNominee(resolutionId, equityToken);
         }
-        revert("ETC_NOT_IMPL");
+        revert("NF_ETC_NOT_IMPL");
     }
 
     ////////////////////////
@@ -437,16 +437,16 @@ contract EquityTokenController is
         IEquityToken equityToken = tokenOffering.equityToken();
         // require nominee match and agreement signature
         var (legalRep,,,) = equityToken.currentAgreement();
-        require(legalRep == _nominee, "NDT_ET_A_MIS");
-        require(equityToken.nominee() == _nominee, "NDT_ET_N_MIS");
+        require(legalRep == _nominee, "NF_NDT_ET_A_MIS");
+        require(equityToken.nominee() == _nominee, "NF_NDT_ET_N_MIS");
         // require token controller match
-        require(equityToken.equityTokenController() == address(this), "NDT_ET_TC_MIS");
+        require(equityToken.equityTokenController() == address(this), "NF_NDT_ET_TC_MIS");
         // require nominee and agreement match
         (legalRep,,,) = tokenOffering.currentAgreement();
-        require(legalRep == _nominee, "NDT_ETO_A_MIS");
+        require(legalRep == _nominee, "NF_NDT_ETO_A_MIS");
         // require terms set and legalRep match
-        require(tokenOffering.etoTerms() != address(0), "NDT_ETO_NO_TERMS");
-        require(tokenOffering.companyLegalRep() == COMPANY_LEGAL_REPRESENTATIVE, "NDT_ETO_LREP_MIS");
+        require(tokenOffering.etoTerms() != address(0), "NF_NDT_ETO_NO_TERMS");
+        require(tokenOffering.companyLegalRep() == COMPANY_LEGAL_REPRESENTATIVE, "NF_NDT_ETO_LREP_MIS");
 
         mAddTokenOffering(eto, et);
 

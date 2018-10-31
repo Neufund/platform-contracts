@@ -69,7 +69,7 @@ contract PlaceholderEquityTokenController is
 
     // require caller is ETO in universe
     modifier onlyRegisteredETO() {
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "ETC_ETO_NOT_U");
+        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "NF_ETC_ETO_NOT_U");
         _;
     }
 
@@ -79,17 +79,17 @@ contract PlaceholderEquityTokenController is
     }
 
     modifier onlyOperational() {
-        require(_state == GovState.Offering || _state == GovState.Funded || _state == GovState.Closing, "INV_STATE");
+        require(_state == GovState.Offering || _state == GovState.Funded || _state == GovState.Closing, "NF_INV_STATE");
         _;
     }
 
     modifier onlyState(GovState state) {
-        require(_state == state, "INV_STATE");
+        require(_state == state, "NF_INV_STATE");
         _;
     }
 
     modifier onlyStates(GovState state1, GovState state2) {
-        require(_state == state1 || _state == state2, "INV_STATE");
+        require(_state == state1 || _state == state2, "NF_INV_STATE");
         _;
     }
 
@@ -331,18 +331,18 @@ contract PlaceholderEquityTokenController is
         onlyRegisteredETO
     {
         if (newState == ETOState.Whitelist) {
-            require(_state == GovState.Setup, "ETC_BAD_STATE");
+            require(_state == GovState.Setup, "NF_ETC_BAD_STATE");
             registerTokenOfferingPrivate(IETOCommitment(msg.sender));
             return;
         }
         // must be same eto that started offering
-        require(msg.sender == _commitment, "ETC_UNREG_COMMITMENT");
+        require(msg.sender == _commitment, "NF_ETC_UNREG_COMMITMENT");
         if (newState == ETOState.Claim) {
-            require(_state == GovState.Offering, "ETC_BAD_STATE");
+            require(_state == GovState.Offering, "NF_ETC_BAD_STATE");
             aproveTokenOfferingPrivate(IETOCommitment(msg.sender));
         }
         if (newState == ETOState.Refund) {
-            require(_state == GovState.Offering, "ETC_BAD_STATE");
+            require(_state == GovState.Offering, "NF_ETC_BAD_STATE");
             failTokenOfferingPrivate(IETOCommitment(msg.sender));
         }
     }
@@ -429,13 +429,13 @@ contract PlaceholderEquityTokenController is
         // require nominee match and agreement signature
         (address nomineeToken,,,) = equityToken.currentAgreement();
         // require token controller match
-        require(equityToken.tokenController() == address(this), "NDT_ET_TC_MIS");
+        require(equityToken.tokenController() == address(this), "NF_NDT_ET_TC_MIS");
         // require nominee and agreement match
         (address nomineOffering,,,) = tokenOffering.currentAgreement();
-        require(nomineOffering == nomineeToken, "NDT_ETO_A_MIS");
+        require(nomineOffering == nomineeToken, "NF_NDT_ETO_A_MIS");
         // require terms set and legalRep match
-        require(tokenOffering.etoTerms() != address(0), "NDT_ETO_N  O_TERMS");
-        require(tokenOffering.companyLegalRep() == COMPANY_LEGAL_REPRESENTATIVE, "NDT_ETO_LREP_MIS");
+        require(tokenOffering.etoTerms() != address(0), "NF_NDT_ETO_NO_TERMS");
+        require(tokenOffering.companyLegalRep() == COMPANY_LEGAL_REPRESENTATIVE, "NF_NDT_ETO_LREP_MIS");
 
         newOffering(equityToken, tokenOffering);
         transitionTo(GovState.Offering);
