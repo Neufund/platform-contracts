@@ -161,6 +161,11 @@ contract Agreement is
     function acceptAgreementInternal(address accepter)
         internal
     {
+        // shouldn't this agreement have to be re-signed, when there is a new amendment?
+        // the way this is written now, the signatory will only sign the first time this
+        // function is entered, so this check should check wether the latest agreement block
+        // number is larger than the last blocknumber signed by the signatory, and then 
+        // re-sign. 
         if(_signatories[accepter] == 0) {
             require(_amendments.length > 0);
             _signatories[accepter] = block.number;

@@ -666,6 +666,8 @@ contract ETOCommitment is
         uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
         // no overflow as smaller one is uint96
+
+        // I have no idea what is going on here :)
         uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
@@ -741,6 +743,8 @@ contract ETOCommitment is
         emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFeeInt);
     }
 
+    // I can't see the mechanism here for only allowing a certain percentage of a locked wallet to be invested
+    // into our first ETO. Or did we drop this?
     function processTicket(
         address investor,
         address wallet,

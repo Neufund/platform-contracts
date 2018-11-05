@@ -12,7 +12,8 @@ import "./SnapshotToken/StandardSnapshotToken.sol";
 import "./NeumarkIssuanceCurve.sol";
 import "./Reclaimable.sol";
 
-
+// Why is the Neumark contract built in a way, that the TokenTransferController is not a separate contract
+// but hardcoded into this contract? Why do we use this pattern here even if we don't use it
 contract Neumark is
     AccessControlled,
     AccessRoles,
