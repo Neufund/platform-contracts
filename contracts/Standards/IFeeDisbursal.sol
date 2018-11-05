@@ -7,4 +7,11 @@ import "./IERC223Callback.sol";
 /// @dev payment token received via ERC223 Transfer
 contract IFeeDisbursal is IERC223Callback {
     // TODO: declare interface
+    function claim() public {
+
+    }
+
+    function recycle() public {
+
+    }
 }
