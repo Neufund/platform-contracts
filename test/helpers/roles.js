@@ -21,4 +21,5 @@ export default {
   eurtLegalManager: sha3("EurtLegalManager"),
   gasExchange: sha3("GasExchange"),
   tokenRateOracle: sha3("TokenRateOracle"),
+  disburser: sha3("Disburser"),
 };

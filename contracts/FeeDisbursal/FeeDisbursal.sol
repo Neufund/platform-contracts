@@ -14,7 +14,6 @@ import "../Standards/IERC223Token.sol";
 contract FeeDisbursal is
     AccessControlled,
     Reclaimable,
-    IFeeDisbursal,
     IdentityRecord,
     Serialization,
     Math
@@ -170,25 +169,28 @@ contract FeeDisbursal is
     // implementation of tokenfallback
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
-        only(ROLE_DISBURSER)
     {
+        // @TODO: check that wallet has disburser role
         // @TODO: move access control to Controller
         require(isDisbursableToken(msg.sender), "NF_DISB_UKNOWN_TOKEN");
         require(amount > 0, "NF_DISB_ZERO_AMOUNT");
 
         // cast and check pro rata token
-        BasicSnapshotToken proRataToken = BasicSnapshotToken(decodeAddress(data));
-        uint256 snapshotId = proRataToken.currentSnapshotId() - 1;
+        // @TODO: uncomment next line and remove the line after that
+        // BasicSnapshotToken proRataToken = BasicSnapshotToken(decodeAddress(data));
+        BasicSnapshotToken proRataToken = UNIVERSE.neumark();
+        uint256 snapshotId = proRataToken.currentSnapshotId(); //@TODO: subtract one or not?
         require(proRataToken.totalSupplyAt(snapshotId) > 0, "");
 
         // create a new disbursal entry
         _disbursals[msg.sender].push(Disbursal({
-            recycleAfterTimestamp: block.timestamp,
+            recycleAfterTimestamp: block.timestamp, //@TODO: add one year here
             amount: amount,
             proRataToken: proRataToken,
             snapshotId: snapshotId,
             disburser: wallet
         }));
+
         //@TODO: add log message
     }
 
