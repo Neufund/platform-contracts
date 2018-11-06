@@ -292,6 +292,15 @@ contract PlaceholderEquityTokenController is
         return newController == _newController;
     }
 
+    // no forced transfers allowed in this controller
+    function onAllowance(address /*owner*/, address /*spender*/)
+        public
+        constant
+        returns (uint256)
+    {
+        return 0;
+    }
+
     //
     // Implements IEquityTokenController
     //
