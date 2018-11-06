@@ -3,13 +3,20 @@ pragma solidity 0.4.25;
 
 import "../Standards/IBasicToken.sol";
 import "../Math.sol";
+import "../SnapshotToken/Helpers/MTokenTransferController.sol";
+import "../SnapshotToken/Helpers/MTokenTransfer.sol";
 
 
 /**
  * @title Basic token
  * @dev Basic version of StandardToken, with no allowances.
  */
-contract BasicToken is IBasicToken, Math {
+contract BasicToken is
+    MTokenTransfer,
+    MTokenTransferController,
+    IBasicToken,
+    Math
+{
 
     ////////////////////////
     // Mutable state
@@ -32,7 +39,7 @@ contract BasicToken is IBasicToken, Math {
         public
         returns (bool)
     {
-        transferInternal(msg.sender, to, amount);
+        mTransfer(msg.sender, to, amount);
         return true;
     }
 
@@ -63,11 +70,15 @@ contract BasicToken is IBasicToken, Math {
     // Internal functions
     ////////////////////////
 
-    // actual transfer function called by all public variants
-    function transferInternal(address from, address to, uint256 amount)
+    //
+    // Implements MTokenTransfer
+    //
+
+    function mTransfer(address from, address to, uint256 amount)
         internal
     {
         require(to != address(0));
+        require(mOnTransfer(from, to, amount));
 
         _balances[from] = sub(_balances[from], amount);
         _balances[to] = add(_balances[to], amount);
