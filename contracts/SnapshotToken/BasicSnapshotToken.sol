@@ -196,7 +196,7 @@ contract BasicSnapshotToken is
     ////////////////////////
 
     function totalSupplyAtInternal(uint256 snapshotId)
-        public
+        internal
         constant
         returns(uint256)
     {
