@@ -3,7 +3,7 @@ pragma solidity 0.4.25;
 import "../AccessControl/AccessControlled.sol";
 import "..//Reclaimable.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../MigrationSource.sol";
 import "./ICBMEuroTokenMigrationTarget.sol";

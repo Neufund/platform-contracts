@@ -1,6 +1,6 @@
 pragma solidity 0.4.25;
 
-import "../../Zeppelin/StandardToken.sol";
+import "../../SnapshotToken/StandardToken.sol";
 import "../../Standards/IMigrationSource.sol";
 import "../../SnapshotToken/Helpers/TrustlessTokenController.sol";
 import "../../ICBM/ICBMEuroTokenMigrationTarget.sol";

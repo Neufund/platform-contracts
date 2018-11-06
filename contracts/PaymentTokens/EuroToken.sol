@@ -3,7 +3,7 @@ pragma solidity 0.4.25;
 import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";

@@ -3,8 +3,8 @@ pragma solidity 0.4.25;
 
 import "../Standards/IBasicToken.sol";
 import "../Math.sol";
-import "../SnapshotToken/Helpers/MTokenTransferController.sol";
-import "../SnapshotToken/Helpers/MTokenTransfer.sol";
+import "./Helpers/MTokenTransferController.sol";
+import "./Helpers/MTokenTransfer.sol";
 
 
 /**

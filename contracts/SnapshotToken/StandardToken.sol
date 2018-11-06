@@ -5,7 +5,7 @@ import "../Standards/IERC20Token.sol";
 import "../Standards/IERC677Token.sol";
 import "../Standards/IERC677Callback.sol";
 import "./BasicToken.sol";
-import "../SnapshotToken/Helpers/TokenAllowance.sol";
+import "./Helpers/TokenAllowance.sol";
 
 
 /**

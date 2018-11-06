@@ -8,7 +8,7 @@ import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223LegacyCallback.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/Helpers/TrustlessTokenController.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/StandardToken.sol";
 
 
 contract ICBMEtherToken is

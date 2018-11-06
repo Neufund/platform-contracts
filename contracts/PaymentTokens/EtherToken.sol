@@ -9,7 +9,7 @@ import "../Standards/IERC223Callback.sol";
 import "../Standards/IContractId.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/Helpers/TrustlessTokenController.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/StandardToken.sol";
 
 
 contract EtherToken is
