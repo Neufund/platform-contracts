@@ -41,20 +41,20 @@ contract(
     let forkArbiter;
     let euroToken;
     let universe;
+    let identityRegistry;
 
-    before(async () => {
+    beforeEach(async () => {
       [universe, accessControl, forkArbiter] = await deployUniverse(masterManager, masterManager);
       await universe.setSingleton(knownInterfaces.gasExchange, gasExchange, {
         from: masterManager,
       });
+      identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
     });
 
     describe("specific tests", () => {
       let tokenController;
-      let identityRegistry;
 
       beforeEach(async () => {
-        identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
         [euroToken, tokenController] = await deployEuroTokenUniverse(
           universe,
           masterManager,
@@ -1170,17 +1170,14 @@ contract(
         const getToken = () => euroToken;
 
         beforeEach(async () => {
-          await tokenController.setAllowedTransferTo(investors[1], true, {
-            from: eurtLegalManager,
-          });
-          // receiving investor to receive
-          await tokenController.setAllowedTransferTo(investors[2], true, {
-            from: eurtLegalManager,
-          });
-          // gasExchange permission to send
-          await tokenController.setAllowedTransferFrom(gasExchange, true, {
-            from: eurtLegalManager,
-          });
+          await identityRegistry.setMultipleClaims(
+            [investors[1], investors[2]],
+            ["0x0", "0x0"],
+            [toBytes32("0x1"), toBytes32("0x1")],
+            {
+              from: masterManager,
+            },
+          );
           await tokenController.setAllowedTransferTo(0x0, true, {
             from: eurtLegalManager,
           });
@@ -1189,7 +1186,35 @@ contract(
           });
         });
 
-        standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        describe("with broker", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(gasExchange, true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        });
+
+        describe("when broker is the from", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(investors[1], true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], investors[1], initialBalance);
+        });
+
+        describe("when broker is the to", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(investors[2], true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], investors[2], initialBalance);
+        });
       });
 
       describe("IERC677Token tests", () => {
@@ -1200,8 +1225,8 @@ contract(
 
         beforeEach(async () => {
           erc667cb = await deployTestErc677Callback();
-          await tokenController.setAllowedTransferTo(investors[1], true, {
-            from: eurtLegalManager,
+          await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), {
+            from: masterManager,
           });
           // gasExchange (which is receiver) permission to send
           await tokenController.setAllowedTransferFrom(erc667cb.address, true, {
@@ -1307,7 +1332,17 @@ contract(
           });
         });
 
-        standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        describe("with broker", () => {
+          standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        });
+
+        describe("when broker is the from", () => {
+          standardTokenTests(getToken, investors[1], investors[2], investors[1], initialBalance);
+        });
+
+        describe("when broker is the to", () => {
+          standardTokenTests(getToken, investors[1], investors[2], investors[2], initialBalance);
+        });
       });
 
       describe("IERC677Token tests", () => {
