@@ -171,23 +171,18 @@ contract EuroTokenController is
     // Implements ITokenController
     //
 
-    /// allow transfer if both parties are explicitely allowed
-    /// or when 'form' is ETO|explicit and 'to' has KYC|explicit
-    /// or when 'from' is ETO|explicit and 'to' is ETO|explicit
-    function onTransfer(address from, address to, uint256)
+    function onTransfer(address broker, address from, address to, uint256 /*amount*/)
         public
         constant
         returns (bool allow)
     {
-        return isTransferAllowedPrivate(from, to, false);
-    }
-
-    function onTransferFrom(address broker, address from, address to, uint256 /*amount*/)
-        public
-        constant
-        returns (bool allow)
-    {
-        return isTransferAllowedPrivate(from, to, true) && _allowedTransferFrom[broker];
+        // detect brokered (transferFrom) transfer when from is different address executing transfer
+        bool isBrokeredTransfer = broker != from;
+        // "from" must be allowed to transfer from to "to"
+        bool isTransferAllowed = isTransferAllowedPrivate(from, to, isBrokeredTransfer);
+        // broker must have direct permission to transfer from
+        bool isBrokerAllowed = !isBrokeredTransfer || _allowedTransferFrom[broker];
+        return isTransferAllowed && isBrokerAllowed;
     }
 
     /// always approve
