@@ -476,10 +476,7 @@ contract(
       ).to.rejectedWith("NF_SEX_OLD_RATE");
     });
 
-    // there is permanent allowance but still investor can increase  allowance by `approve` on euro token
-    // gasExchange (in fact euro token controller) should disregard that
-    // IMO this will fail. I didn't take such case into account
-    it("should revert on exchange bigger than permanent allowance if investor increased allowance", async () => {
+    it("should revert increase allowance of gas exchange due to allowance override", async () => {
       const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
       const rate = Q18.mul(601.65123);
 
@@ -487,25 +484,32 @@ contract(
       await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
       await sendEtherToExchange(_, Q18);
 
-      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
-        from: gasRecipient,
+      // allowance override mechanism prevents usage of approve against gas Exchange as a broker
+      await expect(
+        euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+          from: gasRecipient,
+        }),
+      ).to.be.revert;
+
+      // gas exchange below allowance should happen
+      await gasExchange.gasExchange(gasRecipient, gasExchangeMaxAllowanceEurUlps, gasExchangeFee, {
+        from: gasExchangeManager,
       });
 
-      await gasExchange.gasExchange(
-        gasRecipient,
-        exchangedAmountMoreThanAllowance,
-        gasExchangeFee,
-        {
+      // gas exchange above that must fail on above allowance
+      await expect(
+        gasExchange.gasExchange(gasRecipient, exchangedAmountMoreThanAllowance, gasExchangeFee, {
           from: gasExchangeManager,
-        },
-      );
+        }),
+      ).to.be.revert;
 
+      // one gas exchange succeeded
       expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
-        exchangedAmountMoreThanAllowance,
+        gasExchangeMaxAllowanceEurUlps,
       );
     });
 
-    it("should revert on multi exchange bigger than permanent allowance if investor increased allowance", async () => {
+    it("should revert increase allowance on multi gas exchange due to allowance override", async () => {
       const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
       const rate = Q18.mul(601.65123);
 
@@ -513,21 +517,25 @@ contract(
       await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
       await sendEtherToExchange(_, Q18);
 
-      await euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
-        from: gasRecipient,
-      });
+      await expect(
+        euroToken.approve(gasExchange.address, exchangedAmountMoreThanAllowance, {
+          from: gasRecipient,
+        }),
+      ).to.be.revert;
 
-      await gasExchange.gasExchangeMultiple(
-        [gasRecipient],
-        [exchangedAmountMoreThanAllowance],
-        gasExchangeFee,
-        {
-          from: gasExchangeManager,
-        },
-      );
-      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(
-        exchangedAmountMoreThanAllowance,
-      );
+      await expect(
+        gasExchange.gasExchangeMultiple(
+          [gasRecipient],
+          [exchangedAmountMoreThanAllowance],
+          gasExchangeFee,
+          {
+            from: gasExchangeManager,
+          },
+        ),
+      ).to.be.revert;
+
+      // no gas exchanges succeeded
+      expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(0);
     });
 
     it("should revert on exchange not from gasExchangeManager", async () => {
