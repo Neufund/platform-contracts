@@ -112,14 +112,18 @@ contract FeeDisbursal is
     /// @param tokens addresses of the claimable token
     function claimMultiple(address[] tokens)
     public
+    returns (uint256[])
     {
         // only allow verified and active accounts to claim tokens
         // @TODO: move access control to Controller
         IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(msg.sender));
         require(claims.isVerified && !claims.accountFrozen, "NF_DISB_NOT_VER");
+        uint256[] memory result = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            claimPrivate(tokens[i], msg.sender, UINT256_MAX);
+            (uint256 claimedAmount, uint256 lastIndex)  = claimPrivate(tokens[i], msg.sender, UINT256_MAX);
+            result[i] = claimedAmount;
         }
+        return result; 
     }
 
     /// @notice check how many tokens of a certain kind can be claimed by an account
