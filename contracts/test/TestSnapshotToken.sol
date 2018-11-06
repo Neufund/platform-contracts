@@ -25,6 +25,8 @@ contract TestSnapshotToken is
 
     bool private _enableApprovals;
 
+    mapping (address => mapping (address => uint256)) private _forced;
+
     ////////////////////////
     // Constructor
     ////////////////////////
@@ -79,6 +81,13 @@ contract TestSnapshotToken is
         _enableApprovals = enable;
     }
 
+    // this is really nasty controller that can force any transfer it wants
+    function forceTransfer(address owner, address controller, uint256 amount)
+        public
+    {
+        _forced[owner][controller] = amount;
+    }
+
     ////////////////////////
     // Public functions
     ////////////////////////
@@ -129,5 +138,13 @@ contract TestSnapshotToken is
         returns (bool allow)
     {
         return _enableApprovals;
+    }
+
+    function mAllowanceOverride(address owner, address spender)
+        internal
+        constant
+        returns (uint256)
+    {
+        return _forced[owner][spender];
     }
 }
