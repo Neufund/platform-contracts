@@ -31,16 +31,6 @@ contract TestNullEquityTokenController is
     bool allowChangeNominee = true;
     bool allowChangeTokenController = true;
 
-    function resetAllowance()
-        public
-    {
-        allowOnTransfer = true;
-        allowDestroyTokens = true;
-        allowGenerateTokens = true;
-        allowChangeNominee = true;
-        allowChangeTokenController = true;
-    }
-
     //
     // Implements IEquityTokenController
     //
@@ -81,6 +71,10 @@ contract TestNullEquityTokenController is
         // msg.sender is ETOCommitment
     }
 
+    //
+    //  Implements ITokenController
+    //
+
     function onTransfer(address, address, uint256)
         public
         constant
@@ -88,13 +82,6 @@ contract TestNullEquityTokenController is
     {
         return allowOnTransfer;
     }
-
-    function setAllowOnTransfer(bool _allow)
-        public
-    {
-        allowOnTransfer = _allow;
-    }
-
 
     function onGenerateTokens(address, address, uint256)
         public
@@ -104,13 +91,6 @@ contract TestNullEquityTokenController is
         return allowGenerateTokens;
     }
 
-    function setAllowOnGenerateTokens(bool _allow)
-        public
-    {
-        allowGenerateTokens = _allow;
-    }
-
-
     function onDestroyTokens(address, address, uint256)
         public
         constant
@@ -119,19 +99,34 @@ contract TestNullEquityTokenController is
         return allowDestroyTokens;
     }
 
-    function setAllowDestroyTokens(bool _allow)
-        public
-    {
-        allowDestroyTokens = _allow;
-    }
-
-
     function onChangeTokenController(address, address)
         public
         constant
         returns (bool)
     {
         return allowChangeTokenController;
+    }
+
+    //
+    //  Mock functions
+    //
+
+    function setAllowOnTransfer(bool _allow)
+        public
+    {
+        allowOnTransfer = _allow;
+    }
+
+    function setAllowOnGenerateTokens(bool _allow)
+        public
+    {
+        allowGenerateTokens = _allow;
+    }
+
+    function setAllowDestroyTokens(bool _allow)
+        public
+    {
+        allowDestroyTokens = _allow;
     }
 
     function setAllowChangeTokenController(bool _allow)

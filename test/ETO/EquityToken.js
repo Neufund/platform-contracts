@@ -56,7 +56,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       shareholderRights,
     );
     equityTokenController = await TestNullEquityTokenController.new(universe.address);
-    await equityTokenController.resetAllowance();
 
     equityToken = await EquityToken.new(
       universe.address,
@@ -100,12 +99,17 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     });
 
     it("should overflow on deposit", async () => {
-      const initialBalance = new web3.BigNumber(2).pow(256).plus(1);
+      const initialBalance = new web3.BigNumber(2).pow(256).minus(1);
+      await equityToken.issueTokens(initialBalance, {
+        from: company,
+      });
+
       await expect(
         equityToken.issueTokens(initialBalance, {
           from: company,
         }),
       ).to.be.rejectedWith(EvmError);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(initialBalance);
     });
 
     // cases for successful destroy, rejected due to controller, not enough balance etc.
@@ -140,10 +144,6 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.tokenController()).to.be.bignumber.eq(
         newEquityTokenController.address,
       );
-
-      // clean up
-      await equityToken.changeTokenController(equityTokenController.address);
-      expect(await equityToken.tokenController()).to.be.bignumber.eq(equityTokenController.address);
     });
 
     it("should change nominee", async () => {
