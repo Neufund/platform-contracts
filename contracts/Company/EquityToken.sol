@@ -267,6 +267,17 @@ contract EquityToken is
         return _tokenController.onApprove(owner, spender, amount);
     }
 
+    function mAllowanceOverride(
+        address owner,
+        address spender
+    )
+        internal
+        constant
+        returns (uint256)
+    {
+        return _tokenController.onAllowance(owner, spender);
+    }
+
     //
     // Overrides Agreement
     //
