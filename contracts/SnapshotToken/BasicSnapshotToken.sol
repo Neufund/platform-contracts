@@ -259,7 +259,7 @@ contract BasicSnapshotToken is
     {
         // never send to address 0
         require(to != address(0));
-        // block transfers in clone that points to future/current snapshots of patent token
+        // block transfers in clone that points to future/current snapshots of parent token
         require(parentToken() == address(0) || parentSnapshotId() < parentToken().currentSnapshotId());
         // Alerts the token controller of the transfer
         require(mOnTransfer(from, to, amount));

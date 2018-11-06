@@ -147,7 +147,7 @@ contract TokenAllowance is
     // Implements default MTokenAllowanceController
     //
 
-    // default allowance function
+    // no override in default implementation
     function mAllowanceOverride(
         address /*owner*/,
         address /*spender*/
