@@ -208,18 +208,10 @@ contract(
       it("should apply settings when gas exchange address changes", async () => {
         const newGasExchange = "0x498a042f52f1737a77b91dd8107e68d75bf90000";
         const oldGasExchange = await universe.gasExchange();
-        expect(
-          await tokenController.hasPermanentAllowance(
-            oldGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            newGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, oldGasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
+        expect(await tokenController.onAllowance(identity1, newGasExchange)).to.be.bignumber.eq(0);
         // singletons recognized internally by token controller
         await registerSingletons(universe, masterManager, [
           {
@@ -227,18 +219,10 @@ contract(
             addr: newGasExchange,
           },
         ]);
-        expect(
-          await tokenController.hasPermanentAllowance(
-            oldGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.false;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            newGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
+        expect(await tokenController.onAllowance(identity1, oldGasExchange)).to.be.bignumber.eq(0);
+        expect(await tokenController.onAllowance(identity1, newGasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
       });
 
       // set allowed from. allowed to, apply settings
@@ -260,8 +244,6 @@ contract(
         await expect(tokenController.applySettings(amount, amount, amount, { from: identity1 })).to
           .revert;
       });
-
-      it("should liquidate account via eurt legal rep");
     });
 
     describe("ITokenController tests", () => {
@@ -409,30 +391,13 @@ contract(
 
       it("should have permanent allowance for gasExchange", async () => {
         const gasExchange = await universe.gasExchange();
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps.divToInt(2),
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps.add(1),
-          ),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, gasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
       });
 
       it("should not have permanent allowance for other accounts", async () => {
-        expect(
-          await tokenController.hasPermanentAllowance(identity1, maxSimpleExchangeAllowanceEurUlps),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, identity2)).to.be.bignumber.eq(0);
       });
 
       it("should allow deposit for KYC and explicit", async () => {
