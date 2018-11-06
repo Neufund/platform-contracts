@@ -252,7 +252,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     it("should execute general information rights");
     it("rejects amend Agreement (ISHA) by company");
     it("should return true onApprove");
-    it("should return false hasPermanentAllowance");
+    it("should return 0 on onAllowance");
     it("should return false on changing nominee");
   });
 

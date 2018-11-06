@@ -94,6 +94,51 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
         await token.enableApprovals(false);
         await expect(token.approve(broker, 18281, { from: owner })).to.be.rejectedWith(EvmError);
       });
+
+      it("should force transfer via allowance override", async () => {
+        const amount = new web3.BigNumber(1);
+        await token.deposit(amount, { from: owner });
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(0);
+        await token.forceTransfer(owner, broker, amount);
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(amount);
+        await token.transferFrom(owner, owner2, amount, { from: broker });
+        // forced allowance is not decreased
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(amount);
+        // only when reset by controller
+        await token.forceTransfer(owner, broker, new web3.BigNumber(0));
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(0);
+        expect(await token.balanceOf(owner2)).to.be.bignumber.eq(amount);
+      });
+
+      it("rejects approval when allowance override", async () => {
+        const amount = new web3.BigNumber(1);
+        await token.forceTransfer(owner, broker, amount);
+        // different amount
+        await expect(token.approve(broker, 2, { from: owner })).to.be.rejectedWith(EvmError);
+        // same amount
+        await expect(token.approve(broker, amount, { from: owner })).to.be.rejectedWith(EvmError);
+        await token.forceTransfer(owner, broker, 0);
+        await token.approve(broker, 2, { from: owner });
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(2);
+        await token.deposit(2, { from: owner });
+        await token.transferFrom(owner, owner2, 2, { from: broker });
+      });
+
+      it("rejects allowance reset when there's override", async () => {
+        const amount = new web3.BigNumber(1);
+        await token.forceTransfer(owner, broker, amount);
+        await expect(token.approve(broker, 0, { from: owner })).to.be.rejectedWith(EvmError);
+      });
+
+      it("should shadow existing allowance when there's override", async () => {
+        await token.approve(broker, 2, { from: owner });
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(2);
+        const amount = new web3.BigNumber(1);
+        await token.forceTransfer(owner, broker, amount);
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(amount);
+        await token.forceTransfer(owner, broker, 0);
+        expect(await token.allowance(owner, broker)).to.be.bignumber.eq(2);
+      });
     });
 
     it("should call currentSnapshotId without transaction", async () => {
