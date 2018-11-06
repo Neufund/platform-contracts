@@ -8,6 +8,7 @@ import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
 import "../Standards/IContractId.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
+import "../SnapshotToken/Helpers/TrustlessTokenController.sol";
 import "../Zeppelin/StandardToken.sol";
 
 
@@ -16,6 +17,7 @@ contract EtherToken is
     IContractId,
     AccessControlled,
     StandardToken,
+    TrustlessTokenController,
     IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
@@ -126,7 +128,7 @@ contract EtherToken is
         public
         returns (bool)
     {
-        transferInternal(msg.sender, to, amount);
+        BasicToken.mTransfer(msg.sender, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {
@@ -158,6 +160,7 @@ contract EtherToken is
     function contractId() public pure returns (bytes32 id, uint256 version) {
         return (0x75b86bc24f77738576716a36431588ae768d80d077231d1661c2bea674c6373a, 0);
     }
+
 
     ////////////////////////
     // Private functions
