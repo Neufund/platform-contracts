@@ -14,15 +14,7 @@ contract TestEuroTokenControllerPassThrough is ITokenController
     // Implements ITokenController
     //
 
-    function onTransfer(address, address ,uint256)
-        public
-        constant
-        returns (bool allow)
-    {
-        return true;
-    }
-
-    function onTransferFrom(address, address, address, uint256)
+    function onTransfer(address, address, address ,uint256)
         public
         constant
         returns (bool allow)
