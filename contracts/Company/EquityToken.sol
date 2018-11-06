@@ -251,8 +251,8 @@ contract EquityToken is
         acceptAgreement(from)
         returns (bool allow)
     {
-        // token controller allows transfer and token is not closed
-        return _tokenController.onTransfer(from, to, amount);
+        // if token controller allows transfer
+        return _tokenController.onTransfer(msg.sender, from, to, amount);
     }
 
     function mOnApprove(
