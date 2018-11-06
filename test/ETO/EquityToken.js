@@ -24,6 +24,7 @@ import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { increaseTime } from "../helpers/evmCommands";
 import { contractId, ZERO_ADDRESS } from "../helpers/constants";
+import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
@@ -98,7 +99,14 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(balance).to.be.bignumber.eq(initialBalance);
     });
 
-    it("should overflow on deposit");
+    it("should overflow on deposit", async () => {
+      const initialBalance = new web3.BigNumber(2).pow(256).plus(1);
+      await expect(
+        equityToken.issueTokens(initialBalance, {
+          from: company,
+        }),
+      ).to.be.rejectedWith(EvmError);
+    });
 
     // cases for successful destroy, rejected due to controller, not enough balance etc.
     it("should destroy tokens");
