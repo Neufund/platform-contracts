@@ -287,7 +287,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("rejects setting date before block.timestamp", async () => {
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION()).add(1);
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -2789,11 +2789,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(await euroToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(contribution[6]);
     // check token transferability
     const transferability = etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS;
-    expect(await equityTokenController.onTransfer(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.eq(
-      transferability,
-    );
     expect(
-      await equityTokenController.onTransferFrom(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0),
+      await equityTokenController.onTransfer(ZERO_ADDRESS, ZERO_ADDRESS, ZERO_ADDRESS, 0),
     ).to.eq(transferability);
   }
 
