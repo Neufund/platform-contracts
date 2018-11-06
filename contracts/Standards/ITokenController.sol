@@ -44,4 +44,15 @@ contract ITokenController {
         public
         constant
         returns (bool);
+
+    /// @notice overrides spender allowance
+    /// @dev may be used to implemented forced transfers in which token controller may override approved allowance
+    ///      with any > 0 value and then use transferFrom to execute such transfer
+    ///      This by definition creates non-trustless token so do not implement this call if you do not need trustless transfers!
+    ///      Implementer should not allow approve() to be executed if there is an overrride
+    //       Implemented should return allowance() taking into account override
+    function onAllowance(address owner, address spender)
+        public
+        constant
+        returns (uint256 allowanceOverride);
 }
