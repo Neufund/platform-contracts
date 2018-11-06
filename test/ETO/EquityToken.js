@@ -106,7 +106,21 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
 
-    it("should set token symbol and other metadata from eto terms correctly");
+    it("should set token symbol and other metadata from eto terms correctly", async () => {
+      const equityTokenName = await etoTerms.EQUITY_TOKEN_NAME();
+      const equityTokenSymbol = await etoTerms.EQUITY_TOKEN_SYMBOL();
+      const equityTokenShareNominalValue = await etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
+      const equityTokenPrecision = await tokenTerms.EQUITY_TOKENS_PRECISION();
+      const equityTokensPerShare = await tokenTerms.EQUITY_TOKENS_PER_SHARE();
+
+      expect(await equityToken.name()).to.have.string(equityTokenName);
+      expect(await equityToken.symbol()).to.have.string(equityTokenSymbol);
+      expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenPrecision);
+      expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(equityTokensPerShare);
+      expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
+        equityTokenShareNominalValue,
+      );
+    });
   });
 
   describe("IEquityTokenController tests", () => {
