@@ -6,7 +6,7 @@ import "../AccessRoles.sol";
 import "../KnownInterfaces.sol";
 import "../Universe.sol";
 import "../Identity/IIdentityRegistry.sol";
-import "./IEuroTokenController.sol";
+import "../Standards/ITokenController.sol";
 
 
 /// @title token controller for EuroToken
@@ -16,7 +16,7 @@ import "./IEuroTokenController.sol";
 ///  whitelist several known singleton contracts from Universe to be able to receive and send EUR-T
 /// @dev if contracts are replaced in universe, `applySettings` function must be called
 contract EuroTokenController is
-    IEuroTokenController,
+    ITokenController,
     IContractId,
     AccessControlled,
     AccessRoles,
@@ -241,18 +241,19 @@ contract EuroTokenController is
         return newController != address(0x0);
     }
 
-    //
-    // Implements IEuroTokenController
-    //
-
-    /// simple exchange contract has permanent allowance within amount eur ulps
-    function hasPermanentAllowance(address spender, uint256 amount)
+    /// always allow to transfer from owner to simple exchange lte _maxSimpleExchangeAllowanceEurUlps
+    function onAllowance(address /*owner*/, address spender)
         public
         constant
-        returns (bool yes)
+        returns (uint256)
     {
         address exchange = UNIVERSE.gasExchange();
-        return spender == address(exchange) && amount <= _maxSimpleExchangeAllowanceEurUlps;
+        if (spender == address(exchange)) {
+            // override on allowance to simple exchange
+            return _maxSimpleExchangeAllowanceEurUlps;
+        } else {
+            return 0; // no override
+        }
     }
 
     //

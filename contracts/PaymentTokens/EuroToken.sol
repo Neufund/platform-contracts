@@ -11,7 +11,7 @@ import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../AccessRoles.sol";
 import "../Standards/ITokenControllerHook.sol";
-import "./IEuroTokenController.sol";
+import "../Standards/ITokenController.sol";
 
 
 contract EuroToken is
@@ -39,7 +39,7 @@ contract EuroToken is
     // Mutable state
     ////////////////////////
 
-    IEuroTokenController private _tokenController;
+    ITokenController private _tokenController;
 
     ////////////////////////
     // Events
@@ -108,14 +108,14 @@ contract EuroToken is
     constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
-        IEuroTokenController tokenController
+        ITokenController tokenController
     )
         Agreement(accessPolicy, forkArbiter)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         public
     {
-        require(tokenController != IEuroTokenController(0x0));
+        require(tokenController != ITokenController(0x0));
         _tokenController = tokenController;
     }
 
@@ -195,7 +195,7 @@ contract EuroToken is
         only(ROLE_EURT_LEGAL_MANAGER)
     {
         require(_tokenController.onChangeTokenController(msg.sender, newController));
-        _tokenController = IEuroTokenController(newController);
+        _tokenController = ITokenController(newController);
         emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }
 
@@ -219,6 +219,27 @@ contract EuroToken is
         return BasicToken.transfer(to, amount);
     }
 
+    // overrides to return correct allowance in case of forced transfer
+    function allowance(address owner, address spender)
+        public
+        constant
+        returns (uint256 remaining)
+    {
+        uint256 allowanceOverride = _tokenController.onAllowance(owner, spender);
+        if (allowanceOverride > 0) {
+            return allowanceOverride;
+        }
+        return StandardToken.allowance(owner, spender);
+    }
+
+    function approve(address spender, uint256 amount)
+        public
+        returns (bool)
+    {
+        require(_tokenController.onAllowance(msg.sender, spender) == 0);
+        return StandardToken.approve(spender, amount);
+    }
+
     /// @dev broker acts in the name of 'from' address so broker needs to have permission to transfer from
     ///  this way we may give permissions to brokering smart contracts while investors do not have permissions
     ///  to transfer. 'from' and 'to' address requires standard transfer to permission, broker requires explicit `from` permission
@@ -227,9 +248,10 @@ contract EuroToken is
         onlyIfTransferFromAllowed(msg.sender, from, to, amount)
         returns (bool success)
     {
-        // this is a kind of hack that allows special brokers to always have allowance to transfer
-        // we'll use it to purchase small amount of ether by simple exchange
-        if (_tokenController.hasPermanentAllowance(msg.sender, amount)) {
+        // implement forced transfer with the intention of allowing gas stipend via simple exchange
+        // please again note that nEUR is backed by bank deposit and cannot be considered trustless token
+        uint256 allowanceOverride = _tokenController.onAllowance(from, msg.sender);
+        if (allowanceOverride >= amount && amount > 0) {
             transferInternal(from, to, amount);
             return true;
         }
