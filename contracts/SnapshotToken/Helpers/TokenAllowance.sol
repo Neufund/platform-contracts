@@ -24,6 +24,7 @@ contract TokenAllowance is
     ////////////////////////
 
     // `allowed` tracks rights to spends others tokens as per ERC20
+    // owner => spender => amount
     mapping (address => mapping (address => uint256)) private _allowed;
 
     ////////////////////////
@@ -53,6 +54,10 @@ contract TokenAllowance is
         constant
         returns (uint256 remaining)
     {
+        uint256 override = mAllowanceOverride(owner, spender);
+        if (override > 0) {
+            return override;
+        }
         return _allowed[owner][spender];
     }
 
@@ -73,7 +78,7 @@ contract TokenAllowance is
         //  allowance to zero by calling `approve(_spender,0)` if it is not
         //  already 0 to mitigate the race condition described here:
         //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-        require((amount == 0) || (_allowed[msg.sender][spender] == 0));
+        require((amount == 0 || _allowed[msg.sender][spender] == 0) && mAllowanceOverride(msg.sender, spender) == 0);
 
         _allowed[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
@@ -90,13 +95,15 @@ contract TokenAllowance is
         public
         returns (bool success)
     {
-        // The standard ERC 20 transferFrom functionality
-        bool amountApproved = _allowed[from][msg.sender] >= amount;
-        require(amountApproved);
-
-        _allowed[from][msg.sender] -= amount;
+        uint256 allowed = mAllowanceOverride(from, msg.sender);
+        if (allowed == 0) {
+            // The standard ERC 20 transferFrom functionality
+            allowed = _allowed[from][msg.sender];
+            // yes this will underflow but then we'll revert. will cost gas however so don't underflow
+            _allowed[from][msg.sender] -= amount;
+        }
+        require(allowed >= amount);
         mTransfer(from, to, amount);
-
         return true;
     }
 
@@ -130,5 +137,25 @@ contract TokenAllowance is
         require(success);
 
         return true;
+    }
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    //
+    // Implements default MTokenAllowanceController
+    //
+
+    // default allowance function
+    function mAllowanceOverride(
+        address /*owner*/,
+        address /*spender*/
+    )
+        internal
+        constant
+        returns (uint256)
+    {
+        return 0;
     }
 }
