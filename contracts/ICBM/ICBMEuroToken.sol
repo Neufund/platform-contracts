@@ -74,20 +74,6 @@ contract ICBMEuroToken is
     );
 
     ////////////////////////
-    // Modifiers
-    ////////////////////////
-
-    modifier onlyAllowedTransferFrom(address from) {
-        require(_allowedTransferFrom[from]);
-        _;
-    }
-
-    modifier onlyAllowedTransferTo(address to) {
-        require(_allowedTransferTo[to]);
-        _;
-    }
-
-    ////////////////////////
     // Constructor
     ////////////////////////
 
@@ -170,39 +156,15 @@ contract ICBMEuroToken is
     }
 
     //
-    // Overrides ERC20 Interface to allow transfer from/to allowed addresses
-    //
-
-    function transfer(address to, uint256 amount)
-        public
-        onlyAllowedTransferFrom(msg.sender)
-        onlyAllowedTransferTo(to)
-        returns (bool success)
-    {
-        return BasicToken.transfer(to, amount);
-    }
-
-    /// @dev broker acts in the name of 'from' address so broker needs to have permission to transfer from
-    ///  this way we may give permissions to brokering smart contracts while investors do not have permissions
-    ///  to transfer. 'to' address requires standard transfer to permission
-    function transferFrom(address from, address to, uint256 amount)
-        public
-        onlyAllowedTransferFrom(msg.sender)
-        onlyAllowedTransferTo(to)
-        returns (bool success)
-    {
-        return StandardToken.transferFrom(from, to, amount);
-    }
-
-    //
     // Overrides migration source
     //
 
     function migrate()
         public
         onlyMigrationEnabled()
-        onlyAllowedTransferTo(msg.sender)
     {
+        // actually needs permission to migrate
+        require(_allowedTransferTo[msg.sender]);
         // burn deposit
         uint256 amount = _balances[msg.sender];
         if (amount > 0) {
@@ -216,5 +178,36 @@ contract ICBMEuroToken is
         ICBMEuroTokenMigrationTarget(_migration).migrateEuroTokenOwner(msg.sender, amount);
         // set event
         emit LogEuroTokenOwnerMigrated(msg.sender, amount);
+    }
+
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    //
+    // Implements MTokenController
+    //
+
+    function mOnTransfer(
+        address /*from*/,
+        address to,
+        uint256 /*amount*/
+    )
+        internal
+        returns (bool allow)
+    {
+        // if token controller allows transfer
+        return _allowedTransferFrom[msg.sender] && _allowedTransferTo[to];
+    }
+
+    function mOnApprove(
+        address /*owner*/,
+        address /*spender*/,
+        uint256 /*amount*/
+    )
+        internal
+        returns (bool allow)
+    {
+        return true;
     }
 }

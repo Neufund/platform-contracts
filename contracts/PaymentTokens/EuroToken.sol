@@ -81,16 +81,6 @@ contract EuroToken is
     // Modifiers
     ////////////////////////
 
-    modifier onlyIfTransferAllowed(address from, address to, uint256 amount) {
-        require(_tokenController.onTransfer(from, to, amount));
-        _;
-    }
-
-    modifier onlyIfTransferFromAllowed(address broker, address from, address to, uint256 amount) {
-        require(_tokenController.onTransferFrom(broker, from, to, amount));
-        _;
-    }
-
     modifier onlyIfDepositAllowed(address to, uint256 amount) {
         require(_tokenController.onGenerateTokens(msg.sender, to, amount));
         _;
@@ -208,57 +198,6 @@ contract EuroToken is
     }
 
     //
-    // Overrides ERC20 Interface to allow transfer from/to allowed addresses
-    //
-
-    function transfer(address to, uint256 amount)
-        public
-        onlyIfTransferAllowed(msg.sender, to, amount)
-        returns (bool success)
-    {
-        return BasicToken.transfer(to, amount);
-    }
-
-    // overrides to return correct allowance in case of forced transfer
-    function allowance(address owner, address spender)
-        public
-        constant
-        returns (uint256 remaining)
-    {
-        uint256 allowanceOverride = _tokenController.onAllowance(owner, spender);
-        if (allowanceOverride > 0) {
-            return allowanceOverride;
-        }
-        return StandardToken.allowance(owner, spender);
-    }
-
-    function approve(address spender, uint256 amount)
-        public
-        returns (bool)
-    {
-        require(_tokenController.onAllowance(msg.sender, spender) == 0);
-        return StandardToken.approve(spender, amount);
-    }
-
-    /// @dev broker acts in the name of 'from' address so broker needs to have permission to transfer from
-    ///  this way we may give permissions to brokering smart contracts while investors do not have permissions
-    ///  to transfer. 'from' and 'to' address requires standard transfer to permission, broker requires explicit `from` permission
-    function transferFrom(address from, address to, uint256 amount)
-        public
-        onlyIfTransferFromAllowed(msg.sender, from, to, amount)
-        returns (bool success)
-    {
-        // implement forced transfer with the intention of allowing gas stipend via simple exchange
-        // please again note that nEUR is backed by bank deposit and cannot be considered trustless token
-        uint256 allowanceOverride = _tokenController.onAllowance(from, msg.sender);
-        if (allowanceOverride >= amount && amount > 0) {
-            transferInternal(from, to, amount);
-            return true;
-        }
-        return StandardToken.transferFrom(from, to, amount);
-    }
-
-    //
     // Implements IERC223Token
     //
     function transfer(address to, uint256 amount, bytes data)
@@ -301,20 +240,52 @@ contract EuroToken is
     // Internal functions
     ////////////////////////
 
-    /// @dev overriden to support signing of token holder agreement
-    function transferInternal(address from, address to, uint256 amount)
+    //
+    // Implements MTokenController
+    //
+
+    function mOnTransfer(
+        address from,
+        address to,
+        uint256 amount
+    )
         internal
         acceptAgreement(from)
+        returns (bool allow)
     {
-        BasicToken.transferInternal(from, to, amount);
+        address broker = msg.sender;
+        if (broker != from) {
+            // if called by the depositor (deposit and send), ignore the broker flag
+            bool isDepositor = accessPolicy().allowed(msg.sender, ROLE_EURT_DEPOSIT_MANAGER, this, msg.sig);
+            // this is not very clean but alternative (give brokerage rights to all depositors) is maintenance hell
+            if (isDepositor) {
+                broker = from;
+            }
+        }
+        return _tokenController.onTransfer(broker, from, to, amount);
     }
 
-    /// @dev overriden to support signing of token holder agreement
-    function approveInternal(address owner, address spender, uint256 amount)
+    function mOnApprove(
+        address owner,
+        address spender,
+        uint256 amount
+    )
         internal
         acceptAgreement(owner)
+        returns (bool allow)
     {
-        StandardToken.approveInternal(owner, spender, amount);
+        return _tokenController.onApprove(owner, spender, amount);
+    }
+
+    function mAllowanceOverride(
+        address owner,
+        address spender
+    )
+        internal
+        constant
+        returns (uint256)
+    {
+        return _tokenController.onAllowance(owner, spender);
     }
 
     //
@@ -345,10 +316,9 @@ contract EuroToken is
     /// @notice internal transfer function that checks permissions and calls the tokenFallback
     function ierc223TransferInternal(address from, address to, uint256 amount, bytes data)
         private
-        onlyIfTransferAllowed(from, to, amount)
         returns (bool success)
     {
-        transferInternal(from, to, amount);
+        BasicToken.mTransfer(from, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {
