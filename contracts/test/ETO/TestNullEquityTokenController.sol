@@ -25,6 +25,22 @@ contract TestNullEquityTokenController is
 
     }
 
+    bool allowOnTransfer = true;
+    bool allowDestroyTokens = true;
+    bool allowGenerateTokens = true;
+    bool allowChangeNominee = true;
+    bool allowChangeTokenController = true;
+
+    function resetAllowance()
+        public
+    {
+        allowOnTransfer = true;
+        allowDestroyTokens = true;
+        allowGenerateTokens = true;
+        allowChangeNominee = true;
+        allowChangeTokenController = true;
+    }
+
     //
     // Implements IEquityTokenController
     //
@@ -34,7 +50,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return true;
+        return allowChangeNominee;
     }
 
     //
@@ -64,4 +80,70 @@ contract TestNullEquityTokenController is
     {
         // msg.sender is ETOCommitment
     }
+
+    function onTransfer(address, address, uint256)
+        public
+        constant
+        returns (bool)
+    {
+        return allowOnTransfer;
+    }
+
+    function setAllowOnTransfer(bool _allow)
+        public
+    {
+        allowOnTransfer = _allow;
+    }
+
+
+    function onGenerateTokens(address, address, uint256)
+        public
+        constant
+        returns (bool)
+    {
+        return allowGenerateTokens;
+    }
+
+    function setAllowOnGenerateTokens(bool _allow)
+        public
+    {
+        allowGenerateTokens = _allow;
+    }
+
+
+    function onDestroyTokens(address, address, uint256)
+        public
+        constant
+        returns (bool)
+    {
+        return allowDestroyTokens;
+    }
+
+    function setAllowDestroyTokens(bool _allow)
+        public
+    {
+        allowDestroyTokens = _allow;
+    }
+
+
+    function onChangeTokenController(address, address)
+        public
+        constant
+        returns (bool)
+    {
+        return allowChangeTokenController;
+    }
+
+    function setAllowChangeTokenController(bool _allow)
+        public
+    {
+        allowChangeTokenController = _allow;
+    }
+
+    function setAllowChangeNominee(bool _allow)
+        public
+    {
+        allowChangeNominee = _allow;
+    }
+
 }
