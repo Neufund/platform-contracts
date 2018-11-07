@@ -105,7 +105,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       });
 
       await expect(
-        equityToken.issueTokens(initialBalance, {
+        equityToken.issueTokens(1, {
           from: company,
         }),
       ).to.be.rejectedWith(EvmError);
@@ -167,6 +167,80 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       await expect(
         equityToken.transfer(holders[1], 10, {
           from: holders[0],
+        }),
+      ).to.revert;
+    });
+
+    it("should do transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      const tx = await equityToken.transfer(holders[0], 10, {
+        from: company,
+      });
+
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("should allow approved transfer from", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(1000);
+      await equityToken.approve(admin, 10, {
+        from: company,
+      });
+
+      const tx = await equityToken.transferFrom(company, holders[0], 10, { from: admin });
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("can block approved transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      await equityToken.approve(admin, 10, {
+        from: company,
+      });
+
+      await equityTokenController.setAllowOnTransfer(false);
+
+      await expect(equityToken.transferFrom(company, holders[0], 1, { from: admin })).to.be.revert;
+    });
+
+    it("should allow erc223 transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
+      const tx = await equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
+        from: company,
+      });
+
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("can block approval", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      await equityTokenController.setAllowApprove(false);
+      await expect(
+        equityToken.approve(admin, 10, {
+          from: company,
         }),
       ).to.revert;
     });
