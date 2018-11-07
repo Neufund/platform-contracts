@@ -226,14 +226,14 @@ contract EuroTokenController is
         return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
     }
 
-    /// @dev here we could have a whole procedure to change of the controller, currently TOKEN LEGAL REP can do it
-    /// todo: could move all the access control here
-    function onChangeTokenController(address /*sender*/, address newController)
+    function onChangeTokenController(address sender, address newController)
         public
         constant
         returns (bool)
     {
-        return newController != address(0x0);
+        // can change if original sender (sender) has role on ROLE_EURT_LEGAL_MANAGER on msg.sender (which is euro token)
+        // this replaces only() modifier on euro token method
+        return accessPolicy().allowed(sender, ROLE_EURT_LEGAL_MANAGER, msg.sender, msg.sig) && newController != address(0x0);
     }
 
     /// always allow to transfer from owner to simple exchange lte _maxSimpleExchangeAllowanceEurUlps

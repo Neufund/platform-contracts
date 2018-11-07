@@ -182,7 +182,6 @@ contract EuroToken is
 
     function changeTokenController(address newController)
         public
-        only(ROLE_EURT_LEGAL_MANAGER)
     {
         require(_tokenController.onChangeTokenController(msg.sender, newController));
         _tokenController = ITokenController(newController);
