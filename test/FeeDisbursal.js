@@ -11,6 +11,7 @@ import { TriState, GLOBAL } from "./helpers/triState";
 import roles from "./helpers/roles";
 import { toBytes32, Q18 } from "./helpers/constants";
 import { identityClaims } from "./helpers/identityClaims";
+import increaseTime from "./helpers/increaseTime";
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
@@ -68,6 +69,11 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       expect(balance).to.be.bignumber.equal(expectedAmount);
     }
 
+    async function assertDisbursalCount(token, expectedCount) {
+      const count = await feeDisbursal.getDisbursalCount(token.address);
+      expect(count).to.be.bignumber.equal(expectedCount);
+    }
+
     it("should deploy", async () => {
       await prettyPrintGasCost("FeeDisbursal deploy", feeDisbursal);
       await prettyPrintGasCost("FeeDisbursalController deploy", feeDisbursalController);
@@ -96,13 +102,18 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       await prepareInvestor(investors[0], Q18.mul(200), true);
       await prepareInvestor(investors[1], Q18.mul(300), true);
       await prepareInvestor(investors[2], Q18.mul(500), true);
+      await assertDisbursalCount(etherToken, 0);
 
       // disburse some ether tokens from the disburser
       await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(100), 0, {
         from: disburser,
         value: Q18.mul(100),
       });
+      // there now should be the full amount of ethertokens as well as the count of disbursals for this token here
       await assertTokenBalance(etherToken, feeDisbursal.address, Q18.mul(100));
+      await assertDisbursalCount(etherToken, 1);
+
+      increaseTime(60 * 60 * 24);
 
       // now the investors should have some claimable fee on this token
       await assertClaimable(etherToken, investors[0], 1000, Q18.mul(20));
@@ -118,6 +129,10 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
         from: disburser,
         value: Q18.mul(250),
       });
+      // the last two disbursals should have been merged, so we now have 2 disbursals in total
+      await assertDisbursalCount(etherToken, 2);
+
+      increaseTime(60 * 60 * 24);
 
       // now the investors should have some claimable fee on this token
       await assertClaimable(etherToken, investors[0], 1000, Q18.mul(100));

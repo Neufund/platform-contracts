@@ -26,6 +26,7 @@ contract FeeDisbursalController is
     Universe private UNIVERSE;
     IIdentityRegistry private IDENTITY_REGISTRY;
     IAccessPolicy private ACCESS_POLICY;
+    address[] private ALLOWED_DISBURSABLE_TOKENS;
 
     ////////////////////////
     // Constructor
@@ -36,6 +37,7 @@ contract FeeDisbursalController is
         UNIVERSE = universe;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         ACCESS_POLICY = universe.accessPolicy();
+        ALLOWED_DISBURSABLE_TOKENS = [UNIVERSE.etherToken(), UNIVERSE.euroToken(), UNIVERSE.neumark()];
     }
 
     ////////////////////////
@@ -56,7 +58,9 @@ contract FeeDisbursalController is
         constant
         returns (bool allow)
     {   
-        bool disburserAllowed = UNIVERSE.isAnyOfInterfaceCollectionInstance(DISBURSE_ALLOWED_INTERFACES, disburser) || ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
+        bool disburserAllowed = 
+            UNIVERSE.isAnyOfInterfaceCollectionInstance(DISBURSE_ALLOWED_INTERFACES, disburser) ||
+            ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
         return amount > 0 && isDisbursableToken(token) && disburserAllowed;
     }
 
@@ -76,9 +80,8 @@ contract FeeDisbursalController is
         returns (bool)
     {   
         // @TODO: migrate this to new, more flexible token registering Reclaimable in universe
-        if (token == address(UNIVERSE.etherToken())) return true;
-        if (token == address(UNIVERSE.euroToken())) return true;
-        if (token == address(UNIVERSE.neumark())) return true;
+        for (uint256 i = 0; i < ALLOWED_DISBURSABLE_TOKENS.length; i++)
+            if (token == ALLOWED_DISBURSABLE_TOKENS[i]) return true;
         return false;
     }
 

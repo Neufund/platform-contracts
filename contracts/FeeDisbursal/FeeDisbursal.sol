@@ -24,7 +24,7 @@ contract FeeDisbursal is
         // address of the token used to determine the user pro rata amount, must be a snapshottoken, default is NEU
         BasicSnapshotToken proRataToken;
         // time after which claims to this token can be recycled
-        uint256 recycleAfterTimestamp;
+        uint256 recycleableAfterTimestamp;
         // contract sending the disbursal
         address disburser;
         // total supply of pro rata token at snapshot
@@ -41,7 +41,6 @@ contract FeeDisbursal is
     // Immutable state
     ////////////////////////
     Universe private UNIVERSE;
-    IIdentityRegistry private IDENTITY_REGISTRY;
 
     ////////////////////////
     // Mutable state
@@ -62,8 +61,9 @@ contract FeeDisbursal is
     constructor(Universe universe, IFeeDisbursalController controller)
         public
     {
+        require(universe != address(0x0));
+        require(controller != address(0x0));
         UNIVERSE = universe;
-        IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         _feeDisbursalController = controller;
     }
 
@@ -81,7 +81,7 @@ contract FeeDisbursal is
         uint256 snapshotId,
         uint256 amount,
         BasicSnapshotToken proRataToken,
-        uint256 recycleAfterTimestamp,
+        uint256 recycleableAfterTimestamp,
         address disburser
     )
     {
@@ -89,7 +89,7 @@ contract FeeDisbursal is
         snapshotId = disbursal.snapshotId;
         amount = disbursal.amount;
         proRataToken = disbursal.proRataToken;
-        recycleAfterTimestamp = disbursal.recycleAfterTimestamp;
+        recycleableAfterTimestamp = disbursal.recycleableAfterTimestamp;
         disburser = disbursal.disburser;
     }
 
@@ -136,7 +136,7 @@ contract FeeDisbursal is
     returns (uint256 claimableAmount, uint256 lastIndex)
     {   
         // we don't do to a verified check here, this serves purely to check how much is claimable for an address
-        return claimablePrivate(token, spender, until);
+        return claimablePrivate(token, spender, until, false);
     }
 
     /// @notice claim a token, to be called an investor
@@ -150,7 +150,7 @@ contract FeeDisbursal is
         // we don't to do a verified check here, this serves purely to check how much is claimable for an address
         uint256[] memory result = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            (uint256 claimableAmount, uint256 lastIndex) = claimablePrivate(tokens[i], spender, UINT256_MAX);
+            (uint256 claimableAmount, uint256 lastIndex) = claimablePrivate(tokens[i], spender, UINT256_MAX, false);
             result[i] = claimableAmount;
         }
         return result;
@@ -173,24 +173,49 @@ contract FeeDisbursal is
         public
     {
         // cast and check pro rata token
-        // @TODO: uncomment next line and remove the line after that
-        // BasicSnapshotToken proRataToken = BasicSnapshotToken(decodeAddress(data));
-        BasicSnapshotToken proRataToken = UNIVERSE.neumark();
+        // fallback is neumark
+        BasicSnapshotToken proRataToken;
+        if (data.length != 0) 
+           proRataToken = BasicSnapshotToken(decodeAddress(data));
+        else
+            proRataToken = UNIVERSE.neumark();
         require(_feeDisbursalController.onDisburse(msg.sender, wallet, amount, address(proRataToken)), "");
 
         uint256 snapshotId = proRataToken.currentSnapshotId();
         uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
         require(proRataTokenTotalSupply > 0, "");
 
-        // create a new disbursal entry
-        _disbursals[msg.sender].push(Disbursal({
-            recycleAfterTimestamp: block.timestamp, //@TODO: add one year here
-            amount: amount,
-            proRataToken: proRataToken,
-            snapshotId: snapshotId,
-            disburser: wallet,
-            proRataTokenTotalSupply: proRataTokenTotalSupply
-        }));
+        Disbursal[] storage disbursals = _disbursals[msg.sender];
+
+        // try to merge with an existing disbursal
+        bool merged = false;
+        for ( uint256 i = disbursals.length - 1; i < disbursals.length; i-- ) {
+            // we can only merge if we have the same snapshot id
+            // we can break here, as continuing down the loop the snapshot ids will decrease
+            Disbursal storage disbursal = disbursals[i];
+            if ( disbursal.snapshotId < snapshotId )
+                break;
+            // the existing disbursal must be the same on  number of params so we can merge
+            if (
+                disbursal.proRataToken == proRataToken &&
+                disbursal.proRataTokenTotalSupply == proRataTokenTotalSupply &&
+                disbursal.disburser == wallet) {
+                merged = true;
+                disbursal.amount += amount;
+            }
+        }
+
+
+        // // create a new disbursal entry
+        if (!merged) 
+            disbursals.push(Disbursal({
+                recycleableAfterTimestamp: block.timestamp + 1 years,
+                amount: amount,
+                proRataToken: proRataToken,
+                snapshotId: snapshotId,
+                disburser: wallet,
+                proRataTokenTotalSupply: proRataTokenTotalSupply
+            }));
 
         //@TODO: add log message
     }
@@ -208,7 +233,7 @@ contract FeeDisbursal is
     public
     returns (uint256 claimedAmount, uint256 lastIndex)
     {
-        (claimedAmount, lastIndex) = claimablePrivate(token, spender, until);
+        (claimedAmount, lastIndex) = claimablePrivate(token, spender, until, false);
 
         // mark spender disbursal progress
         _disbursalProgress[token][spender] = lastIndex;
@@ -223,7 +248,8 @@ contract FeeDisbursal is
     /// @param token address of the claimable token
     /// @param spender address of the spender that will receive the funds
     /// @param until until what index to claim to, use UINT256_MAX for all
-    function claimablePrivate(address token, address spender, uint256 until)
+    /// @param onlyRecycleable show only claimable funds that can be recycled
+    function claimablePrivate(address token, address spender, uint256 until, bool onlyRecycleable)
     public
     constant
     returns (uint256 claimableAmount, uint256 lastIndex)
@@ -232,8 +258,15 @@ contract FeeDisbursal is
         claimableAmount = 0;
         for (uint256 i = _disbursalProgress[token][spender]; i < lastIndex; i += 1) {
             Disbursal storage disbursal = _disbursals[token][i];
+            // in case of just determining the recyclable amount of tokens, break when we
+            // cross this time
+            if ( onlyRecycleable && disbursal.recycleableAfterTimestamp > block.timestamp )
+                break;
             BasicSnapshotToken proRataToken = BasicSnapshotToken(disbursal.proRataToken);
             uint256 snapshotId = disbursal.snapshotId;
+            // do not pay out claims from the current snapshot
+            if ( snapshotId == proRataToken.currentSnapshotId() )
+                break;
             uint256 proRataTokenTotalSupply = disbursal.proRataTokenTotalSupply;
             uint256 proRataSpenderBalance = proRataToken.balanceOfAt(spender, snapshotId);
             if (proRataTokenTotalSupply == 0) continue;
