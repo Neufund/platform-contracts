@@ -24,6 +24,7 @@ import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { increaseTime } from "../helpers/evmCommands";
 import { contractId, ZERO_ADDRESS } from "../helpers/constants";
+import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
 const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
@@ -55,6 +56,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       shareholderRights,
     );
     equityTokenController = await TestNullEquityTokenController.new(universe.address);
+
     equityToken = await EquityToken.new(
       universe.address,
       equityTokenController.address,
@@ -96,32 +98,202 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(balance).to.be.bignumber.eq(initialBalance);
     });
 
-    it("should overflow on deposit");
+    it("should overflow on deposit", async () => {
+      const initialBalance = new web3.BigNumber(2).pow(256).minus(1);
+      await equityToken.issueTokens(initialBalance, {
+        from: company,
+      });
+
+      await expect(
+        equityToken.issueTokens(1, {
+          from: company,
+        }),
+      ).to.be.rejectedWith(EvmError);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(initialBalance);
+    });
 
     // cases for successful destroy, rejected due to controller, not enough balance etc.
     it("should destroy tokens");
 
-    it("should change token controller");
-
-    it("should change nominee");
-
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
 
-    it("should set token symbol and other metadata from eto terms correctly");
+    it("should set token symbol and other metadata from eto terms correctly", async () => {
+      const equityTokenName = await etoTerms.EQUITY_TOKEN_NAME();
+      const equityTokenSymbol = await etoTerms.EQUITY_TOKEN_SYMBOL();
+      const equityTokenShareNominalValue = await etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
+      const equityTokenPrecision = await tokenTerms.EQUITY_TOKENS_PRECISION();
+      const equityTokensPerShare = await tokenTerms.EQUITY_TOKENS_PER_SHARE();
+
+      expect(await equityToken.name()).to.have.string(equityTokenName);
+      expect(await equityToken.symbol()).to.have.string(equityTokenSymbol);
+      expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenPrecision);
+      expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(equityTokensPerShare);
+      expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
+        equityTokenShareNominalValue,
+      );
+    });
   });
 
   describe("IEquityTokenController tests", () => {
-    // extend implementation of TestNullEquityTokenController to be able to control all operations via mocks
-    it("can block transfers");
-    it("can block distribute");
-    it("can block issueTokens");
-    it("can block destroyTokens");
-    it("can block closeToken");
-    it("can block changing equity token controller");
-    it("can block changing nominee");
-    it("should change token controller");
-    it("should change nominee");
+    it("should change token controller", async () => {
+      const newEquityTokenController = await TestNullEquityTokenController.new(universe.address);
+
+      await equityToken.changeTokenController(newEquityTokenController.address);
+
+      expect(await equityToken.tokenController()).to.be.bignumber.eq(
+        newEquityTokenController.address,
+      );
+    });
+
+    it("should change nominee", async () => {
+      const newNominee = holders[0];
+
+      await equityToken.changeNominee(newNominee, { from: company });
+
+      expect(await equityToken.nominee()).to.be.bignumber.eq(newNominee);
+
+      // clean up
+      await equityToken.changeNominee(nominee, { from: company });
+      expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
+    });
+
+    it("can block transfers", async () => {
+      await equityToken.issueTokens(1000, {
+        from: holders[0],
+      });
+      await equityTokenController.setAllowOnTransfer(false);
+
+      await expect(
+        equityToken.transfer(holders[1], 10, {
+          from: holders[0],
+        }),
+      ).to.revert;
+    });
+
+    it("should do transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      const tx = await equityToken.transfer(holders[0], 10, {
+        from: company,
+      });
+
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("should allow approved transfer from", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(1000);
+      await equityToken.approve(admin, 10, {
+        from: company,
+      });
+
+      const tx = await equityToken.transferFrom(company, holders[0], 10, { from: admin });
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("can block approved transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      await equityToken.approve(admin, 10, {
+        from: company,
+      });
+
+      await equityTokenController.setAllowOnTransfer(false);
+
+      await expect(equityToken.transferFrom(company, holders[0], 1, { from: admin })).to.be.revert;
+    });
+
+    it("should allow erc223 transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
+      const tx = await equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
+        from: company,
+      });
+
+      expectTransferEvent(tx, company, holders[0], 10);
+      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
+      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
+    });
+
+    it("should block erc223 transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+      await equityTokenController.setAllowOnTransfer(false);
+
+      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
+      await expect(
+        equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
+          from: company,
+        }),
+      ).to.revert;
+    });
+
+    it("can block approval", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+
+      await equityTokenController.setAllowApprove(false);
+      await expect(
+        equityToken.approve(admin, 10, {
+          from: company,
+        }),
+      ).to.revert;
+    });
+
+    it("can block distribute", async () => {
+      await expect(equityToken.distributeTokens(holders[1], 1000, { from: company })).to.revert;
+    });
+
+    it("can block issueTokens", async () => {
+      await equityTokenController.setAllowOnGenerateTokens(false);
+      await expect(
+        equityToken.issueTokens(1000, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_EQTOKEN_NO_GENERATE");
+    });
+
+    it("can block destroyTokens", async () => {
+      await equityToken.issueTokens(1000, {
+        from: holders[0],
+      });
+      await equityTokenController.setAllowDestroyTokens(false);
+
+      await expect(equityToken.destroyTokens(10, { from: holders[0] })).to.be.rejectedWith(
+        "NF_EQTOKEN_NO_DESTROY",
+      );
+    });
+
+    it("can block changing equity token controller", async () => {
+      await equityTokenController.setAllowChangeTokenController(false);
+
+      await expect(equityToken.changeTokenController(holders[1])).to.revert;
+    });
+
+    it("can block changing nominee", async () => {
+      await equityTokenController.setAllowChangeNominee(false);
+
+      await expect(equityToken.changeNominee(holders[1])).to.revert;
+    });
   });
 
   describe("agreement tests", () => {
