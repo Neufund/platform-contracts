@@ -24,9 +24,11 @@ import { identityClaims } from "./helpers/identityClaims";
 import { ZERO_ADDRESS, toBytes32, Q18, contractId } from "./helpers/constants";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import roles from "./helpers/roles";
+import { testChangeTokenController, testTokenController } from "./helpers/tokenControllerTestCases";
 
 const EuroToken = artifacts.require("EuroToken");
-const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
+const TestTokenControllerPassThrough = artifacts.require("TestTokenControllerPassThrough");
+const TestMockableTokenController = artifacts.require("TestMockableTokenController");
 
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
@@ -678,7 +680,7 @@ contract(
         ).to.revert;
 
         // switch controller
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         await euroToken.changeTokenController(controller.address, {
           from: eurtLegalManager,
         });
@@ -693,7 +695,7 @@ contract(
 
       it("should reject on change token controller from invalid account", async () => {
         // switch controller
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         await expect(
           euroToken.changeTokenController(controller.address, {
             from: investors[0],
@@ -1296,7 +1298,7 @@ contract(
 
     describe("pass through controller", () => {
       beforeEach(async () => {
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         euroToken = await EuroToken.new(
           accessControl.address,
           forkArbiter.address,
@@ -1389,6 +1391,40 @@ contract(
 
         testWithdrawal(getToken, investors[0], initialBalance);
       });
+    });
+
+    describe("ITokenController tests", () => {
+      let controller;
+      beforeEach(async () => {
+        controller = await TestMockableTokenController.new();
+        euroToken = await EuroToken.new(
+          accessControl.address,
+          forkArbiter.address,
+          controller.address,
+        );
+        await createAccessPolicy(accessControl, [
+          { subject: depositManager, role: roles.eurtDepositManager },
+          { subject: eurtLegalManager, role: roles.eurtLegalManager },
+        ]);
+        await euroToken.amendAgreement("0x0", { from: eurtLegalManager });
+      });
+
+      const getToken = () => euroToken;
+      const getController = () => controller;
+      const generate = async (amount, account) =>
+        euroToken.deposit(account, amount, defaultDepositRef, { from: depositManager });
+      const destroy = async (amount, account) => euroToken.withdraw(amount, { from: account });
+
+      testChangeTokenController(getToken, getController);
+      testTokenController(
+        getToken,
+        getController,
+        investors[0],
+        investors[1],
+        broker,
+        generate,
+        destroy,
+      );
     });
   },
 );
