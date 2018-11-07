@@ -7,13 +7,15 @@ import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223LegacyCallback.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/Helpers/TrustlessTokenController.sol";
+import "../SnapshotToken/StandardToken.sol";
 
 
 contract ICBMEtherToken is
     IsContract,
     AccessControlled,
     StandardToken,
+    TrustlessTokenController,
     IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
@@ -91,7 +93,7 @@ contract ICBMEtherToken is
         public
         returns (bool)
     {
-        transferInternal(msg.sender, to, amount);
+        BasicToken.mTransfer(msg.sender, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {

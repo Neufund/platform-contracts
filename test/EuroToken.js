@@ -24,9 +24,11 @@ import { identityClaims } from "./helpers/identityClaims";
 import { ZERO_ADDRESS, toBytes32, Q18, contractId } from "./helpers/constants";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import roles from "./helpers/roles";
+import { testChangeTokenController, testTokenController } from "./helpers/tokenControllerTestCases";
 
 const EuroToken = artifacts.require("EuroToken");
-const TestEuroTokenControllerPassThrough = artifacts.require("TestEuroTokenControllerPassThrough");
+const TestTokenControllerPassThrough = artifacts.require("TestTokenControllerPassThrough");
+const TestMockableTokenController = artifacts.require("TestMockableTokenController");
 
 const minDepositAmountEurUlps = Q18.mul(500);
 const minWithdrawAmountEurUlps = Q18.mul(20);
@@ -36,25 +38,25 @@ const defaultDepositRef = toBytes32(0x123);
 
 contract(
   "EuroToken",
-  ([_, masterManager, depositManager, eurtLegalManager, gasExchange, ...investors]) => {
+  ([_, masterManager, depositManager, eurtLegalManager, gasExchange, broker, ...investors]) => {
     let accessControl;
     let forkArbiter;
     let euroToken;
     let universe;
+    let identityRegistry;
 
-    before(async () => {
+    beforeEach(async () => {
       [universe, accessControl, forkArbiter] = await deployUniverse(masterManager, masterManager);
       await universe.setSingleton(knownInterfaces.gasExchange, gasExchange, {
         from: masterManager,
       });
+      identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
     });
 
     describe("specific tests", () => {
       let tokenController;
-      let identityRegistry;
 
       beforeEach(async () => {
-        identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
         [euroToken, tokenController] = await deployEuroTokenUniverse(
           universe,
           masterManager,
@@ -379,7 +381,7 @@ contract(
         ).to.be.rejectedWith(EvmError);
       });
 
-      async function prepTransferViaGasExchange(from, to, amount, initialBalance) {
+      async function prepTransferViaBroker(from, to, amount, initialBalance) {
         const isVerified = toBytes32(identityClaims.isVerified);
         await identityRegistry.setMultipleClaims(
           [from, to],
@@ -395,36 +397,41 @@ contract(
         await euroToken.deposit(to, initialBalance, defaultDepositRef, {
           from: depositManager,
         });
-        await euroToken.approve(gasExchange, amount, { from });
+        await euroToken.approve(broker, amount, { from });
         // no special permissions for investors needed, just the gasExchange
-        await tokenController.setAllowedTransferFrom(gasExchange, true, {
+        await tokenController.setAllowedTransferFrom(broker, true, {
           from: eurtLegalManager,
         });
       }
 
-      it("should transfer between investors via gasExchange with minimum permissions", async () => {
-        const initialBalance = etherToWei(83781221);
-        await prepTransferViaGasExchange(
-          investors[0],
-          investors[1],
-          initialBalance,
-          initialBalance,
+      async function prepTransferViaGasExchange(from, to, initialBalance) {
+        const isVerified = toBytes32(identityClaims.isVerified);
+        await identityRegistry.setMultipleClaims(
+          [from, to],
+          ["0x0", "0x0"],
+          [isVerified, isVerified],
+          {
+            from: masterManager,
+          },
         );
+        await euroToken.deposit(from, initialBalance, defaultDepositRef, {
+          from: depositManager,
+        });
+      }
+
+      it("should transfer between investors via broker with minimum permissions", async () => {
+        const initialBalance = etherToWei(83781221);
+        await prepTransferViaBroker(investors[0], investors[1], initialBalance, initialBalance);
         await euroToken.transferFrom(investors[0], investors[1], initialBalance, {
-          from: gasExchange,
+          from: broker,
         });
         const afterBalance = await euroToken.balanceOf.call(investors[1]);
         expect(afterBalance).to.be.bignumber.eq(initialBalance.mul(2));
       });
 
-      it("should reject transfer by gas exchange if account frozen", async () => {
-        const initialBalance = etherToWei(83781221);
-        await prepTransferViaGasExchange(
-          investors[0],
-          investors[1],
-          initialBalance,
-          initialBalance,
-        );
+      it("should reject transfer by broker if account frozen", async () => {
+        const initialBalance = etherToWei(83781221).add(1);
+        await prepTransferViaBroker(investors[0], investors[1], initialBalance, initialBalance);
         // freeze account (comment this line for the test to fail)
         await identityRegistry.setClaims(
           investors[0],
@@ -435,24 +442,19 @@ contract(
           },
         );
         await expect(
-          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: broker }),
         ).to.be.rejectedWith(EvmError);
       });
 
       it("should reject transfer by broker if broker is not explicit from", async () => {
-        const initialBalance = etherToWei(83781221);
-        await prepTransferViaGasExchange(
-          investors[0],
-          investors[1],
-          initialBalance,
-          initialBalance,
-        );
+        const initialBalance = etherToWei(83781221).add(1);
+        await prepTransferViaBroker(investors[0], investors[1], initialBalance, initialBalance);
         // comment this line for test to fails
-        await tokenController.setAllowedTransferFrom(gasExchange, false, {
+        await tokenController.setAllowedTransferFrom(broker, false, {
           from: eurtLegalManager,
         });
         await expect(
-          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: gasExchange }),
+          euroToken.transferFrom(investors[0], investors[1], initialBalance, { from: broker }),
         ).to.be.rejectedWith(EvmError);
       });
 
@@ -517,14 +519,29 @@ contract(
         ).to.be.rejectedWith(EvmError);
       });
 
-      it("should not decrease allowance for gasExchange when <= amount", async () => {
-        const exchangeAmount = maxSimpleExchangeAllowanceEurUlps;
-        await prepTransferViaGasExchange(
-          investors[0],
-          investors[1],
-          exchangeAmount,
-          minDepositAmountEurUlps,
+      it("should have allowance override for gasExchange", async () => {
+        // hardcoded in controller
+        expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
         );
+        expect(await euroToken.allowance(investors[1], gasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
+      });
+
+      it("reject approval for gas exchange", async () => {
+        // changing approval on gas exchange has no effect
+        expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
+        await expect(euroToken.approve(gasExchange, 0, { from: investors[0] })).to.be.rejectedWith(
+          EvmError,
+        );
+      });
+
+      it("should not decrease allowance for gas exchange when amount < min exchange amount", async () => {
+        const exchangeAmount = maxSimpleExchangeAllowanceEurUlps;
+        await prepTransferViaGasExchange(investors[0], investors[1], etherToWei(8721.28812).add(1));
         await euroToken.transferFrom(investors[0], investors[1], exchangeAmount, {
           from: gasExchange,
         });
@@ -533,18 +550,14 @@ contract(
         );
       });
 
-      it("should decrease allowance for gasExchange when > amount", async () => {
+      it("rejects on transfer via gas exchange when amount > max exchange amount", async () => {
         const exchangeAmount = maxSimpleExchangeAllowanceEurUlps.add(1);
-        await prepTransferViaGasExchange(
-          investors[0],
-          investors[1],
-          exchangeAmount,
-          minDepositAmountEurUlps,
-        );
-        await euroToken.transferFrom(investors[0], investors[1], exchangeAmount, {
-          from: gasExchange,
-        });
-        expect(await euroToken.allowance(investors[0], gasExchange)).to.be.bignumber.eq(0);
+        await prepTransferViaGasExchange(investors[0], investors[1], etherToWei(8721.28812));
+        await expect(
+          euroToken.transferFrom(investors[0], investors[1], exchangeAmount, {
+            from: gasExchange,
+          }),
+        ).to.be.rejectedWith(EvmError);
       });
 
       it("should disallow deposit for non KYC or not explicit", async () => {
@@ -667,7 +680,7 @@ contract(
         ).to.revert;
 
         // switch controller
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         await euroToken.changeTokenController(controller.address, {
           from: eurtLegalManager,
         });
@@ -682,7 +695,7 @@ contract(
 
       it("should reject on change token controller from invalid account", async () => {
         // switch controller
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         await expect(
           euroToken.changeTokenController(controller.address, {
             from: investors[0],
@@ -1159,17 +1172,14 @@ contract(
         const getToken = () => euroToken;
 
         beforeEach(async () => {
-          await tokenController.setAllowedTransferTo(investors[1], true, {
-            from: eurtLegalManager,
-          });
-          // receiving investor to receive
-          await tokenController.setAllowedTransferTo(investors[2], true, {
-            from: eurtLegalManager,
-          });
-          // gasExchange permission to send
-          await tokenController.setAllowedTransferFrom(gasExchange, true, {
-            from: eurtLegalManager,
-          });
+          await identityRegistry.setMultipleClaims(
+            [investors[1], investors[2]],
+            ["0x0", "0x0"],
+            [toBytes32("0x1"), toBytes32("0x1")],
+            {
+              from: masterManager,
+            },
+          );
           await tokenController.setAllowedTransferTo(0x0, true, {
             from: eurtLegalManager,
           });
@@ -1178,7 +1188,35 @@ contract(
           });
         });
 
-        standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        describe("with broker", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(gasExchange, true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        });
+
+        describe("when broker is the from", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(investors[1], true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], investors[1], initialBalance);
+        });
+
+        describe("when broker is the to", () => {
+          beforeEach(async () => {
+            // gasExchange permission to send - broker permissions
+            await tokenController.setAllowedTransferFrom(investors[2], true, {
+              from: eurtLegalManager,
+            });
+          });
+          standardTokenTests(getToken, investors[1], investors[2], investors[2], initialBalance);
+        });
       });
 
       describe("IERC677Token tests", () => {
@@ -1189,8 +1227,8 @@ contract(
 
         beforeEach(async () => {
           erc667cb = await deployTestErc677Callback();
-          await tokenController.setAllowedTransferTo(investors[1], true, {
-            from: eurtLegalManager,
+          await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), {
+            from: masterManager,
           });
           // gasExchange (which is receiver) permission to send
           await tokenController.setAllowedTransferFrom(erc667cb.address, true, {
@@ -1260,7 +1298,7 @@ contract(
 
     describe("pass through controller", () => {
       beforeEach(async () => {
-        const controller = await TestEuroTokenControllerPassThrough.new();
+        const controller = await TestTokenControllerPassThrough.new();
         euroToken = await EuroToken.new(
           accessControl.address,
           forkArbiter.address,
@@ -1296,7 +1334,17 @@ contract(
           });
         });
 
-        standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        describe("with broker", () => {
+          standardTokenTests(getToken, investors[1], investors[2], gasExchange, initialBalance);
+        });
+
+        describe("when broker is the from", () => {
+          standardTokenTests(getToken, investors[1], investors[2], investors[1], initialBalance);
+        });
+
+        describe("when broker is the to", () => {
+          standardTokenTests(getToken, investors[1], investors[2], investors[2], initialBalance);
+        });
       });
 
       describe("IERC677Token tests", () => {
@@ -1343,6 +1391,40 @@ contract(
 
         testWithdrawal(getToken, investors[0], initialBalance);
       });
+    });
+
+    describe("ITokenController tests", () => {
+      let controller;
+      beforeEach(async () => {
+        controller = await TestMockableTokenController.new();
+        euroToken = await EuroToken.new(
+          accessControl.address,
+          forkArbiter.address,
+          controller.address,
+        );
+        await createAccessPolicy(accessControl, [
+          { subject: depositManager, role: roles.eurtDepositManager },
+          { subject: eurtLegalManager, role: roles.eurtLegalManager },
+        ]);
+        await euroToken.amendAgreement("0x0", { from: eurtLegalManager });
+      });
+
+      const getToken = () => euroToken;
+      const getController = () => controller;
+      const generate = async (amount, account) =>
+        euroToken.deposit(account, amount, defaultDepositRef, { from: depositManager });
+      const destroy = async (amount, account) => euroToken.withdraw(amount, { from: account });
+
+      testChangeTokenController(getToken, getController);
+      testTokenController(
+        getToken,
+        getController,
+        investors[0],
+        investors[1],
+        broker,
+        generate,
+        destroy,
+      );
     });
   },
 );

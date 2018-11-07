@@ -18,6 +18,10 @@ import {
   testWithdrawal,
   deployTestErc223Callback,
 } from "../helpers/tokenTestCases";
+import {
+  testTokenController,
+  testChangeTokenController,
+} from "../helpers/tokenControllerTestCases";
 import { eventValue } from "../helpers/events";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
@@ -27,7 +31,7 @@ import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
-const TestNullEquityTokenController = artifacts.require("TestNullEquityTokenController");
+const TestMockableEquityTokenController = artifacts.require("TestMockableEquityTokenController");
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
@@ -55,7 +59,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       tokenTerms,
       shareholderRights,
     );
-    equityTokenController = await TestNullEquityTokenController.new(universe.address);
+    equityTokenController = await TestMockableEquityTokenController.new(universe.address);
 
     equityToken = await EquityToken.new(
       universe.address,
@@ -136,163 +140,41 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IEquityTokenController tests", () => {
-    it("should change token controller", async () => {
-      const newEquityTokenController = await TestNullEquityTokenController.new(universe.address);
+    const getToken = () => equityToken;
+    const getController = () => equityTokenController;
+    const generate = async (amount, account) => equityToken.issueTokens(amount, { from: account });
+    const destroy = async (amount, account) => equityToken.destroyTokens(amount, { from: account });
 
-      await equityToken.changeTokenController(newEquityTokenController.address);
+    testChangeTokenController(getToken, getController);
+    testTokenController(getToken, getController, holders[0], holders[1], broker, generate, destroy);
 
-      expect(await equityToken.tokenController()).to.be.bignumber.eq(
-        newEquityTokenController.address,
-      );
-    });
-
-    it("should change nominee", async () => {
+    it("should change nominee if change enabled", async () => {
       const newNominee = holders[0];
-
+      await equityTokenController.setAllowChangeNominee(true);
       await equityToken.changeNominee(newNominee, { from: company });
-
       expect(await equityToken.nominee()).to.be.bignumber.eq(newNominee);
-
-      // clean up
+      // change back
       await equityToken.changeNominee(nominee, { from: company });
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
     });
 
-    it("can block transfers", async () => {
-      await equityToken.issueTokens(1000, {
-        from: holders[0],
-      });
-      await equityTokenController.setAllowOnTransfer(false);
-
-      await expect(
-        equityToken.transfer(holders[1], 10, {
-          from: holders[0],
-        }),
-      ).to.revert;
-    });
-
-    it("should do transfer", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-
-      const tx = await equityToken.transfer(holders[0], 10, {
-        from: company,
-      });
-
-      expectTransferEvent(tx, company, holders[0], 10);
-      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
-      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
-      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
-    });
-
-    it("should allow approved transfer from", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(1000);
-      await equityToken.approve(admin, 10, {
-        from: company,
-      });
-
-      const tx = await equityToken.transferFrom(company, holders[0], 10, { from: admin });
-      expectTransferEvent(tx, company, holders[0], 10);
-      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
-      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
-      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
-    });
-
-    it("can block approved transfer", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-
-      await equityToken.approve(admin, 10, {
-        from: company,
-      });
-
-      await equityTokenController.setAllowOnTransfer(false);
-
-      await expect(equityToken.transferFrom(company, holders[0], 1, { from: admin })).to.be.revert;
-    });
-
-    it("should allow erc223 transfer", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-
-      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
-      const tx = await equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
-        from: company,
-      });
-
-      expectTransferEvent(tx, company, holders[0], 10);
-      expect(await equityToken.balanceOf(holders[0])).to.be.bignumber.eq(10);
-      expect(await equityToken.balanceOf(company)).to.be.bignumber.eq(990);
-      expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
-    });
-
-    it("should block erc223 transfer", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-      await equityTokenController.setAllowOnTransfer(false);
-
-      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
-      await expect(
-        equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
-          from: company,
-        }),
-      ).to.revert;
-    });
-
-    it("can block approval", async () => {
-      await equityToken.issueTokens(1000, {
-        from: company,
-      });
-
-      await equityTokenController.setAllowApprove(false);
-      await expect(
-        equityToken.approve(admin, 10, {
-          from: company,
-        }),
-      ).to.revert;
-    });
-
-    it("can block distribute", async () => {
-      await expect(equityToken.distributeTokens(holders[1], 1000, { from: company })).to.revert;
-    });
-
-    it("can block issueTokens", async () => {
-      await equityTokenController.setAllowOnGenerateTokens(false);
-      await expect(
-        equityToken.issueTokens(1000, {
-          from: company,
-        }),
-      ).to.be.rejectedWith("NF_EQTOKEN_NO_GENERATE");
-    });
-
-    it("can block destroyTokens", async () => {
-      await equityToken.issueTokens(1000, {
-        from: holders[0],
-      });
-      await equityTokenController.setAllowDestroyTokens(false);
-
-      await expect(equityToken.destroyTokens(10, { from: holders[0] })).to.be.rejectedWith(
-        "NF_EQTOKEN_NO_DESTROY",
-      );
-    });
-
-    it("can block changing equity token controller", async () => {
-      await equityTokenController.setAllowChangeTokenController(false);
-
-      await expect(equityToken.changeTokenController(holders[1])).to.revert;
-    });
-
-    it("can block changing nominee", async () => {
+    it("reject changing nominee if change disabled", async () => {
+      const newNominee = holders[0];
       await equityTokenController.setAllowChangeNominee(false);
 
-      await expect(equityToken.changeNominee(holders[1])).to.revert;
+      await expect(equityToken.changeNominee(newNominee)).to.revert;
+    });
+
+    it("should distribute when transfers enabled", async () => {
+      await generate(1000, holders[0]);
+      await equityTokenController.setAllowOnTransfer(true);
+      await equityToken.distributeTokens(holders[1], 10, { from: holders[0] });
+    });
+
+    it("rejects distribute when transfers disabled", async () => {
+      await generate(1000, holders[0]);
+      await equityTokenController.setAllowOnTransfer(false);
+      await expect(equityToken.distributeTokens(holders[1], 10, { from: holders[0] })).to.revert;
     });
   });
 

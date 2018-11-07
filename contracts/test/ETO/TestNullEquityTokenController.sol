@@ -3,14 +3,20 @@ pragma solidity 0.4.25;
 import "../../Universe.sol";
 import "../../Agreement.sol";
 import "../../Company/IEquityTokenController.sol";
-import "../TestEuroTokenControllerPassThrough.sol";
+import "../TestMockableTokenController.sol";
 
 
-contract TestNullEquityTokenController is
+contract TestMockableEquityTokenController is
     IEquityTokenController,
-    TestEuroTokenControllerPassThrough,
+    TestMockableTokenController,
     Agreement
 {
+
+    ////////////////////////
+    // Mutable state
+    ////////////////////////
+
+    bool internal _allowChangeNominee;
 
     ////////////////////////
     // Constructor
@@ -22,19 +28,12 @@ contract TestNullEquityTokenController is
         public
         Agreement(universe.accessPolicy(), universe.forkArbiter())
     {
-
+        _allowChangeNominee = true;
     }
 
     ////////////////////////
-    // Mutable state
+    // Public Methods
     ////////////////////////
-
-    bool internal _allowOnTransfer = true;
-    bool internal _allowOnApprove = true;
-    bool internal _allowDestroyTokens = true;
-    bool internal _allowGenerateTokens = true;
-    bool internal _allowChangeNominee = true;
-    bool internal _allowChangeTokenController = true;
 
     //
     // Implements IEquityTokenController
@@ -77,82 +76,8 @@ contract TestNullEquityTokenController is
     }
 
     //
-    //  Implements ITokenController
-    //
-
-    function onTransfer(address, address, uint256)
-        public
-        constant
-        returns (bool)
-    {
-        return _allowOnTransfer;
-    }
-
-    function onApprove(address, address, uint256) 
-        public
-        constant
-        returns (bool)
-    {
-        return _allowOnApprove;
-    }
-
-    function onGenerateTokens(address, address, uint256)
-        public
-        constant
-        returns (bool)
-    {
-        return _allowGenerateTokens;
-    }
-
-    function onDestroyTokens(address, address, uint256)
-        public
-        constant
-        returns (bool)
-    {
-        return _allowDestroyTokens;
-    }
-
-    function onChangeTokenController(address, address)
-        public
-        constant
-        returns (bool)
-    {
-        return _allowChangeTokenController;
-    }
-
-    //
     //  Mock functions
     //
-
-    function setAllowOnTransfer(bool allow)
-        public
-    {
-        _allowOnTransfer = allow;
-    }
-
-    function setAllowApprove(bool allow)
-        public
-    {
-        _allowOnApprove = allow;
-    }
-
-    function setAllowOnGenerateTokens(bool allow)
-        public
-    {
-        _allowGenerateTokens = allow;
-    }
-
-    function setAllowDestroyTokens(bool allow)
-        public
-    {
-        _allowDestroyTokens = allow;
-    }
-
-    function setAllowChangeTokenController(bool allow)
-        public
-    {
-        _allowChangeTokenController = allow;
-    }
 
     function setAllowChangeNominee(bool allow)
         public

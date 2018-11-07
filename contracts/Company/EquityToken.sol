@@ -251,8 +251,8 @@ contract EquityToken is
         acceptAgreement(from)
         returns (bool allow)
     {
-        // token controller allows transfer and token is not closed
-        return _tokenController.onTransfer(from, to, amount);
+        // if token controller allows transfer
+        return _tokenController.onTransfer(msg.sender, from, to, amount);
     }
 
     function mOnApprove(
@@ -265,6 +265,17 @@ contract EquityToken is
         returns (bool allow)
     {
         return _tokenController.onApprove(owner, spender, amount);
+    }
+
+    function mAllowanceOverride(
+        address owner,
+        address spender
+    )
+        internal
+        constant
+        returns (uint256)
+    {
+        return _tokenController.onAllowance(owner, spender);
     }
 
     //

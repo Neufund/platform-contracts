@@ -162,7 +162,11 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
     const balanceThird = await token().balanceOf.call(toAddr);
     expect(balanceThird).to.be.bignumber.eq(initialBalance);
     const balanceTo = await token().balanceOf.call(broker);
-    expect(balanceTo).to.be.bignumber.eq(0);
+    if (broker === toAddr) {
+      expect(balanceTo).to.be.bignumber.eq(balanceThird);
+    } else {
+      expect(balanceTo).to.be.bignumber.eq(0);
+    }
     // total supply should not change
     const totalSupply = await token().totalSupply.call();
     expect(totalSupply).to.be.bignumber.eq(initialBalance);
@@ -219,7 +223,13 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
     const balanceThird = await token().balanceOf.call(toAddr);
     expect(balanceThird).to.be.bignumber.eq(amount);
     const balanceTo = await token().balanceOf.call(broker);
-    expect(balanceTo).to.be.bignumber.eq(0);
+    if (broker === fromAddr) {
+      expect(balanceTo).to.be.bignumber.eq(balanceFrom);
+    } else if (broker === toAddr) {
+      expect(balanceTo).to.be.bignumber.eq(balanceThird);
+    } else {
+      expect(balanceTo).to.be.bignumber.eq(0);
+    }
     // total supply should not change
     const totalSupply = await token().totalSupply.call();
     expect(totalSupply).to.be.bignumber.eq(initialBalance);
@@ -255,7 +265,11 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
     const balanceThird = await token().balanceOf.call(toAddr);
     expect(balanceThird).to.be.bignumber.eq(initialBalance);
     const balanceTo = await token().balanceOf.call(broker);
-    expect(balanceTo).to.be.bignumber.eq(0);
+    if (broker === toAddr) {
+      expect(balanceTo).to.be.bignumber.eq(balanceThird);
+    } else {
+      expect(balanceTo).to.be.bignumber.eq(0);
+    }
     // total supply should not change
     const totalSupply = await token().totalSupply.call();
     expect(totalSupply).to.be.bignumber.eq(initialBalance);

@@ -23,4 +23,20 @@ contract MTokenAllowanceController {
         internal
         returns (bool allow);
 
+    /// @notice Allows to override allowance approved by the owner
+    ///         Primary role is to enable forced transfers, do not override if you do not like it
+    ///         Following behavior is expected in the observer
+    ///         approve() - should revert if mAllowanceOverride() > 0
+    ///         allowance() - should return mAllowanceOverride() if set
+    ///         transferFrom() - should override allowance if mAllowanceOverride() > 0
+    /// @param owner An address giving allowance to spender
+    /// @param spender An address getting  a right to transfer allowance amount from the owner
+    /// @return current allowance amount
+    function mAllowanceOverride(
+        address owner,
+        address spender
+    )
+        internal
+        constant
+        returns (uint256 allowance);
 }

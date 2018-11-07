@@ -6,7 +6,7 @@ import "../AccessRoles.sol";
 import "../KnownInterfaces.sol";
 import "../Universe.sol";
 import "../Identity/IIdentityRegistry.sol";
-import "./IEuroTokenController.sol";
+import "../Standards/ITokenController.sol";
 
 
 /// @title token controller for EuroToken
@@ -16,7 +16,7 @@ import "./IEuroTokenController.sol";
 ///  whitelist several known singleton contracts from Universe to be able to receive and send EUR-T
 /// @dev if contracts are replaced in universe, `applySettings` function must be called
 contract EuroTokenController is
-    IEuroTokenController,
+    ITokenController,
     IContractId,
     AccessControlled,
     AccessRoles,
@@ -171,23 +171,18 @@ contract EuroTokenController is
     // Implements ITokenController
     //
 
-    /// allow transfer if both parties are explicitely allowed
-    /// or when 'form' is ETO|explicit and 'to' has KYC|explicit
-    /// or when 'from' is ETO|explicit and 'to' is ETO|explicit
-    function onTransfer(address from, address to, uint256)
+    function onTransfer(address broker, address from, address to, uint256 /*amount*/)
         public
         constant
         returns (bool allow)
     {
-        return isTransferAllowedPrivate(from, to, false);
-    }
-
-    function onTransferFrom(address broker, address from, address to, uint256 /*amount*/)
-        public
-        constant
-        returns (bool allow)
-    {
-        return isTransferAllowedPrivate(from, to, true) && _allowedTransferFrom[broker];
+        // detect brokered (transferFrom) transfer when from is different address executing transfer
+        bool isBrokeredTransfer = broker != from;
+        // "from" must be allowed to transfer from to "to"
+        bool isTransferAllowed = isTransferAllowedPrivate(from, to, isBrokeredTransfer);
+        // broker must have direct permission to transfer from
+        bool isBrokerAllowed = !isBrokeredTransfer || _allowedTransferFrom[broker];
+        return isTransferAllowed && isBrokerAllowed;
     }
 
     /// always approve
@@ -231,28 +226,29 @@ contract EuroTokenController is
         return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
     }
 
-    /// @dev here we could have a whole procedure to change of the controller, currently TOKEN LEGAL REP can do it
-    /// todo: could move all the access control here
-    function onChangeTokenController(address /*sender*/, address newController)
+    function onChangeTokenController(address sender, address newController)
         public
         constant
         returns (bool)
     {
-        return newController != address(0x0);
+        // can change if original sender (sender) has role on ROLE_EURT_LEGAL_MANAGER on msg.sender (which is euro token)
+        // this replaces only() modifier on euro token method
+        return accessPolicy().allowed(sender, ROLE_EURT_LEGAL_MANAGER, msg.sender, msg.sig) && newController != address(0x0);
     }
 
-    //
-    // Implements IEuroTokenController
-    //
-
-    /// simple exchange contract has permanent allowance within amount eur ulps
-    function hasPermanentAllowance(address spender, uint256 amount)
+    /// always allow to transfer from owner to simple exchange lte _maxSimpleExchangeAllowanceEurUlps
+    function onAllowance(address /*owner*/, address spender)
         public
         constant
-        returns (bool yes)
+        returns (uint256)
     {
         address exchange = UNIVERSE.gasExchange();
-        return spender == address(exchange) && amount <= _maxSimpleExchangeAllowanceEurUlps;
+        if (spender == address(exchange)) {
+            // override on allowance to simple exchange
+            return _maxSimpleExchangeAllowanceEurUlps;
+        } else {
+            return 0; // no override
+        }
     }
 
     //

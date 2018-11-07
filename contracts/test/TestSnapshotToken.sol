@@ -7,23 +7,18 @@ import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
 import "../IsContract.sol";
+import "./TestMockableTokenController.sol";
 
 
 contract TestSnapshotToken is
     DailyAndSnapshotable,
     StandardSnapshotToken,
+    TestMockableTokenController,
     IWithdrawableToken,
     TokenMetadata,
     IERC223Token,
     IsContract
 {
-    ////////////////////////
-    // Mutable state
-    ////////////////////////
-
-    bool private _enableTransfers;
-
-    bool private _enableApprovals;
 
     ////////////////////////
     // Constructor
@@ -45,10 +40,10 @@ contract TestSnapshotToken is
         )
         // continue snapshot series of the parent, also will prevent using incompatible scheme
         DailyAndSnapshotable(parentToken == address(0) ? 0 : parentToken.currentSnapshotId())
+        // be your own controller
+        TestMockableTokenController()
         public
     {
-        _enableTransfers = true;
-        _enableApprovals = true;
     }
 
     ////////////////////////
@@ -58,30 +53,17 @@ contract TestSnapshotToken is
     function deposit(uint256 amount)
         public
     {
+        require(_allowGenerateTokens);
         mGenerateTokens(msg.sender, amount);
     }
 
     function withdraw(uint256 amount)
         public
     {
+        require(_allowDestroyTokens);
         mDestroyTokens(msg.sender, amount);
     }
 
-    function enableTransfers(bool enable)
-        public
-    {
-        _enableTransfers = enable;
-    }
-
-    function enableApprovals(bool enable)
-        public
-    {
-        _enableApprovals = enable;
-    }
-
-    ////////////////////////
-    // Public functions
-    ////////////////////////
 
     //
     // Implements IERC223Token
@@ -117,7 +99,7 @@ contract TestSnapshotToken is
         internal
         returns (bool allow)
     {
-        return _enableTransfers;
+        return _allowOnTransfer;
     }
 
     function mOnApprove(
@@ -128,6 +110,14 @@ contract TestSnapshotToken is
         internal
         returns (bool allow)
     {
-        return _enableApprovals;
+        return _allowOnApprove;
+    }
+
+    function mAllowanceOverride(address owner, address spender)
+        internal
+        constant
+        returns (uint256)
+    {
+        return _overrides[owner][spender];
     }
 }

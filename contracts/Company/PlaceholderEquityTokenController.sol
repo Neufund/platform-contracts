@@ -243,20 +243,12 @@ contract PlaceholderEquityTokenController is
     // Implements ITokenController
     //
 
-    function onTransfer(address from, address ,uint256)
+    function onTransfer(address broker, address from, address /*to*/, uint256 /*amount*/)
         public
         constant
         returns (bool allow)
     {
-        return _transfersEnabled || from == _commitment;
-    }
-
-    function onTransferFrom(address, address, address, uint256)
-        public
-        constant
-        returns (bool allow)
-    {
-        return _transfersEnabled;
+        return _transfersEnabled || (from == _commitment && broker == from);
     }
 
     /// always approve
@@ -290,6 +282,15 @@ contract PlaceholderEquityTokenController is
         returns (bool)
     {
         return newController == _newController;
+    }
+
+    // no forced transfers allowed in this controller
+    function onAllowance(address /*owner*/, address /*spender*/)
+        public
+        constant
+        returns (uint256)
+    {
+        return 0;
     }
 
     //

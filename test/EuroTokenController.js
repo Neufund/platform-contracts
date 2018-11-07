@@ -5,7 +5,7 @@ import roles from "./helpers/roles";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import registerSingletons from "./helpers/registerSingletons";
-import { Q18, toBytes32 } from "./helpers/constants";
+import { Q18, toBytes32, ZERO_ADDRESS } from "./helpers/constants";
 
 const EuroTokenController = artifacts.require("EuroTokenController");
 const minDepositAmountEurUlps = Q18.mul(500);
@@ -208,18 +208,10 @@ contract(
       it("should apply settings when gas exchange address changes", async () => {
         const newGasExchange = "0x498a042f52f1737a77b91dd8107e68d75bf90000";
         const oldGasExchange = await universe.gasExchange();
-        expect(
-          await tokenController.hasPermanentAllowance(
-            oldGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            newGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, oldGasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
+        expect(await tokenController.onAllowance(identity1, newGasExchange)).to.be.bignumber.eq(0);
         // singletons recognized internally by token controller
         await registerSingletons(universe, masterManager, [
           {
@@ -227,18 +219,10 @@ contract(
             addr: newGasExchange,
           },
         ]);
-        expect(
-          await tokenController.hasPermanentAllowance(
-            oldGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.false;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            newGasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
+        expect(await tokenController.onAllowance(identity1, oldGasExchange)).to.be.bignumber.eq(0);
+        expect(await tokenController.onAllowance(identity1, newGasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
       });
 
       // set allowed from. allowed to, apply settings
@@ -260,8 +244,6 @@ contract(
         await expect(tokenController.applySettings(amount, amount, amount, { from: identity1 })).to
           .revert;
       });
-
-      it("should liquidate account via eurt legal rep");
     });
 
     describe("ITokenController tests", () => {
@@ -283,29 +265,29 @@ contract(
         await tokenController.setAllowedTransferTo(identity2, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.true;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.true;
         // direction matters: [to] -> [from] disallowed
-        expect(await tokenController.onTransfer(identity2, identity1, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity2, identity2, identity1, 0)).to.be.false;
         // drop from
         await tokenController.setAllowedTransferFrom(identity1, false, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
         // add from
         await tokenController.setAllowedTransferFrom(identity1, true, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.true;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.true;
         // drop to
         await tokenController.setAllowedTransferTo(identity2, false, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
         // drop all
         await tokenController.setAllowedTransferFrom(identity1, false, {
           from: eurtLegalManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
 
         // when kyc identity to ETO
       });
@@ -324,40 +306,45 @@ contract(
           { from: masterManager },
         );
         // when kyc identity to explicit
-        expect(await tokenController.onTransfer(identity1, explicitTo, 0)).to.be.true;
+        expect(await tokenController.onTransfer(identity1, identity1, explicitTo, 0)).to.be.true;
         // disallow non kyc to explicit
-        expect(await tokenController.onTransfer(nonkycIdentity, explicitTo, 0)).to.be.false;
+        expect(await tokenController.onTransfer(nonkycIdentity, nonkycIdentity, explicitTo, 0)).to
+          .be.false;
         // disallow kyc to kyc
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
         // when kyc to not allowed identity
-        expect(await tokenController.onTransfer(identity1, nonkycIdentity, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, nonkycIdentity, 0)).to.be
+          .false;
         // when kyc to not allowed contract
-        expect(await tokenController.onTransfer(identity1, universe.address, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, universe.address, 0)).to.be
+          .false;
         // non kyc to non kyc
-        expect(await tokenController.onTransfer(nonkycIdentity, universe.address, 0)).to.be.false;
+        expect(
+          await tokenController.onTransfer(nonkycIdentity, nonkycIdentity, universe.address, 0),
+        ).to.be.false;
         // explicit from to kyc is allowed (disbursal)
-        expect(await tokenController.onTransfer(explicitFrom, identity1, 0)).to.be.true;
-        // explicit from to non kyc is blocked
-        expect(await tokenController.onTransfer(explicitFrom, nonkycIdentity, 0)).to.be.false;
-        // disallow kyc to kyc via broker without transferFrom
-        expect(await tokenController.onTransferFrom(explicitTo, identity1, identity2, 0)).to.be
-          .false;
-        // allow kyc to kyc via broker
-        expect(await tokenController.onTransferFrom(explicitFrom, identity1, identity2, 0)).to.be
+        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, identity1, 0)).to.be
           .true;
+        // explicit from to non kyc is blocked
+        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, nonkycIdentity, 0)).to
+          .be.false;
+        // disallow kyc to kyc via broker without transferFrom
+        expect(await tokenController.onTransfer(explicitTo, identity1, identity2, 0)).to.be.false;
+        // allow kyc to kyc via broker
+        expect(await tokenController.onTransfer(explicitFrom, identity1, identity2, 0)).to.be.true;
         // disallow kyc to kyc via kyc
-        expect(await tokenController.onTransferFrom(identity1, identity1, identity2, 0)).to.be
-          .false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
         // freeze account to disallow
         await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
           from: masterManager,
         });
         // frozen to explicit blocked
-        expect(await tokenController.onTransfer(identity1, explicitTo, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, explicitTo, 0)).to.be.false;
         // explicit to frozen blocked
-        expect(await tokenController.onTransfer(explicitFrom, identity1, 0)).to.be.false;
+        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, identity1, 0)).to.be
+          .false;
         // frozen to kyc blocked
-        expect(await tokenController.onTransfer(identity1, identity2, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, identity2, 0)).to.be.false;
       });
 
       async function transferPermissionsWithInterfaces(knownInterface) {
@@ -378,23 +365,26 @@ contract(
           { from: masterManager },
         );
         // kyc to eto is allowed
-        expect(await tokenController.onTransfer(identity1, etoAddress, 0)).to.be.true;
+        expect(await tokenController.onTransfer(identity1, identity1, etoAddress, 0)).to.be.true;
         // eto to kyc is allowed
-        expect(await tokenController.onTransfer(etoAddress, identity1, 0)).to.be.true;
+        expect(await tokenController.onTransfer(etoAddress, etoAddress, identity1, 0)).to.be.true;
         // non kyc to eto is disallowed
-        expect(await tokenController.onTransfer(nonkycIdentity, etoAddress, 0)).to.be.false;
+        expect(await tokenController.onTransfer(nonkycIdentity, nonkycIdentity, etoAddress, 0)).to
+          .be.false;
         // eto to non kyc is disallowed
-        expect(await tokenController.onTransfer(etoAddress, nonkycIdentity, 0)).to.be.false;
+        expect(await tokenController.onTransfer(etoAddress, etoAddress, nonkycIdentity, 0)).to.be
+          .false;
         // eto to explicit to is allowed (refund to locked account)
-        expect(await tokenController.onTransfer(etoAddress, explicitTo, 0)).to.be.true;
+        expect(await tokenController.onTransfer(etoAddress, etoAddress, explicitTo, 0)).to.be.true;
         // explicit from to eto is allowed
-        expect(await tokenController.onTransfer(explicitFrom, etoAddress, 0)).to.be.true;
+        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, etoAddress, 0)).to.be
+          .true;
         // freeze account to disallow
         await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
           from: masterManager,
         });
-        expect(await tokenController.onTransfer(identity1, etoAddress, 0)).to.be.false;
-        expect(await tokenController.onTransfer(etoAddress, identity1, 0)).to.be.false;
+        expect(await tokenController.onTransfer(identity1, identity1, etoAddress, 0)).to.be.false;
+        expect(await tokenController.onTransfer(etoAddress, etoAddress, identity1, 0)).to.be.false;
       }
 
       it("should allow/disallow transfer with ETO", async () => {
@@ -405,34 +395,19 @@ contract(
         await transferPermissionsWithInterfaces(knownInterfaces.equityTokenControllerInterface);
       });
 
-      it("should always approve");
+      it("should always approve", async () => {
+        expect(await tokenController.onApprove(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.true;
+      });
 
       it("should have permanent allowance for gasExchange", async () => {
         const gasExchange = await universe.gasExchange();
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps,
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps.divToInt(2),
-          ),
-        ).to.be.true;
-        expect(
-          await tokenController.hasPermanentAllowance(
-            gasExchange,
-            maxSimpleExchangeAllowanceEurUlps.add(1),
-          ),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, gasExchange)).to.be.bignumber.eq(
+          maxSimpleExchangeAllowanceEurUlps,
+        );
       });
 
       it("should not have permanent allowance for other accounts", async () => {
-        expect(
-          await tokenController.hasPermanentAllowance(identity1, maxSimpleExchangeAllowanceEurUlps),
-        ).to.be.false;
+        expect(await tokenController.onAllowance(identity1, identity2)).to.be.bignumber.eq(0);
       });
 
       it("should allow deposit for KYC and explicit", async () => {

@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import EvmError from "./helpers/EVMThrow";
 import { erc223TokenTests, deployTestErc223Callback } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
 import { ZERO_ADDRESS } from "./helpers/constants";
+import { testTokenController } from "./helpers/tokenControllerTestCases";
 
 const BigNumber = web3.BigNumber;
 const TKN_DECIMALS = new BigNumber(10).toPower(18);
@@ -25,7 +25,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
     beforeEach(async () => {
       erc223cb = await deployTestErc223Callback();
       await getToken().deposit(initialBalanceTkn, { from: owner });
-      await getToken().enableTransfers(true);
+      await getToken().setAllowOnTransfer(true);
     });
 
     erc223TokenTests(getToken, getTestErc223cb, owner, accounts[0], initialBalanceTkn);
@@ -45,55 +45,21 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
       TestSnapshotToken.new(parentToken.address, parentSnapshotId);
 
     describe("MTokenController", async () => {
-      let token;
+      const getController = () => testSnapshotToken;
+      const generate = async (amount, account) =>
+        testSnapshotToken.deposit(amount, { from: account });
+      const destroy = async (amount, account) =>
+        testSnapshotToken.withdraw(amount, { from: account });
 
-      beforeEach(() => {
-        token = getToken();
-      });
-
-      it("should transfer when transfer enabled", async () => {
-        const supply = new web3.BigNumber(88172891);
-        await token.deposit(supply, { from: owner });
-        await token.enableTransfers(true);
-        await token.transfer(owner2, 18281, { from: owner });
-      });
-
-      it("should reject transfer when transfer disabled", async () => {
-        const supply = new web3.BigNumber(88172891);
-        await token.deposit(supply, { from: owner });
-        await token.enableTransfers(false);
-        await expect(token.transfer(owner2, 18281, { from: owner })).to.be.rejectedWith(EvmError);
-      });
-
-      it("should ERC223 transfer when transfer enabled", async () => {
-        const supply = new web3.BigNumber(88172891);
-        await token.deposit(supply, { from: owner });
-        await token.enableTransfers(true);
-        await token.transfer["address,uint256,bytes"](owner2, 18281, "", {
-          from: owner,
-        });
-      });
-
-      it("should ERC223 reject transfer when transfer disabled", async () => {
-        const supply = new web3.BigNumber(88172891);
-        await token.deposit(supply, { from: owner });
-        await token.enableTransfers(false);
-        await expect(
-          token.transfer["address,uint256,bytes"](owner2, 18281, "", {
-            from: owner,
-          }),
-        ).to.be.rejectedWith(EvmError);
-      });
-
-      it("should approve when approve enabled", async () => {
-        await token.enableApprovals(true);
-        await token.approve(broker, 18281, { from: owner });
-      });
-
-      it("should reject approve when approve disabled", async () => {
-        await token.enableApprovals(false);
-        await expect(token.approve(broker, 18281, { from: owner })).to.be.rejectedWith(EvmError);
-      });
+      testTokenController(
+        getToken,
+        getController,
+        accounts[0],
+        accounts[1],
+        broker,
+        generate,
+        destroy,
+      );
     });
 
     it("should call currentSnapshotId without transaction", async () => {

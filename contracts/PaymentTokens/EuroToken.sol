@@ -3,7 +3,7 @@ pragma solidity 0.4.25;
 import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
-import "../Zeppelin/StandardToken.sol";
+import "../SnapshotToken/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
@@ -11,7 +11,7 @@ import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../AccessRoles.sol";
 import "../Standards/ITokenControllerHook.sol";
-import "./IEuroTokenController.sol";
+import "../Standards/ITokenController.sol";
 
 
 contract EuroToken is
@@ -39,7 +39,7 @@ contract EuroToken is
     // Mutable state
     ////////////////////////
 
-    IEuroTokenController private _tokenController;
+    ITokenController private _tokenController;
 
     ////////////////////////
     // Events
@@ -81,16 +81,6 @@ contract EuroToken is
     // Modifiers
     ////////////////////////
 
-    modifier onlyIfTransferAllowed(address from, address to, uint256 amount) {
-        require(_tokenController.onTransfer(from, to, amount));
-        _;
-    }
-
-    modifier onlyIfTransferFromAllowed(address broker, address from, address to, uint256 amount) {
-        require(_tokenController.onTransferFrom(broker, from, to, amount));
-        _;
-    }
-
     modifier onlyIfDepositAllowed(address to, uint256 amount) {
         require(_tokenController.onGenerateTokens(msg.sender, to, amount));
         _;
@@ -108,14 +98,14 @@ contract EuroToken is
     constructor(
         IAccessPolicy accessPolicy,
         IEthereumForkArbiter forkArbiter,
-        IEuroTokenController tokenController
+        ITokenController tokenController
     )
         Agreement(accessPolicy, forkArbiter)
         StandardToken()
         TokenMetadata(NAME, DECIMALS, SYMBOL, "")
         public
     {
-        require(tokenController != IEuroTokenController(0x0));
+        require(tokenController != ITokenController(0x0));
         _tokenController = tokenController;
     }
 
@@ -192,10 +182,9 @@ contract EuroToken is
 
     function changeTokenController(address newController)
         public
-        only(ROLE_EURT_LEGAL_MANAGER)
     {
         require(_tokenController.onChangeTokenController(msg.sender, newController));
-        _tokenController = IEuroTokenController(newController);
+        _tokenController = ITokenController(newController);
         emit LogChangeTokenController(_tokenController, newController, msg.sender);
     }
 
@@ -205,35 +194,6 @@ contract EuroToken is
         returns (address)
     {
         return _tokenController;
-    }
-
-    //
-    // Overrides ERC20 Interface to allow transfer from/to allowed addresses
-    //
-
-    function transfer(address to, uint256 amount)
-        public
-        onlyIfTransferAllowed(msg.sender, to, amount)
-        returns (bool success)
-    {
-        return BasicToken.transfer(to, amount);
-    }
-
-    /// @dev broker acts in the name of 'from' address so broker needs to have permission to transfer from
-    ///  this way we may give permissions to brokering smart contracts while investors do not have permissions
-    ///  to transfer. 'from' and 'to' address requires standard transfer to permission, broker requires explicit `from` permission
-    function transferFrom(address from, address to, uint256 amount)
-        public
-        onlyIfTransferFromAllowed(msg.sender, from, to, amount)
-        returns (bool success)
-    {
-        // this is a kind of hack that allows special brokers to always have allowance to transfer
-        // we'll use it to purchase small amount of ether by simple exchange
-        if (_tokenController.hasPermanentAllowance(msg.sender, amount)) {
-            transferInternal(from, to, amount);
-            return true;
-        }
-        return StandardToken.transferFrom(from, to, amount);
     }
 
     //
@@ -279,20 +239,52 @@ contract EuroToken is
     // Internal functions
     ////////////////////////
 
-    /// @dev overriden to support signing of token holder agreement
-    function transferInternal(address from, address to, uint256 amount)
+    //
+    // Implements MTokenController
+    //
+
+    function mOnTransfer(
+        address from,
+        address to,
+        uint256 amount
+    )
         internal
         acceptAgreement(from)
+        returns (bool allow)
     {
-        BasicToken.transferInternal(from, to, amount);
+        address broker = msg.sender;
+        if (broker != from) {
+            // if called by the depositor (deposit and send), ignore the broker flag
+            bool isDepositor = accessPolicy().allowed(msg.sender, ROLE_EURT_DEPOSIT_MANAGER, this, msg.sig);
+            // this is not very clean but alternative (give brokerage rights to all depositors) is maintenance hell
+            if (isDepositor) {
+                broker = from;
+            }
+        }
+        return _tokenController.onTransfer(broker, from, to, amount);
     }
 
-    /// @dev overriden to support signing of token holder agreement
-    function approveInternal(address owner, address spender, uint256 amount)
+    function mOnApprove(
+        address owner,
+        address spender,
+        uint256 amount
+    )
         internal
         acceptAgreement(owner)
+        returns (bool allow)
     {
-        StandardToken.approveInternal(owner, spender, amount);
+        return _tokenController.onApprove(owner, spender, amount);
+    }
+
+    function mAllowanceOverride(
+        address owner,
+        address spender
+    )
+        internal
+        constant
+        returns (uint256)
+    {
+        return _tokenController.onAllowance(owner, spender);
     }
 
     //
@@ -323,10 +315,9 @@ contract EuroToken is
     /// @notice internal transfer function that checks permissions and calls the tokenFallback
     function ierc223TransferInternal(address from, address to, uint256 amount, bytes data)
         private
-        onlyIfTransferAllowed(from, to, amount)
         returns (bool success)
     {
-        transferInternal(from, to, amount);
+        BasicToken.mTransfer(from, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {

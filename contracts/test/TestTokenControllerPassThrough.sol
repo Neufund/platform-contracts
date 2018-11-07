@@ -1,9 +1,9 @@
 pragma solidity 0.4.25;
 
-import "../PaymentTokens/IEuroTokenController.sol";
+import "../Standards/ITokenController.sol";
 
 
-contract TestEuroTokenControllerPassThrough is IEuroTokenController
+contract TestTokenControllerPassThrough is ITokenController
 {
 
     ////////////////////////
@@ -11,18 +11,10 @@ contract TestEuroTokenControllerPassThrough is IEuroTokenController
     ////////////////////////
 
     //
-    // Implements IEuroTokenController
+    // Implements ITokenController
     //
 
-    function onTransfer(address, address ,uint256)
-        public
-        constant
-        returns (bool allow)
-    {
-        return true;
-    }
-
-    function onTransferFrom(address, address, address, uint256)
+    function onTransfer(address, address, address ,uint256)
         public
         constant
         returns (bool allow)
@@ -39,12 +31,12 @@ contract TestEuroTokenControllerPassThrough is IEuroTokenController
         return true;
     }
 
-    function hasPermanentAllowance(address, uint256)
+    function onAllowance(address /*owner*/, address /*spender*/)
         public
         constant
-        returns (bool yes)
+        returns (uint256)
     {
-        return false;
+        return 0;
     }
 
     function onGenerateTokens(address, address, uint256)
