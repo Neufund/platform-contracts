@@ -232,6 +232,20 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.totalSupply()).to.be.bignumber.eq(1000);
     });
 
+    it("should block erc223 transfer", async () => {
+      await equityToken.issueTokens(1000, {
+        from: company,
+      });
+      await equityTokenController.setAllowOnTransfer(false);
+
+      const data = "!79bc68b14fe3225ab8fe3278b412b93956d49c2dN";
+      await expect(
+        equityToken.transfer["address,uint256,bytes"](holders[0], 10, data, {
+          from: company,
+        }),
+      ).to.revert;
+    });
+
     it("can block approval", async () => {
       await equityToken.issueTokens(1000, {
         from: company,

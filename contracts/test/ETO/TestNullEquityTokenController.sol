@@ -25,12 +25,16 @@ contract TestNullEquityTokenController is
 
     }
 
-    bool allowOnTransfer = true;
-    bool allowApprove = true;
-    bool allowDestroyTokens = true;
-    bool allowGenerateTokens = true;
-    bool allowChangeNominee = true;
-    bool allowChangeTokenController = true;
+    ////////////////////////
+    // Mutable state
+    ////////////////////////
+
+    bool internal _allowOnTransfer = true;
+    bool internal _allowOnApprove = true;
+    bool internal _allowDestroyTokens = true;
+    bool internal _allowGenerateTokens = true;
+    bool internal _allowChangeNominee = true;
+    bool internal _allowChangeTokenController = true;
 
     //
     // Implements IEquityTokenController
@@ -41,7 +45,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowChangeNominee;
+        return _allowChangeNominee;
     }
 
     //
@@ -81,7 +85,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowOnTransfer;
+        return _allowOnTransfer;
     }
 
     function onApprove(address, address, uint256) 
@@ -89,7 +93,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowApprove;
+        return _allowOnApprove;
     }
 
     function onGenerateTokens(address, address, uint256)
@@ -97,7 +101,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowGenerateTokens;
+        return _allowGenerateTokens;
     }
 
     function onDestroyTokens(address, address, uint256)
@@ -105,7 +109,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowDestroyTokens;
+        return _allowDestroyTokens;
     }
 
     function onChangeTokenController(address, address)
@@ -113,7 +117,7 @@ contract TestNullEquityTokenController is
         constant
         returns (bool)
     {
-        return allowChangeTokenController;
+        return _allowChangeTokenController;
     }
 
     //
@@ -123,37 +127,37 @@ contract TestNullEquityTokenController is
     function setAllowOnTransfer(bool allow)
         public
     {
-        allowOnTransfer = allow;
+        _allowOnTransfer = allow;
     }
 
     function setAllowApprove(bool allow)
         public
     {
-        allowApprove = allow;
+        _allowOnApprove = allow;
     }
 
     function setAllowOnGenerateTokens(bool allow)
         public
     {
-        allowGenerateTokens = allow;
+        _allowGenerateTokens = allow;
     }
 
     function setAllowDestroyTokens(bool allow)
         public
     {
-        allowDestroyTokens = allow;
+        _allowDestroyTokens = allow;
     }
 
     function setAllowChangeTokenController(bool allow)
         public
     {
-        allowChangeTokenController = allow;
+        _allowChangeTokenController = allow;
     }
 
     function setAllowChangeNominee(bool allow)
         public
     {
-        allowChangeNominee = allow;
+        _allowChangeNominee = allow;
     }
 
 }
