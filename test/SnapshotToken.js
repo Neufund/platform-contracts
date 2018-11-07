@@ -25,7 +25,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
     beforeEach(async () => {
       erc223cb = await deployTestErc223Callback();
       await getToken().deposit(initialBalanceTkn, { from: owner });
-      await getToken().enableTransfers(true);
+      await getToken().setAllowOnTransfer(true);
     });
 
     erc223TokenTests(getToken, getTestErc223cb, owner, accounts[0], initialBalanceTkn);
