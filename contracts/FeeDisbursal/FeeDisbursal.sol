@@ -1,26 +1,17 @@
 pragma solidity 0.4.25;
 
 import "../Universe.sol";
-import "../AccessControl/AccessControlled.sol";
-import "../Reclaimable.sol";
 import "../Standards/IFeeDisbursal.sol";
-import "../Identity/IIdentityRegistry.sol";
 import "../SnapshotToken/BasicSnapshotToken.sol";
 import "../Serialization.sol";
 import "../Math.sol";
 import "../Standards/IERC223Token.sol";
-
+import "../Standards/IFeeDisbursalController.sol";
 
 contract FeeDisbursal is
-    AccessControlled,
-    Reclaimable,
-    IdentityRecord,
     Serialization,
     Math
 {
-
-    uint256 constant UINT256_MAX = 2**256 - 1;
-
 
     ////////////////////////
     // Types
@@ -36,7 +27,15 @@ contract FeeDisbursal is
         uint256 recycleAfterTimestamp;
         // contract sending the disbursal
         address disburser;
+        // total supply of pro rata token at snapshot
+        uint256 proRataTokenTotalSupply;
     }
+
+    ////////////////////////
+    // Constants
+    ////////////////////////
+    uint256 constant UINT256_MAX = 2**256 - 1;
+
 
     ////////////////////////
     // Immutable state
@@ -48,6 +47,8 @@ contract FeeDisbursal is
     // Mutable state
     ////////////////////////
 
+    // controller instance
+    IFeeDisbursalController private _feeDisbursalController;
     // map token addresses to a list of disbursal events of that token
     mapping (address => Disbursal[]) private _disbursals;
     // mapping to track what disbursals have already been paid out to which user
@@ -58,13 +59,12 @@ contract FeeDisbursal is
     ////////////////////////
     // Constructor
     ////////////////////////
-    constructor(Universe universe)
-        AccessControlled(universe.accessPolicy())
-        Reclaimable()
+    constructor(Universe universe, IFeeDisbursalController controller)
         public
     {
         UNIVERSE = universe;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
+        _feeDisbursalController = controller;
     }
 
     ////////////////////////
@@ -76,7 +76,7 @@ contract FeeDisbursal is
     /// @param index until what index to claim to
     function getDisbursal(address token, uint256 index)
     public
-    view
+    constant
     returns (
         uint256 snapshotId,
         uint256 amount,
@@ -93,36 +93,37 @@ contract FeeDisbursal is
         disburser = disbursal.disburser;
     }
 
+    /// @notice get count of disbursals for given token
+    /// @param token address of the claimable token
+    function getDisbursalCount(address token)
+    public
+    constant
+    returns (uint256)
+    {
+        return _disbursals[token].length;
+    }
+
     /// @notice claim a token, to be called an investor
     /// @param token address of the claimable token
     /// @param until until what index to claim to
     function claim(address token, uint256 until)
     public
-    returns (uint256 claimableAmount, uint256 lastIndex)
     {
         // only allow verified and active accounts to claim tokens
-        // @TODO: move access control to Controller
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(msg.sender));
-        require(claims.isVerified && !claims.accountFrozen, "NF_DISB_NOT_VER");
-        return claimPrivate(token, msg.sender, until);
+        require(_feeDisbursalController.onClaim(token, msg.sender), "");
+        claimPrivate(token, msg.sender, until);
     }
 
     /// @notice claim multiple tokens, to be called an investor
     /// @param tokens addresses of the claimable token
     function claimMultiple(address[] tokens)
     public
-    returns (uint256[])
     {
         // only allow verified and active accounts to claim tokens
-        // @TODO: move access control to Controller
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(msg.sender));
-        require(claims.isVerified && !claims.accountFrozen, "NF_DISB_NOT_VER");
-        uint256[] memory result = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            (uint256 claimedAmount, uint256 lastIndex)  = claimPrivate(tokens[i], msg.sender, UINT256_MAX);
-            result[i] = claimedAmount;
+            require(_feeDisbursalController.onClaim(tokens[i], msg.sender), "");
+            (uint256 claimedAmount, uint256 lastIndex) = claimPrivate(tokens[i], msg.sender, UINT256_MAX);
         }
-        return result; 
     }
 
     /// @notice check how many tokens of a certain kind can be claimed by an account
@@ -131,7 +132,7 @@ contract FeeDisbursal is
     /// @param until until what index to claim to
     function claimable(address token, address spender, uint256 until)
     public
-    view
+    constant
     returns (uint256 claimableAmount, uint256 lastIndex)
     {   
         // we don't do to a verified check here, this serves purely to check how much is claimable for an address
@@ -143,7 +144,7 @@ contract FeeDisbursal is
     /// @param spender address of the spender that would receive the funds
     function claimableMutiple(address[] tokens, address spender)
     public
-    view
+    constant
     returns (uint256[])
     {   
         // we don't to do a verified check here, this serves purely to check how much is claimable for an address
@@ -162,6 +163,7 @@ contract FeeDisbursal is
     function recycle(address token, address[] investors, uint256 until)
     public
     {        
+        require(_feeDisbursalController.onRecycle(), "");
         // @TODO: Recycle funds
         // @TODO: add log message
     }
@@ -170,17 +172,15 @@ contract FeeDisbursal is
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
-        // @TODO: check that wallet has disburser role
-        // @TODO: move access control to Controller
-        require(isDisbursableToken(msg.sender), "NF_DISB_UKNOWN_TOKEN");
-        require(amount > 0, "NF_DISB_ZERO_AMOUNT");
-
         // cast and check pro rata token
         // @TODO: uncomment next line and remove the line after that
         // BasicSnapshotToken proRataToken = BasicSnapshotToken(decodeAddress(data));
         BasicSnapshotToken proRataToken = UNIVERSE.neumark();
-        uint256 snapshotId = proRataToken.currentSnapshotId(); //@TODO: subtract one or not?
-        require(proRataToken.totalSupplyAt(snapshotId) > 0, "");
+        require(_feeDisbursalController.onDisburse(msg.sender, wallet, amount, address(proRataToken)), "");
+
+        uint256 snapshotId = proRataToken.currentSnapshotId();
+        uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
+        require(proRataTokenTotalSupply > 0, "");
 
         // create a new disbursal entry
         _disbursals[msg.sender].push(Disbursal({
@@ -188,35 +188,13 @@ contract FeeDisbursal is
             amount: amount,
             proRataToken: proRataToken,
             snapshotId: snapshotId,
-            disburser: wallet
+            disburser: wallet,
+            proRataTokenTotalSupply: proRataTokenTotalSupply
         }));
 
         //@TODO: add log message
     }
 
-    // implementation of reclaimbale
-    function reclaim(IBasicToken token)
-        public
-        only(ROLE_RECLAIMER)
-    {   
-        // forbid reclaiming any or our platform payment tokens
-        // @TODO: move access control to Controller
-        require(!isDisbursableToken(address(token)));
-        Reclaimable.reclaim(token);
-    }
-
-    /// @notice helper to determine if the token at the given address is supported for disbursing
-    /// @param token address of token in question
-    function isDisbursableToken(address token)
-        public
-        view
-        returns (bool)
-    {   
-        // @TODO: migrate this to new, more flexible token registering in universe
-        if (token == address(UNIVERSE.etherToken())) return true;
-        if (token == address(UNIVERSE.euroToken())) return true;
-        return false;
-    }
 
     ////////////////////////
     // Private functions
@@ -230,7 +208,6 @@ contract FeeDisbursal is
     public
     returns (uint256 claimedAmount, uint256 lastIndex)
     {
-        require(isDisbursableToken(token), "NF_DISB_UKNOWN_TOKEN");
         (claimedAmount, lastIndex) = claimablePrivate(token, spender, until);
 
         // mark spender disbursal progress
@@ -248,22 +225,20 @@ contract FeeDisbursal is
     /// @param until until what index to claim to, use UINT256_MAX for all
     function claimablePrivate(address token, address spender, uint256 until)
     public
-    view
+    constant
     returns (uint256 claimableAmount, uint256 lastIndex)
     {
-        require(isDisbursableToken(token), "NF_DISB_UKNOWN_TOKEN");
         lastIndex = min(until, _disbursals[token].length);
         claimableAmount = 0;
         for (uint256 i = _disbursalProgress[token][spender]; i < lastIndex; i += 1) {
             Disbursal storage disbursal = _disbursals[token][i];
             BasicSnapshotToken proRataToken = BasicSnapshotToken(disbursal.proRataToken);
             uint256 snapshotId = disbursal.snapshotId;
-            uint256 proRataTotalSupply = proRataToken.totalSupplyAt(snapshotId);
+            uint256 proRataTokenTotalSupply = disbursal.proRataTokenTotalSupply;
             uint256 proRataSpenderBalance = proRataToken.balanceOfAt(spender, snapshotId);
-            if (proRataTotalSupply == 0) continue;
-            // @TODO: do we need checks for overflow here? probably not as uint256 is really large..
+            if (proRataTokenTotalSupply == 0) continue;
             // this should round down, so we should not be spending more than we have in our balance
-            claimableAmount += (proRataSpenderBalance * disbursal.amount) / proRataTotalSupply;
+            claimableAmount += proportion(disbursal.amount, proRataSpenderBalance, proRataTokenTotalSupply);
         }
         return (claimableAmount, lastIndex);
     }

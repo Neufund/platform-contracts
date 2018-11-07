@@ -4,10 +4,10 @@ import {
   deployUniverse,
   deployIdentityRegistry,
   deployEtherTokenUniverse,
-  deployFeeDisbursal,
+  deployFeeDisbursalUniverse,
   deployNeumarkUniverse,
 } from "./helpers/deployContracts";
-import { TriState } from "./helpers/triState";
+import { TriState, GLOBAL } from "./helpers/triState";
 import roles from "./helpers/roles";
 import { toBytes32, Q18 } from "./helpers/constants";
 import { identityClaims } from "./helpers/identityClaims";
@@ -23,6 +23,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
 
   describe("specific tests", () => {
     let feeDisbursal;
+    let feeDisbursalController;
     let etherToken;
     let identityRegistry;
     let neumark;
@@ -30,17 +31,15 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
     beforeEach(async () => {
       identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
       etherToken = await deployEtherTokenUniverse(universe, masterManager);
-      feeDisbursal = await deployFeeDisbursal(universe, masterManager);
+      [feeDisbursal, feeDisbursalController] = await deployFeeDisbursalUniverse(
+        universe,
+        masterManager,
+      );
       neumark = await deployNeumarkUniverse(universe, masterManager);
 
       // set policy for the disburser
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-      await accessPolicy.setUserRole(
-        disburser,
-        roles.disburser,
-        feeDisbursal.address,
-        TriState.Allow,
-      );
+      await accessPolicy.setUserRole(disburser, roles.disburser, GLOBAL, TriState.Allow);
     });
 
     // send some neumarks to an investor and verify claims
@@ -71,6 +70,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
 
     it("should deploy", async () => {
       await prettyPrintGasCost("FeeDisbursal deploy", feeDisbursal);
+      await prettyPrintGasCost("FeeDisbursalController deploy", feeDisbursalController);
     });
 
     it("should have zero claimable ether tokens for random address", async () => {

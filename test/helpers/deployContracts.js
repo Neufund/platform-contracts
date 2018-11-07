@@ -22,6 +22,7 @@ const LockedAccount = artifacts.require("LockedAccount");
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const FeeDisbursal = artifacts.require("FeeDisbursal");
+const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 
 export async function deployAccessControl(initialRules) {
   const accessPolicy = await RoleBasedAccessPolicy.new();
@@ -411,10 +412,11 @@ export async function deployEtherTokenMigration(
   return [lockedAccount, icbmLockedAccount, icbmAssetToken, controller];
 }
 
-export async function deployFeeDisbursal(universe, universeManager) {
-  const feeDisbursal = await FeeDisbursal.new(universe.address);
+export async function deployFeeDisbursalUniverse(universe, universeManager) {
+  const controller = await FeeDisbursalController.new(universe.address);
+  const feeDisbursal = await FeeDisbursal.new(universe.address, controller.address);
   await universe.setSingleton(knownInterfaces.feeDisbursal, feeDisbursal.address, {
     from: universeManager,
   });
-  return feeDisbursal;
+  return [feeDisbursal, controller];
 }
