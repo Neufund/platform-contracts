@@ -3,7 +3,7 @@ pragma solidity 0.4.25;
 import "../Standards/ITokenController.sol";
 
 
-contract TestEuroTokenControllerPassThrough is ITokenController
+contract TestTokenControllerPassThrough is ITokenController
 {
 
     ////////////////////////
