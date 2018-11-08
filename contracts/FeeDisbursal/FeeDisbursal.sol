@@ -169,6 +169,7 @@ contract FeeDisbursal is
     }
 
     // implementation of tokenfallback
+    // @TODO add old transferCallback method
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
