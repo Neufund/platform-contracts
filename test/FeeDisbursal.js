@@ -18,7 +18,7 @@ import { knownInterfaces } from "./helpers/knownInterfaces";
 const EtherToken = artifacts.require("EtherToken");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
-contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
+contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors]) => {
   let universe;
 
   before(async () => {
@@ -60,10 +60,17 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       // set policy for the disburser
       accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
       await accessPolicy.setUserRole(disburser, roles.disburser, GLOBAL, TriState.Allow);
+      await accessPolicy.setUserRole(disburser2, roles.disburser, GLOBAL, TriState.Allow);
 
       // add verified claim for disburser, so he can receive eurotokens
       await identityRegistry.setClaims(
         disburser,
+        toBytes32(identityClaims.isNone),
+        toBytes32(identityClaims.isVerified),
+        { from: masterManager },
+      );
+      await identityRegistry.setClaims(
+        disburser2,
         toBytes32(identityClaims.isNone),
         toBytes32(identityClaims.isVerified),
         { from: masterManager },
@@ -430,6 +437,27 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       );
       // now will revert again
       await expect(feeDisbursal.claim(etherToken.address, Q18, { from: investors[0] })).to.revert;
+    });
+
+    it("should group disbursal entries of different disbursers", async () => {
+      // we need one neumark hodler
+      await prepareInvestor(investors[0], Q18.mul(200), false);
+
+      await disburseEtherToken(disburser, Q18.mul(2));
+      await disburseEtherToken(disburser2, Q18);
+      await disburseEtherToken(disburser, Q18.mul(3));
+      await disburseEtherToken(disburser, Q18.mul(5));
+
+      await disburseEuroToken(disburser, Q18);
+      await disburseEuroToken(disburser2, Q18);
+      await disburseEuroToken(disburser2, Q18);
+
+      // each should have two disbursals, as they are grouped by disburser
+      await assertDisbursalCount(etherToken, 2);
+      await assertDisbursalCount(euroToken, 2);
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(etherToken, investors[0], Q18, Q18.mul(11));
+      await assertClaimable(euroToken, investors[0], Q18, Q18.mul(3));
     });
   });
 });
