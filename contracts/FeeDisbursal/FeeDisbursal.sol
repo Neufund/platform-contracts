@@ -35,6 +35,11 @@ contract FeeDisbursal is
         uint256 lastIndex
     );
 
+    event LogFundsRecycled(
+        address indexed token,
+        uint256 amount
+    );
+
     ////////////////////////
     // Types
     ////////////////////////
@@ -186,11 +191,21 @@ contract FeeDisbursal is
         require(_feeDisbursalController.onRecycle(), "");
         // for now we say that unclaimed funds on the platform will be distributed among all neu holders
         // this will make recycling much easier. @TODO discuss this approach
-        uint256 totalAmount = 
 
+        // cycle through all investors collect the claimable and recycleable funds
+        // also move the _disbursalProgress pointer
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < investors.length; i += 1) {
+            (uint256 claimableAmount, uint256 lastIndex) = claimablePrivate(token, investors[i], until, true);
+            totalAmount += claimableAmount;
+            _disbursalProgress[token][investors[i]] = lastIndex;
+        }
 
-        // @TODO: Recycle funds
-        // @TODO: add log message
+        // now re-disburse, we're now the disburser
+        disburse(token, this, totalAmount, UNIVERSE.neumark());
+
+        // log
+        emit LogFundsRecycled(token, totalAmount);
     }
 
     /// @notice implementation of tokenfallback, calls the internal disburse function
