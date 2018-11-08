@@ -4688,7 +4688,7 @@ lcid@^1.0.0:
 
 ledger-wallet-provider@Neufund/ledger-wallet-provider.git#moe/admintool:
   version "2.0.0"
-  resolved "https://codeload.github.com/Neufund/ledger-wallet-provider/tar.gz/508c8305d3368a9c9a6dd19058507fa82bb4c3e8"
+  resolved "https://codeload.github.com/Neufund/ledger-wallet-provider/tar.gz/bbd86a8423bc78e37f5256465b2d1f1036bc1579"
   dependencies:
     babel-runtime "^6.23.0"
     ledgerco Neufund/ledgerjs#improve_old_version
@@ -4698,7 +4698,7 @@ ledger-wallet-provider@Neufund/ledger-wallet-provider.git#moe/admintool:
 
 ledgerco@Neufund/ledgerjs#improve_old_version:
   version "1.2.1"
-  resolved "https://codeload.github.com/Neufund/ledgerjs/tar.gz/355ff3a83432d9d388778385c321d2106e5b5bd1"
+  resolved "https://codeload.github.com/Neufund/ledgerjs/tar.gz/80410462a119c28bc848127e2f75164d46d22796"
   dependencies:
     node-hid "0.6.0"
     u2f-api "0.2.7"
