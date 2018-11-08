@@ -14,6 +14,7 @@ import { identityClaims } from "./helpers/identityClaims";
 import increaseTime from "./helpers/increaseTime";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 
+const EtherToken = artifacts.require("EtherToken");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
 contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
@@ -257,6 +258,42 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       increaseTime(60 * 60 * 24);
       await assertClaimable(etherToken, investors[0], 1000, Q18.mul(3));
       // qed :)
+    });
+
+    it("should not disburse if the totalsupply of pro rata token is zero", async () => {
+      // neu neumarks minted yet
+      await expect(
+        etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+          from: disburser,
+          value: Q18.mul(100),
+        }),
+      ).to.revert;
+      // mint neumarks for investor 0
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      // now it will work
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+        from: disburser,
+        value: Q18.mul(100),
+      });
+    });
+
+    it("should not accept disbursing an unknown token", async () => {
+      // we need at least one investor
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      // create a second ether token where the disburser has a balance of 20
+      const newEtherToken = await EtherToken.new(accessPolicy.address);
+      // transfering is now allowed, @TODO: should we use a revertcode here?
+      await expect(
+        newEtherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+          from: disburser,
+          value: Q18.mul(100),
+        }),
+      ).to.revert;
+      // ether token works
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+        from: disburser,
+        value: Q18.mul(100),
+      });
     });
   });
 });
