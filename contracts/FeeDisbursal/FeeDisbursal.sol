@@ -184,11 +184,17 @@ contract FeeDisbursal is
     public
     {        
         require(_feeDisbursalController.onRecycle(), "");
+        // for now we say that unclaimed funds on the platform will be distributed among all neu holders
+        // this will make recycling much easier. @TODO discuss this approach
+        uint256 totalAmount = 
+
+
         // @TODO: Recycle funds
         // @TODO: add log message
     }
 
-    // implementation of tokenfallback
+    /// @notice implementation of tokenfallback, calls the internal disburse function
+    /// legacy onTokenTransfer is also supported via imported file
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
@@ -199,13 +205,29 @@ contract FeeDisbursal is
            proRataToken = BasicSnapshotToken(decodeAddress(data));
         else
             proRataToken = UNIVERSE.neumark();
-        require(_feeDisbursalController.onDisburse(msg.sender, wallet, amount, address(proRataToken)), "");
+        disburse(msg.sender, wallet, amount, proRataToken);
+    }
+
+
+    ////////////////////////
+    // Private functions
+    ////////////////////////
+
+    /// @notice create a new disbursal
+    /// @param token address of the token to disburse
+    /// @param disburser address of the actor disbursing (e.g. eto commitment)
+    /// @param amount amount of the disbursable tokens
+    /// @param proRataToken address of the token that defines the pro rata
+    function disburse(address token, address disburser, uint256 amount, BasicSnapshotToken proRataToken)
+    internal
+    {
+        require(_feeDisbursalController.onDisburse(token, disburser, amount, address(proRataToken)), "");
 
         uint256 snapshotId = proRataToken.currentSnapshotId();
         uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
         require(proRataTokenTotalSupply > 0, "");
 
-        Disbursal[] storage disbursals = _disbursals[msg.sender];
+        Disbursal[] storage disbursals = _disbursals[token];
 
         // try to merge with an existing disbursal
         bool merged = false;
@@ -218,7 +240,7 @@ contract FeeDisbursal is
             // the existing disbursal must be the same on  number of params so we can merge
             if (
                 disbursal.proRataToken == proRataToken &&
-                disbursal.disburser == wallet) {
+                disbursal.disburser == disburser) {
                 merged = true;
                 disbursal.amount += amount;
             }
@@ -231,23 +253,19 @@ contract FeeDisbursal is
                 amount: amount,
                 proRataToken: proRataToken,
                 snapshotId: snapshotId,
-                disburser: wallet
+                disburser: disburser
             }));
 
-        emit LogDisbursalCreated(msg.sender, wallet, amount, proRataToken);
+        emit LogDisbursalCreated(token, disburser, amount, proRataToken);
     }
 
-
-    ////////////////////////
-    // Private functions
-    ////////////////////////
 
     /// @notice claim a token for an spender, returns the amount of tokens claimed
     /// @param token address of the claimable token
     /// @param spender address of the spender that will receive the funds
     /// @param until until what index to claim to
     function claimPrivate(address token, address spender, uint256 until)
-    public
+    internal
     returns (uint256 claimedAmount, uint256 lastIndex)
     {
         (claimedAmount, lastIndex) = claimablePrivate(token, spender, until, false);
@@ -269,7 +287,7 @@ contract FeeDisbursal is
     /// @param until until what index to claim to, use UINT256_MAX for all
     /// @param onlyRecycleable show only claimable funds that can be recycled
     function claimablePrivate(address token, address spender, uint256 until, bool onlyRecycleable)
-    public
+    internal
     constant
     returns (uint256 claimableAmount, uint256 lastIndex)
     {
@@ -288,7 +306,7 @@ contract FeeDisbursal is
                 break;
             uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
             uint256 proRataSpenderBalance = proRataToken.balanceOfAt(spender, snapshotId);
-            if (proRataTokenTotalSupply == 0) continue;
+            if (proRataTokenTotalSupply == 0 || proRataSpenderBalance == 0) continue;
             // this should round down, so we should not be spending more than we have in our balance
             claimableAmount += proportion(disbursal.amount, proRataSpenderBalance, proRataTokenTotalSupply);
         }
