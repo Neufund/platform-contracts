@@ -12,6 +12,7 @@ import roles from "./helpers/roles";
 import { toBytes32, Q18 } from "./helpers/constants";
 import { identityClaims } from "./helpers/identityClaims";
 import increaseTime from "./helpers/increaseTime";
+import { knownInterfaces } from "./helpers/knownInterfaces";
 
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
@@ -28,7 +29,11 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
     let etherToken;
     let identityRegistry;
     let neumark;
+    let accessPolicy;
 
+    /**
+     * Setup
+     */
     beforeEach(async () => {
       identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
       etherToken = await deployEtherTokenUniverse(universe, masterManager);
@@ -39,10 +44,13 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       neumark = await deployNeumarkUniverse(universe, masterManager);
 
       // set policy for the disburser
-      const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+      accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
       await accessPolicy.setUserRole(disburser, roles.disburser, GLOBAL, TriState.Allow);
     });
 
+    /**
+     * Helpers
+     */
     // send some neumarks to an investor and verify claims
     async function prepareInvestor(investor, neumarks, isVerified) {
       await neumark.issueForEuro(neumarks, { from: masterManager });
@@ -59,6 +67,9 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       }
     }
 
+    /**
+     * Assertion helpers
+     */
     async function assertClaimable(token, investor, index, expectedAmount) {
       const [claimableAmount] = await feeDisbursal.claimable(token.address, investor, index);
       expect(claimableAmount).to.be.bignumber.equal(expectedAmount);
@@ -74,6 +85,9 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       expect(count).to.be.bignumber.equal(expectedCount);
     }
 
+    /**
+     * Tests
+     */
     it("should deploy", async () => {
       await prettyPrintGasCost("FeeDisbursal deploy", feeDisbursal);
       await prettyPrintGasCost("FeeDisbursalController deploy", feeDisbursalController);
@@ -158,6 +172,91 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
 
       // all ether is payed out now
       await assertTokenBalance(etherToken, feeDisbursal.address, Q18.mul(0));
+    });
+
+    /**
+     * Access control checks
+     */
+    it("should only allow valid disbursers", async () => {
+      // we need at least one investor
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      const testDisburser = investors[1];
+      // without role or being eto commitment, this won't work
+      await expect(
+        etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+          from: testDisburser,
+          value: Q18.mul(100),
+        }),
+      ).to.revert;
+      // eto commitment interface will work
+      await universe.setCollectionInterface(
+        knownInterfaces.commitmentInterface,
+        testDisburser,
+        true,
+        {
+          from: masterManager,
+        },
+      );
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+        from: testDisburser,
+        value: Q18.mul(100),
+      });
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(1));
+      // reset, should not work anymore
+      await universe.setCollectionInterface(
+        knownInterfaces.commitmentInterface,
+        testDisburser,
+        false,
+        {
+          from: masterManager,
+        },
+      );
+      await expect(
+        etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+          from: testDisburser,
+          value: Q18.mul(100),
+        }),
+      ).to.revert;
+      // token controller will work
+      await universe.setCollectionInterface(
+        knownInterfaces.equityTokenControllerInterface,
+        testDisburser,
+        true,
+        {
+          from: masterManager,
+        },
+      );
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+        from: testDisburser,
+        value: Q18.mul(100),
+      });
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(2));
+      // reset, should not work anymore
+      await universe.setCollectionInterface(
+        knownInterfaces.equityTokenControllerInterface,
+        testDisburser,
+        false,
+        {
+          from: masterManager,
+        },
+      );
+      await expect(
+        etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+          from: testDisburser,
+          value: Q18.mul(100),
+        }),
+      ).to.revert;
+      // disburser role will work
+      await accessPolicy.setUserRole(testDisburser, roles.disburser, GLOBAL, TriState.Allow);
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(1), 0, {
+        from: testDisburser,
+        value: Q18.mul(100),
+      });
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(3));
+      // qed :)
     });
   });
 });
