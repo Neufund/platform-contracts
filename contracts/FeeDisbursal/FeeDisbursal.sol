@@ -18,6 +18,24 @@ contract FeeDisbursal is
 {
 
     ////////////////////////
+    // Events
+    ////////////////////////
+
+    event LogDisbursalCreated(
+        address indexed token,
+        address disburser,
+        uint256 amount,
+        address proRataToken
+    );
+
+    event LogDisbursalClaimed(
+        address indexed claimer,
+        address token,
+        uint256 amount,
+        uint256 lastIndex
+    );
+
+    ////////////////////////
     // Types
     ////////////////////////
     struct Disbursal {
@@ -113,7 +131,7 @@ contract FeeDisbursal is
     {
         // only allow verified and active accounts to claim tokens
         require(_feeDisbursalController.onClaim(token, msg.sender), "");
-        claimPrivate(token, msg.sender, until);
+        (uint256 claimedAmount, uint256 lastIndex) = claimPrivate(token, msg.sender, until);
     }
 
     /// @notice claim multiple tokens, to be called an investor
@@ -206,8 +224,7 @@ contract FeeDisbursal is
             }
         }
 
-
-        // // create a new disbursal entry
+        // create a new disbursal entry
         if (!merged) 
             disbursals.push(Disbursal({
                 recycleableAfterTimestamp: block.timestamp + 1 years,
@@ -217,7 +234,7 @@ contract FeeDisbursal is
                 disburser: wallet
             }));
 
-        //@TODO: add log message
+        emit LogDisbursalCreated(msg.sender, wallet, amount, proRataToken);
     }
 
 
@@ -241,7 +258,9 @@ contract FeeDisbursal is
         // do the actual token transfer
         IERC223Token ierc223Token = IERC223Token(token);
         ierc223Token.transfer(spender, claimedAmount, "");
-        //@TODO: add log message
+
+        // log
+        emit LogDisbursalClaimed(spender, token, claimedAmount, lastIndex);
     }
 
     /// @notice get the amount of tokens that can be claimed by a given spender
