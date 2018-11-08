@@ -295,5 +295,42 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
         value: Q18.mul(100),
       });
     });
+
+    it("should not accept claiming with no identity claims or locked account", async () => {
+      // create investor with neumark but no claims
+      await prepareInvestor(investors[0], Q18.mul(200), false);
+      // disburse some ether tokens from the disburser
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(100), 0, {
+        from: disburser,
+        value: Q18.mul(100),
+      });
+      increaseTime(60 * 60 * 24);
+      // claim will revert
+      await expect(feeDisbursal.claim(etherToken.address, Q18, { from: investors[0] })).to.revert;
+      // add verified bit
+      await identityRegistry.setClaims(
+        investors[0],
+        toBytes32(identityClaims.isNone),
+        toBytes32(identityClaims.isVerified),
+        { from: masterManager },
+      );
+      // now claiming should work
+      await feeDisbursal.claim(etherToken.address, Q18, { from: investors[0] });
+      // disburse more
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(100), 0, {
+        from: disburser,
+        value: Q18.mul(100),
+      });
+      increaseTime(60 * 60 * 24);
+      // set account locked bit
+      await identityRegistry.setClaims(
+        investors[0],
+        toBytes32(identityClaims.isVerified),
+        toBytes32(identityClaims.isVerified | identityClaims.isAccountFrozen),
+        { from: masterManager },
+      );
+      // now will revert again
+      await expect(feeDisbursal.claim(etherToken.address, Q18, { from: investors[0] })).to.revert;
+    });
   });
 });
