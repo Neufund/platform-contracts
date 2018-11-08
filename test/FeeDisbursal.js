@@ -200,6 +200,41 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await assertClaimable(neumark, investors[1], 1000, Q18.mul(70));
     });
 
+    it("should be able to retrieve details of a disbursal", async () => {
+      // we need at least one investor as always
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      // create two entries for ethertoken
+      await disburseEtherToken(disburser, Q18.mul(40));
+      increaseTime(60 * 60 * 24);
+      await disburseEtherToken(disburser2, Q18.mul(60));
+
+      let [
+        snapshotId,
+        amount,
+        proRataToken,
+        recyclableAfterTimestamp,
+        loadedDisburser,
+      ] = await feeDisbursal.getDisbursal(etherToken.address, 0);
+      expect(snapshotId).to.not.be.bignumber.eq(Q18.mul(0));
+      expect(recyclableAfterTimestamp).to.not.be.bignumber.eq(Q18.mul(0));
+      expect(amount).to.be.bignumber.eq(Q18.mul(40));
+      expect(proRataToken).to.be.equal(neumark.address);
+      expect(loadedDisburser).to.be.equal(disburser);
+
+      [
+        snapshotId,
+        amount,
+        proRataToken,
+        recyclableAfterTimestamp,
+        loadedDisburser,
+      ] = await feeDisbursal.getDisbursal(etherToken.address, 1);
+      expect(snapshotId).to.not.be.bignumber.eq(Q18.mul(0));
+      expect(recyclableAfterTimestamp).to.not.be.bignumber.eq(Q18.mul(0));
+      expect(amount).to.be.bignumber.eq(Q18.mul(60));
+      expect(proRataToken).to.be.equal(neumark.address);
+      expect(loadedDisburser).to.be.equal(disburser2);
+    });
+
     // happy path
     it("should disburse different tokens to investors, who then claim them", async () => {
       // prepare some investors
