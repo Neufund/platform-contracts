@@ -7,8 +7,12 @@ import "../Serialization.sol";
 import "../Math.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IFeeDisbursalController.sol";
+import "../Standards/IERC223LegacyCallback.sol";
+import "../Compat/IERC223LegacyCallbackCompat.sol";
 
 contract FeeDisbursal is
+    IERC223LegacyCallback,
+    IERC223LegacyCallbackCompat,
     Serialization,
     Math
 {
@@ -27,8 +31,6 @@ contract FeeDisbursal is
         uint256 recycleableAfterTimestamp;
         // contract sending the disbursal
         address disburser;
-        // total supply of pro rata token at snapshot
-        uint256 proRataTokenTotalSupply;
     }
 
     ////////////////////////
@@ -169,7 +171,6 @@ contract FeeDisbursal is
     }
 
     // implementation of tokenfallback
-    // @TODO add old transferCallback method
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
@@ -199,7 +200,6 @@ contract FeeDisbursal is
             // the existing disbursal must be the same on  number of params so we can merge
             if (
                 disbursal.proRataToken == proRataToken &&
-                disbursal.proRataTokenTotalSupply == proRataTokenTotalSupply &&
                 disbursal.disburser == wallet) {
                 merged = true;
                 disbursal.amount += amount;
@@ -214,8 +214,7 @@ contract FeeDisbursal is
                 amount: amount,
                 proRataToken: proRataToken,
                 snapshotId: snapshotId,
-                disburser: wallet,
-                proRataTokenTotalSupply: proRataTokenTotalSupply
+                disburser: wallet
             }));
 
         //@TODO: add log message
@@ -268,7 +267,7 @@ contract FeeDisbursal is
             // do not pay out claims from the current snapshot
             if ( snapshotId == proRataToken.currentSnapshotId() )
                 break;
-            uint256 proRataTokenTotalSupply = disbursal.proRataTokenTotalSupply;
+            uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
             uint256 proRataSpenderBalance = proRataToken.balanceOfAt(spender, snapshotId);
             if (proRataTokenTotalSupply == 0) continue;
             // this should round down, so we should not be spending more than we have in our balance

@@ -87,6 +87,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
     async function prepareInvestor(investor, neumarks, isVerified) {
       await neumark.issueForEuro(neumarks, { from: masterManager });
       await neumark.distribute(investor, neumarks, { from: masterManager });
+      // burn all the excess neumarks
       const balance = await neumark.balanceOf(masterManager);
       await neumark.burn.uint256(balance, { from: masterManager });
       if (isVerified) {
@@ -111,6 +112,17 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       return euroToken.depositAndTransfer(sender, feeDisbursal.address, amount, amount, 0, 0, {
         from: masterManager,
       });
+    }
+
+    async function disburseNeumark(sender, amount) {
+      await neumark.issueForEuro(amount, { from: masterManager });
+      await neumark.distribute(sender, amount, { from: masterManager });
+      await neumark.transfer["address,uint256,bytes"](feeDisbursal.address, amount, 0, {
+        from: sender,
+      });
+      // burn all the excess neumarks
+      const balance = await neumark.balanceOf(masterManager);
+      await neumark.burn.uint256(balance, { from: masterManager });
     }
 
     /**
@@ -156,8 +168,40 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(lastIndex.toNumber()).to.be.equal(0);
     });
 
+    it("should be able to disburse ether tokens", async () => {
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await prepareInvestor(investors[1], Q18.mul(800), true);
+      await disburseEtherToken(disburser, Q18.mul(100));
+      await assertTokenBalance(etherToken, feeDisbursal.address, Q18.mul(100));
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(20));
+      await assertClaimable(etherToken, investors[1], 1000, Q18.mul(80));
+    });
+
+    it("should be able to disburse euro tokens", async () => {
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await prepareInvestor(investors[1], Q18.mul(800), true);
+      await disburseEuroToken(disburser, Q18.mul(100));
+      await assertTokenBalance(euroToken, feeDisbursal.address, Q18.mul(100));
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(euroToken, investors[0], 1000, Q18.mul(20));
+      await assertClaimable(euroToken, investors[1], 1000, Q18.mul(80));
+    });
+
+    it("should be able to disburse neumark", async () => {
+      // this example is a bit strange, as we issue the same token as is used for pro-rata
+      // maybe this should not be allowed
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await prepareInvestor(investors[1], Q18.mul(700), true);
+      await disburseNeumark(disburser, Q18.mul(100));
+      await assertTokenBalance(neumark, feeDisbursal.address, Q18.mul(100));
+      increaseTime(60 * 60 * 24);
+      await assertClaimable(neumark, investors[0], 1000, Q18.mul(20));
+      await assertClaimable(neumark, investors[1], 1000, Q18.mul(70));
+    });
+
     // happy path
-    it("should disburse tokens to investors", async () => {
+    it("should disburse different tokens to investors, who then claim them", async () => {
       // prepare some investors
       await prepareInvestor(investors[0], Q18.mul(200), true);
       await prepareInvestor(investors[1], Q18.mul(300), true);
