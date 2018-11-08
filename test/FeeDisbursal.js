@@ -175,6 +175,70 @@ contract("FeeDisbursal", ([_, masterManager, disburser, ...investors]) => {
       await assertTokenBalance(etherToken, feeDisbursal.address, Q18.mul(0));
     });
 
+    it("should support simple claims merging and step by step claim payout", async () => {
+      // setup one investor and run some assertions
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await assertDisbursalCount(etherToken, 0);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(0));
+
+      // first disbursal
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(15), 0, {
+        from: disburser,
+        value: Q18.mul(150),
+      });
+      // we now have one disbursal, but nothing claimable, as the claim is not sealed yet
+      await assertDisbursalCount(etherToken, 1);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(0));
+      // second disbursal, should be merged with first
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(5), 0, {
+        from: disburser,
+        value: Q18.mul(150),
+      });
+      await assertDisbursalCount(etherToken, 1);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(0));
+      // after one day these funds become claimable
+      increaseTime(60 * 60 * 24);
+      await assertDisbursalCount(etherToken, 1);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(20));
+      // some more disbursing
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(5), 0, {
+        from: disburser,
+        value: Q18.mul(150),
+      });
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(5), 0, {
+        from: disburser,
+        value: Q18.mul(150),
+      });
+      // both should now be merged, but not claimable yet
+      await assertDisbursalCount(etherToken, 2);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(20));
+      increaseTime(60 * 60 * 24);
+      // claimable now
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(30));
+      // add another day with disbursal
+      await etherToken.depositAndTransfer(feeDisbursal.address, Q18.mul(20), 0, {
+        from: disburser,
+        value: Q18.mul(150),
+      });
+      increaseTime(60 * 60 * 24);
+      await assertDisbursalCount(etherToken, 3);
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(50));
+      // now check that we can granularly get the claimable values
+      await assertClaimable(etherToken, investors[0], 1, Q18.mul(20)); // first claim
+      await assertClaimable(etherToken, investors[0], 2, Q18.mul(30)); // first two claims
+      await assertClaimable(etherToken, investors[0], 3, Q18.mul(50)); // first three claims
+      // now claim the three disbursals invidually
+      await feeDisbursal.claim(etherToken.address, 1, { from: investors[0] });
+      await assertTokenBalance(etherToken, investors[0], Q18.mul(20));
+      await assertClaimable(etherToken, investors[0], Q18, Q18.mul(30)); // now only 2nd and 3rd claims left
+      await feeDisbursal.claim(etherToken.address, 2, { from: investors[0] });
+      await assertTokenBalance(etherToken, investors[0], Q18.mul(30));
+      await assertClaimable(etherToken, investors[0], Q18, Q18.mul(20)); // now only 3rd claim left
+      await feeDisbursal.claim(etherToken.address, 3, { from: investors[0] });
+      await assertTokenBalance(etherToken, investors[0], Q18.mul(50));
+      await assertClaimable(etherToken, investors[0], Q18, Q18.mul(0)); // no claims left
+    });
+
     /**
      * Access control checks
      */
