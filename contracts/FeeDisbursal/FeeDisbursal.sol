@@ -220,16 +220,17 @@ contract FeeDisbursal is
     /// @notice get current controller
     function feeDisbursalController()
         public
+        constant
         returns (IFeeDisbursalController)
     {
         return _feeDisbursalController;
     }
 
     /// @notice update current controller
-    function feeDisbursalController(IFeeDisbursalController newController)
+    function changeFeeDisbursalController(IFeeDisbursalController newController)
         public
     {
-        _feeDisbursalController.onChangeFeeDisbursalController(newController);
+        require(_feeDisbursalController.onChangeFeeDisbursalController(msg.sender, newController));
         address oldController = address(_feeDisbursalController);
         _feeDisbursalController = newController;
         emit LogChangeFeeDisbursalController(oldController, address(newController), msg.sender);

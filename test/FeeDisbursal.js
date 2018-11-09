@@ -15,6 +15,7 @@ import { identityClaims } from "./helpers/identityClaims";
 import increaseTime from "./helpers/increaseTime";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 
+const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 const EtherToken = artifacts.require("EtherToken");
 const RoleBasedAccessPolicy = artifacts.require("RoleBasedAccessPolicy");
 
@@ -537,6 +538,34 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       increaseTime(60 * 60 * 24);
       await assertClaimable(etherToken, investors[0], Q18, Q18.mul(11));
       await assertClaimable(euroToken, investors[0], Q18, Q18.mul(3));
+    });
+
+    it("should allow setting a new controller", async () => {
+      let controller = await feeDisbursal.feeDisbursalController();
+      expect(controller).to.equal(feeDisbursalController.address);
+      const newController = await FeeDisbursalController.new(universe.address);
+      await feeDisbursal.changeFeeDisbursalController(newController.address, {
+        from: masterManager,
+      });
+      controller = await feeDisbursal.feeDisbursalController();
+      expect(controller).to.equal(newController.address);
+    });
+
+    it("should not allow setting a controller from random address", async () => {
+      const controller = await feeDisbursal.feeDisbursalController();
+      expect(controller).to.equal(feeDisbursalController.address);
+      const newController = await FeeDisbursalController.new(universe.address);
+      await expect(
+        feeDisbursal.changeFeeDisbursalController(newController.address, { from: investors[0] }),
+      ).to.revert;
+    });
+
+    it("should not allow setting a controller which has the wrong (or none) contract id", async () => {
+      const controller = await feeDisbursal.feeDisbursalController();
+      expect(controller).to.equal(feeDisbursalController.address);
+      await expect(
+        feeDisbursal.changeFeeDisbursalController(universe.address, { from: masterManager }),
+      ).to.revert;
     });
   });
 });

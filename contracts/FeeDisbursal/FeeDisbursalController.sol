@@ -91,14 +91,14 @@ contract FeeDisbursalController is
 
     /// @notice check if feedisbursalcontroller may change
     /// @param newController instance of the new controller
-    function onChangeFeeDisbursalController(IFeeDisbursalController newController)
+    function onChangeFeeDisbursalController(address sender, IFeeDisbursalController newController)
         public
         constant
         returns (bool)
     {
         (bytes32 controllerContractId, ) = newController.contractId();
         require(controllerContractId == FEE_DISBURSAL_CONTROLLER);
-        return ACCESS_POLICY.allowed(msg.sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig);
+        return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig);
     }
 
     // implementation of ContractId

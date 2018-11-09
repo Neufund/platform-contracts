@@ -31,7 +31,7 @@ contract IFeeDisbursalController is
         returns (bool allow);
 
     /// @notice check wether the disbursal controller may be changed
-    function onChangeFeeDisbursalController(IFeeDisbursalController newController)
+    function onChangeFeeDisbursalController(address sender, IFeeDisbursalController newController)
         public
         constant
         returns (bool);
