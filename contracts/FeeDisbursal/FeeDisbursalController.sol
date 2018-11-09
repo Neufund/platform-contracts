@@ -68,7 +68,7 @@ contract FeeDisbursalController is
         return amount > 0 && isDisbursableToken(token) && disburserAllowed;
     }
 
-    function onRecycle()
+    function onRecycle(address /*token*/, address[] /*investors*/, uint256 /*until*/)
         public
         constant
         returns (bool allow)

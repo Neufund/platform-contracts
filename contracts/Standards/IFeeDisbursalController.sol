@@ -25,7 +25,7 @@ contract IFeeDisbursalController is
         returns (bool allow);
 
     /// @notice check wether this recycling can happen
-    function onRecycle()
+    function onRecycle(address token, address[] investors, uint256 until)
         public
         constant
         returns (bool allow);

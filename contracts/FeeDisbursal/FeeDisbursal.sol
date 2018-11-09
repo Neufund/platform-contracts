@@ -197,7 +197,7 @@ contract FeeDisbursal is
     function recycle(address token, address[] investors, uint256 until)
     public
     {        
-        require(_feeDisbursalController.onRecycle(), "");
+        require(_feeDisbursalController.onRecycle(token, investors, until), "");
         // for now we say that unclaimed funds on the platform will be distributed among all neu holders
         // this will make recycling much easier. @TODO discuss this approach
 
