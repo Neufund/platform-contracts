@@ -9,12 +9,14 @@ import "../Standards/IERC223Token.sol";
 import "../Standards/IFeeDisbursalController.sol";
 import "../Standards/IERC223LegacyCallback.sol";
 import "../Compat/IERC223LegacyCallbackCompat.sol";
+import "../KnownContracts.sol";
 
 contract FeeDisbursal is
     IERC223LegacyCallback,
     IERC223LegacyCallbackCompat,
     Serialization,
-    Math
+    Math,
+    KnownContracts
 {
 
     ////////////////////////
@@ -38,6 +40,12 @@ contract FeeDisbursal is
     event LogFundsRecycled(
         address indexed token,
         uint256 amount
+    );
+
+    event LogChangeFeeDisbursalController(
+        address oldController,
+        address newController,
+        address by
     );
 
     ////////////////////////
@@ -87,7 +95,8 @@ contract FeeDisbursal is
         public
     {
         require(universe != address(0x0));
-        require(controller != address(0x0));
+        (bytes32 controllerContractId, ) = controller.contractId();
+        require(controllerContractId == FEE_DISBURSAL_CONTROLLER);
         UNIVERSE = universe;
         _feeDisbursalController = controller;
     }
@@ -206,6 +215,24 @@ contract FeeDisbursal is
 
         // log
         emit LogFundsRecycled(token, totalAmount);
+    }
+
+    /// @notice get current controller
+    function feeDisbursalController()
+        public
+        returns (IFeeDisbursalController)
+    {
+        return _feeDisbursalController;
+    }
+
+    /// @notice update current controller
+    function feeDisbursalController(IFeeDisbursalController newController)
+        public
+    {
+        _feeDisbursalController.onChangeFeeDisbursalController(newController);
+        address oldController = address(_feeDisbursalController);
+        _feeDisbursalController = newController;
+        emit LogChangeFeeDisbursalController(oldController, address(newController), msg.sender);
     }
 
     /// @notice implementation of tokenfallback, calls the internal disburse function

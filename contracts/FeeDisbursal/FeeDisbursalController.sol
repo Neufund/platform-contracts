@@ -5,13 +5,16 @@ import "../Identity/IIdentityRegistry.sol";
 import "../KnownInterfaces.sol";
 import "../AccessControl/IAccessPolicy.sol";
 import "../AccessRoles.sol";
+import "../KnownContracts.sol";
+
 
 /// @title granular fee disbursal controller
 contract FeeDisbursalController is 
     IdentityRecord,
     IFeeDisbursalController,
     KnownInterfaces,
-    AccessRoles
+    AccessRoles,
+    KnownContracts
 {
 
     ////////////////////////
@@ -85,5 +88,26 @@ contract FeeDisbursalController is
             if (token == ALLOWED_DISBURSABLE_TOKENS[i]) return true;
         return false;
     }
+
+    /// @notice check if feedisbursalcontroller may change
+    /// @param newController instance of the new controller
+    function onChangeFeeDisbursalController(IFeeDisbursalController newController)
+        public
+        constant
+        returns (bool)
+    {
+        (bytes32 controllerContractId, ) = newController.contractId();
+        require(controllerContractId == FEE_DISBURSAL_CONTROLLER);
+        return ACCESS_POLICY.allowed(msg.sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig);
+    }
+
+    // implementation of ContractId
+    function contractId()
+        public
+        pure
+        returns (bytes32 id, uint256 version) {
+        return (FEE_DISBURSAL_CONTROLLER, 0);
+    }
+
 
 }

@@ -52,4 +52,7 @@ contract AccessRoles {
     // allows to disburse to the fee disbursal contract keccak("Disburser")
     bytes32 internal constant ROLE_DISBURSER = 0xd7ea6093d11d866c9e8449f8bffd9da1387c530ee40ad54f0641425bb0ca33b7;
 
+    // allows to manage feedisbursal controller keccak("DisbursalManager")
+    bytes32 internal constant ROLE_DISBURSAL_MANAGER = 0x677f87f7b7ef7c97e42a7e6c85c295cf020c9f11eea1e49f6bf847d7aeae1475;
+
 }

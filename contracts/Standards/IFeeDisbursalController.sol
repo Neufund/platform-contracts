@@ -1,8 +1,11 @@
 pragma solidity 0.4.25;
+import "../Standards/IContractId.sol";
 
 
 /// @title granular fee disbursal controller
-contract IFeeDisbursalController {
+contract IFeeDisbursalController is
+    IContractId
+{
 
 
     ////////////////////////
@@ -26,4 +29,11 @@ contract IFeeDisbursalController {
         public
         constant
         returns (bool allow);
+
+    /// @notice check wether the disbursal controller may be changed
+    function onChangeFeeDisbursalController(IFeeDisbursalController newController)
+        public
+        constant
+        returns (bool);
+
 }
