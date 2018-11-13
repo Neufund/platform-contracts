@@ -24,7 +24,7 @@ const devNetworkDeploymentConfigOverride = {
 // forked mainnet override
 const forkedLiveNetworkDeploymentConfigOverride = {
   ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
-  ISOLATED_UNIVERSE: true,
+  ISOLATED_UNIVERSE: false,
   // other addresses preserve ICBM or set to DEPLOYER
   addresses: {
     EURT_DEPOSIT_MANAGER: "0x9058B511C7450303F5Bc187aAf4cC25d7f7F88C6",
@@ -91,14 +91,19 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
     },
-    forked_live_nano: {
+    forked_nano_live: {
       network_id: 72,
       gas: 6500000,
       provider: nanoProvider(
         "http://ethexp-node.neustg.net:8545",
-        "44'/60'/105'/0",
-        "forked_live_nano",
+        // "44'/60'/0'/0",
+        "44'/60'/105'/2", // eurt legal manager
+        //"44'/60'/105'/0",
+        //"44'/60'/105'/11",
+        "forked_nano_live",
       ),
+      deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
+      // from: "0x08712307a86632b15d13ecfebe732c07cc026915", // -> for deployment "44'/60'/105'/11"
       gasPrice: 10000000000, // 10 gwei /shannon
     },
     localhost_live: {
@@ -115,14 +120,13 @@ module.exports = {
     },
     live: {
       network_id: 1, // Ethereum public network
-      host: "localhost",
-      port: 8543,
+      host: "eth-node.neuprd.net",
+      port: 8545,
       gas: 6500000, // close to current mainnet limit
       gasPrice: 5000000000, // 21 gwei /shannon
-      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
-        ISOLATED_UNIVERSE: true,
+        ISOLATED_UNIVERSE: false,
       },
       // optional config values
       // host - defaults to "localhost"
@@ -131,17 +135,21 @@ module.exports = {
       // gasPrice
       // from - default address to use for any transaction Truffle makes during migrations
     },
-    nano: {
-      network_id: "*",
-      gas: 4600000,
-      provider: nanoProvider("http://localhost:8543", "44'/60'/105'/1", "nano"),
-      gasPrice: 10000000000, // 10 gwei /shannon
-    },
-    nano_customer: {
-      network_id: "*",
-      gas: 4600000,
-      provider: nanoProvider("http://localhost:8543", "44'/60'/0'/0", "nano_customer"),
-      gasPrice: 10000000000, // 10 gwei /shannon
+    nano_live: {
+      network_id: 1,
+      gas: 6500000,
+      provider: nanoProvider(
+        "http://eth-node.neuprd.net:8545",
+        "44'/60'/0'/0",
+        //"44'/60'/105'/0",
+        "44'/60'/105'/11",
+        "nano_live",
+      ),
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+        ISOLATED_UNIVERSE: false,
+      },
+      gasPrice: 7000000000, // 10 gwei /shannon
     },
     inprocess_test: {
       network_id: "*",
