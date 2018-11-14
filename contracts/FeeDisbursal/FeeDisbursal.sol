@@ -354,8 +354,9 @@ contract FeeDisbursal is
     {
         lastIndex = min(until, _disbursals[token].length);
         claimableAmount = 0;
-        for (uint256 i = _disbursalProgress[token][spender]; i < lastIndex; i += 1) {
-            Disbursal storage disbursal = _disbursals[token][i];
+        uint256 currentIndex = 0;
+        for (currentIndex = _disbursalProgress[token][spender]; currentIndex < lastIndex; currentIndex += 1) {
+            Disbursal storage disbursal = _disbursals[token][currentIndex];
             // in case of just determining the recyclable amount of tokens, break when we
             // cross this time
             if ( onlyRecycleable && disbursal.recycleableAfterTimestamp > block.timestamp )
@@ -371,7 +372,7 @@ contract FeeDisbursal is
             // this should round down, so we should not be spending more than we have in our balance
             claimableAmount += proportion(disbursal.amount, proRataSpenderBalance, proRataTokenTotalSupply);
         }
-        return (claimableAmount, i);
+        return (claimableAmount, currentIndex);
     }
 
 }
