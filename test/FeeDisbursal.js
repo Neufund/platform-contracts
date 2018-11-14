@@ -543,9 +543,10 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
     it("should allow setting a new controller", async () => {
       let controller = await feeDisbursal.feeDisbursalController();
       expect(controller).to.equal(feeDisbursalController.address);
+      await accessPolicy.setUserRole(investors[0], roles.disbursalManager, GLOBAL, TriState.Allow);
       const newController = await FeeDisbursalController.new(universe.address);
       await feeDisbursal.changeFeeDisbursalController(newController.address, {
-        from: masterManager,
+        from: investors[0],
       });
       controller = await feeDisbursal.feeDisbursalController();
       expect(controller).to.equal(newController.address);

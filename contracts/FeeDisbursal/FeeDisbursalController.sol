@@ -92,8 +92,7 @@ contract FeeDisbursalController is
         returns (bool)
     {
         (bytes32 controllerContractId, ) = newController.contractId();
-        require(controllerContractId == FEE_DISBURSAL_CONTROLLER);
-        return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig);
+        return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig) && controllerContractId == FEE_DISBURSAL_CONTROLLER;
     }
 
     // implementation of ContractId
