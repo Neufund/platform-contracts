@@ -49,16 +49,14 @@ contract FeeDisbursalController is
 
     function onClaim(address token, address spender)
         public
-        constant
         returns (bool allow)
     {
         IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(spender));
         return isDisbursableToken(token) && claims.isVerified && !claims.accountFrozen;
     }
 
-    function onDisburse(address token, address disburser, uint256 amount, address proRataToken)
+    function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/)
         public
-        constant
         returns (bool allow)
     {   
         //@TODO: should we dissalow token and pro rata token to be the same?
@@ -70,7 +68,6 @@ contract FeeDisbursalController is
 
     function onRecycle(address /*token*/, address[] /*investors*/, uint256 /*until*/)
         public
-        constant
         returns (bool allow)
     {
         return true;
@@ -80,7 +77,6 @@ contract FeeDisbursalController is
     /// @param token address of token in question
     function isDisbursableToken(address token)
         public
-        constant
         returns (bool)
     {   
         // @TODO: migrate this to new, more flexible token registering Reclaimable in universe
@@ -93,7 +89,6 @@ contract FeeDisbursalController is
     /// @param newController instance of the new controller
     function onChangeFeeDisbursalController(address sender, IFeeDisbursalController newController)
         public
-        constant
         returns (bool)
     {
         (bytes32 controllerContractId, ) = newController.contractId();

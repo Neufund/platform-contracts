@@ -145,7 +145,7 @@ contract FeeDisbursal is
     {
         // only allow verified and active accounts to claim tokens
         require(_feeDisbursalController.onClaim(token, msg.sender), "");
-        (uint256 claimedAmount, uint256 lastIndex) = claimPrivate(token, msg.sender, until);
+        claimPrivate(token, msg.sender, until);
     }
 
     /// @notice claim multiple tokens, to be called an investor
@@ -156,7 +156,7 @@ contract FeeDisbursal is
         // only allow verified and active accounts to claim tokens
         for (uint256 i = 0; i < tokens.length; i += 1) {
             require(_feeDisbursalController.onClaim(tokens[i], msg.sender), "");
-            (uint256 claimedAmount, uint256 lastIndex) = claimPrivate(tokens[i], msg.sender, UINT256_MAX);
+            claimPrivate(tokens[i], msg.sender, UINT256_MAX);
         }
     }
 
@@ -184,7 +184,7 @@ contract FeeDisbursal is
         // we don't to do a verified check here, this serves purely to check how much is claimable for an address
         uint256[] memory result = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            (uint256 claimableAmount, uint256 lastIndex) = claimablePrivate(tokens[i], spender, UINT256_MAX, false);
+            (uint256 claimableAmount,) = claimablePrivate(tokens[i], spender, UINT256_MAX, false);
             result[i] = claimableAmount;
         }
         return result;
@@ -292,7 +292,7 @@ contract FeeDisbursal is
         // create a new disbursal entry
         if (!merged) 
             disbursals.push(Disbursal({
-                recycleableAfterTimestamp: block.timestamp + 1 years,
+                recycleableAfterTimestamp: block.timestamp + 365 days,
                 amount: amount,
                 proRataToken: proRataToken,
                 snapshotId: snapshotId,
