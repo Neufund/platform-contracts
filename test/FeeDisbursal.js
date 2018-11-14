@@ -134,6 +134,11 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(claimableAmount).to.be.bignumber.equal(expectedAmount);
     }
 
+    async function assertRecycleable(token, inv, index, expectedAmount) {
+      const recyleableAmount = await feeDisbursal.recycleable(token.address, inv, index);
+      expect(recyleableAmount).to.be.bignumber.equal(expectedAmount);
+    }
+
     async function assertTokenBalance(token, investor, expectedAmount) {
       const balance = await token.balanceOf(investor);
       expect(balance).to.be.bignumber.equal(expectedAmount);
@@ -557,7 +562,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(controller).to.equal(feeDisbursalController.address);
       const newController = await FeeDisbursalController.new(universe.address);
       await expect(
-        feeDisbursal.changeFeeDisbursalController(newController.address, { from: investors[0] }),
+        feeDisbursal.changeFeeDisbursalController(newController.address, { from: investors[3] }),
       ).to.revert;
     });
 
@@ -567,6 +572,49 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await expect(
         feeDisbursal.changeFeeDisbursalController(universe.address, { from: masterManager }),
       ).to.revert;
+    });
+
+    it("should recycle tokens", async () => {
+      await prepareInvestor(investors[0], Q18.mul(25), true);
+      await prepareInvestor(investors[1], Q18.mul(75), true);
+      await disburseEtherToken(disburser, Q18.mul(50));
+      increaseTime(60 * 60 * 24);
+      await disburseEtherToken(disburser, Q18.mul(50));
+      increaseTime(60 * 60 * 24);
+
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(25));
+      await assertClaimable(etherToken, investors[1], 1000, Q18.mul(75));
+      // await assertRecycleable(etherToken, investors, 1000, Q18.mul(0));
+
+      // forward one year, then these tokens become recycleable
+      increaseTime(60 * 60 * 24 * 365);
+      await disburseEtherToken(disburser, Q18.mul(30));
+      increaseTime(60 * 60 * 24);
+      await disburseEtherToken(disburser, Q18.mul(30));
+      increaseTime(60 * 60 * 24);
+
+      // 160 * 0.25
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(40));
+      // 160 * .75
+      await assertClaimable(etherToken, investors[1], 1000, Q18.mul(120));
+      // recycable stays the same
+      await assertRecycleable(etherToken, investors, 1000, Q18.mul(100));
+
+      // we get a new investor now who will have half of the NEU
+      await prepareInvestor(investors[2], Q18.mul(100), true);
+
+      // anyone can recycle
+      await feeDisbursal.recycle(etherToken.address, investors, Q18, { from: investors[2] });
+      await assertRecycleable(etherToken, investors, 1000, Q18.mul(0));
+      increaseTime(60 * 60 * 24);
+
+      // now the 100 recycleable tokens have been divided up to the three investors
+      // 0.5 * 100
+      await assertClaimable(etherToken, investors[2], 1000, Q18.mul(50));
+      // 60 * 0.25 + 100 * 0.125
+      await assertClaimable(etherToken, investors[0], 1000, Q18.mul(27.5));
+      // 160 - 50 - 27.5
+      await assertClaimable(etherToken, investors[1], 1000, Q18.mul(82.5));
     });
   });
 });

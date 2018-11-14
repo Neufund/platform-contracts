@@ -62,6 +62,7 @@ contract FeeDisbursalController is
         //@TODO: should we dissalow token and pro rata token to be the same?
         bool disburserAllowed = 
             UNIVERSE.isAnyOfInterfaceCollectionInstance(DISBURSE_ALLOWED_INTERFACES, disburser) ||
+            UNIVERSE.isSingleton(KNOWN_INTERFACE_FEE_DISBURSAL, disburser) ||
             ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
         return amount > 0 && isDisbursableToken(token) && disburserAllowed;
     }

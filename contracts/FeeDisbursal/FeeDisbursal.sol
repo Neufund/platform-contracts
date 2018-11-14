@@ -190,10 +190,10 @@ contract FeeDisbursal is
         return result;
     }
 
-    /// @notice claim a token, to be called an investor
+    /// @notice recycle a token for multiple investors
     /// @param token address of the recyclable token
     /// @param investors list of investors we want to recycle tokens for
-    /// @param until until what index to claim to
+    /// @param until until what index to recycle to
     function recycle(address token, address[] investors, uint256 until)
     public
     {        
@@ -215,6 +215,24 @@ contract FeeDisbursal is
 
         // log
         emit LogFundsRecycled(token, totalAmount);
+    }
+
+    /// @notice check how much we can recycle for multiple investors
+    /// @param token address of the recyclable token
+    /// @param investors list of investors we want to recycle tokens for
+    /// @param until until what index to recycle to
+    function recycleable(address token, address[] investors, uint256 until)
+    public
+    constant
+    returns (uint256)
+    {    
+        // cycle through all investors collect the claimable and recycleable funds
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < investors.length; i += 1) {
+            (uint256 claimableAmount,) = claimablePrivate(token, investors[i], until, true);
+            totalAmount += claimableAmount;
+        }
+        return totalAmount;
     }
 
     /// @notice get current controller
@@ -353,7 +371,7 @@ contract FeeDisbursal is
             // this should round down, so we should not be spending more than we have in our balance
             claimableAmount += proportion(disbursal.amount, proRataSpenderBalance, proRataTokenTotalSupply);
         }
-        return (claimableAmount, lastIndex);
+        return (claimableAmount, i);
     }
 
 }
