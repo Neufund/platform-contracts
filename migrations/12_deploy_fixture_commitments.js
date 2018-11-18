@@ -214,6 +214,19 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     { from: issuer.address },
   );
 
+  // compute minimum tickets
+  const minTicketEurUlps = etoDefiniton.etoTerms.MIN_TICKET_EUR_ULPS;
+  const EuroToken = artifacts.require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
+  const tokenRateOracle = await EuroToken.at(await universe.tokenExchangeRateOracle());
+  const currentETHRate = await tokenRateOracle.getExchangeRate(
+    await universe.etherToken(),
+    await universe.euroToken(),
+  );
+  const minTicketEth = minTicketEurUlps
+    .div(currentETHRate[0])
+    .round(0, 4)
+    .mul(Q18);
+
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
@@ -222,7 +235,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    Q18.mul(1.71621),
+    minTicketEth.add(Q18.mul(1.71621)),
     "ETH",
   );
   await investICBMAmount(
@@ -230,7 +243,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    Q18.mul(768),
+    minTicketEurUlps.add(Q18.mul(768)),
     "EUR",
   );
   if (final === CommitmentState.Whitelist) {
@@ -245,7 +258,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    Q18.mul(3.71621),
+    minTicketEth.add(Q18.mul(3.71621)),
     "ETH",
   );
   if (final === CommitmentState.Public) {
@@ -279,16 +292,16 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log(
     `Going to Claim.. putting signatures ${
-      etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL
+      etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL
     }`,
   );
   await etoCommitment._mockShiftBackTime(signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
-    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
   );
   await etoCommitment.nomineeConfirmsInvestmentAgreement(
-    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: nominee.address },
   );
   await ensureState(etoCommitment, CommitmentState.Claim);
@@ -338,7 +351,6 @@ async function investICBMAmount(investor, CONFIG, universe, etoCommitment, amoun
   } else {
     wallet = await LockedAccount.at(await universe.etherLock());
   }
-  console.log(amount);
   await wallet.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
     from: investor,
   });
