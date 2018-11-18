@@ -21,7 +21,6 @@ contract ETOCommitment is
     AccessControlled,
     Agreement,
     ETOTimedStateMachine,
-    IdentityRecord,
     Math,
     Serialization,
     IContractId
@@ -69,8 +68,6 @@ contract ETOCommitment is
     LockedAccount private EURO_LOCK;
     // equity token issued
     IEquityToken private EQUITY_TOKEN;
-    // wallet registry of KYC procedure
-    IIdentityRegistry private IDENTITY_REGISTRY;
     // currency rate oracle
     ITokenExchangeRateOracle private CURRENCY_RATES;
 
@@ -213,8 +210,7 @@ contract ETOCommitment is
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
-
-        etoTerms.requireValidTerms(PLATFORM_TERMS);
+        require(etoTerms.requireValidTerms(PLATFORM_TERMS));
 
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
@@ -227,7 +223,6 @@ contract ETOCommitment is
         EURO_TOKEN = universe.euroToken();
         ETHER_LOCK = LockedAccount(universe.etherLock());
         EURO_LOCK = LockedAccount(universe.euroLock());
-        IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         CURRENCY_RATES = ITokenExchangeRateOracle(universe.tokenExchangeRateOracle());
 
         ETO_TERMS = etoTerms;
@@ -326,9 +321,6 @@ contract ETOCommitment is
             // data contains investor address
             investor = decodeAddress(data);
         }
-        // kick out on KYC
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
-        require(claims.isVerified && !claims.accountFrozen, "NF_ETO_INV_NOT_VER");
         if (isEtherInvestment) {
             // compute EUR eurEquivalent via oracle if ether
             (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
@@ -447,13 +439,11 @@ contract ETOCommitment is
         constant
         returns (
             address platformWallet,
-            address identityRegistry,
             address universe,
             address platformTerms
             )
     {
         platformWallet = PLATFORM_WALLET;
-        identityRegistry = IDENTITY_REGISTRY;
         universe = UNIVERSE;
         platformTerms = PLATFORM_TERMS;
     }
@@ -477,6 +467,7 @@ contract ETOCommitment is
         withStateTransition()
         returns (
             bool isWhitelisted,
+            bool isEligible,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
             uint256 equityTokenInt,
@@ -488,7 +479,14 @@ contract ETOCommitment is
         // we use state() here because time was forwarded by withStateTransition
         bool applyDiscounts = state() == ETOState.Whitelist;
         uint256 fixedSlotsEquityTokenInt;
-        (isWhitelisted, minTicketEurUlps, maxTicketEurUlps, equityTokenInt, fixedSlotsEquityTokenInt) = ETO_TERMS.calculateContribution(
+        (
+            isWhitelisted,
+            isEligible,
+            minTicketEurUlps,
+            maxTicketEurUlps,
+            equityTokenInt,
+            fixedSlotsEquityTokenInt
+        ) = ETO_TERMS.calculateContribution(
             investor,
             _totalEquivEurUlps,
             ticket.equivEurUlps,
@@ -757,11 +755,14 @@ contract ETOCommitment is
         // calculate contribution
         (
             bool isWhitelisted,
+            bool isEligible,
             uint minTicketEurUlps,
             uint256 maxTicketEurUlps,
             uint256 equityTokenInt256,
             uint256 fixedSlotEquityTokenInt256
         ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
+        // kick out on KYC
+        require(isEligible, "NF_ETO_INV_NOT_VER");
         assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
         // kick on minimum ticket
         require(equivEurUlps >= minTicketEurUlps, "NF_ETO_MIN_TICKET");
@@ -770,14 +771,14 @@ contract ETOCommitment is
         // kick on cap exceeded
         require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "NF_ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
-        bool isLockedAccount = wallet != investor;
+        // bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
-        if (state() == ETOState.Whitelist) {
-            require(isWhitelisted || isLockedAccount, "NF_ETO_NOT_ON_WL");
+        if (applyDiscounts) {
+            require(isWhitelisted || wallet != investor, "NF_ETO_NOT_ON_WL");
         }
         // we trust NEU token so we issue NEU before writing state
         // issue only for "new money" so LockedAccount from ICBM is excluded
-        if (!isLockedAccount) {
+        if (wallet == investor) {
             (, uint256 investorNmk) = calculateNeumarkDistribution(NEUMARK.issueForEuro(equivEurUlps));
             if (investorNmk > 0) {
                 // now there is rounding danger as we calculate the above for any investor but then just once to get platform share in onClaimTransition
@@ -807,7 +808,7 @@ contract ETOCommitment is
         } else {
             ticket.amountEth += uint96(amount);
         }
-        ticket.usedLockedAccount = ticket.usedLockedAccount || isLockedAccount;
+        ticket.usedLockedAccount = ticket.usedLockedAccount || wallet != investor;
         // log successful commitment
         emit LogFundsCommitted(
             investor,
