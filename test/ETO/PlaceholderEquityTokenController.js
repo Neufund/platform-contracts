@@ -42,6 +42,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
+    // default terms have non transferable token
     [etoTerms] = await deployETOTerms(
       universe,
       ETOTerms,
@@ -231,12 +232,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
       // migrate data from parent
       await newController._finalizeMigration({ from: company });
-      // equity token still has old controller - transfers are enabled
+      // equity token still has old controller - transfers are disabled
       await testCommitment._distributeTokens(investors[0], 10);
-      await equityToken.transfer(investors[1], 1, { from: investors[0] });
+      await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
       // now anyone can replace token controller in equity token
       await equityToken.changeTokenController(newController.address);
-      await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
+      // new mocked controller allows to enable transfer at will
+      await newController._enableTransfers(true, { from: company });
+      equityToken.transfer(investors[1], 1, { from: investors[0] });
       // compare new and old controller - all should be imported
       expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
         await equityTokenController.companyLegalRepresentative(),
