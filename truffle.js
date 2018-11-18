@@ -96,10 +96,10 @@ module.exports = {
       gas: 6500000,
       provider: nanoProvider(
         "http://ethexp-node.neustg.net:8545",
-        // "44'/60'/0'/0",
-        "44'/60'/105'/2", // eurt legal manager
-        //"44'/60'/105'/0",
-        //"44'/60'/105'/11",
+        "44'/60'/0'/0",
+        // "44'/60'/105'/2", // eurt legal manager
+        // "44'/60'/105'/5",
+        // "44'/60'/105'/11",
         "forked_nano_live",
       ),
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
@@ -141,8 +141,8 @@ module.exports = {
       provider: nanoProvider(
         "http://eth-node.neuprd.net:8545",
         "44'/60'/0'/0",
-        //"44'/60'/105'/0",
-        "44'/60'/105'/11",
+        // "44'/60'/105'/0",
+        // "44'/60'/105'/11",
         "nano_live",
       ),
       deploymentConfigOverride: {

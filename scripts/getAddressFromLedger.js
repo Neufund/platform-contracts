@@ -7,7 +7,7 @@
 const ledger = require("ledgerco");
 
 const TIMEOUT = 5 * 1000;
-const DEFAULT_PATH = "44'/60'/0'/0";
+const DEFAULT_PATH = "44'/60'/0'/0/0";
 
 const path = process.argv[2] || DEFAULT_PATH;
 console.log("checking path:", path);
