@@ -54,6 +54,13 @@ contract MockPlaceholderEquityTokenController is
         transitionTo(GovState.Funded);
     }
 
+    function _enableTransfers(bool transfersEnabled)
+        public
+        onlyCompany
+    {
+        enableTransfers(transfersEnabled);
+    }
+
     //
     // Implements IControllerGovernance
     //
