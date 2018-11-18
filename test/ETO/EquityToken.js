@@ -54,6 +54,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
     [etoTerms, etoTermsDict] = await deployETOTerms(
+      universe,
       ETOTerms,
       durationTerms,
       tokenTerms,

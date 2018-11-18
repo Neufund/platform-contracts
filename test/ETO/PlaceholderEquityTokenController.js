@@ -42,7 +42,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
-    [etoTerms] = await deployETOTerms(ETOTerms, durationTerms, tokenTerms, shareholderRights);
+    [etoTerms] = await deployETOTerms(
+      universe,
+      ETOTerms,
+      durationTerms,
+      tokenTerms,
+      shareholderRights,
+    );
     equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
     equityToken = await EquityToken.new(
       universe.address,
