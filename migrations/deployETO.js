@@ -103,6 +103,7 @@ export async function deployETO(
   logDeployed(tokenTerms);
   console.log("Deploying ETOTerms");
   const [etoTerms] = await deployETOTerms(
+    universe,
     ETOTerms,
     durationTerms,
     tokenTerms,
@@ -176,6 +177,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const Universe = artifacts.require(config.artifacts.UNIVERSE);
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
+  const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   const IdentityRegistry = artifacts.require(config.artifacts.IDENTITY_REGISTRY);
   const ITokenExchangeRateOracle = artifacts.require(config.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
   const PlatformTerms = artifacts.require(config.artifacts.PLATFORM_TERMS);
@@ -184,14 +186,15 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
 
   console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
   const eto = await ETOCommitment.at(etoCommitmentAddress);
+  const etoTerms = await ETOTerms.at(await eto.etoTerms());
   const singletons = await eto.singletons();
-  const universe = await Universe.at(singletons[2]);
+  const universe = await Universe.at(singletons[1]);
   console.log("Universe discovered at ", ...good(universe.address));
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
   console.log("AccessPolicy discovered at ", ...good(accessPolicy.address));
-  const identityRegistry = await IdentityRegistry.at(singletons[1]);
+  const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
   console.log("IdentityRegistry discovered at ", ...good(identityRegistry.address));
-  const platformTerms = await PlatformTerms.at(singletons[3]);
+  const platformTerms = await PlatformTerms.at(singletons[2]);
   console.log("PlatformTerms discovered at ", ...good(platformTerms.address));
   const neumarkAddress = await universe.neumark();
   const neumark = await Neumark.at(neumarkAddress);
@@ -200,6 +203,13 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log(
     `Isolated universe...${neuAccessPolicy.address === accessPolicy.address ? "NO" : "YES"}`,
   );
+  let platformTermsVerified = true;
+  try {
+    platformTermsVerified = await etoTerms.requireValidTerms.call(singletons[2]);
+  } catch (e) {
+    platformTermsVerified = false;
+  }
+  console.log(`Platform Terms verified...${platformTermsVerified ? good("YES") : wrong("NO")}`);
   // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
   console.log("------------------------------------------------------");
   const state = await eto.state();
