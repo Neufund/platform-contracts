@@ -84,7 +84,7 @@ const defEtoHwniTerms = {
     EQUITY_TOKEN_SYMBOL: "RCH",
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
-    PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
+    PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
   reservationAndAcquisitionAgreement: "ipfs:QmdV6wnSBku1ho1hLwqeSvuaN9HD1E6E7jhyQHdWteRRWz",
   companyTokenHolderAgreement: "ipfs:QmRCwEaTf6dxSPwDqGEs9nZ6hbtvZdSCaTTWFzoFQYjkwo",
