@@ -5,6 +5,10 @@ import "../Standards/IContractId.sol";
 
 contract ShareholderRights is IContractId {
 
+    ////////////////////////
+    // Types
+    ////////////////////////
+
     enum VotingRule {
         // nominee has no voting rights
         NoVotingRights,
@@ -15,6 +19,16 @@ contract ShareholderRights is IContractId {
         // nominee passes the vote as is giving yes/no split
         Proportional
     }
+
+    ////////////////////////
+    // Constants state
+    ////////////////////////
+
+    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+
+    ////////////////////////
+    // Immutable state
+    ////////////////////////
 
     // a right to drag along (or be dragged) on exit
     bool public constant HAS_DRAG_ALONG_RIGHTS = true;
@@ -40,6 +54,8 @@ contract ShareholderRights is IContractId {
     uint256 public TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
     // number of tokens voting / total supply must be more than this to count the vote
     uint256 public VOTING_MAJORITY_FRAC = 10**17; // 10%
+    // url (typically IPFS hash) to investment agreement between nominee and company
+    string public INVESTMENT_AGREEMENT_TEMPLATE_URL;
 
     ////////////////////////
     // Constructor
@@ -54,7 +70,8 @@ contract ShareholderRights is IContractId {
         uint256 restrictedActVotingDuration,
         uint256 votingFinalizationDuration,
         uint256 tokenholdersQuorumFrac,
-        uint256 votingMajorityFrac
+        uint256 votingMajorityFrac,
+        string investmentAgreementTemplateUrl
     )
         public
     {
@@ -63,6 +80,7 @@ contract ShareholderRights is IContractId {
         require(uint(tagAlongVotingRule) < 4);
         // quorum < 100%
         require(tokenholdersQuorumFrac < 10**18);
+        require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
 
         GENERAL_VOTING_RULE = generalVotingRule;
         TAG_ALONG_VOTING_RULE = tagAlongVotingRule;
@@ -73,6 +91,7 @@ contract ShareholderRights is IContractId {
         VOTING_FINALIZATION_DURATION = votingFinalizationDuration;
         TOKENHOLDERS_QUORUM_FRAC = tokenholdersQuorumFrac;
         VOTING_MAJORITY_FRAC = votingMajorityFrac;
+        INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
     }
 
     //
