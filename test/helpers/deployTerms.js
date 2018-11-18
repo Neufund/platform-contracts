@@ -10,6 +10,7 @@ export const defaultShareholderTerms = {
   VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
   VOTING_MAJORITY_FRAC: Q18.mul(0.1),
+  INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
 };
 
 export const defDurTerms = {
@@ -22,6 +23,10 @@ export const defDurTerms = {
 export const constTokenTerms = {
   EQUITY_TOKENS_PRECISION: new web3.BigNumber(0),
   EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
+};
+
+export const constETOTerms = {
+  MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS: Q18.mul(100000),
 };
 
 export const defTokenTerms = {
@@ -37,14 +42,15 @@ export const defEtoTerms = {
   EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
-  ENABLE_TRANSFERS_ON_SUCCESS: true,
-  INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
-  PROSPECTUS_URL: "893289290300923809jdkljoi3",
+  ALLOW_RETAIL_INVESTORS: true,
+  ENABLE_TRANSFERS_ON_SUCCESS: false,
+  INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
   SHAREHOLDER_RIGHTS: null,
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
+  PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
 };
 
 export function validateTerms(artifact, terms) {
@@ -65,7 +71,7 @@ export function validateTerms(artifact, terms) {
   for (const input of constructor.inputs) {
     if (!(input.name in camelTerms)) {
       throw new Error(
-        `Input at ${idx} name in constructor "${input.name} could not be found in terms" of ${
+        `Input at ${idx} name in constructor "${input.name}" could not be found in terms of ${
           artifact.contract_name
         }`,
       );
@@ -131,6 +137,7 @@ export async function deployTokenTerms(artifact, terms, fullTerms) {
 }
 
 export async function deployETOTerms(
+  universe,
   artifact,
   durationTerms,
   tokenTerms,
@@ -140,6 +147,7 @@ export async function deployETOTerms(
 ) {
   const defaults = fullTerms ? {} : defEtoTerms;
   const etoTerms = Object.assign({}, defaults, terms || {});
+  etoTerms.UNIVERSE = universe.address;
   etoTerms.DURATION_TERMS = durationTerms.address;
   etoTerms.TOKEN_TERMS = tokenTerms.address;
   etoTerms.SHAREHOLDER_RIGHTS = shareholderRights.address;

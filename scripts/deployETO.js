@@ -31,7 +31,6 @@ module.exports = async function deploy() {
   const CONFIG = getConfig(web3, options.network, []);
   const DEPLOYER = getDeployerAccount(options.network, []);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
-  // "0x466351dba572e15a6defec46da61abee4b8472c4"
   const universe = await Universe.at(options.universe);
   const Q18 = CONFIG.Q18;
 

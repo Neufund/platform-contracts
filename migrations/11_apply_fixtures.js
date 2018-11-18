@@ -66,12 +66,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log(
       `amending agreement for EuroToken ${euroToken.address} and Universe ${universe.address}`,
     );
-    await euroToken.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
+    await euroToken.amendAgreement("ipfs:QmVMd3EaJm9SaYf6zZQnSexFCEDY5fCuGpMdtoUadZFCEX");
     await universe.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
 
     console.log("amending agreement for LockedAccounts");
-    await euroLock.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
-    await etherLock.amendAgreement("ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT");
+    await euroLock.amendAgreement("ipfs:QmPLDBY3ba93xvNxk85DXjDTQsdYqEDHr9g3C8uLuF7Nxf");
+    await etherLock.amendAgreement("ipfs:QmPLDBY3ba93xvNxk85DXjDTQsdYqEDHr9g3C8uLuF7Nxf");
 
     if (CONFIG.ISOLATED_UNIVERSE) return;
     // executed only in test deployment
@@ -108,13 +108,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const tokenRateOracle = await ITokenExchangeRateOracle.at(
       await universe.tokenExchangeRateOracle(),
     );
-    const currentETHRate = await tokenRateOracle.getExchangeRate(
-      etherTokenAddress,
-      euroTokenAddress,
-    );
-    if (!currentETHRate[0].eq(EUR_ETH_RATE)) {
-      throw new Error("could not set EUR/ETH rate");
-    }
 
     const currentNEURate = await tokenRateOracle.getExchangeRate(neuTokenAddress, euroTokenAddress);
     if (!currentNEURate[0].eq(EUR_NEU_RATE)) {

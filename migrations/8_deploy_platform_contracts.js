@@ -82,6 +82,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
     if (CONFIG.isLiveDeployment) {
       console.log("LIVE DEPLOYMENT");
+      console.log("Deployment parameters:");
+      console.log(CONFIG);
       if (!(await confirm("Are you sure you want to deploy? [y/n] "))) {
         throw new Error("Aborting!");
       }

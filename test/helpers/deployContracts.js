@@ -180,28 +180,29 @@ export async function deploySimpleExchangeUniverse(
   ];
 }
 
-export async function deployPlatformTerms(universe, universeManager, overrideTerms) {
-  const defaultTerms = {
-    PLATFORM_FEE_FRACTION: Q18.mul(0.03),
-    TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul(0.02),
-    PLATFORM_NEUMARK_SHARE: new web3.BigNumber(2),
-    IS_ICBM_INVESTOR_WHITELISTED: true,
-    MIN_TICKET_EUR_ULPS: Q18.mul(100),
-    DATE_TO_WHITELIST_MIN_DURATION: daysToSeconds(7),
-    TOKEN_RATE_EXPIRES_AFTER: hoursToSeconds(4),
-    MIN_WHITELIST_DURATION: daysToSeconds(0),
-    MAX_WHITELIST_DURATION: daysToSeconds(30),
-    MIN_PUBLIC_DURATION: daysToSeconds(0),
-    MAX_PUBLIC_DURATION: daysToSeconds(60),
-    MIN_OFFER_DURATION: daysToSeconds(1),
-    MAX_OFFER_DURATION: daysToSeconds(90),
-    MIN_SIGNING_DURATION: daysToSeconds(14),
-    MAX_SIGNING_DURATION: daysToSeconds(60),
-    MIN_CLAIM_DURATION: daysToSeconds(7),
-    MAX_CLAIM_DURATION: daysToSeconds(30),
-  };
+export const defaultPlatformTerms = {
+  PLATFORM_FEE_FRACTION: Q18.mul(0.03),
+  TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul(0.02),
+  PLATFORM_NEUMARK_SHARE: new web3.BigNumber(2),
+  IS_ICBM_INVESTOR_WHITELISTED: true,
+  MIN_TICKET_EUR_ULPS: Q18.mul(100),
+  DATE_TO_WHITELIST_MIN_DURATION: daysToSeconds(7),
+  TOKEN_RATE_EXPIRES_AFTER: hoursToSeconds(4),
+  MIN_WHITELIST_DURATION: daysToSeconds(0),
+  MAX_WHITELIST_DURATION: daysToSeconds(30),
+  MIN_PUBLIC_DURATION: daysToSeconds(0),
+  MAX_PUBLIC_DURATION: daysToSeconds(60),
+  MIN_OFFER_DURATION: daysToSeconds(1),
+  MAX_OFFER_DURATION: daysToSeconds(90),
+  MIN_SIGNING_DURATION: daysToSeconds(14),
+  MAX_SIGNING_DURATION: daysToSeconds(60),
+  MIN_CLAIM_DURATION: daysToSeconds(7),
+  MAX_CLAIM_DURATION: daysToSeconds(30),
+};
 
-  const terms = Object.assign(defaultTerms, overrideTerms || {});
+export async function deployPlatformTerms(universe, universeManager) {
+  // make shallow copy
+  const terms = Object.assign({}, defaultPlatformTerms);
   const termsKeys = Object.keys(terms);
   const termsValues = termsKeys.map(v => terms[v]);
 

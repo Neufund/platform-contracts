@@ -18,6 +18,7 @@ import {
   deployETOTerms,
   deployTokenTerms,
   constTokenTerms,
+  constETOTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -51,7 +52,7 @@ const ShareholderRights = artifacts.require("ShareholderRights");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 
 const PLATFORM_SHARE = web3.toBigNumber("2");
-const minDepositAmountEurUlps = Q18.mul(500);
+const minDepositAmountEurUlps = Q18.mul(50);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
 const platformWallet = "0x00447f37bde6c89ad47c1d1e16025e707d3d363a";
@@ -174,9 +175,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.companyLegalRep()).to.eq(company);
       const singletons = await etoCommitment.singletons();
       expect(singletons[0]).to.eq(platformWallet);
-      expect(singletons[1]).to.eq(identityRegistry.address);
-      expect(singletons[2]).to.eq(universe.address);
-      expect(singletons[3]).to.eq(platformTerms.address);
+      expect(singletons[1]).to.eq(universe.address);
+      expect(singletons[2]).to.eq(platformTerms.address);
 
       // check state machine
       expect(await etoCommitment.state()).to.be.bignumber.eq(0);
@@ -348,14 +348,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   });
 
   describe("special investment cases", () => {
-    async function deployEtoWithTicket() {
+    async function deployEtoWithTicket(termsOverride) {
       // with large maximum ticket
-      await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await deployETO(termsOverride);
       await prepareETOForPublic();
     }
 
     beforeEach(async () => {
-      await deployEtoWithTicket();
+      await deployEtoWithTicket({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
     });
 
     it("with changing ether price during ETO", async () => {
@@ -848,6 +848,31 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(ticket[1]).to.be.bignumber.gt(0);
     });
 
+    it("should allow invest over min and over max tickets for fixed slots", async () => {
+      await deployEtoWithTicket({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(150000) } });
+      const slotPriceFraction = Q18.mul(0.8);
+      const slotDp = discountedPrice(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+        Q18.sub(slotPriceFraction),
+      );
+      const slot1Amount = etoTermsDict.MIN_TICKET_EUR_ULPS.sub(slotDp);
+      const slot2Amount = etoTermsDict.MAX_TICKET_EUR_ULPS.add(slotDp);
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1]],
+        [slot1Amount, slot2Amount],
+        [slotPriceFraction, slotPriceFraction],
+        {
+          from: deployer,
+        },
+      );
+
+      await investAmount(investors[0], slot1Amount, "EUR", slotDp);
+      await investAmount(investors[1], slot2Amount, "EUR", slotDp);
+      expect(await euroToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
+        slot1Amount.add(slot2Amount),
+      );
+    });
+
     it("reverts on euro token overflow > 2**96");
     // simulates abandoned ETO
     it("go from Setup with start date to Refund with one large increase time");
@@ -976,7 +1001,12 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("should enable transfer on equity token on success", async () => {
       await deployETO({
-        ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000), ENABLE_TRANSFERS_ON_SUCCESS: true },
+        ovrETOTerms: {
+          MIN_TICKET_EUR_ULPS: constETOTerms.MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS,
+          MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
+          ENABLE_TRANSFERS_ON_SUCCESS: true,
+          ALLOW_RETAIL_INVESTORS: false,
+        },
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
@@ -1005,6 +1035,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // expect transfers are enabled
       await expect(equityToken.transfer(investors[0], 1, { from: investors[1] })).to.be.revert;
     });
+
+    // large tickets only
+    it("should invest in non-retail commitment");
   });
 
   describe("all claim cases", () => {
@@ -1174,6 +1207,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   describe("calculateContribution", () => {
     beforeEach(async () => {
       await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), { from: admin });
       await prepareETOForPublic();
     });
 
@@ -1188,26 +1222,28 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const contrib = await etoCommitment.calculateContribution(investors[0], false, amount);
       // in public phase
       expect(contrib[0]).to.be.false;
-      expect(contrib[1]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
+      // investor is eligible
+      expect(contrib[1]).to.be.true;
+      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
       // returns public max ticket
-      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
+      expect(contrib[3]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
       // always round down in equity token calc
       const equityAmount = amount.div(tokenTermsDict.TOKEN_PRICE_EUR_ULPS).floor();
-      expect(contrib[3]).to.be.bignumber.eq(equityAmount);
+      expect(contrib[4]).to.be.bignumber.eq(equityAmount);
       const neuAmount = investorShare(await neumark.incremental(amount));
-      expect(contrib[4]).to.be.bignumber.eq(neuAmount);
-      expect(contrib[5]).to.be.false;
+      expect(contrib[5]).to.be.bignumber.eq(neuAmount);
+      expect(contrib[6]).to.be.false;
       // invest
       await investAmount(investors[0], amount, "EUR");
       // next contrib
       const contrib2 = await etoCommitment.calculateContribution(investors[0], false, amount);
-      expect(contrib2[3]).to.be.bignumber.eq(contrib[3]);
+      expect(contrib2[4]).to.be.bignumber.eq(contrib[4]);
       // NEU reward drops
-      expect(contrib2[4]).to.be.bignumber.lt(contrib[4]);
+      expect(contrib2[5]).to.be.bignumber.lt(contrib[5]);
       // icbm contrib
       const contrib3 = await etoCommitment.calculateContribution(investors[0], true, amount);
-      expect(contrib3[3]).to.be.bignumber.eq(contrib[3]);
-      expect(contrib3[4]).to.be.bignumber.eq(0);
+      expect(contrib3[4]).to.be.bignumber.eq(contrib[4]);
+      expect(contrib3[5]).to.be.bignumber.eq(0);
     });
 
     it("should calculate contribution in whitelist with discounts", async () => {
@@ -1221,22 +1257,23 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const amount = Q18.mul(87219.291);
       const contrib = await etoCommitment.calculateContribution(investors[0], false, amount);
       expect(contrib[0]).to.be.true;
-      expect(contrib[1]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
+      expect(contrib[1]).to.be.true;
+      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
       // returns public max ticket
-      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
+      expect(contrib[3]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
       // always round down in equity token calc
       const equityAmount = amount.div(dp).floor();
-      expect(contrib[3]).to.be.bignumber.eq(equityAmount);
+      expect(contrib[4]).to.be.bignumber.eq(equityAmount);
       const neuAmount = investorShare(await neumark.incremental(amount));
-      expect(contrib[4]).to.be.bignumber.eq(neuAmount);
-      expect(contrib[5]).to.be.false;
+      expect(contrib[5]).to.be.bignumber.eq(neuAmount);
+      expect(contrib[6]).to.be.false;
       // not on the whitelist
       const contrib2 = await etoCommitment.calculateContribution(investors[1], false, amount);
       expect(contrib2[0]).to.be.false;
       // icbm
       const contrib3 = await etoCommitment.calculateContribution(investors[1], true, amount);
       expect(contrib3[0]).to.be.true;
-      expect(contrib3[3]).to.be.bignumber.eq(equityAmount);
+      expect(contrib3[4]).to.be.bignumber.eq(equityAmount);
     });
 
     it("calculate contribution in whitelist when fixed slots", async () => {
@@ -1254,18 +1291,19 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const slotPrice = discountedPrice(tokenTermsDict.TOKEN_PRICE_EUR_ULPS, discount);
       const contrib = await etoCommitment.calculateContribution(investors[0], false, fixedAmount);
       expect(contrib[0]).to.be.true;
-      expect(contrib[1]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
+      expect(contrib[1]).to.be.true;
+      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
       // returns public max ticket
-      expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
+      expect(contrib[3]).to.be.bignumber.eq(etoTermsDict.MAX_TICKET_EUR_ULPS);
       // always round down in equity token calc
       const equityAmount = fixedAmount.div(slotPrice).floor();
-      expect(contrib[3]).to.be.bignumber.eq(equityAmount);
+      expect(contrib[4]).to.be.bignumber.eq(equityAmount);
       const neuAmount = investorShare(await neumark.incremental(fixedAmount));
-      expect(contrib[4]).to.be.bignumber.eq(neuAmount);
-      expect(contrib[5]).to.be.false;
+      expect(contrib[5]).to.be.bignumber.eq(neuAmount);
+      expect(contrib[6]).to.be.false;
       const contrib2 = await etoCommitment.calculateContribution(investors[1], false, fixedAmount);
       // has a special deal for max ticket
-      expect(contrib2[2]).to.be.bignumber.eq(overMaxTicket);
+      expect(contrib2[3]).to.be.bignumber.eq(overMaxTicket);
       // invests partially from slot partially from wl
       const contrib3 = await etoCommitment.calculateContribution(
         investors[0],
@@ -1281,7 +1319,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         .mul(2)
         .div(mixedPrice)
         .floor();
-      expect(contrib3[3]).to.be.bignumber.eq(mixedEquityAmount);
+      expect(contrib3[4]).to.be.bignumber.eq(mixedEquityAmount);
     });
 
     it("should set max cap flag exceeded in whitelist and public", async () => {
@@ -1294,13 +1332,13 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
       const wlMaxCap = tokenTermsDict.MAX_NUMBER_OF_TOKENS_IN_WHITELIST.mul(dp);
       const wlContrib = await etoCommitment.calculateContribution(investors[0], false, wlMaxCap);
-      expect(wlContrib[5]).to.be.false;
+      expect(wlContrib[6]).to.be.false;
       const wlContrib2 = await etoCommitment.calculateContribution(
         investors[0],
         false,
         wlMaxCap.add(dp),
       );
-      expect(wlContrib2[5]).to.be.true;
+      expect(wlContrib2[6]).to.be.true;
       const discountedTokens = 10000;
       await investAmount(investors[0], dp.mul(discountedTokens), "EUR");
       await skipTimeTo(publicStartDate.add(1));
@@ -1308,13 +1346,13 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       const contrib = await etoCommitment.calculateContribution(investors[0], false, maxCap);
-      expect(contrib[5]).to.be.false;
+      expect(contrib[6]).to.be.false;
       const contrib2 = await etoCommitment.calculateContribution(
         investors[0],
         false,
         maxCap.add(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
       );
-      expect(contrib2[5]).to.be.true;
+      expect(contrib2[6]).to.be.true;
     });
 
     it("max cap flag exceeded should be not be set if within fixed slot", async () => {
@@ -1338,25 +1376,25 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         false,
         wlMaxCap.add(dp),
       );
-      expect(wlContrib2[5]).to.be.false;
+      expect(wlContrib2[6]).to.be.false;
       // whitelist investor without fixed slots is not allowed to do that
       const wlContrib = await etoCommitment.calculateContribution(
         investors[1],
         false,
         wlMaxCap.add(dp),
       );
-      expect(wlContrib[5]).to.be.true;
+      expect(wlContrib[6]).to.be.true;
       // same for icbm investor
       const wlContrib3 = await etoCommitment.calculateContribution(
         investors[2],
         true,
         wlMaxCap.add(dp),
       );
-      expect(wlContrib3[5]).to.be.true;
+      expect(wlContrib3[6]).to.be.true;
       // now fixed slot investor invests but this does not count into wl cap
       await investAmount(investors[0], wlMaxCap.add(dp), "EUR");
       const wlContrib4 = await etoCommitment.calculateContribution(investors[1], false, wlMaxCap);
-      expect(wlContrib4[5]).to.be.false;
+      expect(wlContrib4[6]).to.be.false;
       // but when regular wl invests the cap is expired
       await investAmount(investors[1], wlMaxCap, "EUR");
       const wlContrib5 = await etoCommitment.calculateContribution(
@@ -1364,14 +1402,52 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         false,
         etoTermsDict.MIN_TICKET_EUR_ULPS,
       );
-      expect(wlContrib5[5]).to.be.true;
+      expect(wlContrib5[6]).to.be.true;
       // but not for fixed slot
       const wlContrib6 = await etoCommitment.calculateContribution(
         investors[0],
         false,
         etoTermsDict.MIN_TICKET_EUR_ULPS,
       );
-      expect(wlContrib6[5]).to.be.false;
+      expect(wlContrib6[6]).to.be.false;
+    });
+
+    it("should overwrite max ticket for fixed slots", async () => {
+      const fixedAmount = Q18.mul(20000);
+      const overMaxTicket = etoTermsDict.MAX_TICKET_EUR_ULPS.add(10000);
+      await etoTerms.addWhitelisted([investors[1]], [overMaxTicket], [Q18], {
+        from: deployer,
+      });
+      const contrib = await etoCommitment.calculateContribution(investors[1], false, fixedAmount);
+      expect(contrib[3]).to.be.bignumber.eq(overMaxTicket);
+    });
+
+    it("should overwrite min ticket for fixed slots", async () => {
+      const fixedAmount = Q18.mul(20000);
+      const underMinTicket = etoTermsDict.MIN_TICKET_EUR_ULPS.sub(10000);
+      await etoTerms.addWhitelisted([investors[1]], [underMinTicket], [Q18], {
+        from: deployer,
+      });
+      const contrib = await etoCommitment.calculateContribution(investors[1], false, fixedAmount);
+      expect(contrib[2]).to.be.bignumber.eq(underMinTicket);
+      await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), { from: admin });
+    });
+
+    it("should return non eligible on non-kyc or frozen investor", async () => {
+      let contrib = await etoCommitment.calculateContribution(investors[1], false, Q18);
+      expect(contrib[1]).to.be.false;
+
+      // verify account
+      await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), { from: admin });
+      contrib = await etoCommitment.calculateContribution(investors[1], false, Q18);
+      expect(contrib[1]).to.be.true;
+
+      // freeze account
+      await identityRegistry.setClaims(investors[1], toBytes32("0x1"), toBytes32("0x9"), {
+        from: admin,
+      });
+      contrib = await etoCommitment.calculateContribution(investors[1], false, Q18);
+      expect(contrib[1]).to.be.false;
     });
 
     it("should calculate as public in Setup, Signing and later states");
@@ -2353,6 +2429,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, opts.ovrDurations);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, opts.ovrTokenTerms);
     [etoTerms, etoTermsDict] = await deployETOTerms(
+      universe,
       ETOTerms,
       durationTerms,
       tokenTerms,
