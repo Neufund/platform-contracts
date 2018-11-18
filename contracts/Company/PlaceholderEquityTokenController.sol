@@ -445,17 +445,19 @@ contract PlaceholderEquityTokenController is
     function aproveTokenOfferingPrivate(IETOCommitment tokenOffering)
         private
     {
+        // execute pending resolutions on completed ETO
         (uint256 newShares,,,,,,,) = tokenOffering.contributionSummary();
         uint256 totalShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES() + newShares;
         uint256 marginalPrice = tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
         string memory ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
+        // set new ISHA, increase number of shares, company valuations and establish shareholder rights matrix
         amendISHA(
             ISHAUrl,
             totalShares,
             totalShares * marginalPrice,
             tokenOffering.etoTerms().SHAREHOLDER_RIGHTS()
         );
-        // execute shareholder rights
+        // enable/disable transfers per ETO Terms
         enableTransfers(tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS());
         // move state to funded
         transitionTo(GovState.Funded);
