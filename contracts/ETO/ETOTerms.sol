@@ -371,11 +371,11 @@ contract ETOTerms is
         uint256 discountedAmount;
         minTicketEurUlps = MIN_TICKET_EUR_ULPS;
         maxTicketEurUlps = MAX_TICKET_EUR_ULPS;
+        WhitelistTicket storage wlTicket = _whitelist[investor];
+        // check if has access to discount
+        isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
         // whitelist use discount is possible
         if (applyWhitelistDiscounts) {
-            WhitelistTicket storage wlTicket = _whitelist[investor];
-            // check if has access to discount
-            isWhitelisted = wlTicket.fullTokenPriceFrac > 0;
             // can invest more than general max ticket
             maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, maxTicketEurUlps);
             // can invest less than general min ticket
