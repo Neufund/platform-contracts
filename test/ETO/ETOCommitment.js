@@ -302,6 +302,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         EvmError,
       );
     });
+
+    it("rejects setting agreement by nominee when start date is set");
   });
 
   describe("MockETOCommitment tests", () => {
@@ -1038,6 +1040,65 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     // large tickets only
     it("should invest in non-retail commitment");
+
+    it("should invest in ETO with public discount and have full valuation", async () => {
+      const publicDiscount = Q18.mul(0.2);
+      await deployETO({
+        ovrETOTerms: {
+          MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
+          ENABLE_TRANSFERS_ON_SUCCESS: false,
+          PUBLIC_DISCOUNT_FRAC: publicDiscount,
+          ALLOW_RETAIL_INVESTORS: true,
+        },
+      });
+      // check that whitelist investment is not affected by public discount
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1], investors[2]],
+        [0, 0, Q18.mul(10000)],
+        [Q18, Q18, Q18.mul(0.3)],
+        {
+          from: deployer,
+        },
+      );
+      await prepareETOForPublic();
+      const dp = discountedPrice(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+        etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+      );
+      await investAmount(investors[0], Q18.mul(76172.12882), "EUR", dp);
+      await investAmount(investors[1], Q18.mul(281.12882), "ETH", dp);
+      const slotPrice = discountedPrice(tokenTermsDict.TOKEN_PRICE_EUR_ULPS, Q18.mul(0.7));
+      await investAmount(investors[2], Q18.mul(10000), "EUR", slotPrice);
+      await investAmount(investors[2], Q18.mul(54).add(1), "ETH", dp);
+      await skipTimeTo(publicStartDate);
+
+      const publicPrice = discountedPrice(tokenTermsDict.TOKEN_PRICE_EUR_ULPS, publicDiscount);
+      await investAmount(investors[1], Q18.mul(827.12).sub(1), "ETH", publicPrice);
+      await investAmount(investors[3], Q18.mul(121.12), "ETH", publicPrice);
+
+      const tokensSold = (await etoCommitment.totalInvestment())[1];
+      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.sub(tokensSold).mul(publicPrice);
+      await investAmount(investors[1], missingAmount, "EUR", publicPrice);
+      const contribution = await moveETOToClaim(4, new web3.BigNumber(0));
+      await claimInvestor(investors[1]);
+      await claimInvestor(investors[0]);
+      await claimInvestor(investors[2]);
+      await claimInvestor(investors[3]);
+      const currDate = new web3.BigNumber(await latestTimestamp());
+      const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
+      await skipTimeTo(payoutDate);
+      const transitionTx = await etoCommitment.payout();
+      await expectValidPayoutState(transitionTx, contribution);
+      await expectValidPayoutStateFullClaim();
+      // check valuation of company in token controller
+      const expectedShares = contribution[0].add(etoTermsDict.EXISTING_COMPANY_SHARES);
+      const expectedValuation = expectedShares
+        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
+        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+      const shareholderInfo = await equityTokenController.shareholderInformation();
+      expect(shareholderInfo[0]).to.be.bignumber.eq(expectedShares);
+      expect(shareholderInfo[1]).to.be.bignumber.eq(expectedValuation);
+    });
   });
 
   describe("all claim cases", () => {
@@ -1220,8 +1281,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await skipTimeTo(publicStartDate.add(1));
       const amount = Q18.mul(87219.291).add(1);
       const contrib = await etoCommitment.calculateContribution(investors[0], false, amount);
-      // in public phase
-      expect(contrib[0]).to.be.false;
+      // is whitelisted
+      expect(contrib[0]).to.be.true;
       // investor is eligible
       expect(contrib[1]).to.be.true;
       expect(contrib[2]).to.be.bignumber.eq(etoTermsDict.MIN_TICKET_EUR_ULPS);
@@ -2849,7 +2910,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(contribution[0]);
     expect(generalInformation[0]).to.be.bignumber.eq(newTotalShares);
     expect(generalInformation[1]).to.be.bignumber.eq(
-      newTotalShares.mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
+      newTotalShares
+        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS)
+        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
     );
     expect(generalInformation[2]).to.eq(shareholderRights.address);
     const capTable = await equityTokenController.capTable();
