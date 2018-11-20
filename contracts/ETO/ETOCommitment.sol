@@ -258,7 +258,7 @@ contract ETOCommitment is
         require(etoTerms == ETO_TERMS);
         require(equityToken == EQUITY_TOKEN);
         assert(startDate < 0xFFFFFFFF);
-        // must be more than 14 days (platform terms!)
+        // must be more than NNN days (platform terms!)
         require(
             startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
             "NF_ETO_DATE_TOO_EARLY");
@@ -612,7 +612,7 @@ contract ETOCommitment is
         internal
         returns (bool)
     {
-        return legalRepresentative == NOMINEE;
+        return legalRepresentative == NOMINEE && startOfInternal(ETOState.Whitelist) == 0;
     }
 
     ////////////////////////
