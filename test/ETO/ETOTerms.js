@@ -634,7 +634,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       return amount.div(tokenTerms.TOKEN_PRICE_EUR_ULPS).floor();
     }
 
-    async function fullAmount(total, amount) {
+    async function fullAmount(total, amount, isWhitelisted) {
       const info = await etoTerms.calculateContribution(
         investorNoDiscount,
         total,
@@ -642,7 +642,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         amount,
         false,
       );
-      expect(info[0]).to.be.false;
+      expect(info[0]).to.eq(isWhitelisted);
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
@@ -651,9 +651,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     }
 
     it("simple amount", async () => {
-      await fullAmount(0, Q18.mul(1716.1991));
+      await fullAmount(0, Q18.mul(1716.1991), false);
       // invest again
-      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981));
+      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981), false);
     });
 
     it("simple amount from former fixed slot", async () => {
@@ -663,9 +663,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         from: deployer,
       });
 
-      await fullAmount(0, Q18.mul(1716.1991));
+      await fullAmount(0, Q18.mul(1716.1991), true);
       // invest again
-      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981));
+      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981), true);
     });
   });
 
