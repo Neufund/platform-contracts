@@ -96,27 +96,15 @@ module.exports = {
       gas: 6500000,
       provider: nanoProvider(
         "http://ethexp-node.neustg.net:8545",
-        "44'/60'/0'/0",
+        // "44'/60'/0'/1",
         // "44'/60'/105'/2", // eurt legal manager
-        // "44'/60'/105'/5",
+        "44'/60'/105'/10",
         // "44'/60'/105'/11",
         "forked_nano_live",
       ),
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
       // from: "0x08712307a86632b15d13ecfebe732c07cc026915", // -> for deployment "44'/60'/105'/11"
       gasPrice: 10000000000, // 10 gwei /shannon
-    },
-    localhost_live: {
-      network_id: "*",
-      host: "localhost",
-      port: 8545,
-      gas: 6500000,
-      gasPrice: 21000000000,
-      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
-      deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0x5b8ce2b715522998053fe2cead3e70f9a2b6ea17",
-        ISOLATED_UNIVERSE: true,
-      },
     },
     live: {
       network_id: 1, // Ethereum public network
@@ -140,8 +128,8 @@ module.exports = {
       gas: 6500000,
       provider: nanoProvider(
         "http://eth-node.neuprd.net:8545",
-        "44'/60'/0'/0",
-        // "44'/60'/105'/0",
+        // "44'/60'/0'/0",
+        "44'/60'/105'/2",
         // "44'/60'/105'/11",
         "nano_live",
       ),
@@ -149,7 +137,19 @@ module.exports = {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 7000000000, // 10 gwei /shannon
+      gasPrice: 10000000000, // 10 gwei /shannon
+    },
+    localhost_live: {
+      network_id: "*",
+      host: "localhost",
+      port: 8545,
+      gas: 6500000,
+      gasPrice: 8000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0x5b8ce2b715522998053fe2cead3e70f9a2b6ea17",
+        ISOLATED_UNIVERSE: true,
+      },
     },
     inprocess_test: {
       network_id: "*",
