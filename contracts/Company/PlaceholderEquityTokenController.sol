@@ -448,13 +448,13 @@ contract PlaceholderEquityTokenController is
         // execute pending resolutions on completed ETO
         (uint256 newShares,,,,,,,) = tokenOffering.contributionSummary();
         uint256 totalShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES() + newShares;
-        uint256 marginalPrice = tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
+        uint256 marginalTokenPrice = tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
         string memory ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
         // set new ISHA, increase number of shares, company valuations and establish shareholder rights matrix
         amendISHA(
             ISHAUrl,
             totalShares,
-            totalShares * marginalPrice,
+            totalShares * marginalTokenPrice * tokenOffering.etoTerms().TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE(),
             tokenOffering.etoTerms().SHAREHOLDER_RIGHTS()
         );
         // enable/disable transfers per ETO Terms
