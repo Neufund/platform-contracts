@@ -62,6 +62,7 @@ module.exports = async function inspectETO() {
   }
 
   const config = getConfig(web3, options.network, []);
+  console.log(config);
 
   // get artifacts
   const Universe = artifacts.require(config.artifacts.UNIVERSE);

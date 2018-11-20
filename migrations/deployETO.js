@@ -57,7 +57,7 @@ export async function deployETO(
   const canControlNeu = await neuAccessPolicy.allowed.call(
     deployer,
     roles.accessController,
-    neumarkAddress,
+    neuAccessPolicy.address,
     "",
   );
   console.log(
