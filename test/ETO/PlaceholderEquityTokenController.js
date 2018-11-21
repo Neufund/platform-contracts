@@ -69,9 +69,15 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(v).to.be.bignumber.eq(0);
     }
     const capTable = await equityTokenController.capTable();
+    expect(capTable.length).to.eq(2);
     expect(capTable[0].length).to.eq(0);
     expect(capTable[1].length).to.eq(0);
-    expect(capTable[2].length).to.eq(0);
+
+    const tokenOfferings = await equityTokenController.tokenOfferings();
+    expect(tokenOfferings.length).to.eq(2);
+    expect(tokenOfferings[0].length).to.eq(0);
+    expect(tokenOfferings[1].length).to.eq(0);
+
     expect((await equityTokenController.contractId())[0]).to.eq(
       contractId("PlaceholderEquityTokenController"),
     );
@@ -115,10 +121,23 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         PlaceholderEquityTokenController.abi,
       );
       tx.logs.push(...etoLogs);
-      // expectLogGovStateTransition();
+      expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
       expectLogResolutionExecuted(tx, toBytes32("0"), GovAction.RegisterOffer);
-      // LogOfferingRegistered();
-      // check cap table and investor information
+      expectLogOfferingRegistered(tx, toBytes32("0"), testCommitment.address, equityToken.address);
+      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
+      // no cap table
+      expect(await equityTokenController.capTable()).to.deep.eq([[], []]);
+      // no shareholder info yet
+      expect(await equityTokenController.shareholderInformation()).to.deep.eq([
+        new web3.BigNumber(0),
+        new web3.BigNumber(0),
+        ZERO_ADDRESS,
+      ]);
+      // but offering is there
+      expect(await equityTokenController.tokenOfferings()).to.deep.eq([
+        [testCommitment.address],
+        [equityToken.address],
+      ]);
     });
 
     it("rejects register ETO start from ETO not in universe", async () => {
@@ -152,6 +171,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Setup,
         CommitmentState.Whitelist,
       );
+      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       await testCommitment._generateTokens(amount);
       expect(await equityToken.balanceOf(testCommitment.address)).to.be.bignumber.eq(amount);
       await testCommitment._destroyTokens(amount);
@@ -163,12 +183,15 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       await expect(equityToken.destroyTokens(amount, { from: company })).to.be.revert;
       // approve eto - should not be able to issue tokens
       await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Claim);
+      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Funded);
       await expect(testCommitment._generateTokens(amount)).to.be.revert;
       await expect(testCommitment._destroyTokens(amount)).to.be.revert;
     });
 
-    // approval sets equity token in cap table, sets Agreement to ISHA, sets general company information, moves state to Funded
-    it("should approve ETO and execute transfer rights");
+    it("should approve ETO and execute transfer rights", async () => {
+      // approval sets equity token in cap table, sets Agreement to ISHA, sets general company information, moves state to Funded
+    });
+
     it("rejects approve ETO from ETO not registered before");
     it("rejects approve ETO from registered ETO that was removed from universe");
     it("should fail ETO - refund");
@@ -242,13 +265,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       equityToken.transfer(investors[1], 1, { from: investors[0] });
       // compare new and old controller - all should be imported
       expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
-        await equityTokenController.companyLegalRepresentative(),
+        await newController.companyLegalRepresentative(),
       );
-      expect(await equityTokenController.capTable()).to.deep.equal(
-        await equityTokenController.capTable(),
+      expect(await equityTokenController.capTable()).to.deep.equal(await newController.capTable());
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
+        await newController.tokenOfferings(),
       );
       expect(await equityTokenController.shareholderInformation()).to.deep.equal(
-        await equityTokenController.shareholderInformation(),
+        await newController.shareholderInformation(),
       );
     });
 
@@ -279,6 +303,24 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.action).to.be.bignumber.eq(actionType);
+  }
+
+  function expectLogGovStateTransition(tx, oldState, newState, timestamp) {
+    const event = eventValue(tx, "LogGovStateTransition");
+    expect(event).to.exist;
+    expect(event.args.oldState).to.be.bignumber.eq(oldState);
+    expect(event.args.newState).to.be.bignumber.eq(newState);
+    if (timestamp) {
+      expect(event.args.timestamp).to.be.bignumber.eq(timestamp);
+    }
+  }
+
+  function expectLogOfferingRegistered(tx, resolutionId, commitmentAddress, equityTokenAddress) {
+    const event = eventValue(tx, "LogOfferingRegistered");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.etoCommitment).to.eq(commitmentAddress);
+    expect(event.args.equityToken).to.eq(equityTokenAddress);
   }
 
   function expectLogMigratedTokenController(tx, resolutionId, newController) {
