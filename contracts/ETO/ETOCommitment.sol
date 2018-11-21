@@ -95,7 +95,7 @@ contract ETOCommitment is
     // terms contracts
     ETOTerms private ETO_TERMS;
     // reference to platform terms
-    PlatformTerms public PLATFORM_TERMS;
+    PlatformTerms private PLATFORM_TERMS;
 
     ////////////////////////
     // Mutable state
@@ -764,8 +764,8 @@ contract ETOCommitment is
         // kick out on KYC
         require(isEligible, "NF_ETO_INV_NOT_VER");
         assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
-        // kick on minimum ticket
-        require(equivEurUlps >= minTicketEurUlps, "NF_ETO_MIN_TICKET");
+        // kick on minimum ticket and you must buy at least one token!
+        require(equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps && equityTokenInt256 > 0, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
