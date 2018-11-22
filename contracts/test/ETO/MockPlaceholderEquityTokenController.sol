@@ -39,7 +39,8 @@ contract MockPlaceholderEquityTokenController is
         require(MIGRATED_CONTROLLER.state() == GovState.Migrated, "NF_NOT_MIGRATED");
         require(MIGRATED_CONTROLLER.newTokenController() == address(this), "NF_NOT_MIGRATED_TO_US");
         // migrate cap table
-        (address[] memory equityTokens, , address[] memory offerings) = MIGRATED_CONTROLLER.capTable();
+        (address[] memory equityTokens, ) = MIGRATED_CONTROLLER.capTable();
+        (address[] memory offerings, ) = MIGRATED_CONTROLLER.tokenOfferings();
         newOffering(IEquityToken(equityTokens[0]), offerings[0]);
         // migrate ISHA
         (,,string memory ISHAUrl,) = MIGRATED_CONTROLLER.currentAgreement();

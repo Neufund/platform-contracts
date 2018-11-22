@@ -63,7 +63,7 @@ export function getConfig(web3, network, accounts) {
     // deployed artifacts (may be mocked in overrides)
     artifacts: deployableArtifacts,
     shouldSkipDeployment: network.endsWith("_test") || network === "coverage",
-    isLiveDeployment: network.endsWith("_live"),
+    isLiveDeployment: network.endsWith("live"),
     shouldSkipStep: filename => {
       if (config.shouldSkipDeployment) return true;
       const stepNumber = parseInt(path.basename(filename), 10);

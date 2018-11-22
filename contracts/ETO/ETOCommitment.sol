@@ -95,7 +95,7 @@ contract ETOCommitment is
     // terms contracts
     ETOTerms private ETO_TERMS;
     // reference to platform terms
-    PlatformTerms public PLATFORM_TERMS;
+    PlatformTerms private PLATFORM_TERMS;
 
     ////////////////////////
     // Mutable state
@@ -258,7 +258,7 @@ contract ETOCommitment is
         require(etoTerms == ETO_TERMS);
         require(equityToken == EQUITY_TOKEN);
         assert(startDate < 0xFFFFFFFF);
-        // must be more than 14 days (platform terms!)
+        // must be more than NNN days (platform terms!)
         require(
             startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
             "NF_ETO_DATE_TOO_EARLY");
@@ -612,7 +612,7 @@ contract ETOCommitment is
         internal
         returns (bool)
     {
-        return legalRepresentative == NOMINEE;
+        return legalRepresentative == NOMINEE && startOfInternal(ETOState.Whitelist) == 0;
     }
 
     ////////////////////////
@@ -764,8 +764,8 @@ contract ETOCommitment is
         // kick out on KYC
         require(isEligible, "NF_ETO_INV_NOT_VER");
         assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
-        // kick on minimum ticket
-        require(equivEurUlps >= minTicketEurUlps, "NF_ETO_MIN_TICKET");
+        // kick on minimum ticket and you must buy at least one token!
+        require(equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps && equityTokenInt256 > 0, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded

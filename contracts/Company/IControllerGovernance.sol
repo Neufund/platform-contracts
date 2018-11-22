@@ -133,8 +133,16 @@ contract IControllerGovernance is
         constant
         returns (
             address[] equityTokens,
-            uint256[] shares,
-            address[] lastOfferings
+            uint256[] shares
+        );
+
+    // returns all started offerings
+    function tokenOfferings()
+        public
+        constant
+        returns (
+            address[] offerings,
+            address[] equityTokens
         );
 
     // officially inform shareholders, can be quarterly report, yearly closing
