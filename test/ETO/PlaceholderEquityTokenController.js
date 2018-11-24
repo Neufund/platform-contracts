@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { contractId, ZERO_ADDRESS, toBytes32 } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS, toBytes32, Q18 } from "../helpers/constants";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { GovState, GovAction } from "../helpers/govState";
 import { CommitmentState } from "../helpers/commitmentState";
@@ -9,9 +9,10 @@ import {
   deployETOTerms,
   deployShareholderRights,
   deployTokenTerms,
+  constTokenTerms,
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
-import { decodeLogs, eventValue } from "../helpers/events";
+import { decodeLogs, eventValue, eventWithIdxValue, hasEvent } from "../helpers/events";
 
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -32,33 +33,20 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   // let accessPolicy;
   let universe;
   let etoTerms;
-  // let etoTermsDict;
+  let etoTermsDict;
   let tokenTerms;
+  let tokenTermsDict;
   let testCommitment;
+  let shareholderRights;
+  let durationTerms;
 
   beforeEach(async () => {
     [universe] = await deployUniverse(admin, admin);
     await deployPlatformTerms(universe, admin);
-    const [shareholderRights] = await deployShareholderRights(ShareholderRights);
-    const [durationTerms] = await deployDurationTerms(ETODurationTerms);
-    [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
-    // default terms have non transferable token
-    [etoTerms] = await deployETOTerms(
-      universe,
-      ETOTerms,
-      durationTerms,
-      tokenTerms,
-      shareholderRights,
-    );
-    equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
-    equityToken = await EquityToken.new(
-      universe.address,
-      equityTokenController.address,
-      etoTerms.address,
-      nominee,
-      company,
-    );
-    await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
+    [shareholderRights] = await deployShareholderRights(ShareholderRights);
+    [durationTerms] = await deployDurationTerms(ETODurationTerms);
+    [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms);
+    await deployController();
   });
 
   it("should deploy and check initial state", async () => {
@@ -88,41 +76,23 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
   describe("offering actions", () => {
     beforeEach(async () => {
-      testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
-        universe.address,
-        nominee,
-        company,
-        etoTerms.address,
-        equityToken.address,
-      );
-      await universe.setCollectionsInterfaces(
-        [
-          knownInterfaces.commitmentInterface,
-          knownInterfaces.equityTokenInterface,
-          knownInterfaces.equityTokenControllerInterface,
-        ],
-        [testCommitment.address, equityToken.address, equityTokenController.address],
-        [true, true, true],
-        { from: admin },
-      );
-      await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+      await deployETO();
     });
 
-    // for each test all state data should be obtained from the contract and compared to what we want
     it("should register ETO start", async () => {
       const tx = await testCommitment._triggerStateTransition(
         CommitmentState.Setup,
         CommitmentState.Whitelist,
       );
       expect(await equityTokenController.commitmentObserver()).to.eq(testCommitment.address);
-      const etoLogs = decodeLogs(
+      const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
         PlaceholderEquityTokenController.abi,
       );
-      tx.logs.push(...etoLogs);
+      tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
-      expectLogResolutionExecuted(tx, toBytes32("0"), GovAction.RegisterOffer);
+      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.RegisterOffer);
       expectLogOfferingRegistered(tx, toBytes32("0"), testCommitment.address, equityToken.address);
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       // no cap table
@@ -162,7 +132,9 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       ).to.be.rejectedWith("NF_ETC_BAD_STATE");
     });
 
-    it("rejects register ETO with mismatching terms, addresses, tokens");
+    it(
+      "rejects register ETO with mismatching terms, addresses, tokens and equity token controller",
+    );
 
     it("should allow generating and destroying tokens only by registered ETO in Offering state", async () => {
       const amount = new web3.BigNumber(281871);
@@ -190,22 +162,125 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     it("should approve ETO and execute transfer rights", async () => {
       // approval sets equity token in cap table, sets Agreement to ISHA, sets general company information, moves state to Funded
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      const sharesAmount = 2761;
+      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      await testCommitment._generateTokens(amount);
+      let tx = await testCommitment._triggerStateTransition(
+        CommitmentState.Whitelist,
+        CommitmentState.Public,
+      );
+      // placeholder controller ignores this transition
+      let etcLogs = decodeLogs(
+        tx,
+        equityTokenController.address,
+        PlaceholderEquityTokenController.abi,
+      );
+      expect(etcLogs.length).to.eq(0);
+      // go to signing - also ignores
+      tx = await testCommitment._triggerStateTransition(
+        CommitmentState.Public,
+        CommitmentState.Signing,
+      );
+      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      expect(etcLogs.length).to.eq(0);
+      tx = await testCommitment._triggerStateTransition(
+        CommitmentState.Signing,
+        CommitmentState.Claim,
+      );
+      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      tx.logs.push(...etcLogs);
+      expectLogGovStateTransition(tx, GovState.Offering, GovState.Funded);
+      expectLogOfferingSucceeded(tx, testCommitment.address, equityToken.address, sharesAmount);
+      const tokenAction = etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS
+        ? GovAction.ContinueToken
+        : GovAction.StopToken;
+      expectLogResolutionExecuted(tx, 1, toBytes32("0x0"), tokenAction);
+      expectLogResolutionExecuted(tx, 0, toBytes32("0x0"), GovAction.AmendISHA);
+      expectLogTransfersStateChanged(
+        tx,
+        toBytes32("0x0"),
+        equityToken.address,
+        etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS,
+      );
+      const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(sharesAmount);
+      const expectedValuation = newTotalShares
+        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
+        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+      expectLogISHAAmended(
+        tx,
+        toBytes32("0x0"),
+        await testCommitment.signedInvestmentAgreementUrl(),
+        newTotalShares,
+        expectedValuation,
+        shareholderRights.address,
+      );
+      // verify offerings and cap table
+      expect(await equityTokenController.capTable()).to.deep.equal([
+        [equityToken.address],
+        [new web3.BigNumber(sharesAmount)],
+      ]);
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal([
+        [testCommitment.address],
+        [equityToken.address],
+      ]);
     });
 
-    it("rejects approve ETO from ETO not registered before");
-    it("rejects approve ETO from registered ETO that was removed from universe");
-    it("should fail ETO - refund");
-    it("rejects fail ETO from ETO not registered before");
-    // there are many rejection cases: like not from registered ETO, not from ETO, from other ETO in universe but not registered, from registered ETO but in Offering state
-    it(
-      "should allow transfer if transfers disabled only from registered ETO and only in Offering state",
-    );
-  });
+    it("should approve ETO with 0 new shares", async () => {
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      const tx = await testCommitment._triggerStateTransition(
+        CommitmentState.Signing,
+        CommitmentState.Claim,
+      );
+      const etcLogs = decodeLogs(
+        tx,
+        equityTokenController.address,
+        PlaceholderEquityTokenController.abi,
+      );
+      tx.logs.push(...etcLogs);
+      expectLogISHAAmended(
+        tx,
+        toBytes32("0x0"),
+        await testCommitment.signedInvestmentAgreementUrl(),
+        etoTermsDict.EXISTING_COMPANY_SHARES,
+        etoTermsDict.EXISTING_COMPANY_SHARES.mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE).mul(
+          tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+        ),
+        shareholderRights.address,
+      );
+    });
 
-  describe("post investment actions", () => {
-    beforeEach(async () => {
-      // prepare offering
-      testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
+    it("reject approve when not in funding state", async () => {
+      await expect(
+        testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
+      ).to.be.rejectedWith("NF_ETC_UNREG_COMMITMENT");
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Whitelist,
+        CommitmentState.Claim,
+      );
+      await expect(
+        testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
+      ).to.be.rejectedWith("NF_ETC_BAD_STATE");
+    });
+
+    it("rejects approve ETO from ETO not registered before", async () => {
+      // move original commitment to be ready for approval
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      // create identical new one
+      const testCommitmentRound2 = await TestETOCommitmentPlaceholderTokenController.new(
         universe.address,
         nominee,
         company,
@@ -213,16 +288,231 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         equityToken.address,
       );
       await universe.setCollectionsInterfaces(
-        [
-          knownInterfaces.commitmentInterface,
-          knownInterfaces.equityTokenInterface,
-          knownInterfaces.equityTokenControllerInterface,
-        ],
-        [testCommitment.address, equityToken.address, equityTokenController.address],
-        [true, true, true],
+        [knownInterfaces.commitmentInterface],
+        [testCommitmentRound2.address],
+        [true],
         { from: admin },
       );
-      await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+      await testCommitmentRound2.amendAgreement("AGREEMENT#HASH", { from: nominee });
+      // mock approval state
+      await expect(
+        testCommitmentRound2._triggerStateTransition(
+          CommitmentState.Whitelist,
+          CommitmentState.Claim,
+        ),
+      ).to.be.rejectedWith("NF_ETC_UNREG_COMMITMENT");
+    });
+
+    it("rejects approve ETO from registered ETO that was removed from universe", async () => {
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      await universe.setCollectionsInterfaces(
+        [knownInterfaces.commitmentInterface],
+        [testCommitment.address],
+        [false],
+        { from: admin },
+      );
+      await expect(
+        testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
+      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
+    });
+
+    it("should fail ETO", async () => {
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      const sharesAmount = 2761;
+      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      await testCommitment._generateTokens(amount);
+
+      const tx = await testCommitment._triggerStateTransition(
+        CommitmentState.Signing,
+        CommitmentState.Refund,
+      );
+      const etcLogs = decodeLogs(
+        tx,
+        equityTokenController.address,
+        PlaceholderEquityTokenController.abi,
+      );
+      tx.logs.push(...etcLogs);
+      expectLogGovStateTransition(tx, GovState.Offering, GovState.Setup);
+      expectLogOfferingFailed(tx, testCommitment.address, equityToken.address);
+      // no transfer change
+      expect(hasEvent(tx, "LogTransfersStateChanged")).to.be.false;
+      // no ISHA amended
+      expect(hasEvent(tx, "LogISHAAmended")).to.be.false;
+      // verify offerings and cap table
+      expect(await equityTokenController.capTable()).to.deep.equal([[], []]);
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal([[], []]);
+    });
+
+    it("should approve ETO after first one failed", async () => {
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      const sharesAmount = 2761;
+      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      await testCommitment._generateTokens(amount);
+      // eto failed - must destroy before state transition
+      await testCommitment._destroyTokens(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
+      // fail eto
+      await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
+      // deploy new terms but use same controller
+      // default terms have non transferable token
+      [etoTerms, etoTermsDict] = await deployETOTerms(
+        universe,
+        ETOTerms,
+        durationTerms,
+        tokenTerms,
+        shareholderRights,
+        {
+          ALLOW_RETAIL_INVESTORS: false,
+          ENABLE_TRANSFERS_ON_SUCCESS: true,
+          MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+        },
+      );
+      // now testCommitment will be replaced with new commitment
+      const oldCommitment = testCommitment;
+      await deployETO();
+      // make it clear
+      const newCommitment = testCommitment;
+      await newCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist);
+      // generate tokens via new commitment
+      await newCommitment._generateTokens(amount);
+      // old commitment cannot generate tokens
+      await expect(oldCommitment._generateTokens(amount)).to.be.rejectedWith(
+        "NF_EQTOKEN_NO_GENERATE",
+      );
+      // also cannot distribute (we didn't destroy all tokens above)
+      await expect(oldCommitment._distributeTokens(investors[0], 1)).to.be.revert;
+      await newCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Claim);
+      // the failed ETO didn't destroy all the tokens at the end which would be a critical bug in
+      // business logic. we however use this case for test transferability.
+      // here we take into account those non destroyed tokens
+      // verify offerings and cap table
+      const expectedShares = sharesAmount * 2 - 1; // we destroyed 1 share
+      expect(await equityTokenController.capTable()).to.deep.equal([
+        [equityToken.address],
+        [new web3.BigNumber(expectedShares)],
+      ]);
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal([
+        [newCommitment.address],
+        [equityToken.address],
+      ]);
+      // distribute and transfer (transfers were enabled for non retail eto)
+      await newCommitment._distributeTokens(investors[0], 10);
+      await equityToken.transfer(investors[1], 1, { from: investors[0] });
+    });
+
+    // there are many rejection cases: like not from registered ETO, not from ETO, from other ETO in universe but not registered, from registered ETO but in Offering state
+
+    it("rejects fail ETO from ETO not registered before", async () => {});
+
+    async function testTransfersInOffering(transfersEnabled) {
+      const amount = new web3.BigNumber(281871);
+      // transfers disabled before offering - typical transfer
+      expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
+        .be.false;
+      // eto contract trying to
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      await testCommitment._generateTokens(amount);
+      // transfers disabled for investors
+      expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
+        .be.false;
+      // transfers enabled for eto commitment
+      expect(
+        await equityTokenController.onTransfer(
+          testCommitment.address,
+          testCommitment.address,
+          investors[1],
+          0,
+        ),
+      ).to.be.true;
+      // brokered transfers for eto commitment disallowed
+      expect(
+        await equityTokenController.onTransfer(
+          testCommitment.address,
+          investors[0],
+          investors[1],
+          0,
+        ),
+      ).to.be.false;
+      // make actual token distribution
+      await testCommitment._distributeTokens(investors[0], 10);
+      await testCommitment._distributeTokens(investors[1], 20);
+      // approve eto
+      await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Claim);
+      expect(
+        await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0),
+      ).to.eq(transfersEnabled);
+      // transfers enabled for eto commitment
+      expect(
+        await equityTokenController.onTransfer(
+          testCommitment.address,
+          testCommitment.address,
+          investors[1],
+          0,
+        ),
+      ).to.be.true;
+      // brokered transfers for eto commitment disallowed
+      expect(
+        await equityTokenController.onTransfer(
+          testCommitment.address,
+          investors[0],
+          investors[1],
+          0,
+        ),
+      ).to.eq(transfersEnabled);
+      // distribution works in offering
+      await testCommitment._distributeTokens(investors[0], 1);
+      if (transfersEnabled) {
+        // make a few actual transfers
+        await equityToken.transfer(investors[1], 1, { from: investors[0] });
+        await equityToken.approve(investors[2], 5, { from: investors[1] });
+        await equityToken.transferFrom(investors[1], investors[3], 5, { from: investors[2] });
+      }
+    }
+    it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
+      await deployController({ ALLOW_RETAIL_INVESTORS: true, ENABLE_TRANSFERS_ON_SUCCESS: false });
+      await deployETO();
+      await testTransfersInOffering(false);
+    });
+
+    it("should allow transfers after eto if requested in terms", async () => {
+      await deployController({
+        ALLOW_RETAIL_INVESTORS: false,
+        ENABLE_TRANSFERS_ON_SUCCESS: true,
+        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+      });
+      await deployETO();
+      await testTransfersInOffering(true);
+    });
+
+    it("should prevent transfers from registered ETO when it fails", async () => {
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      const sharesAmount = 2761;
+      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      await testCommitment._generateTokens(amount);
+
+      await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
+
+      await expect(testCommitment._distributeTokens(investors[0], 1)).to.be.revert;
+    });
+  });
+
+  describe("post investment actions", () => {
+    beforeEach(async () => {
+      await deployETO();
       // register new offering
       await testCommitment._triggerStateTransition(
         CommitmentState.Setup,
@@ -232,7 +522,10 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
       // finish offering
-      await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Claim);
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Whitelist,
+        CommitmentState.Claim,
+      );
     });
 
     // startResolution, executeResolution, closeCompany, cancelCompanyClosing
@@ -251,7 +544,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       });
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
       expect(await equityTokenController.newTokenController()).to.eq(newController.address);
-      expectLogResolutionExecuted(tx, toBytes32("0"), GovAction.ChangeTokenController);
+      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
       expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
       // migrate data from parent
       await newController._finalizeMigration({ from: company });
@@ -278,8 +571,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     it("rejects migrating token controller not by company");
     it("rejects migrating token controller in wrong states");
-    it("should not allow closing token");
-    it("should allow changing token controller");
     // we let migrate multiple times in case first one goes wrong
     it("should migrate token controller twice");
     it("should execute general information rights");
@@ -287,19 +578,59 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     it("should return true onApprove");
     it("should return 0 on onAllowance");
     it("should return false on changing nominee");
+    it("revert on receive ether and euro tokens with NOT_IMPL");
   });
 
   // a set of tests vs EquityToken
   // first -> run a full test suite for tokens as in EquityToken.js for Placeholder controller with enabled transfers.
   it("rejects transfer if disallowed");
   it("rejects transferFrom is disallowed");
-  it("rejects closing token");
   it("rejects nominee change");
-  it("should change token controller if old controller properly migrated");
-  it("revert on receive ether and euro tokens with NOT_IMPL");
 
-  function expectLogResolutionExecuted(tx, resolutionId, actionType) {
-    const event = eventValue(tx, "LogResolutionExecuted");
+  async function deployController(termsOverride) {
+    // default terms have non transferable token
+    [etoTerms, etoTermsDict] = await deployETOTerms(
+      universe,
+      ETOTerms,
+      durationTerms,
+      tokenTerms,
+      shareholderRights,
+      termsOverride,
+    );
+    equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
+    equityToken = await EquityToken.new(
+      universe.address,
+      equityTokenController.address,
+      etoTerms.address,
+      nominee,
+      company,
+    );
+    await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
+  }
+
+  async function deployETO() {
+    testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
+      universe.address,
+      nominee,
+      company,
+      etoTerms.address,
+      equityToken.address,
+    );
+    await universe.setCollectionsInterfaces(
+      [
+        knownInterfaces.commitmentInterface,
+        knownInterfaces.equityTokenInterface,
+        knownInterfaces.equityTokenControllerInterface,
+      ],
+      [testCommitment.address, equityToken.address, equityTokenController.address],
+      [true, true, true],
+      { from: admin },
+    );
+    await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+  }
+
+  function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType) {
+    const event = eventWithIdxValue(tx, logIdx, "LogResolutionExecuted");
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.action).to.be.bignumber.eq(actionType);
@@ -323,10 +654,50 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event.args.equityToken).to.eq(equityTokenAddress);
   }
 
+  function expectLogTransfersStateChanged(tx, resolutionId, equityTokenAddress, transfersEnabled) {
+    const event = eventValue(tx, "LogTransfersStateChanged");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.equityToken).to.eq(equityTokenAddress);
+    expect(event.args.transfersEnabled).to.eq(transfersEnabled);
+  }
+
+  function expectLogOfferingSucceeded(tx, commitmentAddress, equityTokenAddress, newShares) {
+    const event = eventValue(tx, "LogOfferingSucceeded");
+    expect(event).to.exist;
+    expect(event.args.etoCommitment).to.eq(commitmentAddress);
+    expect(event.args.equityToken).to.eq(equityTokenAddress);
+    expect(event.args.newShares).to.be.bignumber.eq(newShares);
+  }
+
+  function expectLogOfferingFailed(tx, commitmentAddress, equityTokenAddress) {
+    const event = eventValue(tx, "LogOfferingFailed");
+    expect(event).to.exist;
+    expect(event.args.etoCommitment).to.eq(commitmentAddress);
+    expect(event.args.equityToken).to.eq(equityTokenAddress);
+  }
+
   function expectLogMigratedTokenController(tx, resolutionId, newController) {
     const event = eventValue(tx, "LogMigratedTokenController");
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.newController).eq(newController);
+  }
+
+  function expectLogISHAAmended(
+    tx,
+    resolutionId,
+    ishaUrl,
+    newTotalShares,
+    newValuation,
+    newShareholderRights,
+  ) {
+    const event = eventValue(tx, "LogISHAAmended");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.ISHAUrl).to.eq(ishaUrl);
+    expect(event.args.totalShares).to.be.bignumber.eq(newTotalShares);
+    expect(event.args.companyValuationEurUlps).to.be.bignumber.eq(newValuation);
+    expect(event.args.newShareholderRights).eq(newShareholderRights);
   }
 });
