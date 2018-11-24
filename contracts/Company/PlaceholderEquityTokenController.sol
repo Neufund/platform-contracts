@@ -412,7 +412,7 @@ contract PlaceholderEquityTokenController is
         if (_transfersEnabled != transfersEnabled) {
             _transfersEnabled = transfersEnabled;
         }
-        emit LogResolutionExecuted(0, transfersEnabled ? Action.StopToken : Action.ContinueToken);
+        emit LogResolutionExecuted(0, transfersEnabled ? Action.ContinueToken : Action.StopToken);
         emit LogTransfersStateChanged(0, _equityToken, transfersEnabled);
     }
 
