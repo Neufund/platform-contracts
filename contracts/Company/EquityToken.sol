@@ -174,11 +174,6 @@ contract EquityToken is
         return tokensToShares(totalSupply());
     }
 
-    // number of shares represented by tokens
-    function sharesBalanceOf(address owner) public constant returns (uint256) {
-        return tokensToShares(balanceOf(owner));
-    }
-
     function shareNominalValueEurUlps() public constant returns (uint256) {
         return SHARE_NOMINAL_VALUE_EUR_ULPS;
     }

@@ -19,4 +19,5 @@ export const GovAction = {
   AmendISHA: 7, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur)
   IssueTokensForExistingShares: 8, // (number of converted shares, allocation (address => balance))
   ChangeNominee: 9,
+  Downround: 10,
 };
