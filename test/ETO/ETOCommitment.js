@@ -3005,8 +3005,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     ]);
     expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(contribution[0]);
     // all tokens still belong to eto smart contract
-    expect(await equityToken.sharesBalanceOf(etoCommitment.address)).to.be.bignumber.eq(
-      contribution[0],
+    expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
+      contribution[0].mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
     );
     // just fees left in the contract
     expect(await etherToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(contribution[5]);
