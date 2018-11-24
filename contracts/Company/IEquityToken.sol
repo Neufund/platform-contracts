@@ -21,9 +21,6 @@ contract IEquityToken is
     // number of shares represented by tokens. we round to the closest value.
     function sharesTotalSupply() public constant returns (uint256);
 
-    // owner balance, in shares. we round to the closest value.
-    function sharesBalanceOf(address owner) public constant returns (uint256);
-
     /// nominal value of a share in EUR decimal(18) precision
     function shareNominalValueEurUlps() public constant returns (uint256);
 
