@@ -180,16 +180,54 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("agreement tests", () => {
-    // look for       it("should accept agreement", async () => { in EuroToken
-    it("should sign agreement on transfer");
+    it("should sign agreement on deposit", async () => {
+      expect(await equityToken.agreementSignedAtBlock(holders[0])).to.be.bignumber.eq(0);
+      await equityToken.issueTokens(1000, { from: holders[0] });
+      expect(await equityToken.agreementSignedAtBlock(holders[0])).to.be.bignumber.not.eq(0);
+    });
 
-    it("should not sign agreement on receiving transfer");
+    it("should not sign agreement on receiving transfer", async () => {
+      await equityToken.issueTokens(1000, { from: holders[0] });
+      await equityToken.transfer(holders[1], 1000, { from: holders[0] });
+      // transfer recipient does not implicitly sign
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.eq(0);
+    });
 
-    it("should sign agreement on approve");
+    it("should sign agreement on transfer", async () => {
+      await equityToken.issueTokens(1000, { from: holders[0] });
+      await equityToken.transfer(holders[1], 1000, { from: holders[0] });
+      // transfer recipient does not implicitly sign
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.eq(0);
+      await equityToken.transfer(holders[2], 1000, { from: holders[1] });
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.not.eq(0);
+    });
 
-    it("should sign agreement on distributeTokens for receiver");
+    it("should sign agreement on approve", async () => {
+      await equityToken.approve(holders[1], 1000, { from: holders[0] });
+      expect(await equityToken.agreementSignedAtBlock(holders[0])).to.be.bignumber.not.eq(0);
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.eq(0);
+    });
 
-    it("should sign agreement explicitely");
+    it("should sign agreement on distributeTokens for receiver", async () => {
+      await equityToken.issueTokens(1000, { from: holders[0] });
+      // todo: rethink and maybe we need another function in controller just to control distribute
+      // that would work together with transfer control
+      await equityToken.distributeTokens(holders[1], 1000, { from: holders[0] });
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.not.eq(0);
+    });
+
+    it("should sign agreement on destroy", async () => {
+      await equityToken.issueTokens(1000, { from: holders[0] });
+      await equityToken.transfer(holders[1], 1000, { from: holders[0] });
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.eq(0);
+      await equityToken.destroyTokens(1000, { from: holders[1] });
+      expect(await equityToken.agreementSignedAtBlock(holders[1])).to.be.bignumber.not.eq(0);
+    });
+
+    it("should sign agreement explicitely", async () => {
+      await equityToken.approve(holders[0], 0, { from: holders[0] });
+      expect(await equityToken.agreementSignedAtBlock(holders[0])).to.be.bignumber.not.eq(0);
+    });
   });
 
   describe("IBasicToken tests", () => {

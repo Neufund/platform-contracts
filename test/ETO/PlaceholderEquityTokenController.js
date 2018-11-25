@@ -13,6 +13,14 @@ import {
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { decodeLogs, eventValue, eventWithIdxValue, hasEvent } from "../helpers/events";
+import {
+  basicTokenTests,
+  deployTestErc223Callback,
+  deployTestErc677Callback,
+  erc223TokenTests,
+  erc677TokenTests,
+  standardTokenTests,
+} from "../helpers/tokenTestCases";
 
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -227,6 +235,12 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         [testCommitment.address],
         [equityToken.address],
       ]);
+      // check if agreement was amended
+      const agreement = await equityTokenController.currentAgreement();
+      // as its signed as a result of resolution, the issuer contract is the signing party
+      expect(agreement[0]).to.eq(equityTokenController.address);
+      expect(agreement[2]).to.eq("RAAAAA");
+      expect(agreement[3]).to.be.bignumber.eq(0);
     });
 
     it("should approve ETO with 0 new shares", async () => {
@@ -528,11 +542,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
     });
 
-    // startResolution, executeResolution, closeCompany, cancelCompanyClosing
-    it("reverts on voting rights");
-    // tokenFallback is used to pay dividend in full implementation
-    it("reverts on tokenFallback");
-
     it("should migrate token controller", async () => {
       // deploy new mocked token controller
       const newController = await MockPlaceholderEquityTokenController.new(
@@ -571,21 +580,143 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     it("rejects migrating token controller not by company");
     it("rejects migrating token controller in wrong states");
+
+    it("reverts on investor rights when operational", async () => {
+      await expect(
+        equityTokenController.startResolution(
+          "Secondary Offering",
+          "ipfs:blah",
+          GovAction.RegisterOffer,
+          toBytes32(testCommitment.address),
+          { from: company },
+        ),
+      ).to.be.rejectedWith("NF_NOT_IMPL");
+      await expect(equityTokenController.executeResolution(toBytes32("0x0"))).to.be.rejectedWith(
+        "NF_NOT_IMPL",
+      );
+      await expect(equityTokenController.closeCompany()).to.be.rejectedWith("NF_INV_STATE");
+      await expect(equityTokenController.cancelCompanyClosing()).to.be.rejectedWith("NF_INV_STATE");
+    });
+
+    it("revert on receive ether and euro tokens with NOT_IMPL", async () => {
+      // tokenFallback is used to pay dividend in full implementation
+      await expect(equityTokenController.tokenFallback(ZERO_ADDRESS, 0, "")).to.be.rejectedWith(
+        "NF_NOT_IMPL",
+      );
+    });
+
     // we let migrate multiple times in case first one goes wrong
     it("should migrate token controller twice");
-    it("should execute general information rights");
-    it("rejects amend Agreement (ISHA) by company");
-    it("should return true onApprove");
-    it("should return 0 on onAllowance");
-    it("should return false on changing nominee");
-    it("revert on receive ether and euro tokens with NOT_IMPL");
+
+    it("should execute general information rights", async () => {
+      const tx = await equityTokenController.issueGeneralInformation(
+        "TOKENHOLDERS CALL",
+        "ipfs:blah",
+        { from: company },
+      );
+      expectLogGeneralInformation(tx, company, "TOKENHOLDERS CALL", "ipfs:blah");
+    });
+
+    it("rejects general information not from company", async () => {
+      await expect(
+        equityTokenController.issueGeneralInformation("TOKENHOLDERS CALL", "ipfs:blah", {
+          from: admin,
+        }),
+      ).to.be.rejectedWith("NF_ONLY_COMPANY");
+    });
+
+    it("rejects general information in setup", async () => {
+      await deployController();
+      await expect(
+        equityTokenController.issueGeneralInformation("TOKENHOLDERS CALL", "ipfs:blah", {
+          from: admin,
+        }),
+      ).to.be.rejectedWith("NF_INV_STATE");
+    });
+
+    it("rejects amend Agreement (ISHA) by company", async () => {
+      // ISHA amendment only through resolution, company cannot do that
+      await expect(equityTokenController.amendAgreement("NEW")).to.be.revert;
+    });
+
+    it("should return true onApprove", async () => {
+      expect(await equityTokenController.onApprove(investors[0], investors[1], 0)).to.be.true;
+    });
+
+    it("should return 0 on onAllowance", async () => {
+      expect(
+        await equityTokenController.onAllowance(investors[0], investors[1]),
+      ).to.be.bignumber.eq(0);
+    });
+
+    it("should return false on changing nominee", async () => {
+      expect(
+        await equityTokenController.onChangeNominee(equityToken.address, nominee, investors[0]),
+      ).to.be.false;
+    });
   });
 
-  // a set of tests vs EquityToken
-  // first -> run a full test suite for tokens as in EquityToken.js for Placeholder controller with enabled transfers.
-  it("rejects transfer if disallowed");
-  it("rejects transferFrom is disallowed");
-  it("rejects nominee change");
+  describe("EquityToken basic functions", () => {
+    const initialBalance = new web3.BigNumber(5092819281);
+    const getToken = () => equityToken;
+
+    beforeEach(async () => {
+      // token must be transferable to run standard test suite
+      await deployController({
+        ALLOW_RETAIL_INVESTORS: false,
+        ENABLE_TRANSFERS_ON_SUCCESS: true,
+        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+      });
+      await deployETO();
+      // register new offering
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Setup,
+        CommitmentState.Whitelist,
+      );
+      // issue equity token with Q18
+      await testCommitment._generateTokens(initialBalance);
+      // finish offering
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Whitelist,
+        CommitmentState.Claim,
+      );
+
+      await testCommitment._distributeTokens(investors[1], initialBalance);
+    });
+
+    describe("IBasicToken tests", () => {
+      basicTokenTests(getToken, investors[1], investors[2], initialBalance);
+    });
+
+    describe("IERC20Allowance tests", () => {
+      standardTokenTests(getToken, investors[1], investors[2], investors[3], initialBalance);
+    });
+
+    describe("IERC677Token tests", () => {
+      let erc667cb;
+      const getTestErc667cb = () => erc667cb;
+
+      beforeEach(async () => {
+        erc667cb = await deployTestErc677Callback();
+      });
+
+      erc677TokenTests(getToken, getTestErc667cb, investors[1], initialBalance);
+    });
+
+    describe("IERC223Token tests", () => {
+      let erc223cb;
+      const getTestErc223cb = () => erc223cb;
+
+      beforeEach(async () => {
+        erc223cb = await deployTestErc223Callback(true);
+      });
+
+      erc223TokenTests(getToken, getTestErc223cb, investors[1], investors[2], initialBalance);
+    });
+    it("rejects nominee change", async () => {
+      await expect(equityToken.changeNominee(investors[0])).to.be.revert;
+    });
+  });
 
   async function deployController(termsOverride) {
     // default terms have non transferable token
@@ -682,6 +813,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.newController).eq(newController);
+  }
+
+  function expectLogGeneralInformation(tx, companyLegalRep, infoType, infoUrl) {
+    const event = eventValue(tx, "LogGeneralInformation");
+    expect(event).to.exist;
+    expect(event.args.companyLegalRep).to.eq(companyLegalRep);
+    expect(event.args.informationType).eq(infoType);
+    expect(event.args.informationUrl).eq(infoUrl);
   }
 
   function expectLogISHAAmended(

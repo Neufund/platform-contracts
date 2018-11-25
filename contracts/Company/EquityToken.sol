@@ -135,6 +135,7 @@ contract EquityToken is
     function issueTokens(uint256 amount)
         public
         onlyIfIssueAllowed(address(this), amount)
+        acceptAgreement(msg.sender)
     {
         mGenerateTokens(msg.sender, amount);
         emit LogTokensIssued(msg.sender, _tokenController, amount);
@@ -152,6 +153,7 @@ contract EquityToken is
     function destroyTokens(uint256 amount)
         public
         onlyIfDestroyAllowed(msg.sender, amount)
+        acceptAgreement(msg.sender)
     {
         mDestroyTokens(msg.sender, amount);
         emit LogTokensDestroyed(msg.sender, _tokenController, amount);

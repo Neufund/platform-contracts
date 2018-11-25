@@ -74,7 +74,7 @@ contract PlaceholderEquityTokenController is
     }
 
     modifier onlyCompany() {
-        require(msg.sender == COMPANY_LEGAL_REPRESENTATIVE, "ONLY_COMPANY");
+        require(msg.sender == COMPANY_LEGAL_REPRESENTATIVE, "NF_ONLY_COMPANY");
         _;
     }
 
@@ -200,7 +200,7 @@ contract PlaceholderEquityTokenController is
         onlyCompany
         returns (bytes32 /*resolutionId*/)
     {
-        revert();
+        revert("NF_NOT_IMPL");
     }
 
 
@@ -208,21 +208,21 @@ contract PlaceholderEquityTokenController is
         public
         onlyOperational
     {
-        revert();
+        revert("NF_NOT_IMPL");
     }
 
     function closeCompany()
         public
         onlyState(GovState.Closing)
     {
-        revert();
+        revert("NF_NOT_IMPL");
     }
 
     function cancelCompanyClosing()
         public
         onlyState(GovState.Closing)
     {
-        revert();
+        revert("NF_NOT_IMPL");
     }
 
     function changeTokenController(address newController)
@@ -329,7 +329,7 @@ contract PlaceholderEquityTokenController is
     function tokenFallback(address, uint256, bytes)
         public
     {
-        revert("NOT_IMPL");
+        revert("NF_NOT_IMPL");
     }
 
     //
