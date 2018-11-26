@@ -790,8 +790,11 @@ contract ETOCommitment is
         }
         // issue equity token
         assert(equityTokenInt256 + ticket.equityTokenInt < 2**32);
+        // this will also check ticket.amountEurUlps + uint96(amount) as ticket.equivEurUlps is always >= ticket.amountEurUlps
         assert(equivEurUlps + ticket.equivEurUlps < 2**96);
         assert(amount < 2**96);
+        // practically impossible: would require price of ETH smaller than 1 EUR and > 2**96 amount of ether
+        assert(uint256(ticket.amountEth) + amount < 2**96);
         EQUITY_TOKEN.issueTokens(uint32(equityTokenInt256));
         // update total investment
         _totalEquivEurUlps += uint96(equivEurUlps);
