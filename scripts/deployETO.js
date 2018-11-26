@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 
 require("babel-register");
+const moment = require("moment");
 const commandLineArgs = require("command-line-args");
 const confirm = require("node-ask").confirm;
 const fs = require("fs");
@@ -70,6 +71,9 @@ module.exports = async function deploy() {
           console.log(
             `${k}: ${terms[k].toString(10)} == ${terms[k].div(Q18).toString(10)} * 10**18`,
           );
+        } else if (k.endsWith("_DURATION")) {
+          const duration = moment.duration(terms[k].toNumber() * 1000);
+          console.log(`${k}: ${terms[k].toString(10)} = ${duration.humanize()}`);
         } else {
           console.log(`${k}: ${terms[k].toString(10)}`);
         }
