@@ -304,7 +304,15 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     });
 
-    it("rejects setting agreement by nominee when start date is set");
+    it("rejects setting agreement by nominee when start date is set", async () => {
+      await etoCommitment.amendAgreement("ABBA", { from: nominee });
+      startDate = new web3.BigNumber(await latestTimestamp()).add(1);
+      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+        from: company,
+      });
+      await expect(etoCommitment.amendAgreement("ABBA", { from: nominee })).to.be.revert;
+    });
   });
 
   describe("MockETOCommitment tests", () => {
@@ -793,9 +801,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
     });
 
-    it("sign to claim with feeDisbursal as simple address");
-    // it("sign to claim with feeDisbursal as contract implementing fallback");
-
     it("should refund if company signs too late", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
@@ -946,7 +951,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     });
 
-    it("reverts on euro token overflow > 2**96");
     // simulates abandoned ETO
     it("go from Setup with start date to Refund with one large increase time");
     it(
@@ -955,6 +959,41 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   });
 
   describe("special ETO configurations", () => {
+    it("reverts overflow on internal equity token 32 bit", async () => {
+      // equity tokens in investor ticket are stored in 32bit uint, test below tries to overflow it
+      const two = new web3.BigNumber(2);
+      await deployETO({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(128) },
+        ovrTokenTerms: { TOKEN_PRICE_EUR_ULPS: two.pow(64), MAX_NUMBER_OF_TOKENS: two.pow(128) },
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      await etoCommitment.handleStateTransitions();
+      // will generate exactly 2^32 - 2 tokens
+      await investAmount(investors[0], two.pow(96).sub(two.pow(64).mul(2)), "EUR");
+      // will generate 1 token
+      await investAmount(investors[0], two.pow(64), "EUR");
+      await expect(investAmount(investors[0], two.pow(64), "EUR")).to.be.revert;
+    });
+
+    it("reverts on euro token overflow > 2**96", async () => {
+      // investor ticket stores eurt equivalend in 96bit, this attempts to overflow it (without overflowing equity tokens)
+      const two = new web3.BigNumber(2);
+      await deployETO({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(128), MIN_TICKET_EUR_ULPS: two.pow(90) },
+        ovrTokenTerms: { TOKEN_PRICE_EUR_ULPS: two.pow(90), MAX_NUMBER_OF_TOKENS: two.pow(128) },
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      await etoCommitment.handleStateTransitions();
+      // will generate 62 tokens
+      await investAmount(investors[0], two.pow(96).sub(two.pow(90).mul(2)), "EUR");
+      // will generate 1 token
+      await investAmount(investors[0], two.pow(90), "EUR");
+      expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(63);
+      await expect(investAmount(investors[0], two.pow(90), "EUR")).to.be.revert;
+    });
+
     it("should skip whitelist in ETO with 0 whitelist period", async () => {
       await deployETO({ ovrDurations: { WHITELIST_DURATION: new web3.BigNumber(0) } });
       await prepareETOForPublic();
@@ -1111,6 +1150,33 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     // large tickets only
     it("should invest in non-retail commitment");
+
+    it("sign to claim with feeDisbursal as simple address", async () => {
+      // set simple address as fee disbursal
+      const simpleAccountDisbursal = investors[3];
+      await universe.setSingleton(knownInterfaces.feeDisbursal, simpleAccountDisbursal, {
+        from: admin,
+      });
+      // allow to receive eurt
+      await euroTokenController.setAllowedTransferTo(simpleAccountDisbursal, true, { from: admin });
+      await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+      );
+      await investAmount(investors[1], missingAmount, "EUR");
+      await moveETOToClaim(1, new web3.BigNumber(0));
+      await claimInvestor(investors[1]);
+      const currDate = new web3.BigNumber(await latestTimestamp());
+      const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
+      await skipTimeTo(payoutDate);
+      await etoCommitment.payout();
+      // check if disbursal happened
+      expect(await euroToken.balanceOf(simpleAccountDisbursal)).to.be.bignumber.eq(
+        missingAmount.mul(0.03).round(0, 4),
+      );
+    });
 
     it("should invest in ETO with public discount and have full valuation", async () => {
       const publicDiscount = Q18.mul(0.2);
@@ -2742,7 +2808,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       token = euroToken;
     }
     // we take one wei of NEU so we do not have to deal with rounding errors
-    const expectedNeu = investorShare(await neumark.incremental(eurEquiv)).sub(1);
+    let expectedNeu = investorShare(await neumark.incremental(eurEquiv));
+    if (expectedNeu.gt(0)) {
+      expectedNeu = expectedNeu.sub(1);
+    }
     // use overloaded erc223 to transfer to contract with callback
     const tx = await token.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
       from: investor,
