@@ -55,16 +55,15 @@ contract FeeDisbursalController is
         return isDisbursableToken(token) && claims.isVerified && !claims.accountFrozen;
     }
 
-    function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/)
+    function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/, uint256 recycleAfterPeriod)
         public
         returns (bool allow)
     {   
-        //@TODO: should we dissalow token and pro rata token to be the same?
         bool disburserAllowed = 
             UNIVERSE.isAnyOfInterfaceCollectionInstance(DISBURSE_ALLOWED_INTERFACES, disburser) ||
             UNIVERSE.isSingleton(KNOWN_INTERFACE_FEE_DISBURSAL, disburser) ||
             ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
-        return amount > 0 && isDisbursableToken(token) && disburserAllowed;
+        return amount > 0 && isDisbursableToken(token) && disburserAllowed && recycleAfterPeriod > 0;
     }
 
     function onRecycle(address /*token*/, address[] /*investors*/, uint256 /*until*/)

@@ -10,13 +10,15 @@ import "../Standards/IFeeDisbursalController.sol";
 import "../Standards/IERC223LegacyCallback.sol";
 import "../Compat/IERC223LegacyCallbackCompat.sol";
 import "../KnownContracts.sol";
+import "../PlatformTerms.sol";
 
 contract FeeDisbursal is
     IERC223LegacyCallback,
     IERC223LegacyCallbackCompat,
     Serialization,
     Math,
-    KnownContracts
+    KnownContracts,
+    PlatformTerms
 {
 
     ////////////////////////
@@ -211,7 +213,7 @@ contract FeeDisbursal is
         }
 
         // now re-disburse, we're now the disburser
-        disburse(token, this, totalAmount, UNIVERSE.neumark());
+        disburse(token, this, totalAmount, UNIVERSE.neumark(), DEFAULT_RECYCLE_AFTER_PERIOD);
 
         // log
         emit LogFundsRecycled(token, totalAmount);
@@ -259,14 +261,21 @@ contract FeeDisbursal is
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
-        // cast and check pro rata token
-        // fallback is neumark
+        uint256 recycleAfterPeriod;
         BasicSnapshotToken proRataToken;
-        if (data.length != 0) 
-           proRataToken = BasicSnapshotToken(decodeAddress(data));
-        else
+        if (data.length == 20) {
+            proRataToken = BasicSnapshotToken(decodeAddress(data));
+            recycleAfterPeriod = DEFAULT_RECYCLE_AFTER_PERIOD;
+        }
+        else if (data.length == 52) {
+            address proRataTokenAddress;
+            (proRataTokenAddress, recycleAfterPeriod) = decodeAddressUINT256(data);
+            proRataToken = BasicSnapshotToken(proRataTokenAddress);
+        } else {
             proRataToken = UNIVERSE.neumark();
-        disburse(msg.sender, wallet, amount, proRataToken);
+            recycleAfterPeriod = DEFAULT_RECYCLE_AFTER_PERIOD;
+        }
+        disburse(msg.sender, wallet, amount, proRataToken, recycleAfterPeriod);
     }
 
 
@@ -279,10 +288,10 @@ contract FeeDisbursal is
     /// @param disburser address of the actor disbursing (e.g. eto commitment)
     /// @param amount amount of the disbursable tokens
     /// @param proRataToken address of the token that defines the pro rata
-    function disburse(address token, address disburser, uint256 amount, BasicSnapshotToken proRataToken)
+    function disburse(address token, address disburser, uint256 amount, BasicSnapshotToken proRataToken, uint256 recycleAfterPeriod)
     internal
     {
-        require(_feeDisbursalController.onDisburse(token, disburser, amount, address(proRataToken)), "");
+        require(_feeDisbursalController.onDisburse(token, disburser, amount, address(proRataToken), recycleAfterPeriod), "");
 
         uint256 snapshotId = proRataToken.currentSnapshotId();
         uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
@@ -292,7 +301,7 @@ contract FeeDisbursal is
 
         // try to merge with an existing disbursal
         bool merged = false;
-        for ( uint256 i = disbursals.length - 1; i < disbursals.length; i-- ) {
+        for ( uint256 i = disbursals.length - 1; i != UINT256_MAX; i-- ) {
             // we can only merge if we have the same snapshot id
             // we can break here, as continuing down the loop the snapshot ids will decrease
             Disbursal storage disbursal = disbursals[i];
@@ -310,7 +319,7 @@ contract FeeDisbursal is
         // create a new disbursal entry
         if (!merged) 
             disbursals.push(Disbursal({
-                recycleableAfterTimestamp: block.timestamp + 365 days,
+                recycleableAfterTimestamp: block.timestamp + recycleAfterPeriod,
                 amount: amount,
                 proRataToken: proRataToken,
                 snapshotId: snapshotId,
@@ -336,7 +345,7 @@ contract FeeDisbursal is
 
         // do the actual token transfer
         IERC223Token ierc223Token = IERC223Token(token);
-        ierc223Token.transfer(spender, claimedAmount, "");
+        assert(ierc223Token.transfer(spender, claimedAmount, ""));
 
         // log
         emit LogDisbursalClaimed(spender, token, claimedAmount, lastIndex);

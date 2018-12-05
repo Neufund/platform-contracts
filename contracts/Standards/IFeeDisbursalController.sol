@@ -18,7 +18,7 @@ contract IFeeDisbursalController is
         returns (bool allow);
 
     /// @notice check wether this disbursal can happen
-    function onDisburse(address token, address disburser, uint256 amount, address proRataToken)
+    function onDisburse(address token, address disburser, uint256 amount, address proRataToken, uint256 recycleAfterPeriod)
         public
         returns (bool allow);
 

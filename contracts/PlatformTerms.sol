@@ -50,6 +50,9 @@ contract PlatformTerms is Math, IContractId {
     uint256 public constant MIN_CLAIM_DURATION = 7 days;
     uint256 public constant MAX_CLAIM_DURATION = 30 days;
 
+    // time after which claimable tokens become recycleable
+    uint256 public constant DEFAULT_RECYCLE_AFTER_PERIOD = 365 days;
+
     ////////////////////////
     // Public Function
     ////////////////////////
