@@ -13,6 +13,7 @@ module.exports = async function inspectETO() {
     { name: "eto", type: String },
     { name: "whitelist", type: String },
     { name: "dry-run", type: Boolean },
+    { name: "verbose-rpc", type: Boolean },
     { name: "exec", type: String, multiple: true, defaultOption: true },
   ];
 
