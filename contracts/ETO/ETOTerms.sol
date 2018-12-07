@@ -94,6 +94,8 @@ contract ETOTerms is
     uint256 private MAX_NUMBER_OF_TOKENS;
     // base token price in EUR-T, without any discount scheme
     uint256 private TOKEN_PRICE_EUR_ULPS;
+    // equity tokens per share
+    uint256 private EQUITY_TOKENS_PER_SHARE;
 
 
     ////////////////////////
@@ -154,16 +156,18 @@ contract ETOTerms is
         require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
         require(shareholderRights != address(0));
         // test interface
-        // require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
+        require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(shareNominalValueEurUlps > 0);
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
+        require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
         MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
         TOKEN_PRICE_EUR_ULPS = tokenTerms.TOKEN_PRICE_EUR_ULPS();
+        EQUITY_TOKENS_PER_SHARE = tokenTerms.EQUITY_TOKENS_PER_SHARE();
 
         DURATION_TERMS = durationTerms;
         TOKEN_TERMS = tokenTerms;
@@ -228,6 +232,15 @@ contract ETOTerms is
         }
     }
 
+    /// @notice returns number of shares as a decimal fraction
+    function equityTokensToShares(uint256 amount)
+        public
+        constant
+        returns (uint256)
+    {
+        return proportion(amount, 10**18, EQUITY_TOKENS_PER_SHARE);
+    }
+
     function addWhitelisted(
         address[] investors,
         uint256[] discountAmountsEurUlps,
@@ -289,14 +302,6 @@ contract ETOTerms is
         // check if is eligible for investment
         IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
         isEligible = claims.isVerified && !claims.accountFrozen;
-    }
-
-    function equityTokensToShares(uint256 amount)
-        public
-        constant
-        returns (uint256)
-    {
-        return divRound(amount, TOKEN_TERMS.EQUITY_TOKENS_PER_SHARE());
     }
 
     /// @notice checks terms against platform terms, reverts on invalid

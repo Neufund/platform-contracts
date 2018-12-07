@@ -508,7 +508,7 @@ contract ETOCommitment is
             uint256 equivEurUlps,
             uint256 rewardNmkUlps,
             uint256 equityTokenInt,
-            uint256 sharesInt,
+            uint256 sharesFrac,
             uint256 tokenPrice,
             uint256 neuRate,
             uint256 amountEth,
@@ -522,7 +522,7 @@ contract ETOCommitment is
         equivEurUlps = ticket.equivEurUlps;
         rewardNmkUlps = ticket.rewardNmkUlps;
         equityTokenInt = ticket.equityTokenInt;
-        sharesInt = ETO_TERMS.equityTokensToShares(ticket.equityTokenInt);
+        sharesFrac = ETO_TERMS.equityTokensToShares(ticket.equityTokenInt);
         tokenPrice = equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0;
         neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
         amountEth = ticket.amountEth;
