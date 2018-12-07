@@ -108,8 +108,20 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     await etoTerms.requireValidTerms(platformTerms.address);
   });
 
-  // should be a set of tests with different rounding, we should be able to run it on equity token as well
-  it("should convert equity token amount to shares");
+  it("should convert equity token amount to shares", async () => {
+    const amounts = [1, constTokenTerms.EQUITY_TOKENS_PER_SHARE, 599, Q18, 71627621].map(
+      a => new web3.BigNumber(a),
+    );
+    for (const amount of amounts) {
+      expect(await etoTerms.equityTokensToShares(amount)).to.be.bignumber.eq(
+        amount.mul(Q18).div(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+      );
+    }
+    // make precomputed test
+    expect(await etoTerms.equityTokensToShares(1261)).to.be.bignumber.eq(
+      new web3.BigNumber(10).pow(14).mul(1261),
+    );
+  });
 
   describe("terms validation", () => {
     it("rejects on platform terms with minimum ticket too small", async () => {
