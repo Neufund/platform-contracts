@@ -56,6 +56,7 @@ const PLATFORM_SHARE = web3.toBigNumber("2");
 const minDepositAmountEurUlps = Q18.mul(50);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
+const Q14 = new web3.BigNumber(10).pow(14);
 const platformWallet = "0x00447f37bde6c89ad47c1d1e16025e707d3d363a";
 const defEthPrice = web3.toBigNumber("657.39278932");
 const UNKNOWN_STATE_START_TS = 10000000; // state startOf timeestamps invalid below this
@@ -2828,10 +2829,20 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     if (expectedPrice) {
       // we always round down when computing equity tokens
       expectedEquity = eurEquiv.div(expectedPrice).floor();
+      // compare expected price only on first tranche of investment - later those depend on previous
+      // tranches
+      if (oldTicket[0].eq(0)) {
+        // the actual price will be slightly higher (or equal) than the expected price
+        // due to tokens being indivisible - and we always floor the number of tokens bought
+        // example: token cost is 1 eur, you pay 1.9 eur, you get 1 token, your price is 1.9 eur
+        expect(ticket[4]).to.be.bignumber.eq(eurEquiv.div(expectedEquity).floor());
+      }
     } else {
       expectedEquity = ticket[2].sub(oldTicket[2]);
     }
     expect(ticket[2].sub(oldTicket[2])).to.be.bignumber.eq(expectedEquity);
+    // this assumes equity token precision is 0
+    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(Q14));
     if (currency === "ETH") {
       expect(ticket[6]).to.be.bignumber.eq(amount.add(oldTicket[6]));
     }
@@ -2892,11 +2903,22 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     // check only if expected token price was given
     let expectedEquity;
     if (expectedPrice) {
+      // we always round down when computing equity tokens
       expectedEquity = eurEquiv.div(expectedPrice).floor();
+      // compare expected price only on first tranche of investment - later those depend on previous
+      // tranches
+      if (oldTicket[0].eq(0)) {
+        // the actual price will be slightly higher (or equal) than the expected price
+        // due to tokens being indivisible - and we always floor the number of tokens bought
+        // example: token cost is 1 eur, you pay 1.9 eur, you get 1 token, your price is 1.9 eur
+        expect(ticket[4]).to.be.bignumber.eq(eurEquiv.div(expectedEquity).floor());
+      }
     } else {
       expectedEquity = ticket[2].sub(oldTicket[2]);
     }
     expect(ticket[2].sub(oldTicket[2])).to.be.bignumber.eq(expectedEquity);
+    // this assumes equity token precision is 0
+    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(Q14));
     if (currency === "ETH") {
       expect(ticket[6]).to.be.bignumber.eq(amount.add(oldTicket[6]));
     }
