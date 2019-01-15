@@ -147,8 +147,18 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
+    INV_ETH_EUR_ICBM_M_HAS_KYC_DUP: makeAccount(
+      "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
+      "investor",
+      true,
+    ),
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
       "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
+      "investor",
+      true,
+    ),
+    INV_ICBM_ETH_M_HAS_KYC_DUP: makeAccount(
+      "0xF7784a74Cc59d1e6e1C10ca2053f34D68d280aE7",
       "investor",
       true,
     ),
