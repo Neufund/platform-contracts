@@ -156,11 +156,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("migrating locked accounts");
     await icbmEtherLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address });
     await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address });
     await icbmEuroLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address });
-    await icbmEuroLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address });
     await icbmEuroLock.migrate({ from: fas.INV_ICBM_EUR_M_HAS_KYC.address });
 
     console.log("add ether to test accounts");
