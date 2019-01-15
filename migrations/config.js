@@ -199,6 +199,8 @@ export function getFixtureAccounts(accounts) {
     ),
     SPARE_1: makeAccount("0x9369dFD79049B7C3CF48d54435287b0AFd5227Da", "investor", true),
     SPARE_2: makeAccount("0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D", "investor", true),
+    SPARE_3: makeAccount("0x798fD195575d195B9Bb9619ffb905E434f044f1D", "investor", true),
+    SPARE_4: makeAccount("0xC35ef5DA2607C70D812cA2F317E9958910450dF1", "investor", true),
     // external accounts
     NANO_1: makeAccount("0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D", "external", false),
     NANO_2: makeAccount("0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C", "external", false),
