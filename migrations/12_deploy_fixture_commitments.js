@@ -167,6 +167,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   const whitelist = [
     { address: fas.INV_HAS_EUR_HAS_KYC.address, discountAmount: 0, discount: 0 },
     { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, discountAmount: 500000, discount: 0.5 },
+    { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address, discountAmount: 500000, discount: 0.5 },
   ];
   await deployWhitelist(artifacts, CONFIG, etoCommitment.address, whitelist);
   if (final === CommitmentState.Setup) {
@@ -255,6 +256,14 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await ensureState(etoCommitment, CommitmentState.Public);
   await investICBMAmount(
     fas.INV_ICBM_ETH_M_HAS_KYC.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    minTicketEth.add(Q18.mul(3.71621)),
+    "ETH",
+  );
+  await investICBMAmount(
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
     CONFIG,
     universe,
     etoCommitment,
