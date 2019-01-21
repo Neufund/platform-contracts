@@ -133,7 +133,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const verifiedClaims = requireKYC.map(() => toBytes32("0x1"));
     // special verified claims
     verifiedClaims[2] = toBytes32("0x7");
-    verifiedClaims[3] = toBytes32("0x5");
+    verifiedClaims[3] = toBytes32("0x7");
+    verifiedClaims[4] = toBytes32("0x5");
+    verifiedClaims[5] = toBytes32("0x5");
     await identityRegistry.setMultipleClaims(requireKYC, zeroClaims, verifiedClaims, {
       from: DEPLOYER,
     });
