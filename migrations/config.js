@@ -55,6 +55,7 @@ export function getConfig(web3, network, accounts) {
       EURT_LEGAL_MANAGER: "0x5c31F869F4f9891ca3470bE30Ca3d9e60ced0a05",
       GAS_EXCHANGE: "0x58125e023252A1Da9655994fC446892dbD1B2C03",
       TOKEN_RATE_ORACLE: "0x7C725f972D1ebDEF5Bbfd8996d3Cbe307b23cd42",
+      GAS_STIPEND_SERVICE: "0xABa4430574f2353C0A22Ca4CF2d4a122f0031245",
     },
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
