@@ -11,7 +11,7 @@ const defEtoTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.5),
     VOTING_MAJORITY_FRAC: Q18.mul(0.5),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmVbzgZ4Ape7LVqZbsChmoqanj1npfmLR4SG7FezZ3MqS9",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
@@ -33,7 +33,7 @@ const defEtoTerms = {
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ALLOW_RETAIL_INVESTORS: true,
     ENABLE_TRANSFERS_ON_SUCCESS: false,
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmQYWyx6WWwCYqBnJ74ruogTTHfKoscQRHU5eJFKDD22mT",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
     SHAREHOLDER_RIGHTS: null,
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
@@ -41,8 +41,8 @@ const defEtoTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
-  reservationAndAcquisitionAgreement: "ipfs:QmdV6wnSBku1ho1hLwqeSvuaN9HD1E6E7jhyQHdWteRRWz",
-  companyTokenHolderAgreement: "ipfs:QmRCwEaTf6dxSPwDqGEs9nZ6hbtvZdSCaTTWFzoFQYjkwo",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
 
 const defEtoHwniTerms = {
@@ -56,7 +56,7 @@ const defEtoHwniTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.5),
     VOTING_MAJORITY_FRAC: Q18.mul(0.5),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmVbzgZ4Ape7LVqZbsChmoqanj1npfmLR4SG7FezZ3MqS9",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(8)),
@@ -78,7 +78,7 @@ const defEtoHwniTerms = {
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ALLOW_RETAIL_INVESTORS: false,
     ENABLE_TRANSFERS_ON_SUCCESS: true,
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmQYWyx6WWwCYqBnJ74ruogTTHfKoscQRHU5eJFKDD22mT",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
     SHAREHOLDER_RIGHTS: null,
     EQUITY_TOKEN_NAME: "Rich",
     EQUITY_TOKEN_SYMBOL: "RCH",
@@ -86,8 +86,8 @@ const defEtoHwniTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
-  reservationAndAcquisitionAgreement: "ipfs:QmdV6wnSBku1ho1hLwqeSvuaN9HD1E6E7jhyQHdWteRRWz",
-  companyTokenHolderAgreement: "ipfs:QmRCwEaTf6dxSPwDqGEs9nZ6hbtvZdSCaTTWFzoFQYjkwo",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
 
 // function cloneObject(obj) {
