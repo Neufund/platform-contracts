@@ -87,4 +87,7 @@ contract KnownInterfaces {
 
     // Equity Token interface (collection) keccak256("IEquityToken")
     bytes4 internal constant KNOWN_INTERFACE_EQUITY_TOKEN = 0xab9885bb;
+
+    // Payment tokens (collection) keccak256("PaymentToken")
+    bytes4 internal constant KNOWN_INTERFACE_PAYMENT_TOKEN = 0xb82ce430;
 }
