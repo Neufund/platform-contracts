@@ -216,28 +216,6 @@ contract FeeDisbursal is
         emit LogDisbursalRejected(msg.sender, token, proRataToken, claimedAmount, nextIndex);
     }
 
-    /// @notice returns next disbursal index to be claimed
-    function nextClaimableIndex(address claimer, address token, ITokenSnapshots proRataToken)
-        public
-        constant
-        returns (uint256 index)
-    {
-        return _disbursalProgress[token][proRataToken][claimer];
-    }
-
-    /// @notice returns next disbursal indexes to be claimed for a set of claimable tokens
-    function nextClaimableIndexes(address claimer, address[] tokens, ITokenSnapshots proRataToken)
-        public
-        constant
-        returns (uint256[] indexes)
-    {
-        indexes = new uint256[](tokens.length);
-        uint256 i;
-        for(; i < tokens.length; i += 1) {
-            indexes[i] = _disbursalProgress[tokens[i]][proRataToken][claimer];
-        }
-    }
-
     /// @notice check how many tokens of a certain kind can be claimed by an account
     /// @param token address of the claimable token
     /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
@@ -247,10 +225,10 @@ contract FeeDisbursal is
     function claimable(address token, ITokenSnapshots proRataToken, address claimer, uint256 until)
         public
         constant
-    returns (uint256 claimableAmount, uint256 totalAmount, uint256 recycleableAfterTimestamp, uint256 index)
+    returns (uint256 claimableAmount, uint256 totalAmount, uint256 recycleableAfterTimestamp, uint256 firstIndex)
     {
-        index = _disbursalProgress[token][proRataToken][claimer];
-        recycleableAfterTimestamp = _disbursals[token][proRataToken][index].recycleableAfterTimestamp;
+        firstIndex = _disbursalProgress[token][proRataToken][claimer];
+        recycleableAfterTimestamp = _disbursals[token][proRataToken][firstIndex].recycleableAfterTimestamp;
         // we don't do to a verified check here, this serves purely to check how much is claimable for an address
         (claimableAmount, totalAmount,) = claimablePrivate(token, proRataToken, claimer, until, false);
     }
