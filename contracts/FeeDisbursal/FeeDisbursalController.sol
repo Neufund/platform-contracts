@@ -9,7 +9,7 @@ import "../KnownContracts.sol";
 
 
 /// @title granular fee disbursal controller
-contract FeeDisbursalController is 
+contract FeeDisbursalController is
     IdentityRecord,
     IFeeDisbursalController,
     KnownInterfaces,
@@ -20,16 +20,19 @@ contract FeeDisbursalController is
     ////////////////////////
     // Constants
     ////////////////////////
-    bytes4[] private DISBURSE_ALLOWED_INTERFACES = [KNOWN_INTERFACE_COMMITMENT, KNOWN_INTERFACE_EQUITY_TOKEN_CONTROLLER];
-
+    // collection of interfaces that can disburse tokens: commitment contracts, token controllers
+    bytes4[] private ALLOWED_DISBURSER_INTERFACES = [KNOWN_INTERFACE_COMMITMENT, KNOWN_INTERFACE_EQUITY_TOKEN_CONTROLLER];
+    // collection of tokens that can be disbursed: payment tokens, equity tokens
+    bytes4[] private ALLOWED_DISBURSAL_TOKEN_INTERFACES = [KNOWN_INTERFACE_PAYMENT_TOKEN,  KNOWN_INTERFACE_EQUITY_TOKEN];
 
     ////////////////////////
     // Immutable state
     ////////////////////////
     Universe private UNIVERSE;
-    IIdentityRegistry private IDENTITY_REGISTRY;
     IAccessPolicy private ACCESS_POLICY;
-    address[] private ALLOWED_DISBURSABLE_TOKENS;
+    address private ETHER_LOCK;
+    address private EURO_LOCK;
+    address private NEUMARK;
 
     ////////////////////////
     // Constructor
@@ -38,70 +41,107 @@ contract FeeDisbursalController is
         public
     {
         UNIVERSE = universe;
-        IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
+        // cache services that will never change to save some gas
         ACCESS_POLICY = universe.accessPolicy();
-        ALLOWED_DISBURSABLE_TOKENS = [UNIVERSE.etherToken(), UNIVERSE.euroToken(), UNIVERSE.neumark()];
+        ETHER_LOCK = universe.etherLock();
+        EURO_LOCK = universe.euroLock();
+        NEUMARK = universe.neumark();
     }
 
     ////////////////////////
     // Public functions
     ////////////////////////
 
-    function onClaim(address token, address spender)
+    //
+    // IFeeDisbursalController Implementation
+    //
+
+    function onAccept(address /*token*/, address /*proRataToken*/, address claimer)
         public
+        constant
         returns (bool allow)
     {
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(spender));
-        return isDisbursableToken(token) && claims.isVerified && !claims.accountFrozen;
+        return canClaim(claimer);
     }
 
-    function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/, uint256 recycleAfterPeriod)
+    function onReject(address /*token*/, address /*proRataToken*/, address claimer)
         public
+        constant
         returns (bool allow)
-    {   
-        bool disburserAllowed = 
-            UNIVERSE.isAnyOfInterfaceCollectionInstance(DISBURSE_ALLOWED_INTERFACES, disburser) ||
-            UNIVERSE.isSingleton(KNOWN_INTERFACE_FEE_DISBURSAL, disburser) ||
-            ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
-        return amount > 0 && isDisbursableToken(token) && disburserAllowed && recycleAfterPeriod > 0;
+    {
+        return canClaim(claimer);
     }
 
-    function onRecycle(address /*token*/, address[] /*investors*/, uint256 /*until*/)
+    function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/, uint256 recycleAfterDuration)
         public
+        constant
+        returns (bool allow)
+    {
+        // who can disburse tokens: allowed collections + fee disbursal itself + locked accounts (which we cache to save gas)
+        // or disburser has a disburer role (for example platform operator wallet)
+        bool disburserAllowed = disburser == EURO_LOCK || disburser == ETHER_LOCK || disburser == msg.sender ||
+            UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, disburser) ||
+            ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
+        return amount > 0 && isDisbursableToken(token) && disburserAllowed && recycleAfterDuration > 0;
+    }
+
+    function onRecycle(address /*token*/, address /*proRataToken*/, address[] /*investors*/, uint256 /*until*/)
+        public
+        constant
         returns (bool allow)
     {
         return true;
-    }
-
-    /// @notice helper to determine if the token at the given address is supported for disbursing
-    /// @param token address of token in question
-    function isDisbursableToken(address token)
-        public
-        returns (bool)
-    {   
-        // @TODO: migrate this to new, more flexible token registering Reclaimable in universe
-        for (uint256 i = 0; i < ALLOWED_DISBURSABLE_TOKENS.length; i++)
-            if (token == ALLOWED_DISBURSABLE_TOKENS[i]) return true;
-        return false;
     }
 
     /// @notice check if feedisbursalcontroller may change
     /// @param newController instance of the new controller
     function onChangeFeeDisbursalController(address sender, IFeeDisbursalController newController)
         public
+        constant
         returns (bool)
     {
         (bytes32 controllerContractId, ) = newController.contractId();
         return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig) && controllerContractId == FEE_DISBURSAL_CONTROLLER;
     }
 
-    // implementation of ContractId
+    //
+    // IContractId Implementation
+    //
+
     function contractId()
         public
         pure
-        returns (bytes32 id, uint256 version) {
+        returns (bytes32 id, uint256 version)
+    {
         return (FEE_DISBURSAL_CONTROLLER, 0);
     }
 
+    //
+    // Other public methods
+    //
 
+    /// @notice helper to determine if the token at the given address is supported for disbursing
+    /// @param token address of token in question
+    function isDisbursableToken(address token)
+        public
+        constant
+        returns (bool)
+    {
+        // all payment tokens + NEU (airdrops) + equity tokens (downrounds)
+        return UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSAL_TOKEN_INTERFACES, token) || token == NEUMARK;
+    }
+
+    ////////////////////////
+    // Private functions
+    ////////////////////////
+
+    function canClaim(address claimer)
+        private
+        constant
+        returns (bool allow)
+    {
+        IIdentityRegistry registry = IIdentityRegistry(UNIVERSE.identityRegistry());
+        IdentityClaims memory claims = deserializeClaims(registry.getClaims(claimer));
+        return claims.isVerified && !claims.accountFrozen;
+    }
 }
