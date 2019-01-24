@@ -19,7 +19,7 @@ contract Serialization {
         }
     }
 
-    function decodeAddressUINT256(bytes b)
+    function decodeAddressUInt256(bytes b)
         internal
         pure
         returns (address a, uint256 i)
