@@ -1,24 +1,26 @@
 pragma solidity 0.4.25;
 
 import "../Universe.sol";
+import "../PlatformTerms.sol";
 import "../Standards/IFeeDisbursal.sol";
-import "../SnapshotToken/BasicSnapshotToken.sol";
 import "../Serialization.sol";
 import "../Math.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IFeeDisbursalController.sol";
 import "../Standards/IERC223LegacyCallback.sol";
-import "../Compat/IERC223LegacyCallbackCompat.sol";
+import "../Standards/IERC223Callback.sol";
+import "../Standards/ITokenSnapshots.sol";
+import "../Compat/ERC223LegacyCallbackCompat.sol";
 import "../KnownContracts.sol";
-import "../PlatformTerms.sol";
 
+/// @title granular fee disbursal contract
 contract FeeDisbursal is
+    IERC223Callback,
     IERC223LegacyCallback,
-    IERC223LegacyCallbackCompat,
+    ERC223LegacyCallbackCompat,
     Serialization,
     Math,
-    KnownContracts,
-    PlatformTerms
+    KnownContracts
 {
 
     ////////////////////////
@@ -26,20 +28,31 @@ contract FeeDisbursal is
     ////////////////////////
 
     event LogDisbursalCreated(
+        address indexed proRataToken,
         address indexed token,
-        address disburser,
         uint256 amount,
-        address proRataToken
+        uint256 recycleAfterDuration,
+        address disburser
     );
 
-    event LogDisbursalClaimed(
+    event LogDisbursalAccepted(
         address indexed claimer,
         address token,
+        address proRataToken,
         uint256 amount,
-        uint256 lastIndex
+        uint256 nextIndex
+    );
+
+    event LogDisbursalRejected(
+        address indexed claimer,
+        address token,
+        address proRataToken,
+        uint256 amount,
+        uint256 nextIndex
     );
 
     event LogFundsRecycled(
+        address indexed proRataToken,
         address indexed token,
         uint256 amount
     );
@@ -58,8 +71,6 @@ contract FeeDisbursal is
         uint256 snapshotId;
         // amount of tokens to disburse
         uint256 amount;
-        // address of the token used to determine the user pro rata amount, must be a snapshottoken, default is NEU
-        BasicSnapshotToken proRataToken;
         // time after which claims to this token can be recycled
         uint256 recycleableAfterTimestamp;
         // contract sending the disbursal
@@ -83,11 +94,11 @@ contract FeeDisbursal is
 
     // controller instance
     IFeeDisbursalController private _feeDisbursalController;
-    // map token addresses to a list of disbursal events of that token
-    mapping (address => Disbursal[]) private _disbursals;
+    // map claimable token address to pro rata token adresses to a list of disbursal events of that token
+    mapping (address => mapping(address => Disbursal[])) private _disbursals;
     // mapping to track what disbursals have already been paid out to which user
-    // token address => user address => disbursal progress
-    mapping (address => mapping(address => uint256)) _disbursalProgress;
+    // claimable token address => pro rata token address => user address => next disbursal index to be claimed
+    mapping (address => mapping(address => mapping(address => uint256))) _disbursalProgress;
 
 
     ////////////////////////
@@ -109,129 +120,201 @@ contract FeeDisbursal is
 
     /// @notice get the disbursal at a given index for a given token
     /// @param token address of the claimable token
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
     /// @param index until what index to claim to
-    function getDisbursal(address token, uint256 index)
-    public
-    constant
+    function getDisbursal(address token, address proRataToken, uint256 index)
+        public
+        constant
     returns (
         uint256 snapshotId,
         uint256 amount,
-        BasicSnapshotToken proRataToken,
         uint256 recycleableAfterTimestamp,
         address disburser
     )
     {
-        Disbursal storage disbursal = _disbursals[token][index];
+        Disbursal storage disbursal = _disbursals[token][proRataToken][index];
         snapshotId = disbursal.snapshotId;
         amount = disbursal.amount;
-        proRataToken = disbursal.proRataToken;
         recycleableAfterTimestamp = disbursal.recycleableAfterTimestamp;
         disburser = disbursal.disburser;
     }
 
     /// @notice get count of disbursals for given token
     /// @param token address of the claimable token
-    function getDisbursalCount(address token)
-    public
-    constant
-    returns (uint256)
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    function getDisbursalCount(address token, address proRataToken)
+        public
+        constant
+        returns (uint256)
     {
-        return _disbursals[token].length;
+        return _disbursals[token][proRataToken].length;
     }
 
-    /// @notice claim a token, to be called an investor
+    /// @notice accepts the token disbursal offer and claim offered tokens, to be called by an investor
     /// @param token address of the claimable token
-    /// @param until until what index to claim to
-    function claim(address token, uint256 until)
-    public
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    /// @param until until what index to claim to, noninclusive, use 2**256 to accept all disbursals
+    function accept(address token, ITokenSnapshots proRataToken, uint256 until)
+        public
     {
         // only allow verified and active accounts to claim tokens
-        require(_feeDisbursalController.onClaim(token, msg.sender), "");
-        claimPrivate(token, msg.sender, until);
+        require(_feeDisbursalController.onAccept(token, proRataToken, msg.sender), "NF_VERIFICATION_REQUIRED");
+        (uint256 claimedAmount, , uint256 nextIndex) = claimPrivate(token, proRataToken, msg.sender, until);
+
+        // do the actual token transfer
+        if (claimedAmount > 0) {
+            IERC223Token ierc223Token = IERC223Token(token);
+            assert(ierc223Token.transfer(msg.sender, claimedAmount, ""));
+        }
+        // log
+        emit LogDisbursalAccepted(msg.sender, token, proRataToken, claimedAmount, nextIndex);
     }
 
-    /// @notice claim multiple tokens, to be called an investor
+    /// @notice accepts disbursals of multiple tokens and receives them, to be called an investor
     /// @param tokens addresses of the claimable token
-    function claimMultiple(address[] tokens)
-    public
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    function acceptMultiple(address[] tokens, ITokenSnapshots proRataToken)
+        public
+    {
+        uint256[2][] memory claimed = new uint256[2][](tokens.length);
+        // first gather the funds
+        uint256 i;
+        uint256 totalAmount;
+        for (i = 0; i < tokens.length; i += 1) {
+            // only allow verified and active accounts to claim tokens
+            require(_feeDisbursalController.onAccept(tokens[i], proRataToken, msg.sender), "NF_VERIFICATION_REQUIRED");
+            (claimed[0][i], totalAmount, claimed[1][i]) = claimPrivate(tokens[i], proRataToken, msg.sender, UINT256_MAX);
+        }
+        // then perform actual transfers, after all state changes are done, to prevent re-entry
+        for (i = 0; i < tokens.length; i += 1) {
+            if (claimed[0][i] > 0) {
+                // do the actual token transfer
+                IERC223Token ierc223Token = IERC223Token(tokens[i]);
+                assert(ierc223Token.transfer(msg.sender, claimed[0][i], ""));
+            }
+            // log
+            emit LogDisbursalAccepted(msg.sender, tokens[i], proRataToken, claimed[0][i], claimed[1][i]);
+        }
+    }
+
+    /// @notice rejects disbursal of token which leads to recycle and disbursal of rejected amount
+    /// @param token address of the claimable token
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    /// @param until until what index to claim to, noninclusive, use 2**256 to reject all disbursals
+    function reject(address token, ITokenSnapshots proRataToken, uint256 until)
+        public
     {
         // only allow verified and active accounts to claim tokens
-        for (uint256 i = 0; i < tokens.length; i += 1) {
-            require(_feeDisbursalController.onClaim(tokens[i], msg.sender), "");
-            claimPrivate(tokens[i], msg.sender, UINT256_MAX);
+        require(_feeDisbursalController.onReject(token, address(0), msg.sender), "NF_VERIFICATION_REQUIRED");
+        (uint256 claimedAmount, , uint256 nextIndex) = claimPrivate(token, proRataToken, msg.sender, until);
+        // what was rejected will be recycled
+        if (claimedAmount > 0) {
+            PlatformTerms terms = PlatformTerms(UNIVERSE.platformTerms());
+            disburse(token, this, claimedAmount, proRataToken, terms.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION());
+        }
+        // log
+        emit LogDisbursalRejected(msg.sender, token, proRataToken, claimedAmount, nextIndex);
+    }
+
+    /// @notice returns next disbursal index to be claimed
+    function nextClaimableIndex(address claimer, address token, ITokenSnapshots proRataToken)
+        public
+        constant
+        returns (uint256 index)
+    {
+        return _disbursalProgress[token][proRataToken][claimer];
+    }
+
+    /// @notice returns next disbursal indexes to be claimed for a set of claimable tokens
+    function nextClaimableIndexes(address claimer, address[] tokens, ITokenSnapshots proRataToken)
+        public
+        constant
+        returns (uint256[] indexes)
+    {
+        indexes = new uint256[](tokens.length);
+        uint256 i;
+        for(; i < tokens.length; i += 1) {
+            indexes[i] = _disbursalProgress[tokens[i]][proRataToken][claimer];
         }
     }
 
     /// @notice check how many tokens of a certain kind can be claimed by an account
     /// @param token address of the claimable token
-    /// @param spender address of the spender that would receive the funds
-    /// @param until until what index to claim to
-    function claimable(address token, address spender, uint256 until)
-    public
-    constant
-    returns (uint256 claimableAmount, uint256 lastIndex)
-    {   
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    /// @param claimer address of the claimer that would receive the funds
+    /// @param until until what index to claim to, noninclusive, use 2**256 to reject all disbursals
+    /// @return (amount that can be claimed, total disbursed amount, time to recycle of first disbursal, first disbursal index)
+    function claimable(address token, ITokenSnapshots proRataToken, address claimer, uint256 until)
+        public
+        constant
+    returns (uint256 claimableAmount, uint256 totalAmount, uint256 recycleableAfterTimestamp, uint256 index)
+    {
+        index = _disbursalProgress[token][proRataToken][claimer];
+        recycleableAfterTimestamp = _disbursals[token][proRataToken][index].recycleableAfterTimestamp;
         // we don't do to a verified check here, this serves purely to check how much is claimable for an address
-        return claimablePrivate(token, spender, until, false);
+        (claimableAmount, totalAmount,) = claimablePrivate(token, proRataToken, claimer, until, false);
     }
 
     /// @notice claim a token, to be called an investor
     /// @param tokens addresses of the claimable token
-    /// @param spender address of the spender that would receive the funds
-    function claimableMutiple(address[] tokens, address spender)
-    public
-    constant
-    returns (uint256[])
-    {   
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    /// @param claimer address of the claimer that would receive the funds
+    /// @return array of (amount that can be claimed, total disbursed amount, time to recycle of first disbursal, first disbursal index)
+    function claimableMutiple(address[] tokens, ITokenSnapshots proRataToken, address claimer)
+        public
+        constant
+    returns (uint256[4][] claimables)
+    {
         // we don't to do a verified check here, this serves purely to check how much is claimable for an address
-        uint256[] memory result = new uint256[](tokens.length);
+        claimables = new uint256[4][](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            (uint256 claimableAmount,) = claimablePrivate(tokens[i], spender, UINT256_MAX, false);
-            result[i] = claimableAmount;
+            claimables[3][i] = _disbursalProgress[tokens[i]][proRataToken][claimer];
+            claimables[2][i] = _disbursals[tokens[i]][proRataToken][claimables[3][i]].recycleableAfterTimestamp;
+            (claimables[0][i], claimables[1][i], ) = claimablePrivate(tokens[i], proRataToken, claimer, UINT256_MAX, false);
         }
-        return result;
     }
 
     /// @notice recycle a token for multiple investors
     /// @param token address of the recyclable token
     /// @param investors list of investors we want to recycle tokens for
     /// @param until until what index to recycle to
-    function recycle(address token, address[] investors, uint256 until)
-    public
-    {        
-        require(_feeDisbursalController.onRecycle(token, investors, until), "");
-        // for now we say that unclaimed funds on the platform will be distributed among all neu holders
-        // this will make recycling much easier. @TODO discuss this approach
-
+    function recycle(address token, ITokenSnapshots proRataToken, address[] investors, uint256 until)
+        public
+    {
+        require(_feeDisbursalController.onRecycle(token, proRataToken, investors, until), "");
         // cycle through all investors collect the claimable and recycleable funds
         // also move the _disbursalProgress pointer
-        uint256 totalAmount = 0;
+        uint256 totalClaimableAmount = 0;
         for (uint256 i = 0; i < investors.length; i += 1) {
-            (uint256 claimableAmount, uint256 lastIndex) = claimablePrivate(token, investors[i], until, true);
-            totalAmount += claimableAmount;
-            _disbursalProgress[token][investors[i]] = lastIndex;
+            (uint256 claimableAmount, ,uint256 nextIndex) = claimablePrivate(token, ITokenSnapshots(proRataToken), investors[i], until, true);
+            totalClaimableAmount += claimableAmount;
+            _disbursalProgress[token][proRataToken][investors[i]] = nextIndex;
         }
 
-        // now re-disburse, we're now the disburser
-        disburse(token, this, totalAmount, UNIVERSE.neumark(), DEFAULT_RECYCLE_AFTER_PERIOD);
+        // skip disbursal if amount == 0
+        if (totalClaimableAmount > 0) {
+            // now re-disburse, we're now the disburser
+            PlatformTerms terms = PlatformTerms(UNIVERSE.platformTerms());
+            disburse(token, this, totalClaimableAmount, proRataToken, terms.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION());
+        }
 
         // log
-        emit LogFundsRecycled(token, totalAmount);
+        emit LogFundsRecycled(proRataToken, token, totalClaimableAmount);
     }
 
     /// @notice check how much we can recycle for multiple investors
     /// @param token address of the recyclable token
     /// @param investors list of investors we want to recycle tokens for
     /// @param until until what index to recycle to
-    function recycleable(address token, address[] investors, uint256 until)
-    public
-    constant
+    function recycleable(address token, ITokenSnapshots proRataToken, address[] investors, uint256 until)
+        public
+        constant
     returns (uint256)
-    {    
+    {
         // cycle through all investors collect the claimable and recycleable funds
         uint256 totalAmount = 0;
         for (uint256 i = 0; i < investors.length; i += 1) {
-            (uint256 claimableAmount,) = claimablePrivate(token, investors[i], until, true);
+            (uint256 claimableAmount,,) = claimablePrivate(token, proRataToken, investors[i], until, true);
             totalAmount += claimableAmount;
         }
         return totalAmount;
@@ -261,21 +344,22 @@ contract FeeDisbursal is
     function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
-        uint256 recycleAfterPeriod;
-        BasicSnapshotToken proRataToken;
+        uint256 recycleAfterDuration;
+        ITokenSnapshots proRataToken;
+        PlatformTerms terms = PlatformTerms(UNIVERSE.platformTerms());
+        recycleAfterDuration = terms.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION();
         if (data.length == 20) {
-            proRataToken = BasicSnapshotToken(decodeAddress(data));
-            recycleAfterPeriod = DEFAULT_RECYCLE_AFTER_PERIOD;
+            proRataToken = ITokenSnapshots(decodeAddress(data));
         }
         else if (data.length == 52) {
             address proRataTokenAddress;
-            (proRataTokenAddress, recycleAfterPeriod) = decodeAddressUINT256(data);
-            proRataToken = BasicSnapshotToken(proRataTokenAddress);
+            (proRataTokenAddress, recycleAfterDuration) = decodeAddressUInt256(data);
+            proRataToken = ITokenSnapshots(proRataTokenAddress);
         } else {
+            // legacy ICBMLockedAccount compat mode which does not send pro rata token address and we assume NEU
             proRataToken = UNIVERSE.neumark();
-            recycleAfterPeriod = DEFAULT_RECYCLE_AFTER_PERIOD;
         }
-        disburse(msg.sender, wallet, amount, proRataToken, recycleAfterPeriod);
+        disburse(msg.sender, wallet, amount, proRataToken, recycleAfterDuration);
     }
 
 
@@ -288,100 +372,111 @@ contract FeeDisbursal is
     /// @param disburser address of the actor disbursing (e.g. eto commitment)
     /// @param amount amount of the disbursable tokens
     /// @param proRataToken address of the token that defines the pro rata
-    function disburse(address token, address disburser, uint256 amount, BasicSnapshotToken proRataToken, uint256 recycleAfterPeriod)
-    internal
+    function disburse(address token, address disburser, uint256 amount, ITokenSnapshots proRataToken, uint256 recycleAfterDuration)
+        private
     {
-        require(_feeDisbursalController.onDisburse(token, disburser, amount, address(proRataToken), recycleAfterPeriod), "");
+        require(
+            _feeDisbursalController.onDisburse(token, disburser, amount, address(proRataToken), recycleAfterDuration), "NF_DISBURSAL_REJECTED");
 
         uint256 snapshotId = proRataToken.currentSnapshotId();
         uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
-        require(proRataTokenTotalSupply > 0, "");
+        require(proRataTokenTotalSupply > 0, "NF_NO_DISBURSE_EMPTY_TOKEN");
 
-        Disbursal[] storage disbursals = _disbursals[token];
-
+        Disbursal[] storage disbursals = _disbursals[token][proRataToken];
         // try to merge with an existing disbursal
+        // TODO: only go 100 iterations deep, not till UINT256_MAX (overflow)
         bool merged = false;
         for ( uint256 i = disbursals.length - 1; i != UINT256_MAX; i-- ) {
             // we can only merge if we have the same snapshot id
             // we can break here, as continuing down the loop the snapshot ids will decrease
             Disbursal storage disbursal = disbursals[i];
-            if ( disbursal.snapshotId < snapshotId )
+            if ( disbursal.snapshotId < snapshotId) {
                 break;
-            // the existing disbursal must be the same on  number of params so we can merge
-            if (
-                disbursal.proRataToken == proRataToken &&
-                disbursal.disburser == disburser) {
+            }
+            // the existing disbursal must be the same on number of params so we can merge
+            // disbursal.snapshotId is guaranteed to == proRataToken.currentSnapshotId()
+            if ( disbursal.disburser == disburser ) {
                 merged = true;
                 disbursal.amount += amount;
+                disbursal.recycleableAfterTimestamp = block.timestamp + recycleAfterDuration;
+                break;
             }
         }
 
         // create a new disbursal entry
-        if (!merged) 
+        if (!merged) {
             disbursals.push(Disbursal({
-                recycleableAfterTimestamp: block.timestamp + recycleAfterPeriod,
+                recycleableAfterTimestamp: block.timestamp + recycleAfterDuration,
                 amount: amount,
-                proRataToken: proRataToken,
                 snapshotId: snapshotId,
                 disburser: disburser
             }));
+        }
 
-        emit LogDisbursalCreated(token, disburser, amount, proRataToken);
+        emit LogDisbursalCreated(proRataToken, token, amount, recycleAfterDuration, disburser);
     }
 
 
-    /// @notice claim a token for an spender, returns the amount of tokens claimed
+    /// @notice claim a token for an claimer, returns the amount of tokens claimed
     /// @param token address of the claimable token
-    /// @param spender address of the spender that will receive the funds
+    /// @param claimer address of the claimer that will receive the funds
     /// @param until until what index to claim to
-    function claimPrivate(address token, address spender, uint256 until)
-    internal
-    returns (uint256 claimedAmount, uint256 lastIndex)
+    function claimPrivate(address token, ITokenSnapshots proRataToken, address claimer, uint256 until)
+        internal
+    returns (uint256 claimedAmount, uint256 totalAmount, uint256 nextIndex)
     {
-        (claimedAmount, lastIndex) = claimablePrivate(token, spender, until, false);
+        (claimedAmount, totalAmount, nextIndex) = claimablePrivate(token, proRataToken, claimer, until, false);
 
-        // mark spender disbursal progress
-        _disbursalProgress[token][spender] = lastIndex;
-
-        // do the actual token transfer
-        IERC223Token ierc223Token = IERC223Token(token);
-        assert(ierc223Token.transfer(spender, claimedAmount, ""));
-
-        // log
-        emit LogDisbursalClaimed(spender, token, claimedAmount, lastIndex);
+        // mark claimer disbursal progress
+        _disbursalProgress[token][proRataToken][claimer] = nextIndex;
     }
 
-    /// @notice get the amount of tokens that can be claimed by a given spender
+    /// @notice get the amount of tokens that can be claimed by a given claimer
     /// @param token address of the claimable token
-    /// @param spender address of the spender that will receive the funds
+    /// @param claimer address of the claimer that will receive the funds
     /// @param until until what index to claim to, use UINT256_MAX for all
     /// @param onlyRecycleable show only claimable funds that can be recycled
-    function claimablePrivate(address token, address spender, uint256 until, bool onlyRecycleable)
-    internal
-    constant
-    returns (uint256 claimableAmount, uint256 lastIndex)
+    /// @return a tuple of (amount claimed, total amount disbursed, next disbursal index to be claimed)
+    function claimablePrivate(address token, ITokenSnapshots proRataToken, address claimer, uint256 until, bool onlyRecycleable)
+        internal
+        constant
+        returns (uint256 claimableAmount, uint256 totalAmount, uint256 nextIndex)
     {
-        lastIndex = min(until, _disbursals[token].length);
-        claimableAmount = 0;
-        uint256 currentIndex = 0;
-        for (currentIndex = _disbursalProgress[token][spender]; currentIndex < lastIndex; currentIndex += 1) {
-            Disbursal storage disbursal = _disbursals[token][currentIndex];
-            // in case of just determining the recyclable amount of tokens, break when we
-            // cross this time
-            if ( onlyRecycleable && disbursal.recycleableAfterTimestamp > block.timestamp )
-                break;
-            BasicSnapshotToken proRataToken = BasicSnapshotToken(disbursal.proRataToken);
+        nextIndex = min(until, _disbursals[token][proRataToken].length);
+        uint256 currentIndex = _disbursalProgress[token][proRataToken][claimer];
+        uint256 currentSnapshotId = proRataToken.currentSnapshotId();
+        for (; currentIndex < nextIndex; currentIndex += 1) {
+            Disbursal storage disbursal = _disbursals[token][proRataToken][currentIndex];
             uint256 snapshotId = disbursal.snapshotId;
             // do not pay out claims from the current snapshot
-            if ( snapshotId == proRataToken.currentSnapshotId() )
+            if ( snapshotId == currentSnapshotId )
                 break;
-            uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
-            uint256 proRataSpenderBalance = proRataToken.balanceOfAt(spender, snapshotId);
-            if (proRataTokenTotalSupply == 0 || proRataSpenderBalance == 0) continue;
-            // this should round down, so we should not be spending more than we have in our balance
-            claimableAmount += proportion(disbursal.amount, proRataSpenderBalance, proRataTokenTotalSupply);
+            // in case of just determining the recyclable amount of tokens, break when we
+            // cross this time, this also assumes disbursal.recycleableAfterTimestamp in each disbursal is the same or increases
+            // in case it decreases, recycle will not be possible until 'blocking' disbursal also expires
+            if ( onlyRecycleable && disbursal.recycleableAfterTimestamp > block.timestamp )
+                break;
+            // add to total amount
+            totalAmount += disbursal.amount;
+            // add claimable amount
+            claimableAmount += calculateClaimableAmount(claimer, disbursal.amount, proRataToken, snapshotId);
         }
-        return (claimableAmount, currentIndex);
+        return (claimableAmount, totalAmount, currentIndex);
     }
 
+    function calculateClaimableAmount(address claimer, uint256 disbursalAmount, ITokenSnapshots proRataToken, uint256 snapshotId)
+        private
+        constant
+        returns (uint256)
+    {
+        uint256 proRataClaimerBalance = proRataToken.balanceOfAt(claimer, snapshotId);
+        // if no balance then continue
+        if (proRataClaimerBalance == 0) {
+            return 0;
+        }
+        // compute pro rata amount
+        uint256 proRataTokenTotalSupply = proRataToken.totalSupplyAt(snapshotId);
+        // TODO: prove that rounding errors do not accumulate here
+        return proportion(disbursalAmount, proRataClaimerBalance, proRataTokenTotalSupply);
+    }
 }
