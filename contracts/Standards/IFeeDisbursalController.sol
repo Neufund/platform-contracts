@@ -12,24 +12,34 @@ contract IFeeDisbursalController is
     // Public functions
     ////////////////////////
 
-    /// @notice check wether spender can claim this token
-    function onClaim(address token, address spender)
+    /// @notice check whether claimer can accept disbursal offer
+    function onAccept(address /*token*/, address /*proRataToken*/, address claimer)
         public
+        constant
+        returns (bool allow);
+
+    /// @notice check whether claimer can reject disbursal offer
+    function onReject(address /*token*/, address /*proRataToken*/, address claimer)
+        public
+        constant
         returns (bool allow);
 
     /// @notice check wether this disbursal can happen
     function onDisburse(address token, address disburser, uint256 amount, address proRataToken, uint256 recycleAfterPeriod)
         public
+        constant
         returns (bool allow);
 
     /// @notice check wether this recycling can happen
-    function onRecycle(address token, address[] investors, uint256 until)
+    function onRecycle(address token, address /*proRataToken*/, address[] investors, uint256 until)
         public
+        constant
         returns (bool allow);
 
     /// @notice check wether the disbursal controller may be changed
     function onChangeFeeDisbursalController(address sender, IFeeDisbursalController newController)
         public
+        constant
         returns (bool);
 
 }
