@@ -196,7 +196,8 @@ module.exports = async function inspectETO() {
     IDENTITY_MANAGER: config.addresses.IDENTITY_MANAGER,
     GAS_EXCHANGE: config.addresses.GAS_EXCHANGE,
     TOKEN_RATE_ORACLE: config.addresses.TOKEN_RATE_ORACLE,
-    "GAS EXCHANGE CONTRACT": await universe.gasExchange(),
+    GAS_EXCHANGE_CONTRACT: await universe.gasExchange(),
+    GAS_STIPEND_SERVICE: config.addresses.GAS_STIPEND_SERVICE,
   };
   for (const service of Object.keys(transactingServices)) {
     const serviceBalance = await promisify(web3.eth.getBalance)(transactingServices[service]);
@@ -250,4 +251,7 @@ module.exports = async function inspectETO() {
   console.log(
     `Euro Token Controller max simple exchange ${maxAllowance.div(config.Q18).toNumber()}`,
   );
+  console.log(wrong("TODO: check payment token collection"));
+  console.log(wrong("TODO: check if operator wallet has role fee disburser"));
+  console.log(wrong("TODO: check if platform terms have DEFAULT_RECYCLE_AFTER_PERIOD"));
 };
