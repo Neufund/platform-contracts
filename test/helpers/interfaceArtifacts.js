@@ -21,7 +21,7 @@ export const interfaceToArtifacts = {
   [keyToKey.neumark]: [artifacts.NEUMARK],
   [keyToKey.tokenExchangeRateOracle]: ["ITokenExchangeRateOracle"],
   [keyToKey.gasExchange]: [artifacts.GAS_EXCHANGE],
-  [keyToKey.feeDisbursal]: ["IFeeDisbursal"],
+  [keyToKey.feeDisbursal]: [artifacts.FEE_DISBURSAL],
   [keyToKey.platformPortfolio]: ["IPlatformPortfolio"],
   [keyToKey.tokenExchange]: [],
   [keyToKey.icbmEuroLock]: [artifacts.ICBM_LOCKED_ACCOUNT],
@@ -36,6 +36,7 @@ export const interfaceToArtifacts = {
   [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN, ""],
   [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER, ""],
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
+  [keyToKey.paymentTokenInterface]: ["IERC223Token"],
 };
 
 // verify all known interfaces are mapped

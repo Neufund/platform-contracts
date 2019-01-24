@@ -31,4 +31,5 @@ export const knownInterfaces = {
   equityTokenInterface: sha3("IEquityToken").slice(0, 10),
   equityTokenControllerInterface: sha3("IEquityTokenController").slice(0, 10),
   termsInterface: sha3("IOfferingTerms").slice(0, 10),
+  paymentTokenInterface: sha3("PaymentToken").slice(0, 10),
 };
