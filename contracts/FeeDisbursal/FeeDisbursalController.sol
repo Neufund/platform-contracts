@@ -33,6 +33,8 @@ contract FeeDisbursalController is
     address private ETHER_LOCK;
     address private EURO_LOCK;
     address private NEUMARK;
+    address private ICBM_ETHER_LOCK;
+    address private ICBM_EURO_LOCK;
 
     ////////////////////////
     // Constructor
@@ -46,6 +48,8 @@ contract FeeDisbursalController is
         ETHER_LOCK = universe.etherLock();
         EURO_LOCK = universe.euroLock();
         NEUMARK = universe.neumark();
+        ICBM_ETHER_LOCK = universe.icbmEtherLock();
+        ICBM_EURO_LOCK = universe.icbmEuroLock();
     }
 
     ////////////////////////
@@ -79,9 +83,10 @@ contract FeeDisbursalController is
     {
         // who can disburse tokens: allowed collections + fee disbursal itself + locked accounts (which we cache to save gas)
         // or disburser has a disburer role (for example platform operator wallet)
-        bool disburserAllowed = disburser == EURO_LOCK || disburser == ETHER_LOCK || disburser == msg.sender ||
-            UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, disburser) ||
-            ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, 0x0, msg.sig);
+        bool disburserAllowed = (disburser == EURO_LOCK || disburser == ETHER_LOCK || disburser == msg.sender) || ( 
+            disburser == ICBM_EURO_LOCK || disburser == ICBM_ETHER_LOCK) || ( 
+            UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, disburser)) || ( 
+            ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, msg.sender, msg.sig));
         return amount > 0 && isDisbursableToken(token) && disburserAllowed && recycleAfterDuration > 0;
     }
 
@@ -101,7 +106,7 @@ contract FeeDisbursalController is
         returns (bool)
     {
         (bytes32 controllerContractId, ) = newController.contractId();
-        return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, 0x0, msg.sig) && controllerContractId == FEE_DISBURSAL_CONTROLLER;
+        return ACCESS_POLICY.allowed(sender, ROLE_DISBURSAL_MANAGER, msg.sender, msg.sig) && controllerContractId == FEE_DISBURSAL_CONTROLLER;
     }
 
     //

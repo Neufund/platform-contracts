@@ -89,5 +89,5 @@ contract KnownInterfaces {
     bytes4 internal constant KNOWN_INTERFACE_EQUITY_TOKEN = 0xab9885bb;
 
     // Payment tokens (collection) keccak256("PaymentToken")
-    bytes4 internal constant KNOWN_INTERFACE_PAYMENT_TOKEN = 0xb82ce430;
+    bytes4 internal constant KNOWN_INTERFACE_PAYMENT_TOKEN = 0xb2a0042a;
 }
