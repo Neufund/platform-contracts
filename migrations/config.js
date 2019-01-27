@@ -59,6 +59,8 @@ export function getConfig(web3, network, accounts) {
     },
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
+    // set it to deployed Universe to continue deployment over it
+    UNIVERSE_ADDRESS: null,
     // set to true to deploy separate access policy for Universe
     ISOLATED_UNIVERSE: false,
     // deployed artifacts (may be mocked in overrides)

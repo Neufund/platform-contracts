@@ -251,7 +251,8 @@ module.exports = async function inspectETO() {
   console.log(
     `Euro Token Controller max simple exchange ${maxAllowance.div(config.Q18).toNumber()}`,
   );
-  console.log(wrong("TODO: check payment token collection"));
-  console.log(wrong("TODO: check if operator wallet has role fee disburser"));
-  console.log(wrong("TODO: check if platform terms have DEFAULT_RECYCLE_AFTER_PERIOD"));
+  console.log(...wrong("TODO: check payment token collection"));
+  console.log(...wrong("TODO: check if operator wallet has role fee disburser"));
+  console.log(...wrong("TODO: check if platform terms have DEFAULT_RECYCLE_AFTER_PERIOD"));
+  console.log(...wrong("TODO: check if feeDisbursal has EURT_DEPOSIT_MANAGER"));
 };

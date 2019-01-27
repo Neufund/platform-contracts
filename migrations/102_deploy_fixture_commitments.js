@@ -135,6 +135,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
       if (err) throw new Error(err);
     });
     console.log(`Fixtures described in ${fixturesPath}`);
+
+    // advance snapshot so payout is distributed
+    await neumark.createSnapshot();
   });
 };
 
@@ -318,6 +321,13 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     return etoCommitment;
   }
   console.log("Going to payout");
+  // claim tokens
+  await etoCommitment.claimMany([
+    fas.INV_HAS_EUR_HAS_KYC.address,
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
+    fas.INV_ICBM_ETH_M_HAS_KYC.address,
+  ]);
+  // shift time
   await etoCommitment._mockShiftBackTime(claimD);
   // no need to check state afterwards, payout ensures it
   await etoCommitment.payout();
