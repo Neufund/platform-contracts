@@ -187,11 +187,10 @@ contract FeeDisbursal is
         uint256[2][] memory claimed = new uint256[2][](tokens.length);
         // first gather the funds
         uint256 i;
-        uint256 totalAmount;
         for (i = 0; i < tokens.length; i += 1) {
             // only allow verified and active accounts to claim tokens
             require(_feeDisbursalController.onAccept(tokens[i], proRataToken, msg.sender), "NF_ACCEPT_REJECTED");
-            (claimed[0][i], totalAmount, claimed[1][i]) = claimPrivate(tokens[i], proRataToken, msg.sender, UINT256_MAX);
+            (claimed[0][i], ,claimed[1][i]) = claimPrivate(tokens[i], proRataToken, msg.sender, UINT256_MAX);
         }
         // then perform actual transfers, after all state changes are done, to prevent re-entry
         for (i = 0; i < tokens.length; i += 1) {
