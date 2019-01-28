@@ -25,6 +25,7 @@ const devNetworkDeploymentConfigOverride = {
 // forked mainnet override
 const forkedLiveNetworkDeploymentConfigOverride = {
   ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+  UNIVERSE_ADDRESS: "0x2785279ef76d21d39ad9a5a495955b77dedad528",
   ISOLATED_UNIVERSE: false,
   // other addresses preserve ICBM or set to DEPLOYER
   addresses: {
@@ -116,6 +117,7 @@ module.exports = {
       gasPrice: 5000000000, // 21 gwei /shannon
       deploymentConfigOverride: {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+        UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
       // optional config values
@@ -131,12 +133,13 @@ module.exports = {
       provider: nanoProvider(
         "http://eth-node.neuprd.net:8545",
         // "44'/60'/0'/0",
-        "44'/60'/105'/2",
+        "44'/60'/105'/3", // reclaimer
         // "44'/60'/105'/11",
         "nano_live",
       ),
       deploymentConfigOverride: {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+        UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
       gasPrice: 10000000000, // 10 gwei /shannon
