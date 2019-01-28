@@ -42,7 +42,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       universe = await Universe.deployed();
     }
     // set initial block
-    if (!global._initialBlockNo) {
+    if (global._initialBlockNo === undefined) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
     // deploy fee disbursal and controller

@@ -20,7 +20,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const DEPLOYER = getDeployerAccount(network, accounts);
 
   deployer.then(async () => {
-    const universe = await Universe.deployed();
+    let universe;
+    if (CONFIG.UNIVERSE_ADDRESS) {
+      universe = await Universe.at(CONFIG.ICBM_COMMITMENT_ADDRESS);
+    } else {
+      universe = await Universe.deployed();
+    }
     if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
       if (!CONFIG.ISOLATED_UNIVERSE) {
