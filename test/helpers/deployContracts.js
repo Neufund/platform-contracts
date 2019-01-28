@@ -21,6 +21,8 @@ const TestICBMLockedAccountController = artifacts.require("TestICBMLockedAccount
 const LockedAccount = artifacts.require("LockedAccount");
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
+const FeeDisbursal = artifacts.require("FeeDisbursal");
+const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 
 export async function deployAccessControl(initialRules) {
   const accessPolicy = await RoleBasedAccessPolicy.new();
@@ -99,6 +101,14 @@ export async function deployEtherTokenUniverse(universe, universeManager) {
   await universe.setSingleton(knownInterfaces.etherToken, token.address, {
     from: universeManager,
   });
+  await universe.setCollectionInterface(
+    knownInterfaces.paymentTokenInterface,
+    token.address,
+    true,
+    {
+      from: universeManager,
+    },
+  );
   return token;
 }
 
@@ -122,6 +132,14 @@ export async function deployEuroTokenUniverse(
   await universe.setSingleton(knownInterfaces.euroToken, euroToken.address, {
     from: universeManager,
   });
+  await universe.setCollectionInterface(
+    knownInterfaces.paymentTokenInterface,
+    euroToken.address,
+    true,
+    {
+      from: universeManager,
+    },
+  );
   // set permissions on token controller and euro token
   await createAccessPolicy(accessPolicy, [
     { subject: depositManager, role: roles.eurtDepositManager },
@@ -198,6 +216,7 @@ export const defaultPlatformTerms = {
   MAX_SIGNING_DURATION: daysToSeconds(60),
   MIN_CLAIM_DURATION: daysToSeconds(7),
   MAX_CLAIM_DURATION: daysToSeconds(30),
+  DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION: daysToSeconds(4 * 365),
 };
 
 export async function deployPlatformTerms(universe, universeManager) {
@@ -408,4 +427,13 @@ export async function deployEtherTokenMigration(
     admin,
   );
   return [lockedAccount, icbmLockedAccount, icbmAssetToken, controller];
+}
+
+export async function deployFeeDisbursalUniverse(universe, universeManager) {
+  const controller = await FeeDisbursalController.new(universe.address);
+  const feeDisbursal = await FeeDisbursal.new(universe.address, controller.address);
+  await universe.setSingleton(knownInterfaces.feeDisbursal, feeDisbursal.address, {
+    from: universeManager,
+  });
+  return [feeDisbursal, controller];
 }

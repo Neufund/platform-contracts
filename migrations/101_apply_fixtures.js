@@ -6,6 +6,7 @@ const promisify = require("../test/helpers/evmCommands").promisify;
 const toBytes32 = require("../test/helpers/constants").toBytes32;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const roles = require("../test/helpers/roles").default;
+const { TriState } = require("../test/helpers/triState");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -113,6 +114,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     if (!currentNEURate[0].eq(EUR_NEU_RATE)) {
       throw new Error("could not set EUR/NEU rate");
     }
+
+    console.log("DEPLOYER can create snapshots");
+    await accessPolicy.setUserRole(DEPLOYER, roles.snapshotCreator, "0x0", TriState.Allow);
 
     // setup fixture accounts
     console.log("deposit in EtherToken");

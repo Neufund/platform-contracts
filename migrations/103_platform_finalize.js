@@ -83,6 +83,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const networkDefinition = getNetworkDefinition(network);
     networkDefinition.unlockedAccounts = accounts;
     networkDefinition.provider = undefined;
+    const initialBlock = global._initialBlockNo || -1;
     const meta = {
       CONFIG,
       DEPLOYER,
@@ -92,7 +93,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       INTERFACE_ARTIFACTS: interfaceArtifacts,
       NETWORK: networkDefinition,
       HEAD_BLOCK_NO: endBlockNo,
-      INITIAL_BLOCK_NO: global._initialBlockNo,
+      INITIAL_BLOCK_NO: initialBlock,
     };
     const path = join(__dirname, "../build/meta.json");
     fs.writeFile(path, JSON.stringify(meta, null, 2), err => {

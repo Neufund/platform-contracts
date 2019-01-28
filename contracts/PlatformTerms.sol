@@ -50,6 +50,9 @@ contract PlatformTerms is Math, IContractId {
     uint256 public constant MIN_CLAIM_DURATION = 7 days;
     uint256 public constant MAX_CLAIM_DURATION = 30 days;
 
+    // time after which claimable tokens become recycleable in fee disbursal pool
+    uint256 public constant DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION = 4 * 365 days;
+
     ////////////////////////
     // Public Function
     ////////////////////////
@@ -88,6 +91,6 @@ contract PlatformTerms is Math, IContractId {
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x95482babc4e32de6c4dc3910ee7ae62c8e427efde6bc4e9ce0d6d93e24c39323, 0);
+        return (0x95482babc4e32de6c4dc3910ee7ae62c8e427efde6bc4e9ce0d6d93e24c39323, 1);
     }
 }
