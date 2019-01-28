@@ -7,8 +7,11 @@ const keyToKey = Object.keys(knownInterfaces).reduce(
   {},
 );
 
-// maps known interfaces into artifacts (abis). if more than one artifact is provided, abi discovery is provided via ...
-// todo: implement and describe concrete abi discovery
+// maps known interfaces into artifacts (abis). if more than one artifact is provided, abi discovery is provided via
+// IContractId interface which returns concrete implementation of the interface
+// todo: create knownContracts.js and add output to meta.json for automated discovery
+// please note that this mapping is part of meta.json and will be used by all components down the
+// tool chain
 export const interfaceToArtifacts = {
   [keyToKey.accessPolicy]: [artifacts.ROLE_BASED_ACCESS_POLICY],
   [keyToKey.forkArbiter]: [artifacts.ETHEREUM_FORK_ARBITER],
