@@ -22,7 +22,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   deployer.then(async () => {
     let universe;
     if (CONFIG.UNIVERSE_ADDRESS) {
-      universe = await Universe.at(CONFIG.ICBM_COMMITMENT_ADDRESS);
+      universe = await Universe.at(CONFIG.UNIVERSE_ADDRESS);
     } else {
       universe = await Universe.deployed();
     }
