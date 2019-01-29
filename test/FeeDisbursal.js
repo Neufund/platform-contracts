@@ -17,12 +17,15 @@ import increaseTime from "./helpers/increaseTime";
 import { latestTimestamp } from "./helpers/latestTime";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
-import { decodeLogs, eventValue } from "./helpers/events";
+import { decodeLogs, eventValue, eventValueAtIndex } from "./helpers/events";
+import { divRound } from "./helpers/unitConverter";
 
 const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 const EtherToken = artifacts.require("EtherToken");
 
 const maxUInt256 = new web3.BigNumber(2).pow(256).sub(1);
+const big = b => new web3.BigNumber(b);
+const prop = (disbursal, share, total) => divRound(disbursal.mul(share), total);
 
 contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors]) => {
   let universe;
@@ -180,8 +183,16 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(event.args.disburser).to.eq(disburserAddr);
     }
 
-    function expectLogDisbursalAccepted(tx, claimer, token, proRataToken, amount, nextIndex) {
-      const event = eventValue(tx, "LogDisbursalAccepted");
+    function expectLogDisbursalAccepted(
+      tx,
+      claimer,
+      token,
+      proRataToken,
+      amount,
+      nextIndex,
+      evIdx,
+    ) {
+      const event = eventValueAtIndex(tx, evIdx || 0, "LogDisbursalAccepted");
       expect(event).to.exist;
       expect(event.args.claimer).to.eq(claimer);
       expect(event.args.token).to.eq(token);
@@ -215,6 +226,24 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(event.args.oldController).to.eq(oldController);
       expect(event.args.newController).to.eq(newController);
       expect(event.args.by).to.eq(by);
+    }
+
+    function expectClaimablesToEqual(claimables, expectedClaimables) {
+      for (let i = 0; i < claimables.length; i += 1) {
+        const claimable = claimables[i];
+        const expectedClaimable = expectedClaimables[i];
+        expect(claimable[0], "claimableAmount").to.be.bignumber.eq(expectedClaimable[0]);
+        expect(claimable[1], "totalAmount").to.be.bignumber.eq(expectedClaimable[1]);
+        if (expectedClaimable[2]) {
+          expect(
+            claimable[2].sub(expectedClaimable[2]).abs(),
+            "recyclableAfter",
+          ).to.be.bignumber.lt(10);
+        }
+        if (expectedClaimable[3]) {
+          expect(claimable[3], "firstIndex").to.be.bignumber.eq(expectedClaimable[3]);
+        }
+      }
     }
 
     async function assertClaimable(
@@ -333,11 +362,15 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       it("should always allow recycle");
     });
 
-    async function shouldDisburseToken(token, disbursef) {
-      const amount = Q18.mul(100);
-      await prepareInvestor(investors[0], Q18.mul(200), true);
-      await prepareInvestor(investors[1], Q18.mul(800), true);
-      await disbursef(disburser, Q18.mul(100));
+    async function shouldDisburseToken(
+      token,
+      disbursef,
+      amount = Q18.mul(100),
+      verifyIdentity = true,
+    ) {
+      await prepareInvestor(investors[0], Q18.mul(200), verifyIdentity);
+      await prepareInvestor(investors[1], Q18.mul(800), verifyIdentity);
+      await disbursef(disburser, amount);
       await assertTokenBalance(token, feeDisbursal.address, amount);
       // current snapshot must be skipped
       await assertClaimable(token, neumark, investors[0], 0, 0, 0, 0);
@@ -349,7 +382,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark,
         investors[0],
         maxUInt256,
-        Q18.mul(20),
+        prop(amount, Q18.mul(200), Q18.mul(1000)),
         amount,
         expectedRecycleAfter,
         0,
@@ -359,7 +392,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark,
         investors[1],
         maxUInt256,
-        Q18.mul(80),
+        prop(amount, Q18.mul(800), Q18.mul(1000)),
         amount,
         expectedRecycleAfter,
         0,
@@ -417,6 +450,278 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         await feeDisbursal.getDisbursalCount(etherToken.address, neumark.address),
       ).to.be.bignumber.eq(2);
       await expect(feeDisbursal.getDisbursal(etherToken.address, neumark.address, 2)).to.revert;
+    });
+
+    it("should be able to retreive multiple claimables", async () => {
+      // ether and euro
+      const paymentTokens = [euroToken.address, etherToken.address];
+      const emptyClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      const expectedEmptyClaimables = [[0, 0, 0, 0], [0, 0, 0, 0]];
+      expectClaimablesToEqual(emptyClaimables, expectedEmptyClaimables);
+      await shouldDisburseToken(etherToken, disburseEtherToken);
+      const recycleEther = await recycleAfterFromNow();
+      const etherClaimables0 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      const expectedEtherClaimables0 = [[0, 0, 0, 0], [Q18.mul(20), Q18.mul(100), recycleEther, 0]];
+      expectClaimablesToEqual(etherClaimables0, expectedEtherClaimables0);
+      const etherClaimables1 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      const expectedEtherClaimables1 = [[0, 0, 0, 0], [Q18.mul(80), Q18.mul(100), recycleEther, 0]];
+      expectClaimablesToEqual(etherClaimables1, expectedEtherClaimables1);
+
+      await increaseTime(60 * 60);
+      await shouldDisburseToken(euroToken, disburseEuroToken, Q18.mul(230), false);
+      const recycleEuro = await recycleAfterFromNow();
+      const allClaimables0 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      const expectedAllClaimables0 = [
+        [divRound(Q18.mul(230), big(5)), Q18.mul(230), recycleEuro, 0],
+        [Q18.mul(20), Q18.mul(100), recycleEther, 0],
+      ];
+      expectClaimablesToEqual(allClaimables0, expectedAllClaimables0);
+      const allClaimables1 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      const expectedAllClaimables1 = [
+        [divRound(Q18.mul(230), big(1.25)), Q18.mul(230), recycleEuro, 0],
+        [Q18.mul(80), Q18.mul(100), recycleEther, 0],
+      ];
+      expectClaimablesToEqual(allClaimables1, expectedAllClaimables1);
+    });
+
+    it("should accept multiple", async () => {
+      const paymentTokens = [euroToken.address, etherToken.address];
+      await expect(
+        feeDisbursal.acceptMultipleByToken(paymentTokens, neumark.address, { from: investors[0] }),
+      ).to.be.rejectedWith("NF_ACCEPT_REJECTED");
+      await identityRegistry.setClaims(
+        investors[0],
+        toBytes32(identityClaims.isNone),
+        toBytes32(identityClaims.isVerified),
+        { from: masterManager },
+      );
+      // allow empty accept, events must be generated
+      const emptyAcceptTx = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[0] },
+      );
+      expectLogDisbursalAccepted(
+        emptyAcceptTx,
+        investors[0],
+        euroToken.address,
+        neumark.address,
+        0,
+        0,
+        0,
+      );
+      expectLogDisbursalAccepted(
+        emptyAcceptTx,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        0,
+        0,
+        1,
+      );
+
+      // reset verification
+      await identityRegistry.setClaims(
+        investors[0],
+        toBytes32(identityClaims.isVerified),
+        toBytes32(identityClaims.isNone),
+        { from: masterManager },
+      );
+      // disburse nEur
+      await shouldDisburseToken(euroToken, disburseEuroToken);
+      const euroAcceptTx0 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[0] },
+      );
+      expectLogDisbursalAccepted(
+        euroAcceptTx0,
+        investors[0],
+        euroToken.address,
+        neumark.address,
+        Q18.mul(20),
+        1,
+        0,
+      );
+      expectLogDisbursalAccepted(
+        euroAcceptTx0,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        0,
+        0,
+        1,
+      );
+      const euroAcceptTx1 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[1] },
+      );
+      expectLogDisbursalAccepted(
+        euroAcceptTx1,
+        investors[1],
+        euroToken.address,
+        neumark.address,
+        Q18.mul(80),
+        1,
+        0,
+      );
+      expectLogDisbursalAccepted(
+        euroAcceptTx1,
+        investors[1],
+        etherToken.address,
+        neumark.address,
+        0,
+        0,
+        1,
+      );
+      // expect balances
+      await assertTokenBalance(euroToken, investors[0], Q18.mul(20));
+      await assertTokenBalance(euroToken, investors[1], Q18.mul(80));
+      await assertTokenBalance(etherToken, investors[0], 0);
+      await assertTokenBalance(etherToken, investors[1], 0);
+      await assertTokenBalance(euroToken, feeDisbursal.address, 0);
+
+      // disburse eth
+      const ethDisbursal = Q18.mul(1).add(1);
+      await shouldDisburseToken(etherToken, disburseEtherToken, ethDisbursal, false);
+      const etherAcceptTx0 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[0] },
+      );
+      expectLogDisbursalAccepted(
+        etherAcceptTx0,
+        investors[0],
+        euroToken.address,
+        neumark.address,
+        0,
+        1,
+        0,
+      );
+      const ethClaim00 = prop(ethDisbursal, Q18.mul(400), Q18.mul(2000));
+      expectLogDisbursalAccepted(
+        etherAcceptTx0,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        ethClaim00,
+        1,
+        1,
+      );
+      const etherAcceptTx1 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[1] },
+      );
+      expectLogDisbursalAccepted(
+        etherAcceptTx1,
+        investors[1],
+        euroToken.address,
+        neumark.address,
+        0,
+        1,
+        0,
+      );
+      const ethClaim10 = prop(ethDisbursal, Q18.mul(1600), Q18.mul(2000));
+      expectLogDisbursalAccepted(
+        etherAcceptTx1,
+        investors[1],
+        etherToken.address,
+        neumark.address,
+        ethClaim10,
+        1,
+        1,
+      );
+      await assertTokenBalance(euroToken, feeDisbursal.address, 0);
+      await assertTokenBalance(etherToken, feeDisbursal.address, 0);
+      await assertTokenBalance(euroToken, investors[0], Q18.mul(20));
+      await assertTokenBalance(euroToken, investors[1], Q18.mul(80));
+      await assertTokenBalance(etherToken, investors[0], ethClaim00);
+      await assertTokenBalance(etherToken, investors[1], ethClaim10);
+
+      // disburse both
+      await increaseTime(60 * 172);
+      const ethDisbursal2 = Q18.mul(1.28122182).sub(1);
+      const eurDisbursal2 = Q18.mul(98328423.298372).add(1);
+      await shouldDisburseToken(etherToken, disburseEtherToken, ethDisbursal2, false);
+      await shouldDisburseToken(euroToken, disburseEuroToken, eurDisbursal2, false);
+      const allAcceptTx0 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[0] },
+      );
+      const eurClaim01 = prop(eurDisbursal2, Q18.mul(800), Q18.mul(4000));
+      expectLogDisbursalAccepted(
+        allAcceptTx0,
+        investors[0],
+        euroToken.address,
+        neumark.address,
+        eurClaim01,
+        2,
+        0,
+      );
+      const ethClaim01 = prop(ethDisbursal2, Q18.mul(400), Q18.mul(2000));
+      expectLogDisbursalAccepted(
+        allAcceptTx0,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        ethClaim01,
+        2,
+        1,
+      );
+      const allAcceptTx1 = await feeDisbursal.acceptMultipleByToken(
+        paymentTokens,
+        neumark.address,
+        { from: investors[1] },
+      );
+      const eurClaim11 = prop(eurDisbursal2, Q18.mul(1600), Q18.mul(2000));
+      expectLogDisbursalAccepted(
+        allAcceptTx1,
+        investors[1],
+        euroToken.address,
+        neumark.address,
+        eurClaim11,
+        2,
+        0,
+      );
+      const ethClaim11 = prop(ethDisbursal2, Q18.mul(800), Q18.mul(1000));
+      expectLogDisbursalAccepted(
+        allAcceptTx1,
+        investors[1],
+        etherToken.address,
+        neumark.address,
+        ethClaim11,
+        2,
+        1,
+      );
+      await assertTokenBalance(euroToken, feeDisbursal.address, 0);
+      await assertTokenBalance(etherToken, feeDisbursal.address, 0);
+      await assertTokenBalance(euroToken, investors[0], Q18.mul(20).add(eurClaim01));
+      await assertTokenBalance(euroToken, investors[1], Q18.mul(80).add(eurClaim11));
+      await assertTokenBalance(etherToken, investors[0], ethClaim00.add(ethClaim01));
+      await assertTokenBalance(etherToken, investors[1], ethClaim10.add(ethClaim11));
     });
 
     // happy path
