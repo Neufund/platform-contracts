@@ -190,17 +190,17 @@ contract FeeDisbursal is
         for (i = 0; i < tokens.length; i += 1) {
             // only allow verified and active accounts to claim tokens
             require(_feeDisbursalController.onAccept(tokens[i], proRataToken, msg.sender), "NF_ACCEPT_REJECTED");
-            (claimed[0][i], ,claimed[1][i]) = claimPrivate(tokens[i], proRataToken, msg.sender, UINT256_MAX);
+            (claimed[i][0], ,claimed[i][1]) = claimPrivate(tokens[i], proRataToken, msg.sender, UINT256_MAX);
         }
         // then perform actual transfers, after all state changes are done, to prevent re-entry
         for (i = 0; i < tokens.length; i += 1) {
-            if (claimed[0][i] > 0) {
+            if (claimed[i][0] > 0) {
                 // do the actual token transfer
                 IERC223Token ierc223Token = IERC223Token(tokens[i]);
-                assert(ierc223Token.transfer(msg.sender, claimed[0][i], ""));
+                assert(ierc223Token.transfer(msg.sender, claimed[i][0], ""));
             }
             // log
-            emit LogDisbursalAccepted(msg.sender, tokens[i], proRataToken, claimed[0][i], claimed[1][i]);
+            emit LogDisbursalAccepted(msg.sender, tokens[i], proRataToken, claimed[i][0], claimed[i][1]);
         }
     }
 
@@ -259,6 +259,7 @@ contract FeeDisbursal is
     /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
     /// @param claimer address of the claimer that would receive the funds
     /// @return array of (amount that can be claimed, total disbursed amount, time to recycle of first disbursal, first disbursal index)
+    /// @dev claimbles are returned in the same order as tokens were specified
     function claimableMutipleByToken(address[] tokens, ITokenSnapshots proRataToken, address claimer)
         public
         constant
@@ -267,11 +268,11 @@ contract FeeDisbursal is
         // we don't to do a verified check here, this serves purely to check how much is claimable for an address
         claimables = new uint256[4][](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
-            claimables[3][i] = _disbursalProgress[tokens[i]][proRataToken][claimer];
-            if (claimables[3][i] < _disbursals[tokens[i]][proRataToken].length) {
-                claimables[2][i] = _disbursals[tokens[i]][proRataToken][claimables[3][i]].recycleableAfterTimestamp;
+            claimables[i][3] = _disbursalProgress[tokens[i]][proRataToken][claimer];
+            if (claimables[i][3] < _disbursals[tokens[i]][proRataToken].length) {
+                claimables[i][2] = _disbursals[tokens[i]][proRataToken][claimables[i][3]].recycleableAfterTimestamp;
             }
-            (claimables[0][i], claimables[1][i], ) = claimablePrivate(tokens[i], proRataToken, claimer, UINT256_MAX, false);
+            (claimables[i][0], claimables[i][1], ) = claimablePrivate(tokens[i], proRataToken, claimer, UINT256_MAX, false);
         }
     }
 
