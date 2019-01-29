@@ -14,6 +14,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const PlatformTerms = artifacts.require(CONFIG.artifacts.PLATFORM_TERMS);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
   const EuroTokenController = artifacts.require(CONFIG.artifacts.EURO_TOKEN_CONTROLLER);
   const FeeDisbursal = artifacts.require("FeeDisbursal");
@@ -37,7 +38,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
     let universe;
     if (CONFIG.UNIVERSE_ADDRESS) {
-      universe = await Universe.at(CONFIG.ICBM_COMMITMENT_ADDRESS);
+      universe = await Universe.at(CONFIG.UNIVERSE_ADDRESS);
     } else {
       universe = await Universe.deployed();
     }
@@ -46,8 +47,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
     // deploy fee disbursal and controller
+    console.log("Deploying FeeDisbursalController");
     await deployer.deploy(FeeDisbursalController, universe.address);
     const controller = await FeeDisbursalController.deployed();
+    console.log("Deploying FeeDisbursal");
     await deployer.deploy(FeeDisbursal, universe.address, controller.address);
     const feeDisbursal = await FeeDisbursal.deployed();
 
@@ -59,6 +62,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const DEPLOYER = getDeployerAccount(network, accounts);
 
     const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+    console.log("Setting permissions");
     await createAccessPolicy(accessPolicy, [
       // temporary access to universe, will be dropped in finalize
       {
@@ -85,6 +89,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       },
     ]);
     // set as default disbursal
+    console.log("Setting singletons");
     await universe.setSingleton(knownInterfaces.feeDisbursal, feeDisbursal.address);
 
     const minDeposit = await tokenController.minDepositAmountEurUlps();
@@ -96,11 +101,17 @@ module.exports = function deployContracts(deployer, network, accounts) {
         .toNumber()} ${minWithdraw.div(Q18).toNumber()} ${maxAllowance.div(Q18).toNumber()}`,
     );
     await tokenController.applySettings(minDeposit, minWithdraw, maxAllowance);
-    // add payment tokens to payment tokens collection
+    console.log("add payment tokens to payment tokens collection");
     await universe.setCollectionsInterfaces(
       [knownInterfaces.paymentTokenInterface, knownInterfaces.paymentTokenInterface],
       [euroTokenAddress, etherTokenAddress],
       [true, true],
     );
+    if (CONFIG.isLiveDeployment) {
+      console.log("re-deploying PlatformTerms on live network");
+      await deployer.deploy(PlatformTerms);
+      const platformTerms = await PlatformTerms.deployed();
+      await universe.setSingleton(knownInterfaces.platformTerms, platformTerms.address);
+    }
   });
 };
