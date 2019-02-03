@@ -35,6 +35,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
           { subject: DEPLOYER, role: roles.eurtLegalManager, state: TriState.Unset },
           { subject: DEPLOYER, role: roles.identityManager, state: TriState.Unset },
           { subject: DEPLOYER, role: roles.tokenRateOracle, state: TriState.Unset },
+          { subject: DEPLOYER, role: roles.lockedAccountAdmin, state: TriState.Unset },
           {
             subject: DEPLOYER,
             role: roles.universeManager,
