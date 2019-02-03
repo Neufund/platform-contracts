@@ -5,6 +5,7 @@ import "../PlatformTerms.sol";
 import "../Standards/IFeeDisbursal.sol";
 import "../Serialization.sol";
 import "../Math.sol";
+import "../Standards/IContractId.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IFeeDisbursalController.sol";
@@ -27,7 +28,8 @@ contract FeeDisbursal is
     Serialization,
     Math,
     KnownContracts,
-    KnownInterfaces
+    KnownInterfaces,
+    IContractId
 {
 
     ////////////////////////
@@ -39,7 +41,8 @@ contract FeeDisbursal is
         address indexed token,
         uint256 amount,
         uint256 recycleAfterDuration,
-        address disburser
+        address disburser,
+        uint256 index
     );
 
     event LogDisbursalAccepted(
@@ -79,8 +82,10 @@ contract FeeDisbursal is
         uint256 snapshotId;
         // amount of tokens to disburse
         uint256 amount;
-        // time after which claims to this token can be recycled
-        uint256 recycleableAfterTimestamp;
+        // timestamp after which claims to this token can be recycled
+        uint128 recycleableAfterTimestamp;
+        // timestamp on which token were disbursed
+        uint128 disbursalTimestamp;
         // contract sending the disbursal
         address disburser;
     }
@@ -95,6 +100,9 @@ contract FeeDisbursal is
     // Immutable state
     ////////////////////////
     Universe private UNIVERSE;
+
+    // must be cached - otherwise default func runs out of gas
+    address private ICBM_ETHER_TOKEN;
 
     ////////////////////////
     // Mutable state
@@ -119,6 +127,7 @@ contract FeeDisbursal is
         (bytes32 controllerContractId, ) = controller.contractId();
         require(controllerContractId == FEE_DISBURSAL_CONTROLLER);
         UNIVERSE = universe;
+        ICBM_ETHER_TOKEN = universe.getSingleton(KNOWN_INTERFACE_ICBM_ETHER_TOKEN);
         _feeDisbursalController = controller;
     }
 
@@ -137,6 +146,7 @@ contract FeeDisbursal is
         uint256 snapshotId,
         uint256 amount,
         uint256 recycleableAfterTimestamp,
+        uint256 disburseTimestamp,
         address disburser
     )
     {
@@ -144,6 +154,7 @@ contract FeeDisbursal is
         snapshotId = disbursal.snapshotId;
         amount = disbursal.amount;
         recycleableAfterTimestamp = disbursal.recycleableAfterTimestamp;
+        disburseTimestamp = disbursal.disbursalTimestamp;
         disburser = disbursal.disburser;
     }
 
@@ -375,25 +386,47 @@ contract FeeDisbursal is
         require(msg.sender == tokenAddress);
         // transfer assets
         IERC20Token token = IERC20Token(tokenAddress);
+        // this needs a special permission in case of ICBM Euro Token
         require(token.transferFrom(from, address(this), amount));
 
         // now in case we convert from icbm token
         // migrate previous asset token depends on token type, unfortunatelly deposit function differs so we have to cast. this is weak...
-        if (tokenAddress == UNIVERSE.getSingleton(KNOWN_INTERFACE_ICBM_ETHER_TOKEN)) {
+        if (tokenAddress == ICBM_ETHER_TOKEN) {
             // after EtherToken withdraw, deposit ether into new token
             IWithdrawableToken(tokenAddress).withdraw(amount);
             token = IERC20Token(UNIVERSE.etherToken());
             EtherToken(token).deposit.value(amount)();
         }
         if(tokenAddress == UNIVERSE.getSingleton(KNOWN_INTERFACE_ICBM_EURO_TOKEN)) {
-            // this contract requires EuroToken DEPOSIT_MANAGER role
             IWithdrawableToken(tokenAddress).withdraw(amount);
             token = IERC20Token(UNIVERSE.euroToken());
+            // this requires EuroToken DEPOSIT_MANAGER role
             EuroToken(token).deposit(this, amount, 0x0);
         }
-
-        tokenFallbackPrivate(msg.sender, from, amount, data);
+        tokenFallbackPrivate(address(token), from, amount, data);
         return true;
+    }
+
+    //
+    // IContractId Implementation
+    //
+
+    function contractId()
+        public
+        pure
+        returns (bytes32 id, uint256 version)
+    {
+        return (0x2e1a7e4ac88445368dddb31fe43d29638868837724e9be8ffd156f21a971a4d7, 0);
+    }
+
+    //
+    // Payable default function to receive ether during migration
+    //
+    function ()
+        public
+        payable
+    {
+        require(msg.sender == ICBM_ETHER_TOKEN);
     }
 
 
@@ -439,6 +472,8 @@ contract FeeDisbursal is
             proRataTokenTotalSupply -= proRataToken.balanceOfAt(address(this), snapshotId);
         }
         require(proRataTokenTotalSupply > 0, "NF_NO_DISBURSE_EMPTY_TOKEN");
+        uint256 recycleAfter = add(block.timestamp, recycleAfterDuration);
+        assert(recycleAfter<2**128);
 
         Disbursal[] storage disbursals = _disbursals[token][proRataToken];
         // try to merge with an existing disbursal
@@ -456,7 +491,8 @@ contract FeeDisbursal is
             if ( disbursal.disburser == disburser ) {
                 merged = true;
                 disbursal.amount += amount;
-                disbursal.recycleableAfterTimestamp = block.timestamp + recycleAfterDuration;
+                disbursal.recycleableAfterTimestamp = uint128(recycleAfter);
+                disbursal.disbursalTimestamp = uint128(block.timestamp);
                 break;
             }
         }
@@ -464,14 +500,14 @@ contract FeeDisbursal is
         // create a new disbursal entry
         if (!merged) {
             disbursals.push(Disbursal({
-                recycleableAfterTimestamp: block.timestamp + recycleAfterDuration,
+                recycleableAfterTimestamp: uint128(recycleAfter),
+                disbursalTimestamp: uint128(block.timestamp),
                 amount: amount,
                 snapshotId: snapshotId,
                 disburser: disburser
             }));
         }
-
-        emit LogDisbursalCreated(proRataToken, token, amount, recycleAfterDuration, disburser);
+        emit LogDisbursalCreated(proRataToken, token, amount, recycleAfterDuration, disburser, merged ? i : disbursals.length - 1);
     }
 
 

@@ -255,4 +255,5 @@ module.exports = async function inspectETO() {
   console.log(...wrong("TODO: check if operator wallet has role fee disburser"));
   console.log(...wrong("TODO: check if platform terms have DEFAULT_RECYCLE_AFTER_PERIOD"));
   console.log(...wrong("TODO: check if feeDisbursal has EURT_DEPOSIT_MANAGER"));
+  console.log(...wrong("TODO: check if a broker for ICBM Euro token"));
 };

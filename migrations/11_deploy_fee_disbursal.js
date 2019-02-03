@@ -16,9 +16,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const PlatformTerms = artifacts.require(CONFIG.artifacts.PLATFORM_TERMS);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
+  const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
+  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
   const EuroTokenController = artifacts.require(CONFIG.artifacts.EURO_TOKEN_CONTROLLER);
-  const FeeDisbursal = artifacts.require("FeeDisbursal");
-  const FeeDisbursalController = artifacts.require("FeeDisbursalController");
+  const FeeDisbursal = artifacts.require(CONFIG.artifacts.FEE_DISBURSAL);
+  const FeeDisbursalController = artifacts.require(CONFIG.artifacts.FEE_DISBURSAL_CONTROLLER);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
 
   deployer.then(async () => {
@@ -58,6 +60,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const euroTokenAddress = await universe.euroToken();
     const etherTokenAddress = await universe.etherToken();
     const euroToken = await EuroToken.at(euroTokenAddress);
+    const icbmEuroLockedAccount = await ICBMLockedAccount.at(await universe.icbmEuroLock());
+    const icbmEtherLockedAccount = await ICBMLockedAccount.at(await universe.icbmEtherLock());
+    const icbmEuroToken = await ICBMEuroToken.at(await icbmEuroLockedAccount.assetToken());
     const tokenController = await EuroTokenController.at(await euroToken.tokenController());
     const DEPLOYER = getDeployerAccount(network, accounts);
 
@@ -73,6 +78,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       },
       // temporary access to euro token controller, will be dropped in finalize
       { subject: DEPLOYER, role: roles.eurtLegalManager },
+      // temporary deposit manager so icbm euro token permissions can be changed
+      { subject: DEPLOYER, role: roles.eurtDepositManager },
+      // temporary locked account manager to set fee disbursal contract
+      { subject: DEPLOYER, role: roles.lockedAccountAdmin },
       // add platform wallet to disbursers
       {
         subject: CONFIG.PLATFORM_OPERATOR_WALLET,
@@ -101,6 +110,15 @@ module.exports = function deployContracts(deployer, network, accounts) {
         .toNumber()} ${minWithdraw.div(Q18).toNumber()} ${maxAllowance.div(Q18).toNumber()}`,
     );
     await tokenController.applySettings(minDeposit, minWithdraw, maxAllowance);
+
+    console.log("Setting fee disbursal in ICBM Locked Contracts");
+    await icbmEuroLockedAccount.setPenaltyDisbursal(feeDisbursal.address);
+    await icbmEtherLockedAccount.setPenaltyDisbursal(feeDisbursal.address);
+
+    console.log("Giving ICBM Euro Token broker permissions to FeeDisbursal");
+    await icbmEuroToken.setAllowedTransferTo(feeDisbursal.address, true);
+    await icbmEuroToken.setAllowedTransferFrom(feeDisbursal.address, true);
+
     console.log("add payment tokens to payment tokens collection");
     await universe.setCollectionsInterfaces(
       [knownInterfaces.paymentTokenInterface, knownInterfaces.paymentTokenInterface],
