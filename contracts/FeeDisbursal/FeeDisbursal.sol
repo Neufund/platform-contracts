@@ -158,6 +158,31 @@ contract FeeDisbursal is
         disburser = disbursal.disburser;
     }
 
+    /// @notice get disbursals for current snapshot id of the proRataToken that cannot be claimed yet
+    /// @param token address of the disbursable token
+    /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
+    /// @return array of (snapshotId, amount, index) ordered by index. full disbursal information can be retrieved via index
+    function getNonClaimableDisbursals(address token, address proRataToken)
+        public
+        constant
+    returns (uint256[3][] memory disbursals)
+    {
+        uint256 len = _disbursals[token][proRataToken].length;
+        if (len == 0) {
+            return;
+        }
+        // count elements with current snapshot id
+        uint256 snapshotId = ITokenSnapshots(proRataToken).currentSnapshotId();
+        uint256 ii = len;
+        while(_disbursals[token][proRataToken][ii-1].snapshotId == snapshotId && --ii > 0) {}
+        disbursals = new uint256[3][](len-ii);
+        for(uint256 jj = 0; jj < len - ii; jj += 1) {
+            disbursals[jj][0] = snapshotId;
+            disbursals[jj][1] = _disbursals[token][proRataToken][ii+jj].amount;
+            disbursals[jj][2] = ii+jj;
+        }
+    }
+
     /// @notice get count of disbursals for given token
     /// @param token address of the disbursable token
     /// @param proRataToken address of the token used to determine the user pro rata amount, must be a snapshottoken
