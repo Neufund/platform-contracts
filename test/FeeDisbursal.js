@@ -684,6 +684,67 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await expect(feeDisbursal.getDisbursal(etherToken.address, neumark.address, 2)).to.revert;
     });
 
+    it("should retrieve non claimable disbursals", async () => {
+      const empty = await feeDisbursal.getNonClaimableDisbursals(
+        etherToken.address,
+        neumark.address,
+      );
+      expect(empty).to.be.empty;
+      const snapshotId = await neumark.currentSnapshotId();
+      // we need at least one investor as always
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      // create two entries for ethertoken
+      await disburseEtherToken(disburser, Q18.mul(40));
+      const one = await feeDisbursal.getNonClaimableDisbursals(etherToken.address, neumark.address);
+      expect(one.length).to.be.eq(1);
+      expect(one[0][0]).to.be.bignumber.eq(snapshotId);
+      expect(one[0][1]).to.be.bignumber.eq(Q18.mul(40));
+      expect(one[0][2]).to.be.bignumber.eq(0);
+
+      await disburseEtherToken(disburser2, Q18.mul(60));
+      const two = await feeDisbursal.getNonClaimableDisbursals(etherToken.address, neumark.address);
+      expect(two.length).to.be.eq(2);
+      expect(two[0]).to.be.deep.eq(one[0]);
+      expect(two[1][0]).to.be.bignumber.eq(snapshotId);
+      expect(two[1][1]).to.be.bignumber.eq(Q18.mul(60));
+      expect(two[1][2]).to.be.bignumber.eq(1);
+      // seal
+      await advanceSnapshotId(neumark);
+      const empty2 = await feeDisbursal.getNonClaimableDisbursals(
+        etherToken.address,
+        neumark.address,
+      );
+      expect(empty2).to.be.empty;
+      const snapshotId2 = await neumark.currentSnapshotId();
+      await disburseEtherToken(disburser, Q18.mul(50));
+      const one2 = await feeDisbursal.getNonClaimableDisbursals(
+        etherToken.address,
+        neumark.address,
+      );
+      expect(one2.length).to.be.eq(1);
+      expect(one2[0][0]).to.be.bignumber.eq(snapshotId2);
+      expect(one2[0][1]).to.be.bignumber.eq(Q18.mul(50));
+      expect(one2[0][2]).to.be.bignumber.eq(2);
+
+      await disburseEtherToken(disburser2, Q18.mul(70));
+      const two2 = await feeDisbursal.getNonClaimableDisbursals(
+        etherToken.address,
+        neumark.address,
+      );
+      expect(two2.length).to.be.eq(2);
+      expect(two2[0]).to.be.deep.eq(one2[0]);
+      expect(two2[1][0]).to.be.bignumber.eq(snapshotId2);
+      expect(two2[1][1]).to.be.bignumber.eq(Q18.mul(70));
+      expect(two2[1][2]).to.be.bignumber.eq(3);
+      // seal
+      await advanceSnapshotId(neumark);
+      const empty3 = await feeDisbursal.getNonClaimableDisbursals(
+        etherToken.address,
+        neumark.address,
+      );
+      expect(empty3).to.be.empty;
+    });
+
     it("should overwrite timestamp and recycle period in details of disbursal", async () => {
       await prepareInvestor(investors[0], Q18.mul(200), true);
       // disburse some
