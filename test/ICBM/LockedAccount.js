@@ -6,6 +6,11 @@ import {
   deployNeumark,
   deployICBMLockedAccount,
   applyTransferPermissions,
+  deployPlatformTerms,
+  deployFeeDisbursalUniverse,
+  deployUniverse,
+  deployEuroTokenUniverse,
+  deployEtherTokenUniverse,
 } from "../helpers/deployContracts";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
@@ -17,6 +22,7 @@ import { etherToWei } from "../helpers/unitConverter";
 import roles from "../helpers/roles";
 import { promisify } from "../helpers/evmCommands";
 import { dayInSeconds, monthInSeconds, Q18 } from "../helpers/constants";
+import { knownInterfaces } from "../helpers/knownInterfaces";
 
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
@@ -634,6 +640,70 @@ contract(
         // look for correct amount of burned neumarks
         expectNeumarksBurnedEvent(unlockTx, lockedAccount.address, ticket, neumarks);
         await makeWithdraw(investor, ticket.sub(penalty));
+      });
+
+      it("should unlock with approveAndCall on real FeeDisbursal", async () => {
+        const ticket = etherToWei(1);
+        const isEuroLock = (await assetToken.symbol()) === "EUR-T";
+        const neumarks = await lock(investor, ticket);
+        await enableUnlocks();
+        // deploy universe and others
+        const [universe, newAP] = await deployUniverse(admin, admin);
+        await deployPlatformTerms(universe, admin);
+        // add NEU
+        await universe.setSingleton(knownInterfaces.neumark, neumark.address, { from: admin });
+        // add icbm locks to singletons
+        if (isEuroLock) {
+          await universe.setManySingletons(
+            [knownInterfaces.icbmEuroLock, knownInterfaces.icbmEuroToken],
+            [lockedAccount.address, assetToken.address],
+            { from: admin },
+          );
+        } else {
+          await universe.setManySingletons(
+            [knownInterfaces.icbmEtherLock, knownInterfaces.icbmEtherToken],
+            [lockedAccount.address, assetToken.address],
+            { from: admin },
+          );
+        }
+        // change to new FeeDisbursal
+        const [feeDisbursal] = await deployFeeDisbursalUniverse(universe, admin);
+        let convertedToken;
+        if (isEuroLock) {
+          [convertedToken] = await deployEuroTokenUniverse(
+            universe,
+            admin,
+            admin,
+            admin,
+            0,
+            0,
+            Q18,
+          );
+          await assetToken.setAllowedTransferTo(feeDisbursal.address, true, { from: admin });
+          await assetToken.setAllowedTransferFrom(feeDisbursal.address, true, { from: admin });
+          await newAP.setUserRole(
+            feeDisbursal.address,
+            roles.eurtDepositManager,
+            convertedToken.address,
+            TriState.Allow,
+          );
+        } else {
+          convertedToken = await deployEtherTokenUniverse(universe, admin);
+        }
+
+        // all neu will be burned so give neu to someone else so we can distribute
+        await neumark.issueForEuro(Q18, { from: admin });
+        // set new penalty disbursal
+        await lockedAccount.setPenaltyDisbursal(feeDisbursal.address, {
+          from: admin,
+        });
+        // this will pay out
+        await neumark.approveAndCall(lockedAccount.address, neumarks, "", {
+          from: investor,
+        });
+        const penalty = await calculateUnlockPenalty(ticket);
+        // old payment token was converted to a new one inside FeeDisbursal contract
+        expect(await convertedToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(penalty);
       });
 
       it("should silently exit on unlock of non-existing investor", async () => {

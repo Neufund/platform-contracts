@@ -9,6 +9,8 @@ import {
   deployEuroTokenUniverse,
   deployEtherTokenMigration,
   deployEuroTokenMigration,
+  deployFeeDisbursalUniverse,
+  deployPlatformTerms,
 } from "./helpers/deployContracts";
 import increaseTime, { setTimeTo } from "./helpers/increaseTime";
 import { latestTimestamp } from "./helpers/latestTime";
@@ -25,6 +27,7 @@ import {
   monthInSeconds,
   Q18,
   toBytes32,
+  ZERO_ADDRESS,
 } from "./helpers/constants";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
@@ -33,6 +36,7 @@ import { expectLogFundsCommitted } from "./helpers/commitment";
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 const TestNullContract = artifacts.require("TestNullContract");
 const NullCommitment = artifacts.require("NullCommitment");
+const EuroTokenController = artifacts.require("EuroTokenController");
 
 const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
 const LOCK_PERIOD = 18 * monthInSeconds;
@@ -1224,6 +1228,27 @@ contract(
         expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
         expectNeumarksBurnedEvent(unlockTx, lockedAccount.address, ticket, neumarks);
         await makeWithdraw(investor, ticket.sub(penalty));
+      });
+
+      it("should unlock with approveAndCall on real FeeDisbursal", async () => {
+        const ticket = etherToWei(1);
+        const neumarks = await lock(investor, ticket, makeDeposit);
+        // must have platform terms to read default recycle period
+        await deployPlatformTerms(universe, admin);
+        // change to new FeeDisbursal
+        const [feeDisbursal] = await deployFeeDisbursalUniverse(universe, admin);
+        // all neu will be burned so give neu to someone else so we can distribute
+        await neumark.issueForEuro(Q18, { from: admin });
+        // also let it process nEUR
+        const etcAddress = await universe.getSingleton(knownInterfaces.euroTokenController);
+        if (etcAddress !== ZERO_ADDRESS) {
+          const euroTokenController = await EuroTokenController.at(etcAddress);
+          await euroTokenController.applySettings(0, 0, Q18, { from: admin });
+        }
+        // this will pay out
+        await unlockWithCallback(investor, neumarks);
+        const penalty = await calculateUnlockPenalty(ticket);
+        expect(await assetToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(penalty);
       });
 
       it("should silently exit on unlock of non-existing investor", async () => {

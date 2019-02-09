@@ -11,6 +11,7 @@ import {
   deploySimpleExchangeUniverse,
   deployEtherTokenMigration,
   deployEuroTokenMigration,
+  deployFeeDisbursalUniverse,
 } from "../helpers/deployContracts";
 import {
   deployShareholderRights,
@@ -1176,6 +1177,40 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // check if disbursal happened
       expect(await euroToken.balanceOf(simpleAccountDisbursal)).to.be.bignumber.eq(
         missingAmount.mul(0.03).round(0, 4),
+      );
+    });
+
+    it("sign to claim with real FeeDisbursal contract", async () => {
+      await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      const missingAmount = tokenTermsDict.MIN_NUMBER_OF_TOKENS.mul(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+      );
+      const ethAmount = Q18.mul(232).add(1);
+      await investAmount(investors[1], ethAmount, "ETH");
+      await investAmount(investors[1], missingAmount, "EUR");
+      let currDate = new web3.BigNumber(await latestTimestamp());
+      const signDate = currDate.add(durTable[CommitmentState.Public]);
+      await skipTimeTo(signDate);
+      await moveETOToClaim(1, new web3.BigNumber(0));
+      await claimInvestor(investors[1]);
+      currDate = new web3.BigNumber(await latestTimestamp());
+      const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
+      await skipTimeTo(payoutDate);
+
+      // change to new FeeDisbursal
+      const [feeDisbursal] = await deployFeeDisbursalUniverse(universe, admin);
+      // also let it process nEUR
+      await euroTokenController.applySettings(0, 0, Q18, { from: admin });
+      // this will pay out
+      await etoCommitment.payout();
+      // check if disbursal happened
+      expect(await euroToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(
+        missingAmount.mul(0.03).round(0, 4),
+      );
+      expect(await etherToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(
+        ethAmount.mul(0.03).round(0, 4),
       );
     });
 
