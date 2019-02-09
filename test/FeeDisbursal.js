@@ -29,7 +29,11 @@ const TestDisburser = artifacts.require("TestDisburser");
 
 const maxUInt256 = new web3.BigNumber(2).pow(256).sub(1);
 const big = b => new web3.BigNumber(b);
-const prop = (disbursal, share, total) => divRound(disbursal.mul(share), total);
+const propd = (disbursal, share, total) =>
+  disbursal
+    .mul(share)
+    .div(total)
+    .floor();
 
 contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors]) => {
   let universe;
@@ -135,17 +139,26 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
     }
 
     // disburse some ethertokens from the given disburser
-    async function disburseEtherToken(sender, amount) {
+    async function disburseEtherToken(sender, amount, expIndex) {
       // console.log("disburseEtherToken");
       const tx = await etherToken.depositAndTransfer(feeDisbursal.address, amount, 0, {
         from: sender,
         value: amount,
       });
       tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
-      expectLogDisbursalCreated(tx, neumark.address, etherToken.address, amount, sender);
+      expectLogDisbursalCreated(
+        tx,
+        neumark.address,
+        etherToken.address,
+        amount,
+        sender,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        expIndex,
+      );
+      return tx;
     }
 
-    async function disburseEuroToken(sender, amount) {
+    async function disburseEuroToken(sender, amount, expIndex) {
       const tx = await euroToken.depositAndTransfer(
         sender,
         feeDisbursal.address,
@@ -158,20 +171,38 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         },
       );
       tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
-      expectLogDisbursalCreated(tx, neumark.address, euroToken.address, amount, sender);
+      expectLogDisbursalCreated(
+        tx,
+        neumark.address,
+        euroToken.address,
+        amount,
+        sender,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        expIndex,
+      );
+      return tx;
     }
 
-    async function disburseNeumark(sender, amount) {
+    async function disburseNeumark(sender, amount, expIndex) {
       await neumark.issueForEuro(amount, { from: masterManager });
       await neumark.distribute(sender, amount, { from: masterManager });
       const tx = await neumark.transfer["address,uint256,bytes"](feeDisbursal.address, amount, 0, {
         from: sender,
       });
       tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
-      expectLogDisbursalCreated(tx, neumark.address, neumark.address, amount, sender);
+      expectLogDisbursalCreated(
+        tx,
+        neumark.address,
+        neumark.address,
+        amount,
+        sender,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        expIndex,
+      );
       // burn all the excess neumarks
       const balance = await neumark.balanceOf(masterManager);
       await neumark.burn.uint256(balance, { from: masterManager });
+      return tx;
     }
 
     /**
@@ -290,11 +321,11 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       return [claimableAmount, totalAmount, recyclableAfter, firstIndex];
     }
 
-    async function assertRecycleable(token, proRataToken, investor, index, expectedAmount) {
+    async function assertRecycleable(token, proRataToken, investorList, index, expectedAmount) {
       const recycleableAmount = await feeDisbursal.recycleable(
         token.address,
         proRataToken.address,
-        investor,
+        investorList,
         index,
       );
       expect(recycleableAmount).to.be.bignumber.equal(expectedAmount);
@@ -537,7 +568,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await prepareInvestor(investors[0], Q18.mul(200), verifyIdentity);
       await prepareInvestor(investors[1], Q18.mul(800), verifyIdentity);
       await disbursef(disburser, amount);
-      await assertTokenBalance(token, feeDisbursal.address, amount);
+
       // current snapshot must be skipped
       await assertClaimable(token, neumark, investors[0], 0, 0, 0, 0);
       await advanceSnapshotId(neumark);
@@ -548,7 +579,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark,
         investors[0],
         maxUInt256,
-        prop(amount, Q18.mul(200), Q18.mul(1000)),
+        propd(amount, Q18.mul(200), Q18.mul(1000)),
         amount,
         expectedRecycleAfter,
         0,
@@ -558,7 +589,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark,
         investors[1],
         maxUInt256,
-        prop(amount, Q18.mul(800), Q18.mul(1000)),
+        propd(amount, Q18.mul(800), Q18.mul(1000)),
         amount,
         expectedRecycleAfter,
         0,
@@ -592,7 +623,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await disburseNeumark(disburser2, tr2Amount);
       await advanceSnapshotId(neumark);
       // available now as disbursal snapshot is sealed
-      const inv0expectedAmount = prop(amount, Q18.mul(200), iniDist);
+      const inv0expectedAmount = propd(amount, Q18.mul(200), iniDist);
       await assertClaimable(neumark, neumark, investors[0], maxUInt256, inv0expectedAmount, amount);
       // now investor1 got inv0expectedAmount of NEU so proRata below changes
       await feeDisbursal.accept(neumark.address, neumark.address, maxUInt256, {
@@ -607,7 +638,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await disburseNeumark(disburser, tr2Amount);
       await advanceSnapshotId(neumark);
       // available now as disbursal snapshot is sealed
-      const inv0expectedAmount2 = prop(
+      const inv0expectedAmount2 = propd(
         amount,
         Q18.mul(200).add(inv0expectedAmount),
         iniDist.add(inv0expectedAmount),
@@ -626,8 +657,8 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await feeDisbursal.accept(neumark.address, neumark.address, maxUInt256, {
         from: investors[1],
       });
-      // right balances
-      expect(await neumark.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(0);
+      // max 2 wei left in the contract
+      expect(await neumark.balanceOf(feeDisbursal.address)).to.be.bignumber.lt(3);
       // 2 * amount got distributed + initial distribution
       expect(await neumark.totalSupply()).to.be.bignumber.eq(amount.mul(2).add(iniDist));
       // disbursal1 + disbursal2 + initial dist
@@ -635,8 +666,8 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         inv0expectedAmount2.add(inv0expectedAmount).add(Q18.mul(200)),
       );
       // same
-      const inv1expectedAmount = prop(amount, Q18.mul(800), iniDist);
-      const inv1expectedAmount2 = prop(amount, Q18.mul(800), iniDist.add(inv0expectedAmount));
+      const inv1expectedAmount = propd(amount, Q18.mul(800), iniDist);
+      const inv1expectedAmount2 = propd(amount, Q18.mul(800), iniDist.add(inv0expectedAmount));
       expect(await neumark.balanceOf(investors[1])).to.be.bignumber.eq(
         inv1expectedAmount.add(inv1expectedAmount2).add(Q18.mul(800)),
       );
@@ -748,7 +779,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
     it("should overwrite timestamp and recycle period in details of disbursal", async () => {
       await prepareInvestor(investors[0], Q18.mul(200), true);
       // disburse some
-      await disburseEtherToken(disburser, Q18.mul(40));
+      await disburseEtherToken(disburser, Q18.mul(40), 0);
       const currSnapshotId = await neumark.currentSnapshotId();
       let currTs = await latestTimestamp();
       let recycleAfter = await recycleAfterFromNow();
@@ -767,7 +798,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
 
       // skip some time do not cross snapshot boundary
       await increaseTime(30);
-      await disburseEtherToken(disburser, Q18.mul(60));
+      await disburseEtherToken(disburser, Q18.mul(60), 0);
       // those moved by 30 secs (around)
       currTs = await latestTimestamp();
       recycleAfter = await recycleAfterFromNow();
@@ -952,7 +983,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         1,
         0,
       );
-      const ethClaim00 = prop(ethDisbursal, Q18.mul(400), Q18.mul(2000));
+      const ethClaim00 = propd(ethDisbursal, Q18.mul(400), Q18.mul(2000));
       expectLogDisbursalAccepted(
         etherAcceptTx0,
         investors[0],
@@ -976,7 +1007,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         1,
         0,
       );
-      const ethClaim10 = prop(ethDisbursal, Q18.mul(1600), Q18.mul(2000));
+      const ethClaim10 = propd(ethDisbursal, Q18.mul(1600), Q18.mul(2000));
       expectLogDisbursalAccepted(
         etherAcceptTx1,
         investors[1],
@@ -986,8 +1017,9 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         1,
         1,
       );
+      const ethLeftover1 = ethDisbursal.sub(ethClaim00).sub(ethClaim10);
       await assertTokenBalance(euroToken, feeDisbursal.address, 0);
-      await assertTokenBalance(etherToken, feeDisbursal.address, 0);
+      await assertTokenBalance(etherToken, feeDisbursal.address, ethLeftover1);
       await assertTokenBalance(euroToken, investors[0], Q18.mul(20));
       await assertTokenBalance(euroToken, investors[1], Q18.mul(80));
       await assertTokenBalance(etherToken, investors[0], ethClaim00);
@@ -1004,7 +1036,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark.address,
         { from: investors[0] },
       );
-      const eurClaim01 = prop(eurDisbursal2, Q18.mul(800), Q18.mul(4000));
+      const eurClaim01 = propd(eurDisbursal2, Q18.mul(800), Q18.mul(4000));
       expectLogDisbursalAccepted(
         allAcceptTx0,
         investors[0],
@@ -1014,7 +1046,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         2,
         0,
       );
-      const ethClaim01 = prop(ethDisbursal2, Q18.mul(400), Q18.mul(2000));
+      const ethClaim01 = propd(ethDisbursal2, Q18.mul(400), Q18.mul(2000));
       expectLogDisbursalAccepted(
         allAcceptTx0,
         investors[0],
@@ -1029,7 +1061,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         neumark.address,
         { from: investors[1] },
       );
-      const eurClaim11 = prop(eurDisbursal2, Q18.mul(1600), Q18.mul(2000));
+      const eurClaim11 = propd(eurDisbursal2, Q18.mul(1600), Q18.mul(2000));
       expectLogDisbursalAccepted(
         allAcceptTx1,
         investors[1],
@@ -1039,7 +1071,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         2,
         0,
       );
-      const ethClaim11 = prop(ethDisbursal2, Q18.mul(800), Q18.mul(1000));
+      const ethClaim11 = propd(ethDisbursal2, Q18.mul(800), Q18.mul(1000));
       expectLogDisbursalAccepted(
         allAcceptTx1,
         investors[1],
@@ -1049,8 +1081,11 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         2,
         1,
       );
-      await assertTokenBalance(euroToken, feeDisbursal.address, 0);
-      await assertTokenBalance(etherToken, feeDisbursal.address, 0);
+      // compute leftover correctly
+      const ethLeftover2 = ethLeftover1.add(ethDisbursal2.sub(ethClaim01).sub(ethClaim11));
+      const eurLeftover2 = eurDisbursal2.sub(eurClaim11).sub(eurClaim01);
+      await assertTokenBalance(euroToken, feeDisbursal.address, eurLeftover2);
+      await assertTokenBalance(etherToken, feeDisbursal.address, ethLeftover2);
       await assertTokenBalance(euroToken, investors[0], Q18.mul(20).add(eurClaim01));
       await assertTokenBalance(euroToken, investors[1], Q18.mul(80).add(eurClaim11));
       await assertTokenBalance(etherToken, investors[0], ethClaim00.add(ethClaim01));
@@ -1068,9 +1103,9 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
 
       // disburse some ether tokens from the disburser
       const initalEtherDisbursal = Q18.mul(100);
-      await disburseEtherToken(disburser, initalEtherDisbursal);
+      await disburseEtherToken(disburser, initalEtherDisbursal, 0);
       const initialEuroDisbursal = Q18.mul(50);
-      await disburseEuroToken(disburser, initialEuroDisbursal);
+      await disburseEuroToken(disburser, initialEuroDisbursal, 0);
       // there now should be the full amount of ethertokens as well as the count of disbursals for this token here
       await assertTokenBalance(etherToken, feeDisbursal.address, Q18.mul(100));
       await assertDisbursalCount(etherToken, neumark, 1);
@@ -1143,10 +1178,10 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       );
 
       // disburse some more ether
-      await disburseEtherToken(disburser, Q18.mul(150));
-      await disburseEtherToken(disburser, Q18.mul(250));
+      await disburseEtherToken(disburser, Q18.mul(150), 1);
+      await disburseEtherToken(disburser, Q18.mul(250), 1); // overrides disbursal
       const finalEtherDisbursal = initalEtherDisbursal.add(Q18.mul(150)).add(Q18.mul(250));
-      await disburseEuroToken(disburser, Q18.mul(200));
+      await disburseEuroToken(disburser, Q18.mul(200), 1);
       const finalEuroDisbursal = initialEuroDisbursal.add(Q18.mul(200));
       // the last two disbursals should have been merged, so we now have 2 disbursals in total
       await assertDisbursalCount(etherToken, neumark, 2);
@@ -1218,7 +1253,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       );
 
       // claim first and check claimable balances
-      const acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, maxUInt256, {
+      let acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, maxUInt256, {
         from: investors[0],
       });
       expectLogDisbursalAccepted(
@@ -1229,10 +1264,17 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         finalEtherDisbursal.mul(0.2), // this is investor 0 pro-rata
         2,
       );
-      await feeDisbursal.accept(euroToken.address, neumark.address, maxUInt256, {
+      acceptTx = await feeDisbursal.accept(euroToken.address, neumark.address, maxUInt256, {
         from: investors[1],
       });
-      // todo: add expectLogDisbursalAccepted in many more places
+      expectLogDisbursalAccepted(
+        acceptTx,
+        investors[1],
+        euroToken.address,
+        neumark.address,
+        finalEuroDisbursal.mul(0.3),
+        2,
+      );
       await assertClaimable(etherToken, neumark, investors[0], maxUInt256, 0, 0, 0, 2);
       await assertClaimable(
         etherToken,
@@ -1324,7 +1366,29 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await assertClaimable(etherToken, neumark, investors[1], maxUInt256, 0, 0, 0, 1);
     });
 
-    it("should disburse with changing balances and supply at snapshots");
+    it("should disburse with changing balances after snapshot", async () => {
+      const totalAmount = Q18.mul(10);
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await prepareInvestor(investors[1], Q18.mul(400), true);
+      await disburseEtherToken(disburser, totalAmount);
+      await advanceSnapshotId(neumark);
+      // investor[1] sells all NEU
+      await neumark.transfer(investors[2], Q18.mul(400), { from: investors[1] });
+      // still can claim payouts
+      const expClaim = propd(totalAmount, Q18.mul(400), Q18.mul(600));
+      await assertClaimable(etherToken, neumark, investors[1], maxUInt256, expClaim, totalAmount);
+      const acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, 1, {
+        from: investors[1],
+      });
+      expectLogDisbursalAccepted(
+        acceptTx,
+        investors[1],
+        etherToken.address,
+        neumark.address,
+        expClaim,
+        1,
+      );
+    });
 
     // change pro rata dist and supply before sealing snapshot
     it("should disburse with changing balances and supply at current snapshot", async () => {
@@ -1338,13 +1402,36 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       // this will seal inv0: 150 NEU, inv1: 440 NEU
       await advanceSnapshotId(neumark);
       const total = Q18.mul(590);
-      const exp1 = prop(Q18.mul(10), Q18.mul(150), total);
-      const exp2 = prop(Q18.mul(10), Q18.mul(440), total);
+      const exp1 = propd(Q18.mul(10), Q18.mul(150), total);
+      const exp2 = propd(Q18.mul(10), Q18.mul(440), total);
       await assertClaimable(etherToken, neumark, investors[0], 1, exp1, Q18.mul(10));
       await assertClaimable(etherToken, neumark, investors[1], 1, exp2, Q18.mul(10));
     });
 
-    it("should merge disbursal spaced by many disbursers");
+    it("should merge disbursal spaced by many disbursers", async () => {
+      await prepareInvestor(investors[0], Q18.mul(200), true);
+      await disburseEtherToken(disburser, Q18, 0);
+      await disburseEtherToken(disburser2, Q18, 1);
+      // should merge with idx 0
+      await disburseEtherToken(disburser, Q18, 0);
+      // add more disbursers
+      await accessPolicy.setUserRole(investors[0], roles.disburser, GLOBAL, TriState.Allow);
+      await accessPolicy.setUserRole(investors[1], roles.disburser, GLOBAL, TriState.Allow);
+      await disburseEtherToken(investors[0], Q18, 2);
+      await disburseEtherToken(investors[1], Q18, 3);
+      // should merge to 0
+      await disburseEtherToken(disburser, Q18, 0);
+      // should merge to 1
+      await disburseEtherToken(disburser2, Q18, 1);
+      // should not merge across snapshots
+      await advanceSnapshotId(neumark);
+      await disburseEtherToken(disburser, Q18, 4);
+      // should have correct amounts
+      const d1 = await feeDisbursal.getDisbursal(etherToken.address, neumark.address, 0);
+      expect(d1[1]).to.be.bignumber.eq(Q18.mul(3));
+      const d2 = await feeDisbursal.getDisbursal(etherToken.address, neumark.address, 1);
+      expect(d2[1]).to.be.bignumber.eq(Q18.mul(2));
+    });
 
     it("should support simple claims merging and step by step claim payout", async () => {
       // setup one investor and run some assertions
@@ -1452,8 +1539,19 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         0,
       ); // first three claims
       // now accept the three disbursals invidually
-      await feeDisbursal.accept(etherToken.address, neumark.address, 1, { from: investors[0] });
+      let acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, 1, {
+        from: investors[0],
+      });
+      expectLogDisbursalAccepted(
+        acceptTx,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(20),
+        1,
+      );
       await assertTokenBalance(etherToken, investors[0], Q18.mul(20));
+      // remaining claimable
       await assertClaimable(
         etherToken,
         neumark,
@@ -1464,8 +1562,19 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         claimableData[2].add(60 * 60),
         1,
       ); // now only 2nd and 3rd claims left
-      await feeDisbursal.accept(etherToken.address, neumark.address, 2, { from: investors[0] });
+      acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, 2, {
+        from: investors[0],
+      });
+      expectLogDisbursalAccepted(
+        acceptTx,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(10),
+        2,
+      );
       await assertTokenBalance(etherToken, investors[0], Q18.mul(30));
+      // final remaining claimable
       await assertClaimable(
         etherToken,
         neumark,
@@ -1476,12 +1585,20 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         claimableData[2].add(60 * 60),
         2,
       ); // now only 3rd claim left
-      await feeDisbursal.accept(etherToken.address, neumark.address, 3, { from: investors[0] });
+      acceptTx = await feeDisbursal.accept(etherToken.address, neumark.address, 3, {
+        from: investors[0],
+      });
+      expectLogDisbursalAccepted(
+        acceptTx,
+        investors[0],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(20),
+        3,
+      );
       await assertTokenBalance(etherToken, investors[0], Q18.mul(50));
       await assertClaimable(etherToken, neumark, investors[0], 4, Q18.mul(0), 0, 0, 3); // no claims left
     });
-
-    it("should accept tokens over many pro-rata tokens");
 
     it("should reject disbursal", async () => {
       await prepareInvestor(investors[0], Q18.mul(200), true);
@@ -1491,7 +1608,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       await advanceSnapshotId(neumark);
       await disburseEtherToken(disburser, Q18.mul(50));
       await advanceSnapshotId(neumark);
-      const rejectTx = await feeDisbursal.reject(etherToken.address, neumark.address, 2, {
+      let rejectTx = await feeDisbursal.reject(etherToken.address, neumark.address, maxUInt256, {
         from: investors[0],
       });
       expectLogDisbursalRejected(
@@ -1502,24 +1619,94 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         Q18.mul(150 * 0.2),
         2,
       );
-      // todo: add more checks
+      expectLogDisbursalCreated(
+        rejectTx,
+        neumark.address,
+        etherToken.address,
+        Q18.mul(150 * 0.2),
+        feeDisbursal.address,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        2,
+      );
+
+      rejectTx = await feeDisbursal.reject(etherToken.address, neumark.address, maxUInt256, {
+        from: investors[1],
+      });
+      expectLogDisbursalRejected(
+        rejectTx,
+        investors[1],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(150 * 0.3),
+        2,
+      );
+      // but it was merged into existing recycle disbursal of investor[0] - see expIndex
+      expectLogDisbursalCreated(
+        rejectTx,
+        neumark.address,
+        etherToken.address,
+        Q18.mul(150 * 0.3),
+        feeDisbursal.address,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        2,
+      );
+
+      // step by step reject
+      rejectTx = await feeDisbursal.reject(etherToken.address, neumark.address, 1, {
+        from: investors[2],
+      });
+      expectLogDisbursalRejected(
+        rejectTx,
+        investors[2],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(100 * 0.5),
+        1,
+      );
+      expectLogDisbursalCreated(
+        rejectTx,
+        neumark.address,
+        etherToken.address,
+        Q18.mul(100 * 0.5),
+        feeDisbursal.address,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        2,
+      );
+      rejectTx = await feeDisbursal.reject(etherToken.address, neumark.address, 2, {
+        from: investors[2],
+      });
+      expectLogDisbursalRejected(
+        rejectTx,
+        investors[2],
+        etherToken.address,
+        neumark.address,
+        Q18.mul(50 * 0.5),
+        2,
+      );
+      expectLogDisbursalCreated(
+        rejectTx,
+        neumark.address,
+        etherToken.address,
+        Q18.mul(50 * 0.5),
+        feeDisbursal.address,
+        platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        2,
+      );
+
+      // now all funds reside in single recycled disbursal
+      const recycled = await feeDisbursal.getDisbursal(etherToken.address, neumark.address, 2);
+      expect(recycled[1]).to.be.bignumber.eq(Q18.mul(150));
     });
 
-    it("should disburse fully with various roundings in pro rata calculations");
-
-    it("should disburse 1 wei", async () => {
-      const distribution = [
-        Q18.mul(10).add(1),
-        Q18.mul(0.121213),
-        Q18.mul(26712).sub(1),
-        Q18.mul(0.118),
-      ];
+    it("should disburse fully with various roundings in pro rata calculations", async () => {
+      // this would fail if conctact rounds HALF_UP
+      const distribution = [big(1), big(1)];
       let idx = 0;
       for (const a of distribution) {
         await prepareInvestor(investors[idx], a);
         idx += 1;
       }
-      const wei = new web3.BigNumber(1);
+      const wei = big(3);
       await disburseEtherToken(disburser, wei);
       await advanceSnapshotId(neumark);
       const [snapshotId] = await feeDisbursal.getDisbursal(etherToken.address, neumark.address, 0);
@@ -1527,7 +1714,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
       expect(total).to.be.bignumber.eq(distribution.reduce((p, v) => p.add(v)));
       idx = 0;
       for (const a of distribution) {
-        const exp = prop(wei, a, total);
+        const exp = propd(wei, a, total);
         await assertClaimable(etherToken, neumark, investors[idx], 1, exp, wei);
         const tx = await feeDisbursal.accept(etherToken.address, neumark.address, maxUInt256, {
           from: investors[idx],
@@ -1542,10 +1729,48 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
         idx += 1;
       }
-      expect(await neumark.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(0);
+      // one wei left in the contract
+      expect(await etherToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(1);
     });
 
-    it("rejects recycleAfterDuration overflow");
+    it("should disburse 1 wei", async () => {
+      const distribution = [
+        Q18.mul(10).add(1),
+        Q18.mul(0.121213),
+        Q18.mul(26712).sub(1),
+        Q18.mul(0.118),
+      ];
+      let idx = 0;
+      for (const a of distribution) {
+        await prepareInvestor(investors[idx], a);
+        idx += 1;
+      }
+      const wei = big(1);
+      await disburseEtherToken(disburser, wei);
+      await advanceSnapshotId(neumark);
+      const [snapshotId] = await feeDisbursal.getDisbursal(etherToken.address, neumark.address, 0);
+      const total = await neumark.totalSupplyAt(snapshotId);
+      expect(total).to.be.bignumber.eq(distribution.reduce((p, v) => p.add(v)));
+      idx = 0;
+      for (const a of distribution) {
+        const exp = propd(wei, a, total);
+        await assertClaimable(etherToken, neumark, investors[idx], 1, exp, wei);
+        const tx = await feeDisbursal.accept(etherToken.address, neumark.address, maxUInt256, {
+          from: investors[idx],
+        });
+        await expectLogDisbursalAccepted(
+          tx,
+          investors[idx],
+          etherToken.address,
+          neumark.address,
+          exp,
+          1,
+        );
+        idx += 1;
+      }
+      // 1 wei left in the contract
+      expect(await etherToken.balanceOf(feeDisbursal.address)).to.be.bignumber.eq(1);
+    });
 
     describe("access control", () => {
       it("should only allow valid disbursers", async () => {
@@ -1671,10 +1896,6 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
           value: Q18.mul(1),
         });
       });
-
-      it(
-        "should not disburse if the totalSupply of pro rata token equals disbursed amount and disbursed token is same as pro rata token",
-      );
 
       it("should not accept disbursing an unknown token", async () => {
         // we need at least one investor
@@ -1953,9 +2174,109 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
       });
 
-      // if there are 3 disbursals, 1 expired, 2 not yet expired and 3rd expired we can recycle just 1
-      // that's because we cannot increase idx past 2nd
-      it("should not recycle disbursals if spaced by non recyclable disbursals");
+      it("should not recycle disbursals if spaced by non recyclable disbursals", async () => {
+        // if there are 3 disbursals, 1 expired, 2 not yet expired and 3rd expired we can recycle just 1
+        // that's because we cannot increase idx past 2nd
+        await prepareInvestor(investors[0], Q18);
+        await prepareInvestor(investors[1], Q18.mul(1.5));
+        // disburse with normal recycle period
+        await disburseEtherToken(disburser, Q18);
+        // disburse with double time period
+        const doubleDefRecycle = big(2).mul(
+          platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+        );
+        const testDisburser = await TestDisburser.new(feeDisbursal.address, neumark.address);
+        await testDisburser.setRecycleAfterDuration(doubleDefRecycle);
+        await accessPolicy.setUserRole(
+          testDisburser.address,
+          roles.disburser,
+          GLOBAL,
+          TriState.Allow,
+        );
+        await etherToken.deposit({ from: disburser, value: Q18 });
+        const disburse2lTx = await etherToken.transfer["address,uint256,bytes"](
+          testDisburser.address,
+          Q18,
+          "",
+          { from: disburser },
+        );
+        disburse2lTx.logs = decodeLogs(disburse2lTx, feeDisbursal.address, feeDisbursal.abi);
+        expectLogDisbursalCreated(
+          disburse2lTx,
+          neumark.address,
+          etherToken.address,
+          Q18,
+          testDisburser.address,
+          doubleDefRecycle,
+        );
+        // disburse with normal recycle
+        await disburseEtherToken(disburser2, Q18, 2);
+        // wait default recycle time so we can recycle
+        await increaseTime(platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION + 1);
+        // 1 and 3 disbursal could be recycled but recycle procedure must go continously
+        await assertRecycleable(etherToken, neumark, investors.slice(0, 2), maxUInt256, Q18);
+        let recycleTx = await feeDisbursal.recycle(
+          etherToken.address,
+          neumark.address,
+          investors.slice(0, 2),
+          maxUInt256,
+          { from: masterManager },
+        );
+        expectedLogFundsRecycled(
+          recycleTx,
+          neumark.address,
+          etherToken.address,
+          Q18,
+          masterManager,
+        );
+        // one investor takes non recycled disbursal but leaves the last (expired) one
+        await feeDisbursal.accept(etherToken.address, neumark.address, 2, { from: investors[1] });
+        // now in case of investors[1] we go past
+        await assertRecycleable(
+          etherToken,
+          neumark,
+          investors.slice(0, 2),
+          maxUInt256,
+          propd(Q18, Q18.mul(1.5), Q18.mul(2.5)),
+        );
+        // other investors takes all (including expired)
+        const acceptTx = await feeDisbursal.accept(
+          etherToken.address,
+          neumark.address,
+          maxUInt256,
+          { from: investors[0] },
+        );
+        expectLogDisbursalAccepted(
+          acceptTx,
+          investors[0],
+          etherToken.address,
+          neumark.address,
+          propd(Q18.mul(2), Q18.mul(1), Q18.mul(2.5)),
+          3,
+        );
+        // recycle remaining part
+        await assertRecycleable(
+          etherToken,
+          neumark,
+          investors.slice(0, 2),
+          maxUInt256,
+          propd(Q18, Q18.mul(1.5), Q18.mul(2.5)),
+        );
+        recycleTx = await feeDisbursal.recycle(
+          etherToken.address,
+          neumark.address,
+          investors.slice(0, 2),
+          maxUInt256,
+          { from: masterManager },
+        );
+        expectedLogFundsRecycled(
+          recycleTx,
+          neumark.address,
+          etherToken.address,
+          propd(Q18, Q18.mul(1.5), Q18.mul(2.5)),
+          masterManager,
+        );
+      });
     });
 
     describe("parametrized disbursals", async () => {
@@ -1989,7 +2310,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
       });
 
-      it("disburse eth with explicit snapshot token", async () => {
+      it("should disburse eth with explicit snapshot token", async () => {
         // disburse
         const tx = await etherToken.depositAndTransfer(testDisburser.address, Q18, "", {
           from: masterManager,
@@ -2013,7 +2334,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
           maxUInt256,
           { from: investors[0] },
         );
-        const inv1Amount = prop(Q18, Q18, Q18.mul(3));
+        const inv1Amount = propd(Q18, Q18, Q18.mul(3));
         expectLogDisbursalAccepted(
           acceptTx,
           investors[0],
@@ -2029,7 +2350,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
           maxUInt256,
           { from: investors[1] },
         );
-        const inv2Amount = prop(Q18, Q18.mul(2), Q18.mul(3));
+        const inv2Amount = propd(Q18, Q18.mul(2), Q18.mul(3));
         expectLogDisbursalRejected(
           rejectTx,
           investors[1],
@@ -2049,7 +2370,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
         await advanceSnapshotId(proRataToken);
         // check claimable of 1
-        const inv1Amount2 = prop(inv2Amount, Q18, Q18.mul(3));
+        const inv1Amount2 = propd(inv2Amount, Q18, Q18.mul(3));
         await assertClaimable(
           etherToken,
           proRataToken,
@@ -2059,7 +2380,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
           inv2Amount,
         );
         // check claimable of 2
-        const inv2Amount2 = prop(inv2Amount, Q18.mul(2), Q18.mul(3));
+        const inv2Amount2 = propd(inv2Amount, Q18.mul(2), Q18.mul(3));
         await assertClaimable(
           etherToken,
           proRataToken,
@@ -2070,7 +2391,7 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
       });
 
-      it("disburse with explicit expiration", async () => {
+      it("should disburse with explicit expiration", async () => {
         // disburse
         const recycleDuration = daysToSeconds(10);
         await testDisburser.setRecycleAfterDuration(recycleDuration);
@@ -2095,6 +2416,113 @@ contract("FeeDisbursal", ([_, masterManager, disburser, disburser2, ...investors
         );
         expect(afterTs.sub(disbTs)).to.be.bignumber.eq(big(recycleDuration));
         expect(recycleDuration).not.eq(platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION);
+      });
+
+      it("rejects recycleAfterDuration overflow", async () => {
+        const MAX_UINT128_1 = big(2).pow(128);
+        await testDisburser.setRecycleAfterDuration(MAX_UINT128_1);
+        await expect(
+          etherToken.depositAndTransfer(testDisburser.address, Q18, "", {
+            from: masterManager,
+            value: Q18,
+          }),
+        ).to.revert;
+        // current block timestamp is added so reverse will overflow
+        const tsNow = await latestTimestamp();
+        await testDisburser.setRecycleAfterDuration(MAX_UINT128_1.sub(tsNow));
+        await expect(
+          etherToken.depositAndTransfer(testDisburser.address, Q18, "", {
+            from: masterManager,
+            value: Q18,
+          }),
+        ).to.revert;
+        // 1s below should work
+        await testDisburser.setRecycleAfterDuration(MAX_UINT128_1.sub(tsNow).sub(2));
+        const tx = await etherToken.depositAndTransfer(testDisburser.address, Q18, "", {
+          from: masterManager,
+          value: Q18,
+        });
+        tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
+        expectLogDisbursalCreated(
+          tx,
+          proRataToken.address,
+          etherToken.address,
+          Q18,
+          testDisburser.address,
+          MAX_UINT128_1.sub(tsNow).sub(2),
+          0,
+        );
+      });
+
+      it("should accept token from many pro rata distributions", async () => {
+        // prepare NEU, other token already prepared
+        await prepareInvestor(investors[0], Q18.mul(70), false);
+        await prepareInvestor(investors[1], Q18.mul(30), false);
+        // distribute ether
+        await etherToken.depositAndTransfer(testDisburser.address, Q18, "", {
+          from: masterManager,
+          value: Q18,
+        });
+        await disburseEtherToken(disburser, Q18.mul(28).add(1));
+        // no claimables before first snapshot
+        const proRatas = [neumark.address, proRataToken.address];
+        const empty = await feeDisbursal.claimableMutipleByProRataToken(
+          etherToken.address,
+          proRatas,
+          investors[0],
+        );
+        expectClaimablesToEqual(empty, [[0, 0, 0, 0], [0, 0, 0, 0]]);
+        const emptyTx = await feeDisbursal.acceptMultipleByProRataToken(
+          etherToken.address,
+          proRatas,
+          { from: investors[0] },
+        );
+        expectLogDisbursalAccepted(emptyTx, investors[0], etherToken.address, proRatas[0], 0, 0, 0);
+        expectLogDisbursalAccepted(emptyTx, investors[0], etherToken.address, proRatas[1], 0, 0, 1);
+        // make test snapshot token claimable
+        await advanceSnapshotId(proRataToken);
+        const proRataClaimables = await feeDisbursal.claimableMutipleByProRataToken(
+          etherToken.address,
+          proRatas,
+          investors[0],
+        );
+        const proRataInv0Amount = propd(Q18, Q18, Q18.mul(3));
+        expectClaimablesToEqual(proRataClaimables, [
+          [0, 0, 0, 0],
+          [proRataInv0Amount, Q18, null, null],
+        ]);
+      });
+
+      it("should not disburse if the totalSupply of pro rata token equals disbursed amount and disbursed token is same as pro rata token", async () => {
+        await universe.setCollectionInterface(
+          knownInterfaces.equityTokenInterface,
+          proRataToken.address,
+          true,
+          { from: masterManager },
+        );
+        await proRataToken.transfer["address,uint256,bytes"](testDisburser.address, Q18, "", {
+          from: investors[0],
+        });
+        // in short: you cannot send all tokens pro rata tokens to be disbursed against itself.
+        // there would be no one to claim them later
+        await expect(
+          proRataToken.transfer["address,uint256,bytes"](testDisburser.address, Q18.mul(2), "", {
+            from: investors[1],
+          }),
+        ).to.be.rejectedWith("NF_NO_DISBURSE_EMPTY_TOKEN");
+        // leave 1 wei at investors[1]
+        await proRataToken.transfer["address,uint256,bytes"](
+          testDisburser.address,
+          Q18.mul(2).sub(1),
+          "",
+          { from: investors[1] },
+        );
+        await advanceSnapshotId(proRataToken);
+        // as only holder of 1 wei gets all tokens
+        await feeDisbursal.accept(proRataToken.address, proRataToken.address, maxUInt256, {
+          from: investors[1],
+        });
+        assertTokenBalance(proRataToken, investors[1], Q18.mul(3));
       });
     });
 
