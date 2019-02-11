@@ -235,12 +235,11 @@ contract FeeDisbursal is
                 IERC223Token ierc223Token = IERC223Token(tokens[i]);
                 assert(ierc223Token.transfer(msg.sender, claimed[i][0], ""));
             }
-            // log
+            // always log, even empty amounts
             emit LogDisbursalAccepted(msg.sender, tokens[i], proRataToken, claimed[i][0], claimed[i][1]);
         }
     }
 
-    /*
     /// @notice accepts disbursals for single token against many pro rata tokens
     /// @param token address of the disbursable token
     /// @param proRataTokens addresses of the tokens used to determine the user pro rata amount, must be a snapshottoken
@@ -248,9 +247,21 @@ contract FeeDisbursal is
     function acceptMultipleByProRataToken(address token, ITokenSnapshots[] proRataTokens)
         public
     {
-        // TODO: implement
+        uint256 i;
+        uint256 fullAmount;
+        for (i = 0; i < proRataTokens.length; i += 1) {
+            require(_feeDisbursalController.onAccept(token, proRataTokens[i], msg.sender), "NF_ACCEPT_REJECTED");
+            (uint256 amount, , uint256 nextIndex) = claimPrivate(token, proRataTokens[i], msg.sender, UINT256_MAX);
+            fullAmount += amount;
+            // emit here, that's how we avoid second loop and storing particular claims
+            emit LogDisbursalAccepted(msg.sender, token, proRataTokens[i], amount, nextIndex);
+        }
+        if (fullAmount > 0) {
+            // and now why this method exits - one single transfer of token from many distributions
+            IERC223Token ierc223Token = IERC223Token(token);
+            assert(ierc223Token.transfer(msg.sender, fullAmount, ""));
+        }
     }
-    */
 
     /// @notice rejects disbursal of token which leads to recycle and disbursal of rejected amount
     /// @param token address of the disbursable token
@@ -301,7 +312,6 @@ contract FeeDisbursal is
         constant
     returns (uint256[4][] claimables)
     {
-        // we don't to do a verified check here, this serves purely to check how much is claimable for an address
         claimables = new uint256[4][](tokens.length);
         for (uint256 i = 0; i < tokens.length; i += 1) {
             claimables[i][3] = _disbursalProgress[tokens[i]][proRataToken][claimer];
@@ -312,7 +322,6 @@ contract FeeDisbursal is
         }
     }
 
-    /*
     /// @notice check how many tokens can be claimed against many pro rata tokens
     /// @param token address of the disbursable token
     /// @param proRataTokens addresses of the tokens used to determine the user pro rata amount, must be a snapshottoken
@@ -321,11 +330,17 @@ contract FeeDisbursal is
     function claimableMutipleByProRataToken(address token, ITokenSnapshots[] proRataTokens, address claimer)
         public
         constant
-    returns (uint256 claimableAmount, uint256 totalAmount, uint256 recycleableAfterTimestamp, uint256 firstIndex)
+    returns (uint256[4][] claimables)
     {
-        // TODO: implement
+        claimables = new uint256[4][](proRataTokens.length);
+        for (uint256 i = 0; i < proRataTokens.length; i += 1) {
+            claimables[i][3] = _disbursalProgress[token][proRataTokens[i]][claimer];
+            if (claimables[i][3] < _disbursals[token][proRataTokens[i]].length) {
+                claimables[i][2] = _disbursals[token][proRataTokens[i]][claimables[i][3]].recycleableAfterTimestamp;
+            }
+            (claimables[i][0], claimables[i][1], ) = claimablePrivate(token, proRataTokens[i], claimer, UINT256_MAX, false);
+        }
     }
-    */
 
     /// @notice recycle a token for multiple investors
     /// @param token address of the recyclable token
@@ -502,7 +517,6 @@ contract FeeDisbursal is
 
         Disbursal[] storage disbursals = _disbursals[token][proRataToken];
         // try to merge with an existing disbursal
-        // TODO: only go 100 iterations deep, not till UINT256_MAX (overflow)
         bool merged = false;
         for ( uint256 i = disbursals.length - 1; i != UINT256_MAX; i-- ) {
             // we can only merge if we have the same snapshot id
@@ -599,7 +613,11 @@ contract FeeDisbursal is
         if (token == address(proRataToken)) {
             proRataTokenTotalSupply -= proRataToken.balanceOfAt(address(this), snapshotId);
         }
-        // TODO: prove that rounding errors do not accumulate here
-        return proportion(disbursalAmount, proRataClaimerBalance, proRataTokenTotalSupply);
+        // using round HALF_UP we risks rounding errors to accumulate and overflow balance at the last claimer
+        // example: disbursalAmount = 3, total supply = 2 and two claimers with 1 pro rata token balance
+        // with HALF_UP first claims 2 and seconds claims2 but balance is 1 at that point
+        // thus we round down here saving tons of gas by not doing additional bookkeeping
+        // consequence: small amounts of disbursed funds will be left in the contract
+        return mul(disbursalAmount, proRataClaimerBalance) / proRataTokenTotalSupply;
     }
 }

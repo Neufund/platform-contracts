@@ -4,6 +4,7 @@ require("babel-register");
 const commandLineArgs = require("command-line-args");
 const getConfig = require("../migrations/config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
+const roles = require("../test/helpers/roles").default;
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
 const promisify = require("../test/helpers/evmCommands").promisify;
 const stringify = require("../test/helpers/constants").stringify;
@@ -102,6 +103,7 @@ module.exports = async function inspectETO() {
     knownInterfaces.icbmEuroLock,
     knownInterfaces.icbmEtherLock,
   ]);
+  const platformTerms = await PlatformTerms.at(await universe.platformTerms());
   const euroLock = await LockedAccount.at(euroLockAddress);
   const etherLock = await LockedAccount.at(etherLockAddress);
   const icbmEuroLock = await ICBMLockedAccount.at(icbmEuroLockAddress);
@@ -179,7 +181,6 @@ module.exports = async function inspectETO() {
   await checkAgreement(neumark, "Neumark Agreement");
   // check current EUR rate
   const rateOracle = await ITokenExchangeRateOracle.at(await universe.tokenExchangeRateOracle());
-  const platformTerms = await PlatformTerms.at(await universe.platformTerms());
   const ethRate = await rateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress);
   const rateExpirationDelta = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
   const now = new web3.BigNumber(Math.floor(new Date() / 1000));
@@ -187,7 +188,6 @@ module.exports = async function inspectETO() {
   const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   console.log("---------------------------------------------");
-  // todo: check euro token controller settings and allowed transfers in euro token
 
   console.log("---------------------------------------------");
   // check balances of various services
@@ -226,6 +226,7 @@ module.exports = async function inspectETO() {
   console.log("---------------------------------------------");
   console.log("Dump Euro Token Controller:");
   const tokenController = await EuroTokenController.at(await euroToken.tokenController());
+
   async function allowsTransferTo(c) {
     const addr = await universe[c]();
     const allowed = await tokenController.allowedTransferTo(addr);
@@ -234,6 +235,7 @@ module.exports = async function inspectETO() {
   await allowsTransferTo("feeDisbursal");
   await allowsTransferTo("euroLock");
   await allowsTransferTo("gasExchange");
+
   async function allowsTransferFrom(c) {
     const addr = await universe[c]();
     const allowed = await tokenController.allowedTransferFrom(addr);
@@ -251,9 +253,49 @@ module.exports = async function inspectETO() {
   console.log(
     `Euro Token Controller max simple exchange ${maxAllowance.div(config.Q18).toNumber()}`,
   );
-  console.log(...wrong("TODO: check payment token collection"));
-  console.log(...wrong("TODO: check if operator wallet has role fee disburser"));
-  console.log(...wrong("TODO: check if platform terms have DEFAULT_RECYCLE_AFTER_PERIOD"));
-  console.log(...wrong("TODO: check if feeDisbursal has EURT_DEPOSIT_MANAGER"));
-  console.log(...wrong("TODO: check if a broker for ICBM Euro token"));
+  console.log("Check payment token collection");
+  const isEurtPayment = await universe.isInterfaceCollectionInstance(
+    knownInterfaces.paymentTokenInterface,
+    euroTokenAddress,
+  );
+  console.log("EUR-T", ...(isEurtPayment ? good("YES") : wrong("NO")));
+  const isEthtPayment = await universe.isInterfaceCollectionInstance(
+    knownInterfaces.paymentTokenInterface,
+    etherTokenAddress,
+  );
+  console.log("EUR-T", ...(isEthtPayment ? good("YES") : wrong("NO")));
+  console.log("--------------------");
+  const feeDisbursalAddress = await universe.feeDisbursal();
+  const pwHasDisburser = await accessPolicy.allowed.call(
+    config.addresses.PLATFORM_OPERATOR_WALLET,
+    roles.disburser,
+    feeDisbursalAddress,
+    "",
+  );
+  console.log(
+    "operator wallet has role fee disburser",
+    ...(pwHasDisburser ? good("YES") : wrong("NO")),
+  );
+  const defaultRecycle = await platformTerms.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION();
+  console.log(`DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION in PlatformTerms ${defaultRecycle}`);
+  const feeHasEurtManager = await accessPolicy.allowed.call(
+    feeDisbursalAddress,
+    roles.eurtDepositManager,
+    euroTokenAddress,
+    "",
+  );
+  console.log(
+    "fee disbursal has role eurt deposit manager on EuroToken",
+    ...(feeHasEurtManager ? good("YES") : wrong("NO")),
+  );
+  const feeHasIcbmEurtFrom = await icbmEuroToken.allowedTransferFrom(feeDisbursalAddress);
+  console.log(
+    "FeeDisbursal has transfer from permission in icbm EUR-T",
+    ...(feeHasIcbmEurtFrom ? good("YES") : wrong("NO")),
+  );
+  const feeHasIcbmEurtTo = await icbmEuroToken.allowedTransferTo(feeDisbursalAddress);
+  console.log(
+    "FeeDisbursal has transfer to permission in icbm EUR-T",
+    ...(feeHasIcbmEurtTo ? good("YES") : wrong("NO")),
+  );
 };

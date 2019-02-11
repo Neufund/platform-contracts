@@ -132,6 +132,9 @@ export async function deployEuroTokenUniverse(
   await universe.setSingleton(knownInterfaces.euroToken, euroToken.address, {
     from: universeManager,
   });
+  await universe.setSingleton(knownInterfaces.euroTokenController, tokenController.address, {
+    from: universeManager,
+  });
   await universe.setCollectionInterface(
     knownInterfaces.paymentTokenInterface,
     euroToken.address,
