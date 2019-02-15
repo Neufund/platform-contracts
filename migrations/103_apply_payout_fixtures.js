@@ -13,6 +13,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
+  const Neumark = artifacts.require(CONFIG.artifacts.NEUMARK);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
 
   const DEPLOYER = getDeployerAccount(network, accounts);
@@ -23,9 +24,14 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
     const etherToken = await EtherToken.at(await universe.etherToken());
     const euroToken = await EuroToken.at(await universe.euroToken());
+    const neumark = await Neumark.at(await universe.neumark());
     // make deployer to be able to disburse
     await accessPolicy.setUserRole(DEPLOYER, roles.disburser, GLOBAL, TriState.Allow);
-    // await accessPolicy.setUserRole(DEPLOYER, roles.eurtDepositManager, GLOBAL, TriState.Allow);
+
+    // advance snapshot so payout is distributed (payouts from ETO)
+    await neumark.createSnapshot();
+
+    // distribute into next snapshot
     console.log("Disbursing some ETH to NEU holders");
     const ethDisbursalAmount = Q18.mul(128.12812);
     await etherToken.depositAndTransfer(feeDisbursalAddress, ethDisbursalAmount, "", {

@@ -135,9 +135,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
       if (err) throw new Error(err);
     });
     console.log(`Fixtures described in ${fixturesPath}`);
-
-    // advance snapshot so payout is distributed
-    await neumark.createSnapshot();
   });
 };
 
