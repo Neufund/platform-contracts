@@ -35,6 +35,9 @@ contract PlaceholderEquityTokenController is
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
 
+    // old token controller
+    address private OLD_TOKEN_CONTROLLER;
+
     ////////////////////////
     // Mutable state
     ////////////////////////
@@ -225,13 +228,14 @@ contract PlaceholderEquityTokenController is
         revert("NF_NOT_IMPL");
     }
 
-    function changeTokenController(address newController)
+    function changeTokenController(IControllerGovernance newController)
         public
-        onlyState(GovState.Funded)
+        onlyStates(GovState.Funded, GovState.Closed)
         onlyCompany
     {
-        require(newController != address(0));
         require(newController != address(this));
+        // must be migrated with us as a source
+        require(newController.oldTokenController() == address(this), "NF_NOT_MIGRATED_FROM_US");
         _newController = newController;
         transitionTo(GovState.Migrated);
         emit LogResolutionExecuted(0, Action.ChangeTokenController);
@@ -252,7 +256,7 @@ contract PlaceholderEquityTokenController is
         constant
         returns (address)
     {
-        return address(0);
+        return OLD_TOKEN_CONTROLLER;
     }
 
     //
@@ -369,7 +373,37 @@ contract PlaceholderEquityTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 0);
+        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 1);
+    }
+
+    //
+    // Other functions
+    //
+
+    function migrateTokenController(IControllerGovernance oldController, bool transfersEnables)
+        public
+        onlyState(GovState.Setup)
+        onlyCompany
+    {
+        require(oldController.newTokenController() == address(0), "NF_OLD_CONTROLLED_ALREADY_MIGRATED");
+        // migrate cap table
+        (address[] memory equityTokens, ) = oldController.capTable();
+        (address[] memory offerings, ) = oldController.tokenOfferings();
+        // migrate ISHA
+        (,,string memory ISHAUrl,) = oldController.currentAgreement();
+        (
+            _totalCompanyShares,
+            _companyValuationEurUlps,
+            _shareholderRights
+        ) = oldController.shareholderInformation();
+        _equityToken = IEquityToken(equityTokens[0]);
+        _commitment = offerings[0];
+        // set ISHA. use this.<> to call externally so msg.sender is correct in mCanAmend
+        this.amendAgreement(ISHAUrl);
+        // transfer flag may be changed during migration of the controller
+        enableTransfers(transfersEnables);
+        transitionTo(GovState.Funded);
+        OLD_TOKEN_CONTROLLER = oldController;
     }
 
     ////////////////////////
