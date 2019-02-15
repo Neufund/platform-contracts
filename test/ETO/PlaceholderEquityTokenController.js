@@ -546,8 +546,12 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // deploy new mocked token controller
       const newController = await MockPlaceholderEquityTokenController.new(
         universe.address,
-        equityTokenController.address,
+        company,
       );
+      // migrate data from parent
+      await newController.migrateTokenController(equityTokenController.address, false, {
+        from: company,
+      });
       const tx = await equityTokenController.changeTokenController(newController.address, {
         from: company,
       });
@@ -555,8 +559,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(await equityTokenController.newTokenController()).to.eq(newController.address);
       expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
       expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
-      // migrate data from parent
-      await newController._finalizeMigration({ from: company });
       // equity token still has old controller - transfers are disabled
       await testCommitment._distributeTokens(investors[0], 10);
       await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
@@ -578,8 +580,188 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
     });
 
-    it("rejects migrating token controller not by company");
-    it("rejects migrating token controller in wrong states");
+    it("should migrate token controller with transferability change", async () => {
+      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
+      // migrate data from parent and enable transfers
+      const migratedTx = await newController.migrateTokenController(
+        equityTokenController.address,
+        true,
+        { from: company },
+      );
+      expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
+      expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
+
+      // now migrate existing token controller to a new one
+      const tx = await equityTokenController.changeTokenController(newController.address, {
+        from: company,
+      });
+      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
+      expect(await equityTokenController.newTokenController()).to.eq(newController.address);
+      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
+      expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
+
+      // equity token still has old controller - transfers are disabled
+      await testCommitment._distributeTokens(investors[0], 10);
+      await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
+      // now anyone can replace token controller in equity token
+      await equityToken.changeTokenController(newController.address);
+      // new mocked controller had resolution to enable transfers
+      equityToken.transfer(investors[1], 1, { from: investors[0] });
+
+      // compare new and old controller - all should be imported
+      expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
+        await newController.companyLegalRepresentative(),
+      );
+      expect(await equityTokenController.capTable()).to.deep.equal(await newController.capTable());
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
+        await newController.tokenOfferings(),
+      );
+      expect(await equityTokenController.shareholderInformation()).to.deep.equal(
+        await newController.shareholderInformation(),
+      );
+      const agreementData = await equityTokenController.currentAgreement();
+      expect(agreementData[2]).to.eq((await newController.currentAgreement())[2]);
+      const oldInNewAddress = await newController.oldTokenController();
+      expect(oldInNewAddress).to.eq(equityTokenController.address);
+    });
+
+    it("rejects migrating token controller not by company", async () => {
+      // deploy new mocked token controller
+      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
+      await expect(
+        newController.migrateTokenController(equityTokenController.address, true, {
+          from: nominee,
+        }),
+      ).to.revert;
+      await newController.migrateTokenController(equityTokenController.address, true, {
+        from: company,
+      });
+      await expect(
+        equityTokenController.changeTokenController(newController.address, {
+          from: nominee,
+        }),
+      ).to.revert;
+      await equityTokenController.changeTokenController(newController.address, {
+        from: company,
+      });
+    });
+
+    it("rejects migrating token controller to new controller that migrated from different old controller", async () => {
+      const newController = await MockPlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+      );
+      await newController.migrateTokenController(equityTokenController.address, true, {
+        from: company,
+      });
+      // mockup old controller changing change chain
+      await newController._overrideOldController(investors[0]);
+      // now there's mismatch between old and new controller chain, so revert
+      await expect(
+        equityTokenController.changeTokenController(newController.address, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_NOT_MIGRATED_FROM_US");
+    });
+
+    it("should migrate twice", async () => {
+      // first migration
+      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
+      await newController.migrateTokenController(equityTokenController.address, true, {
+        from: company,
+      });
+      await equityTokenController.changeTokenController(newController.address, {
+        from: company,
+      });
+      // second migration
+      const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
+      const migratedTx = await newController2.migrateTokenController(newController.address, true, {
+        from: company,
+      });
+      expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
+      expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
+      const tx = await newController.changeTokenController(newController2.address, {
+        from: company,
+      });
+      expect(await newController.state()).to.be.bignumber.eq(GovState.Migrated);
+      expect(await newController.newTokenController()).to.eq(newController2.address);
+      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
+      expectLogMigratedTokenController(tx, toBytes32("0"), newController2.address);
+
+      // as we didn't change anything for shareholders, initial controller must match third controller
+      expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
+        await newController2.companyLegalRepresentative(),
+      );
+      expect(await equityTokenController.capTable()).to.deep.equal(await newController2.capTable());
+      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
+        await newController2.tokenOfferings(),
+      );
+      expect(await equityTokenController.shareholderInformation()).to.deep.equal(
+        await newController2.shareholderInformation(),
+      );
+      const agreementData = await equityTokenController.currentAgreement();
+      expect(agreementData[2]).to.eq((await newController2.currentAgreement())[2]);
+
+      // verify change chain
+      const oldInNewAddress = await newController2.oldTokenController();
+      expect(oldInNewAddress).to.eq(newController.address);
+      expect(await newController.newTokenController()).to.eq(newController2.address);
+      expect(await newController.oldTokenController()).to.eq(equityTokenController.address);
+      expect(await equityTokenController.newTokenController()).to.eq(newController.address);
+      expect(await equityTokenController.oldTokenController()).to.eq(ZERO_ADDRESS);
+
+      // to change controller in equity token we need to follow the chain
+      await expect(
+        equityToken.changeTokenController(newController2.address, { from: investors[0] }),
+      ).to.be.rejectedWith("NF_ET_NO_PERM_NEW_CONTROLLER");
+      await equityToken.changeTokenController(newController.address, { from: investors[1] });
+      await equityToken.changeTokenController(newController2.address, { from: investors[2] });
+
+      expect(await equityToken.tokenController()).to.be.eq(newController2.address);
+    });
+
+    it("rejects change token controller in wrong states", async () => {
+      const newController = await MockPlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+      );
+      // can be accepted only in Setup state
+      await newController._overrideState(GovState.Offering);
+      expect(await newController.state()).to.be.bignumber.eq(GovState.Offering);
+      await expect(
+        newController.migrateTokenController(equityTokenController.address, true, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_INV_STATE");
+      // migrate
+      await newController._overrideState(GovState.Setup);
+      await newController.migrateTokenController(equityTokenController.address, true, {
+        from: company,
+      });
+      await equityTokenController.changeTokenController(newController.address, {
+        from: company,
+      });
+      const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
+      // we prevent with migrating data from already migrated controller
+      await expect(
+        newController2.migrateTokenController(equityTokenController.address, true, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_OLD_CONTROLLED_ALREADY_MIGRATED");
+      await newController2.migrateTokenController(newController.address, true, { from: company });
+      // cannot migrate when company is closing
+      await newController._overrideState(GovState.Closing);
+      await expect(
+        newController.changeTokenController(newController2.address, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_INV_STATE");
+      // can migrate when company is closed
+      await newController._overrideState(GovState.Closed);
+      await newController.changeTokenController(newController2.address, {
+        from: company,
+      });
+    });
 
     it("reverts on investor rights when operational", async () => {
       await expect(
@@ -604,9 +786,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         "NF_NOT_IMPL",
       );
     });
-
-    // we let migrate multiple times in case first one goes wrong
-    it("should migrate token controller twice");
 
     it("should execute general information rights", async () => {
       const tx = await equityTokenController.issueGeneralInformation(

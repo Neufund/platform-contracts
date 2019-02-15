@@ -175,7 +175,7 @@ contract IControllerGovernance is
 
     /// @notice replace current token controller
     /// @dev please note that this process is also controlled by existing controller so for example resolution may be required
-    function changeTokenController(address newController) public;
+    function changeTokenController(IControllerGovernance newController) public;
 
     // in Migrated state - an address of actual token controller
     /// @dev should return zero address on other states

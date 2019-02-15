@@ -19,11 +19,13 @@ path[12]=../contracts/Company/ShareholderRights.sol
 path[13]=../contracts/ETO/ETOTokenTerms.sol
 path[14]=../contracts/ETO/ETODurationTerms.sol
 path[15]=../contracts/Company/EquityToken.sol
+path[16]=../contracts/FeeDisbursal/FeeDisbursal.sol
+path[17]=../contracts/FeeDisbursal/FeeDisbursalController.sol
 
 #Output directory
 output=./build/flatten
 
-for i in {0..15}
+for i in {16..17}
 do
   echo Flattening ${path[i]} to $output
   yarn truffle-flattener ${path[i]} $output
