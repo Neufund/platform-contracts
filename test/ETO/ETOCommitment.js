@@ -45,6 +45,9 @@ import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
+const MockPlaceholderEquityTokenController = artifacts.require(
+  "MockPlaceholderEquityTokenController",
+);
 const ETOCommitment = artifacts.require("ETOCommitment");
 const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -2677,10 +2680,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     );
     // deploy equity token controller which is company management contract
     const oldTokenController = equityTokenController;
-    equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
+    if (oldTokenController) {
+      // replace with mocked token controller, current implementation does not allow multi eto
+      equityTokenController = await MockPlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+      );
+    } else {
+      equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
+    }
     // deploy equity token
     if (opts.ovrEquityToken) {
       // change token controller
+      await equityTokenController.migrateTokenController(oldTokenController.address, false, {
+        from: company,
+      });
       await oldTokenController.changeTokenController(equityTokenController.address, {
         from: company,
       });
@@ -2688,6 +2702,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await equityToken.changeTokenController(equityTokenController.address);
       expect(await equityToken.tokenController()).to.eq(equityTokenController.address);
       equityToken = opts.ovrEquityToken;
+      // prepare token controller for follow on ETO
+      await equityTokenController._overrideState(GovState.Setup);
     } else {
       equityToken = await EquityToken.new(
         universe.address,
