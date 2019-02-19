@@ -123,7 +123,7 @@ export async function deployEuroTokenUniverse(
 ) {
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
   const forkArbiter = await EthereumForkArbiter.at(await universe.forkArbiter());
-  const tokenController = await EuroTokenController.new(universe.address);
+  const tokenController = await EuroTokenController.new(universe.address, depositManager);
   const euroToken = await EuroToken.new(
     accessPolicy.address,
     forkArbiter.address,

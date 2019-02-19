@@ -1,11 +1,12 @@
 import { expect } from "chai";
 import createAccessPolicy from "./helpers/createAccessPolicy";
-import { eventValue } from "./helpers/events";
+import { eventValue, eventValueAtIndex } from "./helpers/events";
 import roles from "./helpers/roles";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import registerSingletons from "./helpers/registerSingletons";
-import { Q18, toBytes32, ZERO_ADDRESS } from "./helpers/constants";
+import { contractId, Q18, toBytes32, ZERO_ADDRESS } from "./helpers/constants";
+import { TriState } from "./helpers/triState";
 
 const EuroTokenController = artifacts.require("EuroTokenController");
 const minDepositAmountEurUlps = Q18.mul(500);
@@ -14,7 +15,16 @@ const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
 
 contract(
   "EuroTokenController",
-  ([_, masterManager, eurtLegalManager, identity1, identity2, nonkycIdentity, explicit]) => {
+  ([
+    _,
+    masterManager,
+    eurtLegalManager,
+    depositManager,
+    identity1,
+    identity2,
+    nonkycIdentity,
+    explicit,
+  ]) => {
     let accessControl;
     let universe;
     let identityRegistry;
@@ -24,6 +34,7 @@ contract(
       [universe, accessControl] = await deployUniverse(masterManager, masterManager);
       await createAccessPolicy(accessControl, [
         { subject: eurtLegalManager, role: roles.eurtLegalManager },
+        { subject: depositManager, role: roles.eurtDepositManager },
       ]);
       // singletons recognized internally by token controller
       await registerSingletons(universe, masterManager, [
@@ -55,7 +66,7 @@ contract(
     ) {
       identityRegistry = await deployIdentityRegistry(universe, masterManager, masterManager);
       // set no limits, block infinite allowance
-      tokenController = await EuroTokenController.new(universe.address);
+      tokenController = await EuroTokenController.new(universe.address, depositManager);
       await tokenController.applySettings(
         _minDepositAmountEurUlps,
         _minWithdrawAmountEurUlps,
@@ -64,26 +75,45 @@ contract(
       );
     }
 
-    // eslint-disable-next-line no-unused-vars
     function expectUniverseReloadedEvent(tx) {
       const event = eventValue(tx, "LogUniverseReloaded");
       expect(event).to.exist;
     }
 
-    // eslint-disable-next-line no-unused-vars
-    function expectAllowedToEvent(tx, to, allowed) {
-      const event = eventValue(tx, "LogAllowedToAddress");
+    function expectAllowedToEvent(tx, to, allowed, idx) {
+      const event = eventValueAtIndex(tx, idx, "LogAllowedToAddress");
       expect(event).to.exist;
       expect(event.args.to).to.eq(to);
       expect(event.args.allowed).to.eq(allowed);
     }
 
-    // eslint-disable-next-line no-unused-vars
-    function expectAllowedFromEvent(tx, from, allowed) {
-      const event = eventValue(tx, "LogAllowedFromAddress");
+    function expectAllowedFromEvent(tx, from, allowed, idx) {
+      const event = eventValueAtIndex(tx, idx, "LogAllowedFromAddress");
       expect(event).to.exist;
       expect(event.args.from).to.eq(from);
       expect(event.args.allowed).to.eq(allowed);
+    }
+
+    function expectLogSettingsChanged(tx, minDeposit, minWithdraw, maxExchange) {
+      const event = eventValue(tx, "LogSettingsChanged");
+      expect(event).to.exist;
+      expect(event.args.minDepositAmountEurUlps).to.be.bignumber.eq(minDeposit);
+      expect(event.args.minWithdrawAmountEurUlps).to.be.bignumber.eq(minWithdraw);
+      expect(event.args.maxSimpleExchangeAllowanceEurUlps).to.be.bignumber.eq(maxExchange);
+    }
+
+    function expectLogFeeSettingsChanged(tx, depositFrac, withdrawFrac) {
+      const event = eventValue(tx, "LogFeeSettingsChanged");
+      expect(event).to.exist;
+      expect(event.args.depositFeeFraction).to.be.bignumber.eq(depositFrac);
+      expect(event.args.withdrawFeeFraction).to.be.bignumber.eq(withdrawFrac);
+    }
+
+    function expectLogDepositManagerChanged(tx, oldDepositManager, newDepositManager) {
+      const event = eventValue(tx, "LogDepositManagerChanged");
+      expect(event).to.exist;
+      expect(event.args.oldDepositManager).to.be.bignumber.eq(oldDepositManager);
+      expect(event.args.newDepositManager).to.be.bignumber.eq(newDepositManager);
     }
 
     describe("general tests", () => {
@@ -98,14 +128,6 @@ contract(
       });
 
       it("should deploy", async () => {
-        // const depTx = await promisify(web3.eth.getTransactionReceipt)(
-        //   tokenController.transactionHash,
-        // );
-        // expectUniverseReloadedEvent(depTx);
-        /* const fromEvents = tx.logs.filter(e => e.event === "LogAllowedFromAddress");
-        expect(fromEvents.length).to.eq(2);
-        const toEvents = tx.logs.filter(e => e.event === "LogAllowedToAddress");
-        expect(toEvents.length).to.eq(2); */
         // parameters should be set
         expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(
           minDepositAmountEurUlps,
@@ -116,6 +138,9 @@ contract(
         expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
           maxSimpleExchangeAllowanceEurUlps,
         );
+        expect(await tokenController.depositManager()).to.eq(depositManager);
+        expect(await tokenController.withdrawalFeeFraction()).to.be.bignumber.eq(0);
+        expect(await tokenController.depositFeeFraction()).to.be.bignumber.eq(0);
         // several contracts should be whitelisted for transfers
         expect(await tokenController.allowedTransferFrom(await universe.gasExchange())).to.be.true;
         expect(await tokenController.allowedTransferTo(await universe.gasExchange())).to.be.true;
@@ -126,6 +151,10 @@ contract(
         // euro token cannot receive transfers
         expect(await tokenController.allowedTransferFrom(await universe.euroToken())).to.be.false;
         expect(await tokenController.allowedTransferTo(await universe.euroToken())).to.be.false;
+        // contractId
+        const ctrId = await tokenController.contractId();
+        expect(ctrId[0]).to.eq(contractId("EuroTokenController"));
+        expect(ctrId[1]).to.be.bignumber.eq(1);
       });
 
       it("should set allow from", async () => {
@@ -147,16 +176,32 @@ contract(
       });
 
       it("should apply settings", async () => {
-        tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
-          from: eurtLegalManager,
-        });
+        const settingsTx = await tokenController.applySettings(
+          Q18.mul(10),
+          Q18.mul(20),
+          Q18.mul(30),
+          {
+            from: eurtLegalManager,
+          },
+        );
+        expectUniverseReloadedEvent(settingsTx);
+        // we set 3 addresses to transfer from and to
+        const fromEvents = settingsTx.logs.filter(e => e.event === "LogAllowedFromAddress");
+        expect(fromEvents.length).to.eq(3);
+        const toEvents = settingsTx.logs.filter(e => e.event === "LogAllowedToAddress");
+        expect(toEvents.length).to.eq(3);
+        // check first to and from
+        expectAllowedToEvent(settingsTx, "0x147df49452f805d1a35e7ca314f564d1087b112f", true, 0);
+        expectAllowedFromEvent(settingsTx, "0x147df49452f805d1a35e7ca314f564d1087b112f", true, 0);
+        expectLogSettingsChanged(settingsTx, Q18.mul(10), Q18.mul(20), Q18.mul(30));
+
         expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(10));
         expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.mul(20));
         expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
           Q18.mul(30),
         );
 
-        tokenController.applySettings(Q18.mul(40), Q18.mul(50), Q18.mul(60), {
+        await tokenController.applySettings(Q18.mul(40), Q18.mul(50), Q18.mul(60), {
           from: eurtLegalManager,
         });
         expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(40));
@@ -193,7 +238,7 @@ contract(
           },
         ]);
 
-        tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
+        await tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
           from: eurtLegalManager,
         });
 
@@ -225,7 +270,45 @@ contract(
         );
       });
 
-      // set allowed from. allowed to, apply settings
+      it("should apply fee settings", async () => {
+        // set to 10% and 50% of deposit and withdraw amount respectively
+        const tx = await tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), {
+          from: depositManager,
+        });
+        expectLogFeeSettingsChanged(tx, Q18.mul(0.1), Q18.mul(0.5));
+        expect(await tokenController.depositFeeFraction()).to.be.bignumber.eq(Q18.mul(0.1));
+        expect(await tokenController.withdrawalFeeFraction()).to.be.bignumber.eq(Q18.mul(0.5));
+        // set back to 0
+        const tx2 = await tokenController.applyFeeSettings(0, 0, { from: depositManager });
+        expectLogFeeSettingsChanged(tx2, 0, 0);
+        expect(await tokenController.depositFeeFraction()).to.be.bignumber.eq(0);
+        expect(await tokenController.withdrawalFeeFraction()).to.be.bignumber.eq(0);
+      });
+
+      it("rejects on invalid fee settings", async () => {
+        // fees > 100% (Q18) are invalid
+        await expect(tokenController.applyFeeSettings(Q18, Q18.mul(0.1), { from: depositManager }))
+          .to.revert;
+        await expect(tokenController.applyFeeSettings(Q18.mul(0.1), Q18, { from: depositManager }))
+          .to.revert;
+      });
+
+      it("should change deposit manager", async () => {
+        const tx = await tokenController.changeDepositManager(identity1, {
+          from: eurtLegalManager,
+        });
+        expectLogDepositManagerChanged(tx, depositManager, identity1);
+        // may set fees if obtains deposit manager role
+        await createAccessPolicy(accessControl, [
+          { subject: identity1, role: roles.eurtDepositManager },
+        ]);
+        await tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: identity1 });
+        await expect(
+          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: depositManager }),
+        ).to.revert;
+        expect(await tokenController.depositManager()).to.eq(identity1);
+      });
+
       it("should reject on admin ops not from manager", async () => {
         const amount = 1;
 
@@ -243,6 +326,24 @@ contract(
 
         await expect(tokenController.applySettings(amount, amount, amount, { from: identity1 })).to
           .revert;
+
+        await expect(tokenController.changeDepositManager(identity1, { from: identity2 })).to
+          .revert;
+      });
+
+      it("rejects on setting fees not from deposit manager", async () => {
+        await expect(
+          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: identity1 }),
+        ).to.revert;
+      });
+
+      it("rejects on setting fees not from deposit manager role", async () => {
+        await createAccessPolicy(accessControl, [
+          { subject: depositManager, role: roles.eurtDepositManager, state: TriState.Deny },
+        ]);
+        await expect(
+          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: depositManager }),
+        ).to.revert;
       });
     });
 
