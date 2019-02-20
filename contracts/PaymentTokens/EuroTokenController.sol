@@ -38,7 +38,28 @@ contract EuroTokenController is
         bool allowed
     );
 
+    // allowances for special contracts were made, see
+    // allowFromUniverse function
     event LogUniverseReloaded();
+
+    // new withdraw and deposit settings were made
+    event LogSettingsChanged(
+        uint256 minDepositAmountEurUlps,
+        uint256 minWithdrawAmountEurUlps,
+        uint256 maxSimpleExchangeAllowanceEurUlps
+    );
+
+    // new deposit/withdraw fees were set
+    event LogFeeSettingsChanged(
+        uint256 depositFeeFraction,
+        uint256 withdrawFeeFraction
+    );
+
+    // deposit manager was changed
+    event LogDepositManagerChanged(
+        address oldDepositManager,
+        address newDepositManager
+    );
 
     ////////////////////////
     // Constants
@@ -71,20 +92,43 @@ contract EuroTokenController is
     // max token exchange can make for gas purchase
     uint256 private _maxSimpleExchangeAllowanceEurUlps;
 
+    // fraction of amount deposited to bank account takes as a fee - before deposit to token is made
+    uint256 private _depositFeeFraction;
+
+    // fraction of amount withdrawn to holder bank account taken as a fee - after withdraw from token is made
+    uint256 private _withdrawalFeeFraction;
+
     // identity registry
     IIdentityRegistry private _identityRegistry;
+
+    // issuer of the token, must have ROLE_EURT_DEPOSIT_MANAGER role
+    // also is able to set deposit and withdraw fees
+    // issuer is a legal representation of a bank, payment gateway or bank account holder
+    // that settles incoming and outgoing bank transactions
+    address private _depositManager;
+
+    ////////////////////////
+    // Constructor
+    ////////////////////////
+
+    modifier onlyDepositManager() {
+        require(msg.sender == _depositManager);
+        _;
+    }
 
     ////////////////////////
     // Constructor
     ////////////////////////
 
     constructor(
-        Universe universe
+        Universe universe,
+        address depositManager
     )
         AccessControlled(universe.accessPolicy())
         public
     {
         UNIVERSE = universe;
+        _depositManager = depositManager;
     }
 
     ////////////////////////
@@ -107,6 +151,16 @@ contract EuroTokenController is
         setAllowedTransferFromPrivate(from, allowed);
     }
 
+    /// @notice changes deposit manager
+    function changeDepositManager(address newDepositManager)
+        public
+        only(ROLE_EURT_LEGAL_MANAGER)
+    {
+        require(newDepositManager != address(0));
+        emit LogDepositManagerChanged(_depositManager, newDepositManager);
+        _depositManager = newDepositManager;
+    }
+
     /// @notice sets limits and whitelists contracts from universe
     function applySettings(
         uint256 minDepositAmountEurUlps,
@@ -121,6 +175,27 @@ contract EuroTokenController is
             minWithdrawAmountEurUlps,
             maxSimpleExchangeAllowanceEurUlps
         );
+        _identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
+        allowFromUniverse();
+    }
+
+    /// @notice set official deposit and withdraw fees
+    /// fees are fractions of amount of deposit/withdraw (volume based)
+    /// deposit fees are taken by deposit manager before `deposit` is called on EuroToken, from amount sent to the bank
+    /// withdraw fees are taken from amount burned via `withdraw` funtion of EuroToken, deposit manager informs on final settlement via settleWithdraw
+    function applyFeeSettings(
+        uint256 depositFeeFraction,
+        uint256 withdrawalFeeFraction
+    )
+        public
+        onlyDepositManager
+        only(ROLE_EURT_DEPOSIT_MANAGER)
+    {
+        require(depositFeeFraction < 10**18);
+        require(withdrawalFeeFraction < 10**18);
+        _depositFeeFraction = depositFeeFraction;
+        _withdrawalFeeFraction = withdrawalFeeFraction;
+        emit LogFeeSettingsChanged(depositFeeFraction, withdrawalFeeFraction);
     }
 
     //
@@ -165,6 +240,30 @@ contract EuroTokenController is
         returns (uint256)
     {
         return _maxSimpleExchangeAllowanceEurUlps;
+    }
+
+    function depositManager()
+        public
+        constant
+        returns (address)
+    {
+        return _depositManager;
+    }
+
+    function depositFeeFraction()
+        public
+        constant
+        returns (uint256)
+    {
+        return _depositFeeFraction;
+    }
+
+    function withdrawalFeeFraction()
+        public
+        constant
+        returns (uint256)
+    {
+        return _withdrawalFeeFraction;
     }
 
     //
@@ -256,7 +355,7 @@ contract EuroTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xddc22bc86ca8ebf8229756d3fd83791c143630f28e301fef65bbe3070a377f2a, 0);
+        return (0xddc22bc86ca8ebf8229756d3fd83791c143630f28e301fef65bbe3070a377f2a, 1);
     }
 
     ////////////////////////
@@ -270,11 +369,10 @@ contract EuroTokenController is
     )
         private
     {
-        _identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
-        allowFromUniverse();
         _minDepositAmountEurUlps = pMinDepositAmountEurUlps;
         _minWithdrawAmountEurUlps = pMinWithdrawAmountEurUlps;
         _maxSimpleExchangeAllowanceEurUlps = pMaxSimpleExchangeAllowanceEurUlps;
+        emit LogSettingsChanged(_minDepositAmountEurUlps, _minWithdrawAmountEurUlps, _maxSimpleExchangeAllowanceEurUlps);
     }
 
     /// enables to and from transfers for several Universe singletons
@@ -290,10 +388,10 @@ contract EuroTokenController is
         setAllowedTransferFromPrivate(UNIVERSE.gasExchange(), true);
 
         // contracts below may receive funds
-        // fee disbursal may receive funds to disburse
-        setAllowedTransferToPrivate(UNIVERSE.feeDisbursal(), true);
         // euro lock may receive refunds
         setAllowedTransferToPrivate(UNIVERSE.euroLock(), true);
+        // fee disbursal may receive funds to disburse
+        setAllowedTransferToPrivate(UNIVERSE.feeDisbursal(), true);
         // gas exchange must be able to receive euro token (as payment)
         setAllowedTransferToPrivate(UNIVERSE.gasExchange(), true);
 

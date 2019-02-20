@@ -101,7 +101,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
     await deployer.deploy(EtherToken, accessPolicy.address);
     const etherToken = await EtherToken.deployed();
     console.log("Deploying EuroTokenController");
-    await deployer.deploy(EuroTokenController, universe.address);
+    await deployer.deploy(
+      EuroTokenController,
+      universe.address,
+      CONFIG.addresses.EURT_DEPOSIT_MANAGER,
+    );
     const tokenController = await EuroTokenController.deployed();
     console.log("Deploying EuroToken");
     await deployer.deploy(
