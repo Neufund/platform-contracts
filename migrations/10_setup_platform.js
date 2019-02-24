@@ -28,6 +28,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       accessPolicy,
       [
         { subject: DEPLOYER, role: roles.eurtLegalManager },
+        { subject: DEPLOYER, role: roles.eurtDepositManager },
         { subject: DEPLOYER, role: roles.identityManager },
         { subject: DEPLOYER, role: roles.tokenRateOracle },
       ],
@@ -40,6 +41,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
       CONFIG.MIN_WITHDRAW_AMOUNT_EUR_ULPS,
       CONFIG.MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS,
     );
+    console.log("Setup euro token deposti manager and fees");
+    await tokenController.changeDepositManager(DEPLOYER);
+    await tokenController.applyFeeSettings(
+      CONFIG.EURT_DEPOSIT_FEE_FRAC,
+      CONFIG.EURT_WITHDRAWAL_FEE_FRAC,
+    );
+    await tokenController.changeDepositManager(CONFIG.addresses.EURT_DEPOSIT_MANAGER);
     console.log("add platform wallet as reclaimer to simple exchange");
     await createAccessPolicy(accessPolicy, [
       {

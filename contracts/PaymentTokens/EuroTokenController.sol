@@ -103,7 +103,7 @@ contract EuroTokenController is
 
     // issuer of the token, must have ROLE_EURT_DEPOSIT_MANAGER role
     // also is able to set deposit and withdraw fees
-    // issuer is a legal representation of a bank, payment gateway or bank account holder
+    // issuer is a legal representation of a bank, payment gateway or bank account holder where settlement happens
     // that settles incoming and outgoing bank transactions
     address private _depositManager;
 

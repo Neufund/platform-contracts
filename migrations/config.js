@@ -44,9 +44,12 @@ export function getConfig(web3, network, accounts) {
   // platform config - new settings go here
   const platformConfig = {
     // euro token settings
-    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.mul(50),
-    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.mul(10),
+    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.mul(1),
+    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.mul(5),
     MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS: Q18.mul(25),
+    // euro token fees
+    EURT_WITHDRAWAL_FEE_FRAC: Q18.mul(0.005),
+    EURT_DEPOSIT_FEE_FRAC: Q18.mul(0),
     // Maps roles to addresses
     addresses: {
       EURT_DEPOSIT_MANAGER: "0xB9B0c83590A442bc8D01a9823E6df66762B64755",
