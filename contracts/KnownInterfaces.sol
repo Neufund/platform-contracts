@@ -28,6 +28,9 @@ contract KnownInterfaces {
     // euro token interface and singleton keccak256("EuroToken")
     bytes4 internal constant KNOWN_INTERFACE_EURO_TOKEN = 0x83c3790b;
 
+    // euro token interface and singleton keccak256("EuroTokenController")
+    bytes4 internal constant KNOWN_INTERFACE_EURO_TOKEN_CONTROLLER = 0x33ac4661;
+
     // identity registry interface and singleton keccak256("IIdentityRegistry")
     bytes4 internal constant KNOWN_INTERFACE_IDENTITY_REGISTRY = 0x0a72e073;
 
