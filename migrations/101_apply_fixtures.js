@@ -67,7 +67,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log(
       `amending agreement for EuroToken ${euroToken.address} and Universe ${universe.address}`,
     );
-    await euroToken.amendAgreement("ipfs:QmchKdFfFtcVUCPq8ZLXwPUz5LxW58R6WgFBHdxKkyGawF");
+    await euroToken.amendAgreement("ipfs:QmdE8jb4FoSRdu5HnJU8Fum6YFmpKQSo733TAWD2owJohK");
     await universe.amendAgreement("ipfs:QmS3qGWqvruywjM7Lp82LiyoyqDQbArdXveC5JA5m54Qfv");
 
     console.log("amending agreement for LockedAccounts");
