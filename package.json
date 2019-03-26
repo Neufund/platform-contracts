@@ -43,6 +43,7 @@
     "swarm-js": "^0.1.35",
     "truffle": "Neufund/truffle#e15ee6b4b92162bd30702dc3f5dbd683066516b4",
     "truffle-flattener": "Neufund/truffle-flattener",
+    "truffle-hdwallet-provider": "^1.0.5",
     "web3": "0.20.1",
     "web3-provider-engine": "^13.3.2"
   },

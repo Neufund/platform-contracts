@@ -1,6 +1,8 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
+const promisify = require("../test/helpers/evmCommands").promisify;
+const getDeployerAccount = require("./config").getDeployerAccount;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -18,6 +20,18 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log("set Commitment to public phase");
     await commitment._mockTransitionTo(1);
     await commitment._mockTransitionTo(2);
+
+    const DEPLOYER = getDeployerAccount(network, accounts);
+
+    console.log("add ether to test accounts");
+    for (const f of Object.keys(fas)) {
+      await promisify(web3.eth.sendTransaction)({
+        from: DEPLOYER,
+        to: fas[f].address,
+        value: CONFIG.Q18.mul(1000000),
+      });
+    }
+
     console.log("commit ETH");
     await commitment.commit({
       from: fas.INV_ETH_ICBM_NO_KYC.address,
@@ -25,7 +39,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     });
     await commitment.commit({
       from: fas.INV_ETH_ICBM_NO_KYC_2.address,
-      value: CONFIG.Q18.mul(161.1289798),
+      value: CONFIG.Q18.mul(167.1289798),
     });
     await commitment.commit({
       from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address,

@@ -178,7 +178,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
     });
     await icbmEuroLock.migrate({ from: fas.INV_ICBM_EUR_M_HAS_KYC.address });
 
-    // await icbmEuroLock.
     console.log("add ether to test accounts");
     for (const f of Object.keys(fas)) {
       await promisify(web3.eth.sendTransaction)({
