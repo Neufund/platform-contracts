@@ -506,7 +506,7 @@ contract ETOCommitment is
             (,neuRewardUlps) = calculateNeumarkDistribution(NEUMARK.incremental(newInvestorContributionEurUlps));
         }
         // crossing max cap can always happen
-        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt);
+        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt, newInvestorContributionEurUlps);
     }
 
     function investorTicket(address investor)
@@ -562,7 +562,8 @@ contract ETOCommitment is
     {
         // add 1 to MIN_TICKET_TOKEN because it was produced by floor and check only MAX CAP
         // WHITELIST CAP will not induce state transition as fixed slots should be able to invest till the end of Whitelist
-        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0);
+        // also put the minimum ticket size plus one cent as eur equivalent to see wether we would cross the threshold
+        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, ETO_TERMS.MIN_TICKET_EUR_ULPS() + 1**16);
         if (capExceeded) {
             if (oldState == ETOState.Whitelist) {
                 return ETOState.Public;
@@ -777,7 +778,7 @@ contract ETOCommitment is
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
-        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "NF_ETO_MAX_TOK_CAP");
+        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256, equivEurUlps), "NF_ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
         // bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
@@ -833,14 +834,19 @@ contract ETOCommitment is
         );
     }
 
-    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt)
+    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt, uint256 equivEurUlps)
         private
         constant
         returns (bool maxCapExceeded)
-    {
+    {   
+        // check for exceeding tokens
         maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_NUMBER_OF_TOKENS;
         if (applyDiscounts && !maxCapExceeded) {
             maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+        }
+        // check for exceeding max investment amount as defined by the constraints
+        if ( equivEurUlps + _totalEquivEurUlps > ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS() ) {
+            maxCapExceeded = true;
         }
     }
 
