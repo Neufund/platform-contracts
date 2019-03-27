@@ -105,6 +105,9 @@ contract ETOTermsConstraints is IContractId {
         require(minTicketSizeEurUlps<=maxTicketSizeEurUlps);
         require(minInvestmentAmountEurUlps<=maxInvestmentAmountEurUlps);
         require(minTicketSizeEurUlps<=maxInvestmentAmountEurUlps);
+        require(maxTicketSizeEurUlps>0);
+        require(maxInvestmentAmountEurUlps>0);
+
 
         CAN_SET_TRANSFERABILITY = canSetTransferability;
         HAS_NOMINEE = hasNominee;
