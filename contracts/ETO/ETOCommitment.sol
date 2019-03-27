@@ -2,6 +2,7 @@ pragma solidity 0.4.25;
 
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
+import "./ETOTermsConstraints.sol";
 import "../Universe.sol";
 import "../Company/IEquityToken.sol";
 import "../ICBM/LockedAccount.sol";
@@ -9,7 +10,7 @@ import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../Math.sol";
 import "../Serialization.sol";
-
+import "../KnownInterfaces.sol";
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -23,7 +24,8 @@ contract ETOCommitment is
     ETOTimedStateMachine,
     Math,
     Serialization,
-    IContractId
+    IContractId,
+    KnownInterfaces
 {
 
     ////////////////////////
@@ -94,6 +96,8 @@ contract ETOCommitment is
 
     // terms contracts
     ETOTerms private ETO_TERMS;
+    // terms constraings (a.k.a. "Product")
+    ETOTermsConstraints private ETO_TERMS_CONSTRAINTS;
     // reference to platform terms
     PlatformTerms private PLATFORM_TERMS;
 
@@ -199,6 +203,7 @@ contract ETOCommitment is
         address nominee,
         address companyLegalRep,
         ETOTerms etoTerms,
+        ETOTermsConstraints etoTermsConstraints,
         IEquityToken equityToken
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
@@ -210,7 +215,10 @@ contract ETOCommitment is
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
-        require(etoTerms.requireValidTerms(PLATFORM_TERMS));
+        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
+
+        ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
+        require(etoTerms.requireValidTerms(ETO_TERMS_CONSTRAINTS));
 
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
@@ -260,13 +268,13 @@ contract ETOCommitment is
         assert(startDate < 0xFFFFFFFF);
         // must be more than NNN days (platform terms!)
         require(
-            startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
+            startDate > block.timestamp && startDate - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION(),
             "NF_ETO_DATE_TOO_EARLY");
         // prevent re-setting start date if ETO starts too soon
         uint256 startAt = startOfInternal(ETOState.Whitelist);
         // block.timestamp must be less than startAt, otherwise timed state transition is done
         require(
-            startAt == 0 || (startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION()),
+            startAt == 0 || (startAt - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION()),
             "NF_ETO_START_TOO_SOON");
         runStateMachine(uint32(startDate));
         // todo: lock ETO_TERMS whitelist to be more trustless

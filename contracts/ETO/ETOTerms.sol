@@ -2,6 +2,7 @@ pragma solidity 0.4.25;
 
 import "./ETODurationTerms.sol";
 import "./ETOTokenTerms.sol";
+import "./ETOTermsConstraints.sol";
 import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
@@ -305,7 +306,7 @@ contract ETOTerms is
     }
 
     /// @notice checks terms against platform terms, reverts on invalid
-    function requireValidTerms(PlatformTerms platformTerms)
+    function requireValidTerms(ETOTermsConstraints termsConstraints)
         public
         constant
         returns (bool)
@@ -323,23 +324,29 @@ contract ETOTerms is
         // it must be possible to collect more funds than max number of tokens
         require(ESTIMATED_MAX_CAP_EUR_ULPS() >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
 
-        require(MIN_TICKET_EUR_ULPS >= platformTerms.MIN_TICKET_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
-        // duration checks
-        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
-        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
+        // ticket size checks
+        require(MIN_TICKET_EUR_ULPS >= termsConstraints.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+        require(MAX_TICKET_EUR_ULPS <= termsConstraints.MAX_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
 
-        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
-        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
+        // only allow transferabilty if this is allowed in general
+        require(!ENABLE_TRANSFERS_ON_SUCCESS || termsConstraints.CAN_SET_TRANSFERABILITY(), "NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
+
+        // duration checks
+        require(DURATION_TERMS.WHITELIST_DURATION() >= termsConstraints.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
+        require(DURATION_TERMS.WHITELIST_DURATION() <= termsConstraints.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
+
+        require(DURATION_TERMS.PUBLIC_DURATION() >= termsConstraints.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
+        require(DURATION_TERMS.PUBLIC_DURATION() <= termsConstraints.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
 
         uint256 totalDuration = DURATION_TERMS.WHITELIST_DURATION() + DURATION_TERMS.PUBLIC_DURATION();
-        require(totalDuration >= platformTerms.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
-        require(totalDuration <= platformTerms.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
+        require(totalDuration >= termsConstraints.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
+        require(totalDuration <= termsConstraints.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
 
-        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
-        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
+        require(DURATION_TERMS.SIGNING_DURATION() >= termsConstraints.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
+        require(DURATION_TERMS.SIGNING_DURATION() <= termsConstraints.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
 
-        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
-        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
+        require(DURATION_TERMS.CLAIM_DURATION() >= termsConstraints.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
+        require(DURATION_TERMS.CLAIM_DURATION() <= termsConstraints.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
 
         return true;
     }

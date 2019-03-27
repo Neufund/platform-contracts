@@ -17,6 +17,7 @@ contract MockETOCommitment is
         address nominee,
         address companyLegalRep,
         ETOTerms etoTerms,
+        ETOTermsConstraints etoTermsConstraints,
         IEquityToken equityToken
     )
         ETOCommitment(
@@ -25,6 +26,7 @@ contract MockETOCommitment is
             nominee,
             companyLegalRep,
             etoTerms,
+            etoTermsConstraints,
             equityToken
         )
     public

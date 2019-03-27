@@ -93,4 +93,7 @@ contract KnownInterfaces {
 
     // Payment tokens (collection) keccak256("PaymentToken")
     bytes4 internal constant KNOWN_INTERFACE_PAYMENT_TOKEN = 0xb2a0042a;
+
+    // ETO Contraints, aka Products keccak256("ETOTermsConstraints")
+    bytes4 internal constant KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS = 0x277dd384;
 }
