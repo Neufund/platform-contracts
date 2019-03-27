@@ -360,16 +360,6 @@ contract ETOCommitment is
         claimTokensPrivate(msg.sender);
     }
 
-    function claimMany(address[] investors)
-        external
-        withStateTransition()
-        onlyStates(ETOState.Claim, ETOState.Payout)
-    {
-        for(uint256 ii = 0; ii < investors.length; ii++) {
-            claimTokensPrivate(investors[ii]);
-        }
-    }
-
     function refund()
         external
         withStateTransition()
@@ -377,16 +367,6 @@ contract ETOCommitment is
 
     {
         refundTokensPrivate(msg.sender);
-    }
-
-    function refundMany(address[] investors)
-        external
-        withStateTransition()
-        onlyState(ETOState.Refund)
-    {
-        for(uint256 ii = 0; ii < investors.length; ii++) {
-            refundTokensPrivate(investors[ii]);
-        }
     }
 
     function payout()

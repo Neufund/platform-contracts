@@ -1441,25 +1441,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectValidPayoutStateFullClaim();
       await expectNoICBMPendingCommitments(investors.slice(0, 1));
     });
-
-    it("should claim many with duplicates without effect", async () => {
-      const tx = await etoCommitment.claimMany([investors[0], investors[1], investors[0]]);
-      const eventsCount = tx.logs.filter(e => e.event === "LogTokensClaimed").length;
-      expect(eventsCount).to.eq(2);
-      await expectFullClaimInPayout();
-    });
-
-    it("should claim many without tickets without effect", async () => {
-      const tx = await etoCommitment.claimMany([
-        investors[0],
-        investors[1],
-        investors[0],
-        investors[2],
-      ]);
-      const eventsCount = tx.logs.filter(e => e.event === "LogTokensClaimed").length;
-      expect(eventsCount).to.eq(2);
-      await expectFullClaimInPayout();
-    });
   });
 
   describe("all refund cases", () => {
@@ -1503,25 +1484,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("should refund many", async () => {
       await refundMultipleInvestors([investors[0], investors[1]]);
-      await expectFullyRefundedState();
-    });
-
-    it("should refund many with duplicates without effect", async () => {
-      const tx = await etoCommitment.refundMany([investors[0], investors[1], investors[0]]);
-      const eventsCount = tx.logs.filter(e => e.event === "LogFundsRefunded").length;
-      expect(eventsCount).to.eq(4);
-      await expectFullyRefundedState();
-    });
-
-    it("should refund many without tickets without effect", async () => {
-      const tx = await etoCommitment.refundMany([
-        investors[0],
-        investors[1],
-        investors[0],
-        investors[2],
-      ]);
-      const eventsCount = tx.logs.filter(e => e.event === "LogFundsRefunded").length;
-      expect(eventsCount).to.eq(4);
       await expectFullyRefundedState();
     });
   });
@@ -2770,20 +2732,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     }
   }
 
-  async function expectValidInvestorClaim(tx, investor, logIdx) {
+  async function expectValidInvestorClaim(tx, investor) {
     const ticket = await etoCommitment.investorTicket(investor);
-    let ilogIdx = logIdx;
-    if (ilogIdx === undefined) {
-      // there's just single investor in tx
-      expect(ticket[8]).to.be.true;
-      ilogIdx = 0;
-    } else {
-      const wasSettled = ticket[8];
-      if (!wasSettled) {
-        return;
-      }
-    }
-    expectLogTokensClaimed(tx, ilogIdx, investor, ticket[2], ticket[1]);
+    expect(ticket[8]).to.be.true;
+    expectLogTokensClaimed(tx, 0, investor, ticket[2], ticket[1]);
     expect(await neumark.balanceOf(investor)).to.be.bignumber.eq(ticket[1]);
     expect(await equityToken.balanceOf(investor)).to.be.bignumber.eq(ticket[2]);
     expect(await equityToken.agreementSignedAtBlock(investor)).to.be.bignumber.gt(0);
@@ -3442,16 +3394,17 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   }
 
   async function claimInvestor(investor) {
+    const ticket = await etoCommitment.investorTicket(investor);
     const tx = await etoCommitment.claim({ from: investor });
-    await expectValidInvestorClaim(tx, investor);
+    // check only if actual claim happened
+    if (ticket[2].gt(0)) {
+      await expectValidInvestorClaim(tx, investor);
+    }
   }
 
   async function claimMultipleInvestors(investorsAddresses) {
-    const tx = await etoCommitment.claimMany(investorsAddresses);
-    let logIdx = 0;
     for (const investor of investorsAddresses) {
-      await expectValidInvestorClaim(tx, investor, logIdx);
-      logIdx += 1;
+      await claimInvestor(investor);
     }
   }
 
@@ -3461,11 +3414,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   }
 
   async function refundMultipleInvestors(investorsAddresses) {
-    const tx = await etoCommitment.refundMany(investorsAddresses);
-    let idx = 0;
     for (const investor of investorsAddresses) {
-      await expectValidInvestorRefund(tx, investor, idx);
-      idx += 1;
+      await refundInvestor(investor);
     }
   }
 
