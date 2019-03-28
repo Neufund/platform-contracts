@@ -23,6 +23,7 @@ contract TestICBMTimedStateMachine is
     function testStateOrdering()
         public
         pure
+        returns (bool passed)
     {
         assert(State.Before == State.Before);
         assert(State.Before < State.Whitelist);
@@ -50,6 +51,8 @@ contract TestICBMTimedStateMachine is
         assert(int(State.Before) + 1 == int(State.Whitelist));
         assert(int(State.Whitelist) + 1 == int(State.Public));
         assert(int(State.Public) + 1 == int(State.Finished));
+
+        return true;
     }
 
     //
