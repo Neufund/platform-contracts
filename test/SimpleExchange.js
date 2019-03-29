@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "./helpers/bignumber";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { promisify } from "./helpers/evmCommands";
@@ -17,8 +18,8 @@ import { divRound, etherToWei } from "./helpers/unitConverter";
 import increaseTime from "./helpers/increaseTime";
 import { toBytes32, Q18, contractId, ZERO_ADDRESS } from "./helpers/constants";
 
-const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
-const gasExchangeFee = Q18.mul(0.07);
+const gasExchangeMaxAllowanceEurUlps = Q18.times(50);
+const gasExchangeFee = Q18.times(0.07);
 const hasKYCandHasAccount = toBytes32("0x5");
 
 contract(
@@ -75,50 +76,50 @@ contract(
       const tx = await gasExchange.setExchangeRate(
         etherToken.address,
         euroToken.address,
-        Q18.mul(100),
+        Q18.times(100),
         { from: tokenOracleManager },
       );
       expect(tx.logs.length).to.eq(2);
-      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
-      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
+      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.times(100));
+      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.times(0.01));
       const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
       let timestamp = await latestTimestamp();
-      expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(rate[0]).to.be.bignumber.eq(Q18.times(100));
+      expect(rate[1].minus(timestamp).abs()).to.be.bignumber.lt(2);
       const invRate = await rateOracle.getExchangeRate(euroToken.address, etherToken.address);
       timestamp = await latestTimestamp();
-      expect(invRate[0]).to.be.bignumber.eq(Q18.mul(0.01));
-      expect(invRate[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(invRate[0]).to.be.bignumber.eq(Q18.times(0.01));
+      expect(invRate[1].minus(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
     it("should set exchange rate after day", async () => {
       const tx = await gasExchange.setExchangeRate(
         etherToken.address,
         euroToken.address,
-        Q18.mul(100),
+        Q18.times(100),
         { from: tokenOracleManager },
       );
 
       expect(tx.logs.length).to.eq(2);
-      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
-      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
+      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.times(100));
+      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.times(0.01));
 
       const dayDuration = 1 * 60 * 24;
       await increaseTime(dayDuration);
 
       const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
       let timestamp = await latestTimestamp();
-      expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rate[1].sub(timestamp - dayDuration).abs()).to.be.bignumber.lt(2);
+      expect(rate[0]).to.be.bignumber.eq(Q18.times(100));
+      expect(rate[1].minus(timestamp - dayDuration).abs()).to.be.bignumber.lt(2);
       const invRate = await rateOracle.getExchangeRate(euroToken.address, etherToken.address);
       timestamp = await latestTimestamp();
-      expect(invRate[0]).to.be.bignumber.eq(Q18.mul(0.01));
-      expect(invRate[1].sub(timestamp - dayDuration).abs()).to.be.bignumber.lt(2);
+      expect(invRate[0]).to.be.bignumber.eq(Q18.times(0.01));
+      expect(invRate[1].minus(timestamp - dayDuration).abs()).to.be.bignumber.lt(2);
 
       const txAfterDay = await gasExchange.setExchangeRate(
         euroToken.address,
         etherToken.address,
-        Q18.mul(0.001),
+        Q18.times(0.001),
         { from: tokenOracleManager },
       );
 
@@ -127,28 +128,28 @@ contract(
         txAfterDay.logs[0],
         euroToken.address,
         etherToken.address,
-        Q18.mul(0.001),
+        Q18.times(0.001),
       );
       expectLogSetExchangeRate(
         txAfterDay.logs[1],
         etherToken.address,
         euroToken.address,
-        Q18.mul(1000),
+        Q18.times(1000),
       );
 
       const rateAfterDay = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
       timestamp = await latestTimestamp();
 
-      expect(rateAfterDay[0]).to.be.bignumber.eq(Q18.mul(1000));
-      expect(rateAfterDay[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(rateAfterDay[0]).to.be.bignumber.eq(Q18.times(1000));
+      expect(rateAfterDay[1].minus(timestamp).abs()).to.be.bignumber.lt(2);
 
       const inversedRateAfterDay = await rateOracle.getExchangeRate(
         euroToken.address,
         etherToken.address,
       );
       timestamp = await latestTimestamp();
-      expect(inversedRateAfterDay[0]).to.be.bignumber.eq(Q18.mul(0.001));
-      expect(inversedRateAfterDay[1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(inversedRateAfterDay[0]).to.be.bignumber.eq(Q18.times(0.001));
+      expect(inversedRateAfterDay[1].minus(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
     it("should set many exchange rates", async () => {
@@ -156,61 +157,61 @@ contract(
       const tx = await gasExchange.setExchangeRates(
         [etherToken.address, neuToken.address],
         [euroToken.address, euroToken.address],
-        [Q18.mul(100), Q18.mul(0.4)],
+        [Q18.times(100), Q18.times(0.4)],
         { from: tokenOracleManager },
       );
       expect(tx.logs.length).to.eq(4);
-      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
-      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
-      expectLogSetExchangeRate(tx.logs[2], neuToken.address, euroToken.address, Q18.mul(0.4));
-      expectLogSetExchangeRate(tx.logs[3], euroToken.address, neuToken.address, Q18.mul(2.5));
+      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.times(100));
+      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.times(0.01));
+      expectLogSetExchangeRate(tx.logs[2], neuToken.address, euroToken.address, Q18.times(0.4));
+      expectLogSetExchangeRate(tx.logs[3], euroToken.address, neuToken.address, Q18.times(2.5));
       const rates = await rateOracle.getExchangeRates(
         [etherToken.address, neuToken.address],
         [euroToken.address, euroToken.address],
       );
       let timestamp = await latestTimestamp();
-      expect(rates[0][0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
-      expect(rates[0][1]).to.be.bignumber.eq(Q18.mul(0.4));
-      expect(rates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(rates[0][0]).to.be.bignumber.eq(Q18.times(100));
+      expect(rates[1][0].minus(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(rates[0][1]).to.be.bignumber.eq(Q18.times(0.4));
+      expect(rates[1][1].minus(timestamp).abs()).to.be.bignumber.lt(2);
       const invRates = await rateOracle.getExchangeRates(
         [euroToken.address, euroToken.address],
         [etherToken.address, neuToken.address],
       );
       timestamp = await latestTimestamp();
-      expect(invRates[0][0]).to.be.bignumber.eq(Q18.mul(0.01));
-      expect(invRates[1][0].sub(timestamp).abs()).to.be.bignumber.lt(2);
-      expect(invRates[0][1]).to.be.bignumber.eq(Q18.mul(2.5));
-      expect(invRates[1][1].sub(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(invRates[0][0]).to.be.bignumber.eq(Q18.times(0.01));
+      expect(invRates[1][0].minus(timestamp).abs()).to.be.bignumber.lt(2);
+      expect(invRates[0][1]).to.be.bignumber.eq(Q18.times(2.5));
+      expect(invRates[1][1].minus(timestamp).abs()).to.be.bignumber.lt(2);
     });
 
     it("should set same echanage rates multiple times", async () => {
       const tx = await gasExchange.setExchangeRates(
         [etherToken.address, euroToken.address],
         [euroToken.address, etherToken.address],
-        [Q18.mul(100), Q18.mul(0.01)],
+        [Q18.times(100), Q18.times(0.01)],
         { from: tokenOracleManager },
       );
       expect(tx.logs.length).to.eq(4);
 
-      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.mul(100));
-      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.mul(0.01));
-      expectLogSetExchangeRate(tx.logs[3], etherToken.address, euroToken.address, Q18.mul(100));
-      expectLogSetExchangeRate(tx.logs[2], euroToken.address, etherToken.address, Q18.mul(0.01));
+      expectLogSetExchangeRate(tx.logs[0], etherToken.address, euroToken.address, Q18.times(100));
+      expectLogSetExchangeRate(tx.logs[1], euroToken.address, etherToken.address, Q18.times(0.01));
+      expectLogSetExchangeRate(tx.logs[3], etherToken.address, euroToken.address, Q18.times(100));
+      expectLogSetExchangeRate(tx.logs[2], euroToken.address, etherToken.address, Q18.times(0.01));
 
       const rates = await rateOracle.getExchangeRates(
         [etherToken.address, euroToken.address],
         [euroToken.address, etherToken.address],
       );
 
-      expect(rates[0][0]).to.be.bignumber.eq(Q18.mul(100));
-      expect(rates[0][1]).to.be.bignumber.eq(Q18.mul(0.01));
+      expect(rates[0][0]).to.be.bignumber.eq(Q18.times(100));
+      expect(rates[0][1]).to.be.bignumber.eq(Q18.times(0.01));
       expect(rates[1][0]).to.be.bignumber.eq(rates[1][1]);
     });
 
     it("should store when inversed rate is maximum possible stored value for 18 decimals tokens", async () => {
-      const maximumPossibleRate = web3.toBigNumber(10).pow(36);
-      const inversionOfMaximumPossibleRate = divRound(Q18.mul(Q18), maximumPossibleRate);
+      const maximumPossibleRate = new BigNumber(10).pow(36);
+      const inversionOfMaximumPossibleRate = divRound(Q18.times(Q18), maximumPossibleRate);
       expect(inversionOfMaximumPossibleRate).to.be.bignumber.eq(1);
 
       await gasExchange.setExchangeRate(
@@ -231,15 +232,15 @@ contract(
 
     it("should revert on set exchange rate not from tokenOracleManager", async () => {
       // this should work
-      gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
+      gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.times(100), {
         from: tokenOracleManager,
       });
       const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
-      expect(rate[0]).to.be.bignumber.eq(Q18.mul(100));
+      expect(rate[0]).to.be.bignumber.eq(Q18.times(100));
 
       // this should fail for authentication reasons
       await expect(
-        gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(90), {
+        gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.times(90), {
           from: randomAddress,
         }),
       ).to.revert;
@@ -247,12 +248,12 @@ contract(
         etherToken.address,
         euroToken.address,
       );
-      expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.mul(100));
+      expect(rateAfterFailedTx[0]).to.be.bignumber.eq(Q18.times(100));
     });
 
     it("should revert on set exchange rate when setting same nominator and denominator", async () => {
       await expect(
-        gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.mul(0.1), {
+        gasExchange.setExchangeRate(etherToken.address, etherToken.address, Q18.times(0.1), {
           from: tokenOracleManager,
         }),
       ).to.be.rejectedWith("NF_SEX_SAME_N_D");
@@ -260,7 +261,7 @@ contract(
 
     it("should revert when trying to set rate for addres that is not erc223 token", async () => {
       await expect(
-        gasExchange.setExchangeRate(etherToken.address, randomAddress, Q18.mul(1), {
+        gasExchange.setExchangeRate(etherToken.address, randomAddress, Q18.times(1), {
           from: tokenOracleManager,
         }),
       ).to.revert;
@@ -275,10 +276,7 @@ contract(
     });
 
     it("should revert on set rate to more than uint128 max", async () => {
-      const moreThanMaxUInt128 = web3
-        .toBigNumber(2)
-        .pow(128)
-        .plus(1);
+      const moreThanMaxUInt128 = new BigNumber(2).pow(128).plus(1);
 
       await expect(
         gasExchange.setExchangeRate(etherToken.address, euroToken.address, moreThanMaxUInt128, {
@@ -294,22 +292,22 @@ contract(
 
     it("should exchange EuroToken to gas", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
       const initalBalance = await promisify(web3.eth.getBalance)(gasRecipient);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       const tx = await gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
         from: gasExchangeManager,
       });
       const expectedWei = divRound(
-        exchangedAmount.sub(gasExchangeFee.mul(decimalExchangeAmount)),
-        new web3.BigNumber(601.65123),
+        exchangedAmount.minus(gasExchangeFee.times(decimalExchangeAmount)),
+        new BigNumber(601.65123),
       );
-      const invRate = divRound(Q18.mul(Q18), rate);
+      const invRate = divRound(Q18.times(Q18), rate);
       expectLogGasExchange(
         tx.logs[0],
         gasRecipient,
@@ -323,12 +321,12 @@ contract(
       const afterBalance = await promisify(web3.eth.getBalance)(gasRecipient);
       expect(
         afterBalance
-          .sub(initalBalance)
-          .sub(expectedWei)
+          .minus(initalBalance)
+          .minus(expectedWei)
           .abs(),
       ).to.be.bignumber.lt(10);
       // simple check if we are not doing stupid error of using invesrse rate and selling wei for cheap
-      expect(exchangedAmount).to.be.bignumber.gt(afterBalance.sub(initalBalance));
+      expect(exchangedAmount).to.be.bignumber.gt(afterBalance.minus(initalBalance));
       // set platform_wallet as reclaimer for gasExchange and extract euro
       await reclaimEuroFromExchange(platformWallet);
       expect(await euroToken.balanceOf(gasExchange.address)).to.be.bignumber.eq(0);
@@ -337,16 +335,16 @@ contract(
 
     it("should exchange EuroToken to gas for multiple accounts", async () => {
       const decimalExchangeAmount1 = 20;
-      const exchangedAmount1 = Q18.mul(decimalExchangeAmount1);
+      const exchangedAmount1 = Q18.times(decimalExchangeAmount1);
       const decimalExchangeAmount2 = 17.90128;
-      const exchangedAmount2 = Q18.mul(decimalExchangeAmount2);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount2 = Q18.times(decimalExchangeAmount2);
+      const rate = Q18.times(601.65123);
       const initalBalance1 = await promisify(web3.eth.getBalance)(gasRecipient);
       const initalBalance2 = await promisify(web3.eth.getBalance)(anotherGasRecipient);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
-      await depositEuroToken(anotherGasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
+      await depositEuroToken(anotherGasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       const tx = await gasExchange.gasExchangeMultiple(
@@ -359,14 +357,14 @@ contract(
       );
       expect(tx.logs.length).to.eq(2);
       const expectedWei1 = divRound(
-        exchangedAmount1.sub(gasExchangeFee.mul(decimalExchangeAmount1)),
-        new web3.BigNumber(601.65123),
+        exchangedAmount1.minus(gasExchangeFee.times(decimalExchangeAmount1)),
+        new BigNumber(601.65123),
       );
       const expectedWei2 = divRound(
-        exchangedAmount2.sub(gasExchangeFee.mul(decimalExchangeAmount2)),
-        new web3.BigNumber(601.65123),
+        exchangedAmount2.minus(gasExchangeFee.times(decimalExchangeAmount2)),
+        new BigNumber(601.65123),
       );
-      const invRate = divRound(Q18.mul(Q18), rate);
+      const invRate = divRound(Q18.times(Q18), rate);
       expectLogGasExchange(
         tx.logs[0],
         gasRecipient,
@@ -391,14 +389,14 @@ contract(
       const afterBalance2 = await promisify(web3.eth.getBalance)(anotherGasRecipient);
       expect(
         afterBalance1
-          .sub(initalBalance1)
-          .sub(expectedWei1)
+          .minus(initalBalance1)
+          .minus(expectedWei1)
           .abs(),
       ).to.be.bignumber.lt(10);
       expect(
         afterBalance2
-          .sub(initalBalance2)
-          .sub(expectedWei2)
+          .minus(initalBalance2)
+          .minus(expectedWei2)
           .abs(),
       ).to.be.bignumber.lt(10);
       // set platform_wallet as reclaimer for gasExchange and extract euro
@@ -411,9 +409,9 @@ contract(
 
     it("should revert on not set exchange rate", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
 
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -425,7 +423,7 @@ contract(
 
     it("should revert on exchange bigger than permanent allowance", async () => {
       const exchangedAmount = gasExchangeMaxAllowanceEurUlps.add(1); // larger than gasExchangeMaxAllowanceEurUlps
-      const rate = Q18.mul(601.65123);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
       await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
@@ -440,11 +438,11 @@ contract(
 
     it("should revert on exchange if rate older than 1 hour", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       const hour = 60 * 60;
@@ -459,11 +457,11 @@ contract(
 
     it("should revert on multi exchange if rate older than 1 hour", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       const hour = 60 * 60;
@@ -478,7 +476,7 @@ contract(
 
     it("should revert increase allowance of gas exchange due to allowance override", async () => {
       const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
-      const rate = Q18.mul(601.65123);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
       await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
@@ -511,7 +509,7 @@ contract(
 
     it("should revert increase allowance on multi gas exchange due to allowance override", async () => {
       const exchangedAmountMoreThanAllowance = gasExchangeMaxAllowanceEurUlps.plus(1);
-      const rate = Q18.mul(601.65123);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
       await depositEuroToken(gasRecipient, gasExchangeMaxAllowanceEurUlps.times(2));
@@ -540,11 +538,11 @@ contract(
 
     it("should revert on exchange not from gasExchangeManager", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -556,14 +554,14 @@ contract(
 
     it("should revert on multiple exchange not from gasExchangeManager", async () => {
       const decimalExchangeAmount1 = 20;
-      const exchangedAmount1 = Q18.mul(decimalExchangeAmount1);
+      const exchangedAmount1 = Q18.times(decimalExchangeAmount1);
       const decimalExchangeAmount2 = 17.90128;
-      const exchangedAmount2 = Q18.mul(decimalExchangeAmount2);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount2 = Q18.times(decimalExchangeAmount2);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
-      await depositEuroToken(anotherGasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
+      await depositEuroToken(anotherGasRecipient, Q18.times(40));
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -580,11 +578,11 @@ contract(
 
     it("should revert on exchange contract not having ether", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(40));
+      await depositEuroToken(gasRecipient, Q18.times(40));
 
       await expect(
         gasExchange.gasExchange(gasRecipient, exchangedAmount, gasExchangeFee, {
@@ -595,11 +593,11 @@ contract(
 
     it("should revert on not having enough euroToken", async () => {
       const decimalExchangeAmount = 20;
-      const exchangedAmount = Q18.mul(decimalExchangeAmount);
-      const rate = Q18.mul(601.65123);
+      const exchangedAmount = Q18.times(decimalExchangeAmount);
+      const rate = Q18.times(601.65123);
 
       await setGasExchangeRateAndAllowance(rate, gasExchangeMaxAllowanceEurUlps);
-      await depositEuroToken(gasRecipient, Q18.mul(1)); // not enough tokens
+      await depositEuroToken(gasRecipient, Q18.times(1)); // not enough tokens
       await sendEtherToExchange(_, Q18);
 
       await expect(
@@ -610,7 +608,7 @@ contract(
     });
 
     it("should reclaim ether from SimpleExchange", async () => {
-      const gasPrice = new web3.BigNumber(0x01);
+      const gasPrice = new BigNumber(0x01);
       const etherAmount = etherToWei(10);
 
       await sendEtherToExchange(_, etherAmount);
@@ -633,7 +631,7 @@ contract(
         from: platformWallet,
         gasPrice,
       });
-      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const gasCost = gasPrice.times(tx.receipt.gasUsed);
 
       const exchangeBalaceAfter = await promisify(web3.eth.getBalance)(simpleExchange.address);
       expect(exchangeBalaceAfter).to.be.bignumber.eq(0);
@@ -699,7 +697,7 @@ contract(
       expect(event.args.amountEurUlps).to.be.bignumber.eq(exchangedAmount);
       expect(event.args.exchangeFeeFrac).to.be.bignumber.eq(fee);
       expect(event.args.amountWei).to.be.bignumber;
-      expect(event.args.amountWei.sub(expectedWei).abs()).to.be.bignumber.lt(10);
+      expect(event.args.amountWei.minus(expectedWei).abs()).to.be.bignumber.lt(10);
       expect(event.args.rate).to.be.bignumber.eq(rate);
     }
   },

@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "../helpers/bignumber";
 import EvmError from "../helpers/EVMThrow";
 import increaseTime from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
@@ -24,21 +25,21 @@ const Token = { Ether: 1, Euro: 2 };
 const BEFORE_DURATION = 5 * 24 * 60 * 60;
 const WHITELIST_DURATION = 5 * 24 * 60 * 60;
 const PUBLIC_DURATION = 30 * 24 * 60 * 60;
-const PLATFORM_SHARE = web3.toBigNumber("2");
+const PLATFORM_SHARE = new BigNumber("2");
 
 const WHITELIST_START = BEFORE_DURATION;
 const PUBLIC_START = WHITELIST_START + WHITELIST_DURATION;
 const FINISHED_START = PUBLIC_START + PUBLIC_DURATION;
 const AGREEMENT = "ipfs:QmPXME1oRtoT627YKaDPDQ3PwA8tdP9rWuAAweLzqSwAWT";
 const LOCK_DURATION = 18 * 30 * 24 * 60 * 60;
-const PENALTY_FRACTION = web3.toBigNumber("0.1").mul(Q18);
-const CAP_EUR = web3.toBigNumber("200000000").mul(Q18);
-const MIN_TICKET_EUR = web3.toBigNumber("300").mul(Q18);
-const ETH_EUR_FRACTION = web3.toBigNumber("300").mul(Q18);
-const ethToEur = eth => eth.mul(ETH_EUR_FRACTION).div(Q18);
-const eurToEth = eur => divRound(eur.mul(Q18), ETH_EUR_FRACTION);
+const PENALTY_FRACTION = new BigNumber("0.1").times(Q18);
+const CAP_EUR = new BigNumber("200000000").times(Q18);
+const MIN_TICKET_EUR = new BigNumber("300").times(Q18);
+const ETH_EUR_FRACTION = new BigNumber("300").times(Q18);
+const ethToEur = eth => eth.times(ETH_EUR_FRACTION).div(Q18);
+const eurToEth = eur => divRound(eur.times(Q18), ETH_EUR_FRACTION);
 const platformShare = nmk => nmk.div(PLATFORM_SHARE).round(0, 1); // round down
-const investorShare = nmk => nmk.sub(platformShare(nmk));
+const investorShare = nmk => nmk.minus(platformShare(nmk));
 const MIN_TICKET_ETH = eurToEth(MIN_TICKET_EUR);
 
 contract(
@@ -193,12 +194,7 @@ contract(
         .map((_, i) => (i % 2 ? Token.Ether : Token.Euro));
       const amounts = Array(N)
         .fill(0)
-        .map((_, i) =>
-          web3
-            .toBigNumber(i * i)
-            .mul(Q18)
-            .plus(MIN_TICKET_EUR),
-        );
+        .map((_, i) => new BigNumber(i * i).times(Q18).plus(MIN_TICKET_EUR));
 
       return { whitelisted, tokens, amounts };
     }
@@ -213,10 +209,9 @@ contract(
       const amounts = Array(N)
         .fill(0)
         .map(() =>
-          web3
-            .toBigNumber(Math.random() * ticketDecimal)
+          new BigNumber(Math.random() * ticketDecimal)
             .floor()
-            .mul(Q18)
+            .times(Q18)
             .plus(MIN_TICKET_EUR),
         );
 
@@ -267,9 +262,7 @@ contract(
           });
 
           const investor = await commitment.whitelistInvestor(ii);
-          expect(new web3.BigNumber(investor)).to.be.bignumber.eq(
-            new web3.BigNumber(whitelisted[ii]),
-          );
+          expect(new BigNumber(investor)).to.be.bignumber.eq(new BigNumber(whitelisted[ii]));
 
           const ticket = await commitment.whitelistTicket(investor);
           expect(ticket[0]).to.be.bignumber.eq(tokens[ii]);
@@ -314,9 +307,9 @@ contract(
       it("should pre-allocate Nmk for whitelist with Ether and Euro", async () => {
         const whitelisted = [investors[0], investors[1]];
         const tokens = [Token.Ether, Token.Euro];
-        const amounts = [MIN_TICKET_EUR.mul(3), MIN_TICKET_EUR.mul(5)];
+        const amounts = [MIN_TICKET_EUR.times(3), MIN_TICKET_EUR.times(5)];
         const expectedEur = amounts[0]
-          .mul(ETH_EUR_FRACTION)
+          .times(ETH_EUR_FRACTION)
           .div(Q18)
           .plus(amounts[1]);
         const expectedNmk = await neumark.cumulative(expectedEur);
@@ -333,14 +326,14 @@ contract(
       });
 
       it("should not accept the same investor twice", async () => {
-        await commitment.addWhitelisted([investors[0]], [Token.Euro], [MIN_TICKET_EUR.mul(2)], {
+        await commitment.addWhitelisted([investors[0]], [Token.Euro], [MIN_TICKET_EUR.times(2)], {
           from: whitelistAdmin,
         });
 
         const tx = commitment.addWhitelisted(
           [investors[0]],
           [Token.Euro],
-          [MIN_TICKET_EUR.mul(2)],
+          [MIN_TICKET_EUR.times(2)],
           { from: whitelistAdmin },
         );
 
@@ -348,14 +341,14 @@ contract(
       });
 
       it("should not accept the same investor with different token", async () => {
-        await commitment.addWhitelisted([investors[0]], [Token.Euro], [MIN_TICKET_EUR.mul(2)], {
+        await commitment.addWhitelisted([investors[0]], [Token.Euro], [MIN_TICKET_EUR.times(2)], {
           from: whitelistAdmin,
         });
 
         const tx = commitment.addWhitelisted(
           [investors[0]],
           [Token.Ether],
-          [MIN_TICKET_EUR.mul(2)],
+          [MIN_TICKET_EUR.times(2)],
           { from: whitelistAdmin },
         );
 
@@ -375,7 +368,7 @@ contract(
         const tx = commitment.addWhitelisted(
           [investors[0]],
           [Token.Euro],
-          [MIN_TICKET_EUR.sub(1)],
+          [MIN_TICKET_EUR.minus(1)],
           { from: whitelistAdmin },
         );
 
@@ -387,8 +380,8 @@ contract(
           [investors[0]],
           [Token.Euro],
           [
-            MIN_TICKET_EUR.sub(1)
-              .mul(Q18)
+            MIN_TICKET_EUR.minus(1)
+              .times(Q18)
               .div(ETH_EUR_FRACTION),
           ],
           { from: whitelistAdmin },
@@ -432,7 +425,7 @@ contract(
         await commitment.addWhitelisted(
           [investors[0], investors[1]],
           [Token.Ether, Token.Euro],
-          [MIN_TICKET_EUR.mul(10), MIN_TICKET_EUR.mul(10)],
+          [MIN_TICKET_EUR.times(10), MIN_TICKET_EUR.times(10)],
           { from: whitelistAdmin },
         );
       });
@@ -467,17 +460,17 @@ contract(
     });
 
     describe("Timed transtitions", async () => {
-      const amountEth = MIN_TICKET_EUR.mul(10);
-      const amountEur = MIN_TICKET_EUR.mul(10);
+      const amountEth = MIN_TICKET_EUR.times(10);
+      const amountEur = MIN_TICKET_EUR.times(10);
       let neumarksEth;
       let neumarksEur;
       let totalNmk;
 
       beforeEach(async () => {
-        const ethEur = amountEth.mul(ETH_EUR_FRACTION).div(Q18);
+        const ethEur = amountEth.times(ETH_EUR_FRACTION).div(Q18);
         neumarksEth = await neumark.cumulative(ethEur);
         totalNmk = await neumark.cumulative(ethEur.plus(amountEur));
-        neumarksEur = totalNmk.sub(neumarksEth);
+        neumarksEur = totalNmk.minus(neumarksEth);
         await commitment.addWhitelisted(
           [investors[0], investors[1]],
           [Token.Ether, Token.Euro],
@@ -520,11 +513,13 @@ contract(
         const part = 0.411829;
         await commitment.commit({
           from: investors[0],
-          value: amountEth.mul(part).round(),
+          value: amountEth.times(part).round(),
         });
         const nmksBefore = await neumark.balanceOf(commitment.address);
-        const fulfilledNeumarks = neumarksEth.mul(part).round();
-        expect(nmksBefore).to.be.bignumber.eq(neumarksEur.add(neumarksEth.sub(fulfilledNeumarks)));
+        const fulfilledNeumarks = neumarksEth.times(part).round();
+        expect(nmksBefore).to.be.bignumber.eq(
+          neumarksEur.add(neumarksEth.minus(fulfilledNeumarks)),
+        );
 
         await increaseTime(PUBLIC_START);
         const tx = await commitment.handleTimedTransitions();
@@ -574,7 +569,7 @@ contract(
       it("should roll back unfulfilled Euro tickets on Finished with part Euro ticket fulfilled", async () => {
         await increaseTime(PUBLIC_START);
         const part = 0.918912;
-        const partialEur = amountEur.mul(part).round();
+        const partialEur = amountEur.times(part).round();
         await euroToken.deposit(investors[1], amountEur, {
           from: eurtDepositManager,
         });
@@ -584,8 +579,8 @@ contract(
         // commit partial
         await commitment.commitEuro({ from: investors[1] });
         const nmksBefore = await neumark.balanceOf(commitment.address);
-        const fulfilledNeumarks = neumarksEur.mul(part).round();
-        expect(nmksBefore).to.be.bignumber.eq(neumarksEur.sub(fulfilledNeumarks));
+        const fulfilledNeumarks = neumarksEur.times(part).round();
+        expect(nmksBefore).to.be.bignumber.eq(neumarksEur.minus(fulfilledNeumarks));
 
         await increaseTime(FINISHED_START);
         const tx = await commitment.handleTimedTransitions();
@@ -602,17 +597,17 @@ contract(
         const part0 = 0.411829;
         await commitment.commit({
           from: investors[0],
-          value: amountEth.mul(part0).round(),
+          value: amountEth.times(part0).round(),
         });
         const nmksBefore0 = await neumark.balanceOf(commitment.address);
-        const fulfilledNeumarks0 = neumarksEth.mul(part0).round();
+        const fulfilledNeumarks0 = neumarksEth.times(part0).round();
         expect(nmksBefore0).to.be.bignumber.eq(
-          neumarksEur.add(neumarksEth.sub(fulfilledNeumarks0)),
+          neumarksEur.add(neumarksEth.minus(fulfilledNeumarks0)),
         );
 
         await increaseTime(PUBLIC_START);
         const part1 = 0.918912;
-        const partialEur1 = amountEur.mul(part1).round();
+        const partialEur1 = amountEur.times(part1).round();
         await euroToken.deposit(investors[1], amountEur, {
           from: eurtDepositManager,
         });
@@ -622,8 +617,8 @@ contract(
         // commit partial
         await commitment.commitEuro({ from: investors[1] });
         const nmksBefore1 = await neumark.balanceOf(commitment.address);
-        const fulfilledNeumarks1 = neumarksEur.mul(part1).round();
-        expect(nmksBefore1).to.be.bignumber.eq(neumarksEur.sub(fulfilledNeumarks1));
+        const fulfilledNeumarks1 = neumarksEur.times(part1).round();
+        expect(nmksBefore1).to.be.bignumber.eq(neumarksEur.minus(fulfilledNeumarks1));
 
         await increaseTime(FINISHED_START);
         const tx = await commitment.handleTimedTransitions();
@@ -657,7 +652,7 @@ contract(
 
     describe("Estimate neumark reward", async () => {
       it("should compute from current curve with equal split", async () => {
-        const amountEth = Q18.mul(6.62);
+        const amountEth = Q18.times(6.62);
         const amountEur = await commitment.convertToEur(amountEth);
         const totalNmk = await neumark.incremental(amountEur);
         expect(totalNmk.modulo(2)).to.be.bignumber.eq(0);
@@ -669,13 +664,13 @@ contract(
       });
 
       it("should compute from current curve investor 1 wei more", async () => {
-        const amountEth = Q18.mul(1);
+        const amountEth = Q18.times(1);
         const amountEur = await commitment.convertToEur(amountEth);
         const totalNmk = await neumark.incremental(amountEur);
         expect(totalNmk.modulo(2)).to.be.bignumber.eq(1);
         const investorNmk = investorShare(totalNmk);
         const platformNmk = platformShare(totalNmk);
-        expect(investorNmk.sub(platformNmk)).to.be.bignumber.eq(1);
+        expect(investorNmk.minus(platformNmk)).to.be.bignumber.eq(1);
 
         const estimate = await commitment.estimateNeumarkReward(amountEth);
 
@@ -685,8 +680,8 @@ contract(
 
     describe("Commit ether not whitelisted", async () => {
       const investor = investors[0];
-      const amountEth = Q18.mul(100);
-      const amountEur = amountEth.mul(ETH_EUR_FRACTION).div(Q18);
+      const amountEth = Q18.times(100);
+      const amountEur = amountEth.times(ETH_EUR_FRACTION).div(Q18);
       let expectedTotalNmk;
       let expectedInvestorNmk;
       let expectedPlatformNmk;
@@ -718,8 +713,8 @@ contract(
 
       it("should commit during Public with partial approve on ICBMEtherToken", async () => {
         await increaseTime(PUBLIC_START);
-        const part1 = amountEth.mul(0.181278);
-        const part2 = amountEth.sub(part1);
+        const part1 = amountEth.times(0.181278);
+        const part2 = amountEth.minus(part1);
 
         await etherToken.deposit({ from: investor, value: part1 });
         await etherToken.approve(commitment.address, part1, { from: investor });
@@ -761,8 +756,8 @@ contract(
 
       it("should reject commit if ICBMEtherToken balance 1 wei below approve", async () => {
         await increaseTime(PUBLIC_START);
-        // remove .sub(1) for this test to fail
-        await etherToken.deposit({ from: investor, value: amountEth.sub(1) });
+        // remove .minus(1) for this test to fail
+        await etherToken.deposit({ from: investor, value: amountEth.minus(1) });
         await etherToken.approve(commitment.address, amountEth, {
           from: investor,
         });
@@ -803,7 +798,7 @@ contract(
       });
 
       it("should not commit less than min ticket", async () => {
-        const small = MIN_TICKET_ETH.sub(1);
+        const small = MIN_TICKET_ETH.minus(1);
         await increaseTime(PUBLIC_START);
 
         const tx = commitment.commit({ from: investor, value: small });
@@ -812,7 +807,7 @@ contract(
       });
 
       it("should commit from curve", async () => {
-        const otherAmount = MIN_TICKET_EUR.mul(10);
+        const otherAmount = MIN_TICKET_EUR.times(10);
         await increaseTime(PUBLIC_START);
         await commitment.commit({ from: other, value: otherAmount });
         const curveNmk = investorShare(await neumark.incremental(ethToEur(amountEth)));
@@ -824,18 +819,18 @@ contract(
       });
 
       it("should commit cap and verify Neumarks cap", async () => {
-        const capEth = CAP_EUR.mul(Q18).divToInt(ETH_EUR_FRACTION);
+        const capEth = CAP_EUR.times(Q18).dividedToIntegerBy(ETH_EUR_FRACTION);
         await increaseTime(PUBLIC_START);
 
         commitment.commit({ from: other, value: capEth });
         const supply = await neumark.totalSupply();
 
-        const neumarkCap = new web3.BigNumber(869474423);
+        const neumarkCap = new BigNumber(869474423);
         expect(supply.div(Q18).round(0, 1)).to.be.bignumber.eq(neumarkCap);
       });
 
       it("should not commit over cap", async () => {
-        const capEth = CAP_EUR.mul(Q18).divToInt(ETH_EUR_FRACTION);
+        const capEth = CAP_EUR.times(Q18).dividedToIntegerBy(ETH_EUR_FRACTION);
         await increaseTime(PUBLIC_START);
 
         const tx = commitment.commit({ from: other, value: capEth.plus(1) });
@@ -868,7 +863,7 @@ contract(
 
         expect(balance).to.be.bignumber.eq(amountEth);
         expect(neumarksDue).to.be.bignumber.eq(expectedInvestorNmk);
-        expect(unlockDate.sub(expectUnlockDate).abs()).to.be.bignumber.lt(epsilon);
+        expect(unlockDate.minus(expectUnlockDate).abs()).to.be.bignumber.lt(epsilon);
         expect(lockEth).to.be.bignumber.eq(amountEth);
       });
 
@@ -891,8 +886,8 @@ contract(
       });
 
       it("should commit Ether and ICBMEtherToken", async () => {
-        const lessAmount = amountEth.divToInt(3);
-        const remainder = amountEth.sub(lessAmount);
+        const lessAmount = amountEth.dividedToIntegerBy(3);
+        const remainder = amountEth.minus(lessAmount);
         await increaseTime(PUBLIC_START);
 
         await etherToken.deposit({
@@ -914,8 +909,8 @@ contract(
     describe("Commit ether whitelisted", async () => {
       const investor = investors[0];
       const passiveInvestor = investors[1];
-      const amountEth = Q18.mul(100);
-      const amountEur = amountEth.mul(ETH_EUR_FRACTION).div(Q18);
+      const amountEth = Q18.times(100);
+      const amountEur = amountEth.times(ETH_EUR_FRACTION).div(Q18);
       let expectedTotalWhitelistNmk;
       let expectedTotalPublicNmk;
 
@@ -990,7 +985,7 @@ contract(
         });
 
         it("should commit only from curve during Public", async () => {
-          const otherEth = MIN_TICKET_EUR.mul(10);
+          const otherEth = MIN_TICKET_EUR.times(10);
           await increaseTime(PUBLIC_START);
           await commitment.commit({ value: otherEth, from: other });
           const curveNmk = investorShare(await neumark.incremental(ethToEur(amountEth)));
@@ -1006,7 +1001,7 @@ contract(
         });
 
         it("should not commit over cap during Whitelist", async () => {
-          const capEth = CAP_EUR.mul(Q18).divToInt(ETH_EUR_FRACTION);
+          const capEth = CAP_EUR.times(Q18).dividedToIntegerBy(ETH_EUR_FRACTION);
           await increaseTime(WHITELIST_START);
 
           const tx = commitment.commit({
@@ -1018,7 +1013,7 @@ contract(
         });
 
         it("should not commit over cap during Public", async () => {
-          const capEth = CAP_EUR.mul(Q18).divToInt(ETH_EUR_FRACTION);
+          const capEth = CAP_EUR.times(Q18).dividedToIntegerBy(ETH_EUR_FRACTION);
           await increaseTime(PUBLIC_START);
 
           const tx = commitment.commit({
@@ -1032,10 +1027,10 @@ contract(
         it("should commit on curve if investor commits in Euro Token during Public", async () => {
           await increaseTime(PUBLIC_START);
           await commitment.handleTimedTransitions();
-          const ticketEur = amountEur.mul(0.18).round();
+          const ticketEur = amountEur.times(0.18).round();
           const expectedNmk = investorShare(await neumark.incremental(ticketEur));
 
-          await euroToken.deposit(investor, CAP_EUR.mul(2), {
+          await euroToken.deposit(investor, CAP_EUR.times(2), {
             from: eurtDepositManager,
           });
           await euroToken.approve(commitment.address, ticketEur, {
@@ -1050,9 +1045,9 @@ contract(
         it("should reject if investor commits in Euro Token during Whitelist", async () => {
           // change to PUBLIC_START for this test to fail
           await increaseTime(WHITELIST_START);
-          const ticketEur = amountEur.mul(0.819);
+          const ticketEur = amountEur.times(0.819);
 
-          await euroToken.deposit(investor, CAP_EUR.mul(2), {
+          await euroToken.deposit(investor, CAP_EUR.times(2), {
             from: eurtDepositManager,
           });
           await euroToken.approve(commitment.address, ticketEur, {
@@ -1068,12 +1063,12 @@ contract(
           await commitment.addWhitelisted(
             [investor, passiveInvestor],
             [Token.Ether, Token.Ether],
-            [0, amountEth.mul(passiveInvestorMul)],
+            [0, amountEth.times(passiveInvestorMul)],
             { from: whitelistAdmin },
           );
           // passive investor's ticket still
           expectedTotalWhitelistNmk = await neumark.incremental["uint256,uint256"](
-            amountEur.mul(passiveInvestorMul),
+            amountEur.times(passiveInvestorMul),
             amountEur,
           );
           // passive investor's ticket expired
@@ -1089,7 +1084,7 @@ contract(
           await commitment.addWhitelisted(
             [investor, passiveInvestor],
             [Token.Ether, Token.Ether],
-            [amountEth, amountEth.mul(passiveInvestorMul)],
+            [amountEth, amountEth.times(passiveInvestorMul)],
             { from: whitelistAdmin },
           );
           // passive investor's ticket still
@@ -1123,10 +1118,10 @@ contract(
         });
 
         it("should commit less than ticket proportionally", async () => {
-          const lessAmount = amountEth.divToInt(3);
-          const lessInv = investorShare(expectedTotalWhitelistNmk).divToInt(3);
-          const lessPlt = platformShare(expectedTotalWhitelistNmk).divToInt(3);
-          const epsilon = web3.toBigNumber("1000");
+          const lessAmount = amountEth.dividedToIntegerBy(3);
+          const lessInv = investorShare(expectedTotalWhitelistNmk).dividedToIntegerBy(3);
+          const lessPlt = platformShare(expectedTotalWhitelistNmk).dividedToIntegerBy(3);
+          const epsilon = new BigNumber("1000");
           await increaseTime(WHITELIST_START);
 
           await commitment.commit({
@@ -1138,13 +1133,13 @@ contract(
 
           // Inexact due to complex rounding. We should be within epsilon of
           // the expected result
-          expect(investorNmk.sub(lessInv).abs()).to.be.bignumber.lt(epsilon);
-          expect(platformNmk.sub(lessPlt).abs()).to.be.bignumber.lt(epsilon);
+          expect(investorNmk.minus(lessInv).abs()).to.be.bignumber.lt(epsilon);
+          expect(platformNmk.minus(lessPlt).abs()).to.be.bignumber.lt(epsilon);
         });
 
         it("should commit full ticket in tranches exactly", async () => {
-          const lessAmount = amountEth.divToInt(3);
-          const remainder = amountEth.sub(lessAmount);
+          const lessAmount = amountEth.dividedToIntegerBy(3);
+          const remainder = amountEth.minus(lessAmount);
           await increaseTime(WHITELIST_START);
 
           await commitment.commit({
@@ -1162,17 +1157,17 @@ contract(
           expect(platformNmk.add(investorNmk)).to.be.bignumber.eq(expectedTotalWhitelistNmk);
           // multiple rounding errors but just 1 division so max 1 wei difference
           expect(
-            platformNmk.sub(platformShare(expectedTotalWhitelistNmk)).abs(),
+            platformNmk.minus(platformShare(expectedTotalWhitelistNmk)).abs(),
           ).to.be.bignumber.lt(2);
-          expect(investorNmk.sub(investorShare(expectedTotalWhitelistNmk))).to.be.bignumber.lt(2);
+          expect(investorNmk.minus(investorShare(expectedTotalWhitelistNmk))).to.be.bignumber.lt(2);
         });
 
         it("should commit more than ticket", async () => {
-          const addedEth = Q18.mul(50);
+          const addedEth = Q18.times(50);
           const moreEth = amountEth.plus(addedEth);
           const addedNmk = investorShare(await neumark.incremental(ethToEur(addedEth)));
           const expectedNmk = platformShare(expectedTotalWhitelistNmk).plus(addedNmk);
-          const epsilon = web3.toBigNumber("10");
+          const epsilon = new BigNumber("10");
           await increaseTime(WHITELIST_START);
 
           await commitment.commit({
@@ -1181,14 +1176,14 @@ contract(
           });
           const investorNmk = await neumark.balanceOf(investor);
 
-          expect(investorNmk.sub(expectedNmk)).to.be.bignumber.lt(epsilon);
+          expect(investorNmk.minus(expectedNmk)).to.be.bignumber.lt(epsilon);
         });
       });
     });
 
     describe("Commit euro not whitelisted", async () => {
       const investor = investors[0];
-      const amountEur = MIN_TICKET_EUR.mul(10);
+      const amountEur = MIN_TICKET_EUR.times(10);
       let expectedTotalNmk;
       let expectedInvestorNmk;
 
@@ -1196,7 +1191,7 @@ contract(
         expectedTotalNmk = await neumark.cumulative(amountEur);
         expectedInvestorNmk = investorShare(expectedTotalNmk);
 
-        await euroToken.deposit(investor, CAP_EUR.mul(2), {
+        await euroToken.deposit(investor, CAP_EUR.times(2), {
           from: eurtDepositManager,
         });
         await euroToken.approve(commitment.address, amountEur, {
@@ -1224,8 +1219,8 @@ contract(
 
       it("should reject commit if balance 1 'wei' below approve", async () => {
         await increaseTime(PUBLIC_START);
-        // remove .sub(1) for this test to fail
-        await euroToken.deposit(other, amountEur.sub(1), {
+        // remove .minus(1) for this test to fail
+        await euroToken.deposit(other, amountEur.minus(1), {
           from: eurtDepositManager,
         });
         await euroToken.approve(commitment.address, amountEur, {
@@ -1270,7 +1265,7 @@ contract(
         await euroToken.approve(commitment.address, 0, {
           from: investor,
         });
-        await euroToken.approve(commitment.address, MIN_TICKET_EUR.sub(1), {
+        await euroToken.approve(commitment.address, MIN_TICKET_EUR.minus(1), {
           from: investor,
         });
         await increaseTime(PUBLIC_START);
@@ -1308,7 +1303,7 @@ contract(
       });
 
       it("should issue neumark from curve", async () => {
-        await euroToken.deposit(other, CAP_EUR.mul(2), {
+        await euroToken.deposit(other, CAP_EUR.times(2), {
           from: eurtDepositManager,
         });
         await euroToken.approve(commitment.address, amountEur, {
@@ -1317,12 +1312,12 @@ contract(
         await increaseTime(PUBLIC_START);
         await commitment.commitEuro({ from: other });
         const curveNmk = investorShare(await neumark.incremental(amountEur));
-        const epsilon = web3.toBigNumber("10");
+        const epsilon = new BigNumber("10");
 
         await commitment.commitEuro({ from: investor });
         const investorNmk = await neumark.balanceOf(investor);
 
-        expect(investorNmk.sub(curveNmk).abs()).to.be.bignumber.lt(epsilon);
+        expect(investorNmk.minus(curveNmk).abs()).to.be.bignumber.lt(epsilon);
       });
 
       it("should lock ICBMEuroToken", async () => {
@@ -1340,7 +1335,7 @@ contract(
 
         expect(balance).to.be.bignumber.eq(amountEur);
         expect(neumarksDue).to.be.bignumber.eq(expectedInvestorNmk);
-        expect(unlockDate.sub(expectUnlockDate).abs()).to.be.bignumber.lt(epsilon);
+        expect(unlockDate.minus(expectUnlockDate).abs()).to.be.bignumber.lt(epsilon);
         expect(lockEur).to.be.bignumber.eq(amountEur);
       });
     });
@@ -1348,12 +1343,12 @@ contract(
     describe("Commit euro whitelisted", async () => {
       const investor = investors[0];
       const passiveInvestor = investors[1];
-      const amountEur = MIN_TICKET_EUR.mul(178.89172);
+      const amountEur = MIN_TICKET_EUR.times(178.89172);
       let expectedTotalWhitelistNmk;
       let expectedTotalPublicNmk;
 
       beforeEach(async () => {
-        await euroToken.deposit(investor, CAP_EUR.mul(2), {
+        await euroToken.deposit(investor, CAP_EUR.times(2), {
           from: eurtDepositManager,
         });
         await euroToken.approve(commitment.address, amountEur, {
@@ -1437,7 +1432,7 @@ contract(
 
         it("should commit on curve if investor commits in Ether during Public", async () => {
           await increaseTime(PUBLIC_START);
-          const ticketEth = MIN_TICKET_ETH.mul(7.1892);
+          const ticketEth = MIN_TICKET_ETH.times(7.1892);
           const ticketEurUlps = ethToEur(ticketEth);
           const expectedNmk = investorShare(await neumark.incremental(ticketEurUlps));
           // whitelist only works per specific token, investment on general terms
@@ -1453,7 +1448,7 @@ contract(
         it("should reject if investor commits in Ether during Whitelist", async () => {
           await increaseTime(WHITELIST_START);
           await expect(
-            commitment.commit({ from: investor, value: MIN_TICKET_ETH.mul(10) }),
+            commitment.commit({ from: investor, value: MIN_TICKET_ETH.times(10) }),
           ).to.be.rejectedWith(EvmError);
         });
       }
@@ -1464,11 +1459,11 @@ contract(
           await commitment.addWhitelisted(
             [passiveInvestor, investor],
             [Token.Euro, Token.Euro],
-            [amountEur.mul(passiveInvestorMul), 0],
+            [amountEur.times(passiveInvestorMul), 0],
             { from: whitelistAdmin },
           );
           expectedTotalWhitelistNmk = await neumark.incremental["uint256,uint256"](
-            amountEur.mul(passiveInvestorMul),
+            amountEur.times(passiveInvestorMul),
             amountEur,
           );
           // passive investor reservation in EURT does not expire
@@ -1484,11 +1479,11 @@ contract(
           await commitment.addWhitelisted(
             [passiveInvestor, investor],
             [Token.Euro, Token.Euro],
-            [amountEur.mul(passiveInvestorMul), amountEur],
+            [amountEur.times(passiveInvestorMul), amountEur],
             { from: whitelistAdmin },
           );
           expectedTotalWhitelistNmk = await neumark.incremental["uint256,uint256"](
-            amountEur.mul(passiveInvestorMul),
+            amountEur.times(passiveInvestorMul),
             amountEur,
           );
           // passive investor reservation in EURT does not expire
@@ -1517,10 +1512,10 @@ contract(
         });
 
         it("should commit less than ticket proportionally", async () => {
-          const lessAmount = amountEur.divToInt(3);
-          const lessInv = investorShare(expectedTotalWhitelistNmk).divToInt(3);
-          const lessPlt = platformShare(expectedTotalWhitelistNmk).divToInt(3);
-          const epsilon = web3.toBigNumber("1000");
+          const lessAmount = amountEur.dividedToIntegerBy(3);
+          const lessInv = investorShare(expectedTotalWhitelistNmk).dividedToIntegerBy(3);
+          const lessPlt = platformShare(expectedTotalWhitelistNmk).dividedToIntegerBy(3);
+          const epsilon = new BigNumber("1000");
           await euroToken.approve(commitment.address, 0, { from: investor });
           await euroToken.approve(commitment.address, lessAmount, {
             from: investor,
@@ -1533,13 +1528,13 @@ contract(
 
           // Inexact due to complex rounding. We should be within epsilon of
           // the expected result
-          expect(investorNmk.sub(lessInv).abs()).to.be.bignumber.lt(epsilon);
-          expect(platformNmk.sub(lessPlt).abs()).to.be.bignumber.lt(epsilon);
+          expect(investorNmk.minus(lessInv).abs()).to.be.bignumber.lt(epsilon);
+          expect(platformNmk.minus(lessPlt).abs()).to.be.bignumber.lt(epsilon);
         });
 
         it("should commit full ticket in tranches exactly", async () => {
-          const lessAmount = amountEur.divToInt(3);
-          const remainder = amountEur.sub(lessAmount);
+          const lessAmount = amountEur.dividedToIntegerBy(3);
+          const remainder = amountEur.minus(lessAmount);
           await euroToken.approve(commitment.address, 0, { from: investor });
           await euroToken.approve(commitment.address, lessAmount, {
             from: investor,
@@ -1558,17 +1553,17 @@ contract(
           expect(platformNmk.add(investorNmk)).to.be.bignumber.eq(expectedTotalWhitelistNmk);
           // multiple rounding errors but just 1 division so max 1 wei difference
           expect(
-            platformNmk.sub(platformShare(expectedTotalWhitelistNmk)).abs(),
+            platformNmk.minus(platformShare(expectedTotalWhitelistNmk)).abs(),
           ).to.be.bignumber.lt(2);
-          expect(investorNmk.sub(investorShare(expectedTotalWhitelistNmk))).to.be.bignumber.lt(2);
+          expect(investorNmk.minus(investorShare(expectedTotalWhitelistNmk))).to.be.bignumber.lt(2);
         });
 
         it("should commit more than ticket", async () => {
-          const addedEur = Q18.mul(50);
+          const addedEur = Q18.times(50);
           const moreEur = amountEur.plus(addedEur);
           const addedNmk = investorShare(await neumark.incremental(addedEur));
           const expectedNmk = investorShare(expectedTotalWhitelistNmk).plus(addedNmk);
-          const epsilon = web3.toBigNumber("10");
+          const epsilon = new BigNumber("10");
           await euroToken.approve(commitment.address, 0, { from: investor });
           await euroToken.approve(commitment.address, moreEur, {
             from: investor,
@@ -1578,7 +1573,7 @@ contract(
           await commitment.commitEuro({ from: investor });
           const investorNmk = await neumark.balanceOf(investor);
 
-          expect(investorNmk.sub(expectedNmk)).to.be.bignumber.lt(epsilon);
+          expect(investorNmk.minus(expectedNmk)).to.be.bignumber.lt(epsilon);
         });
 
         it("should commit during Public with reserved ticket", async () => {
@@ -1586,7 +1581,7 @@ contract(
           // other investor commits with ether
           await commitment.commit({
             from: other,
-            value: MIN_TICKET_ETH.mul(10),
+            value: MIN_TICKET_ETH.times(10),
           });
 
           await commitment.commitEuro({ from: investor });
@@ -1615,21 +1610,21 @@ contract(
         const { whitelisted, tokens, amounts } = fillWhitelistRandom(N, maxTicket);
         // every second ticket is 0 (not reserved spot)
         const tickets = amounts.map((a, i) => (i % hasReservedTickets ? a : 0));
-        const totalWhitelistAmount = tickets.reduce((a, v) => a.add(v), new web3.BigNumber(0));
+        const totalWhitelistAmount = tickets.reduce((a, v) => a.add(v), new BigNumber(0));
         await commitment.addWhitelisted(whitelisted, tokens, tickets, {
           from: whitelistAdmin,
         });
         // some stats
-        let investedWlAmount = new web3.BigNumber(0);
-        let reservedInvestedAmount = new web3.BigNumber(0);
-        let reserveUsedNmk = new web3.BigNumber(0);
+        let investedWlAmount = new BigNumber(0);
+        let reservedInvestedAmount = new BigNumber(0);
+        let reserveUsedNmk = new BigNumber(0);
         const activeInvestors = {};
         // invest 30 random tickets
         await increaseTime(WHITELIST_START);
         const WLN = 30;
         for (let ii = 0; ii < WLN; ii += 1) {
           const ticketDecimal = Math.floor(Math.random() * maxTicket * 1000000) / 1000000;
-          const ticket = Q18.mul(ticketDecimal)
+          const ticket = Q18.times(ticketDecimal)
             .add(MIN_TICKET_ETH)
             .floor();
           const investor = whitelisted[Math.floor(Math.random() * whitelisted.length)];
@@ -1647,16 +1642,16 @@ contract(
             // compute amount on NMK and ETH that goes from reserved ticket vs what goes on top if more invested
             const wlTicketEth = eurToEth(whitelistTicket[1]);
             const reservedInvested = wlTicketEth.gte(ticket) ? ticket : wlTicketEth;
-            const fullNmkReserved = whitelistTicket[2].mul(PLATFORM_SHARE);
+            const fullNmkReserved = whitelistTicket[2].times(PLATFORM_SHARE);
             // if funds over ticket get full reserved NNK, otherwise do proportion
             const reservedNmk = wlTicketEth.gte(ticket)
-              ? divRound(ticket.mul(fullNmkReserved), wlTicketEth)
+              ? divRound(ticket.times(fullNmkReserved), wlTicketEth)
               : fullNmkReserved;
             reserveUsedNmk = reserveUsedNmk.add(reservedNmk);
             reservedInvestedAmount = reservedInvestedAmount.add(reservedInvested);
             if (ticket.gt(reservedInvested)) {
               // funds over ticket size added to capital over reserved capital
-              investedWlAmount = investedWlAmount.add(ticket.sub(reservedInvested));
+              investedWlAmount = investedWlAmount.add(ticket.minus(reservedInvested));
             }
           } else {
             investedWlAmount = investedWlAmount.add(ticket);
@@ -1674,10 +1669,10 @@ contract(
           );
 
           const platformNmk = await neumark.balanceOf(platform);
-          expect(platformNmk.sub(platformShare(distributedNmk)).abs()).to.be.bignumber.lt(
+          expect(platformNmk.minus(platformShare(distributedNmk)).abs()).to.be.bignumber.lt(
             investorsCount + 1,
           );
-          expect(reservedNmk.sub(await neumark.totalSupply()).abs()).to.be.bignumber.lt(
+          expect(reservedNmk.minus(await neumark.totalSupply()).abs()).to.be.bignumber.lt(
             investorsCount + 1,
           );
         }
@@ -1699,7 +1694,7 @@ contract(
         // this will release unused reserved tickets
         await commitment.handleTimedTransitions();
         // now when unused reserved NMK were returned total NMK supply must eq all distributed NMK
-        expect(icbmWlDistributedNmk.sub(await neumark.totalSupply()).abs()).to.be.bignumber.lte(
+        expect(icbmWlDistributedNmk.minus(await neumark.totalSupply()).abs()).to.be.bignumber.lte(
           WLN,
         );
         // this is where curve in Neumark contract is at, which does not not equal capital invested!
@@ -1707,10 +1702,10 @@ contract(
         // 100 random investors in public commitment
         const PLN = 100;
         maxTicket = 1000;
-        let investmentPubAmount = new web3.BigNumber(0);
+        let investmentPubAmount = new BigNumber(0);
         for (let ii = 0; ii < PLN; ii += 1) {
           const ticketDecimal = Math.floor(Math.random() * maxTicket * 1000000) / 1000000;
-          const ticket = Q18.mul(ticketDecimal).floor();
+          const ticket = Q18.times(ticketDecimal).floor();
           const investor = investors[Math.floor(Math.random() * investors.length)];
           // eslint-disable-next-line no-console
           console.log(
@@ -1758,14 +1753,14 @@ contract(
           return;
         }
         // every investor gets million EUR
-        const investorStartFunds = Q18.mul(1000000);
+        const investorStartFunds = Q18.times(1000000);
         for (const investor of investors) {
           await euroToken.deposit(investor, investorStartFunds, {
             from: eurtDepositManager,
           });
         }
         expect(await euroToken.totalSupply()).to.be.bignumber.eq(
-          investorStartFunds.mul(investors.length),
+          investorStartFunds.times(investors.length),
         );
         // add 50 investors to whitelist with tickets from 1 - 10000 eth
         const N = 50;
@@ -1774,21 +1769,21 @@ contract(
         const { whitelisted, tokens, amounts } = fillWhitelistRandom(N, maxTicket, Token.Euro);
         // every second ticket is 0 (not reserved spot)
         const tickets = amounts.map((a, i) => (i % hasReservedTickets ? a : 0));
-        const totalWhitelistAmount = tickets.reduce((a, v) => a.add(v), new web3.BigNumber(0));
+        const totalWhitelistAmount = tickets.reduce((a, v) => a.add(v), new BigNumber(0));
         await commitment.addWhitelisted(whitelisted, tokens, tickets, {
           from: whitelistAdmin,
         });
         // some stats
-        let investedWlAmount = new web3.BigNumber(0);
-        let reservedInvestedAmount = new web3.BigNumber(0);
-        let reserveUsedNmk = new web3.BigNumber(0);
+        let investedWlAmount = new BigNumber(0);
+        let reservedInvestedAmount = new BigNumber(0);
+        let reserveUsedNmk = new BigNumber(0);
         const activeInvestors = {};
         // invest 30 random tickets
         await increaseTime(WHITELIST_START);
         const WLN = 30;
         for (let ii = 0; ii < WLN; ii += 1) {
           const ticketDecimal = Math.floor(Math.random() * maxTicket * 1000000) / 1000000;
-          const ticket = Q18.mul(ticketDecimal)
+          const ticket = Q18.times(ticketDecimal)
             .add(MIN_TICKET_EUR)
             .floor();
           const investor = whitelisted[Math.floor(Math.random() * whitelisted.length)];
@@ -1809,16 +1804,16 @@ contract(
             // compute amount on NMK and ETH that goes from reserved ticket vs what goes on top if more invested
             const wlTicketEur = whitelistTicket[1];
             const reservedInvested = wlTicketEur.gte(ticket) ? ticket : wlTicketEur;
-            const fullNmkReserved = whitelistTicket[2].mul(PLATFORM_SHARE);
+            const fullNmkReserved = whitelistTicket[2].times(PLATFORM_SHARE);
             // if funds over ticket get full reserved NNK, otherwise do proportion
             const reservedNmk = wlTicketEur.gte(ticket)
-              ? divRound(ticket.mul(fullNmkReserved), wlTicketEur)
+              ? divRound(ticket.times(fullNmkReserved), wlTicketEur)
               : fullNmkReserved;
             reserveUsedNmk = reserveUsedNmk.add(reservedNmk);
             reservedInvestedAmount = reservedInvestedAmount.add(reservedInvested);
             if (ticket.gt(reservedInvested)) {
               // funds over ticket size added to capital over reserved capital
-              investedWlAmount = investedWlAmount.add(ticket.sub(reservedInvested));
+              investedWlAmount = investedWlAmount.add(ticket.minus(reservedInvested));
             }
           } else {
             investedWlAmount = investedWlAmount.add(ticket);
@@ -1834,10 +1829,10 @@ contract(
           );
 
           const platformNmk = await neumark.balanceOf(platform);
-          expect(platformNmk.sub(platformShare(distributedNmk)).abs()).to.be.bignumber.lt(
+          expect(platformNmk.minus(platformShare(distributedNmk)).abs()).to.be.bignumber.lt(
             investorsCount + 1,
           );
-          expect(reservedNmk.sub(await neumark.totalSupply()).abs()).to.be.bignumber.lt(
+          expect(reservedNmk.minus(await neumark.totalSupply()).abs()).to.be.bignumber.lt(
             investorsCount + 1,
           );
         }
@@ -1866,10 +1861,10 @@ contract(
         const PLN = 50;
         // only from non whitelisted
         const nonWhitelisted = investors.slice(50);
-        let investmentPubAmount = new web3.BigNumber(0);
+        let investmentPubAmount = new BigNumber(0);
         for (let ii = 0; ii < PLN; ii += 1) {
           const ticketDecimal = Math.floor(Math.random() * maxTicket * 1000000) / 1000000;
-          const ticket = Q18.mul(ticketDecimal)
+          const ticket = Q18.times(ticketDecimal)
             .add(MIN_TICKET_EUR)
             .floor();
           const investor = nonWhitelisted[Math.floor(Math.random() * nonWhitelisted.length)];
@@ -1896,7 +1891,7 @@ contract(
         await commitment.handleTimedTransitions();
         // now when unused reserved NMK were returned total NMK supply must eq all distributed NMK
         /* expect(
-          icbmWlDistributedNmk.sub(await neumark.totalSupply()).abs()
+          icbmWlDistributedNmk.minus(await neumark.totalSupply()).abs()
         ).to.be.bignumber.lte(WLN.add(PLN)); */
         // const effectiveEurWlCurve = await neumark.incrementalInverse()
         const expectedPubNmk = await neumark.incremental["uint256,uint256"](

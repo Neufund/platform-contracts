@@ -1,47 +1,48 @@
-import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
+import { BigNumber } from "./bignumber";
+import { daysToSeconds, Q18, findConstructor, camelCase } from "./constants";
 
 export const defaultShareholderTerms = {
-  GENERAL_VOTING_RULE: new web3.BigNumber(1),
-  TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
-  LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
+  GENERAL_VOTING_RULE: new BigNumber(1),
+  TAG_ALONG_VOTING_RULE: new BigNumber(2),
+  LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.times(1.5),
   HAS_FOUNDERS_VESTING: true,
-  GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
-  RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
-  TOKENHOLDERS_QUORUM_FRAC: Q18.mul(0.1),
-  VOTING_MAJORITY_FRAC: Q18.mul(0.1),
+  GENERAL_VOTING_DURATION: new BigNumber(daysToSeconds(10)),
+  RESTRICTED_ACT_VOTING_DURATION: new BigNumber(daysToSeconds(14)),
+  VOTING_FINALIZATION_DURATION: new BigNumber(daysToSeconds(5)),
+  TOKENHOLDERS_QUORUM_FRAC: Q18.times(0.1),
+  VOTING_MAJORITY_FRAC: Q18.times(0.1),
   INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
 };
 
 export const defDurTerms = {
-  WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
-  PUBLIC_DURATION: new web3.BigNumber(daysToSeconds(30)),
-  SIGNING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  CLAIM_DURATION: new web3.BigNumber(daysToSeconds(10)),
+  WHITELIST_DURATION: new BigNumber(daysToSeconds(7)),
+  PUBLIC_DURATION: new BigNumber(daysToSeconds(30)),
+  SIGNING_DURATION: new BigNumber(daysToSeconds(14)),
+  CLAIM_DURATION: new BigNumber(daysToSeconds(10)),
 };
 
 export const constTokenTerms = {
-  EQUITY_TOKENS_PRECISION: new web3.BigNumber(0),
-  EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
+  EQUITY_TOKENS_PRECISION: new BigNumber(0),
+  EQUITY_TOKENS_PER_SHARE: new BigNumber(10000),
 };
 
 export const constETOTerms = {
-  MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS: Q18.mul(100000),
+  MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS: Q18.times(100000),
 };
 
 export const defTokenTerms = {
-  MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
-  MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
-  TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
-  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(4000 * 10000),
+  MIN_NUMBER_OF_TOKENS: new BigNumber(2000 * 10000),
+  MAX_NUMBER_OF_TOKENS: new BigNumber(10000 * 10000),
+  TOKEN_PRICE_EUR_ULPS: Q18.times("0.12376189"),
+  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new BigNumber(4000 * 10000),
 };
 
 export const defEtoTerms = {
   DURATION_TERMS: null,
   TOKEN_TERMS: null,
-  EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
-  MIN_TICKET_EUR_ULPS: Q18.mul(500),
-  MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
+  EXISTING_COMPANY_SHARES: new BigNumber(32000),
+  MIN_TICKET_EUR_ULPS: Q18.times(500),
+  MAX_TICKET_EUR_ULPS: Q18.times(1000000),
   ALLOW_RETAIL_INVESTORS: true,
   ENABLE_TRANSFERS_ON_SUCCESS: false,
   INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
@@ -49,8 +50,8 @@ export const defEtoTerms = {
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-  WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
-  PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
+  WHITELIST_DISCOUNT_FRAC: Q18.times(0.3),
+  PUBLIC_DISCOUNT_FRAC: Q18.times(0),
 };
 
 export function validateTerms(artifact, terms) {

@@ -1,3 +1,4 @@
+import { BigNumber } from "./bignumber";
 import { expect } from "chai";
 import EvmError from "./EVMThrow";
 
@@ -120,7 +121,7 @@ export function testTokenController(
   });
 
   it("should force transfer via allowance override", async () => {
-    const amount = new web3.BigNumber(1);
+    const amount = new BigNumber(1);
     await generate(amount, holder1);
     expect(await token().allowance(holder1, broker)).to.be.bignumber.eq(0);
     await controller().setAllowanceOverride(holder1, broker, amount);
@@ -129,13 +130,13 @@ export function testTokenController(
     // forced allowance is not decreased
     expect(await token().allowance(holder1, broker)).to.be.bignumber.eq(amount);
     // only when reset by controller
-    await controller().setAllowanceOverride(holder1, broker, new web3.BigNumber(0));
+    await controller().setAllowanceOverride(holder1, broker, new BigNumber(0));
     expect(await token().allowance(holder1, broker)).to.be.bignumber.eq(0);
     expect(await token().balanceOf(holder2)).to.be.bignumber.eq(amount);
   });
 
   it("rejects approval when allowance override", async () => {
-    const amount = new web3.BigNumber(1);
+    const amount = new BigNumber(1);
     await controller().setAllowanceOverride(holder1, broker, amount);
     // different amount
     await expect(token().approve(broker, 2, { from: holder1 })).to.be.rejectedWith(EvmError);
@@ -149,7 +150,7 @@ export function testTokenController(
   });
 
   it("rejects allowance reset when there's override", async () => {
-    const amount = new web3.BigNumber(1);
+    const amount = new BigNumber(1);
     await controller().setAllowanceOverride(holder1, broker, amount);
     await expect(token().approve(broker, 0, { from: holder1 })).to.be.rejectedWith(EvmError);
   });
@@ -157,7 +158,7 @@ export function testTokenController(
   it("should shadow existing allowance when there's override", async () => {
     await token().approve(broker, 2, { from: holder1 });
     expect(await token().allowance(holder1, broker)).to.be.bignumber.eq(2);
-    const amount = new web3.BigNumber(1);
+    const amount = new BigNumber(1);
     await controller().setAllowanceOverride(holder1, broker, amount);
     expect(await token().allowance(holder1, broker)).to.be.bignumber.eq(amount);
     await controller().setAllowanceOverride(holder1, broker, 0);

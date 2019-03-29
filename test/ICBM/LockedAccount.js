@@ -1,3 +1,4 @@
+import { BigNumber } from "../helpers/bignumber";
 import { expect } from "chai";
 import moment from "moment";
 import { hasEvent, eventValue } from "../helpers/events";
@@ -32,9 +33,9 @@ const TestICBMLockedAccountMigrationTarget = artifacts.require(
   "TestICBMLockedAccountMigrationTarget",
 );
 
-const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
+const gasPrice = new BigNumber(0x01); // this low gas price is forced by code coverage
 const LOCK_PERIOD = 18 * monthInSeconds;
-const UNLOCK_PENALTY_FRACTION = Q18.mul(0.1).round(0, 0);
+const UNLOCK_PENALTY_FRACTION = Q18.times(0.1).round(0, 0);
 
 contract(
   "ICBMLockedAccount",
@@ -74,8 +75,8 @@ contract(
           gasPrice,
         });
         const afterBalance = await promisify(web3.eth.getBalance)(investorAddress);
-        const gasCost = gasPrice.mul(tx.receipt.gasUsed);
-        expect(afterBalance).to.be.bignumber.eq(initalBalance.add(amount).sub(gasCost));
+        const gasCost = gasPrice.times(tx.receipt.gasUsed);
+        expect(afterBalance).to.be.bignumber.eq(initalBalance.add(amount).minus(gasCost));
       }
 
       beforeEach(async () => {
@@ -129,7 +130,7 @@ contract(
         // notifies bank to pay out EUR, burns EURT
         await assetToken.withdraw(amount, { from });
         const afterBalance = await assetToken.balanceOf.call(from);
-        expect(afterBalance).to.be.bignumber.eq(initalBalance.sub(amount));
+        expect(afterBalance).to.be.bignumber.eq(initalBalance.minus(amount));
       }
 
       beforeEach(async () => {
@@ -194,7 +195,7 @@ contract(
       }
 
       async function migrateOne(ticket, investorAddress) {
-        const neumarks = ticket.mul(6.5);
+        const neumarks = ticket.times(6.5);
         // lock investor
         await makeDeposit(investorAddress, controller.address, ticket);
         await controller.investToken(neumarks, { from: investorAddress });
@@ -230,7 +231,7 @@ contract(
         // check asset balance
         const assetBalanceSourceAfter = await assetToken.balanceOf.call(lockedAccount.address);
         const assetBalanceTargetAfter = await assetToken.balanceOf.call(migrationTarget.address);
-        expect(assetBalanceSourceAfter).to.be.bignumber.eq(assetBalanceSourceBefore.sub(ticket));
+        expect(assetBalanceSourceAfter).to.be.bignumber.eq(assetBalanceSourceBefore.minus(ticket));
         expect(assetBalanceTargetAfter).to.be.bignumber.eq(ticket);
       }
 
@@ -442,7 +443,7 @@ contract(
         expect(investorBalance[0]).to.be.bignumber.equal(ticket.add(initialLockedBalance[0]));
         expect(investorBalance[1]).to.be.bignumber.equal(neumarks.add(initialLockedBalance[1]));
         // verify longstop date independently
-        let unlockDate = new web3.BigNumber(timebase + 18 * 30 * dayInSeconds);
+        let unlockDate = new BigNumber(timebase + 18 * 30 * dayInSeconds);
         if (initialLockedBalance[2] > 0) {
           // earliest date is preserved for repeated investor address
           unlockDate = initialLockedBalance[2];
@@ -496,7 +497,7 @@ contract(
       }
 
       async function calculateUnlockPenalty(ticket) {
-        return ticket.mul(await lockedAccount.penaltyFraction()).div(etherToWei(1));
+        return ticket.times(await lockedAccount.penaltyFraction()).div(etherToWei(1));
       }
 
       async function assertCorrectUnlock(tx, investorAddress, ticket, penalty) {
@@ -574,8 +575,8 @@ contract(
         const penalty = await calculateUnlockPenalty(ticket);
         await assertCorrectUnlock(unlockTx, investor, ticket, penalty);
         await expectPenaltyEvent(unlockTx, investor, penalty);
-        expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        expectUnlockEvent(unlockTx, investor, ticket.minus(penalty), neumarks);
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock two investors both with penalty", async () => {
@@ -588,7 +589,7 @@ contract(
         const penalty1 = await calculateUnlockPenalty(ticket1);
         await expectPenaltyEvent(unlockTx, investor, penalty1);
         await expectPenaltyBalance(penalty1);
-        expectUnlockEvent(unlockTx, investor, ticket1.sub(penalty1), neumarks1);
+        expectUnlockEvent(unlockTx, investor, ticket1.minus(penalty1), neumarks1);
         expect(await neumark.balanceOf(investor2)).to.be.bignumber.eq(neumarks2);
         expect(await neumark.totalSupply()).to.be.bignumber.eq(neumarks2);
         expect(await assetToken.balanceOf(lockedAccount.address)).to.be.bignumber.eq(ticket2);
@@ -598,7 +599,7 @@ contract(
         const penalty2 = await calculateUnlockPenalty(ticket2);
         await expectPenaltyEvent(unlockTx, investor2, penalty2);
         await expectPenaltyBalance(penalty1.add(penalty2));
-        expectUnlockEvent(unlockTx, investor2, ticket2.sub(penalty2), neumarks2);
+        expectUnlockEvent(unlockTx, investor2, ticket2.minus(penalty2), neumarks2);
       });
 
       it("should reject unlock with approval on contract disbursal that has receiveApproval not implemented", async () => {
@@ -624,8 +625,8 @@ contract(
         const penalty = await calculateUnlockPenalty(ticket);
         await assertCorrectUnlock(unlockTx, investor, ticket, penalty);
         await expectPenaltyEvent(unlockTx, investor, penalty);
-        expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        expectUnlockEvent(unlockTx, investor, ticket.minus(penalty), neumarks);
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock with approveAndCall on simple address disbursal", async () => {
@@ -639,7 +640,7 @@ contract(
         // await expectPenaltyEvent(unlockTx, investor, penalty, disbursalPool);
         // look for correct amount of burned neumarks
         expectNeumarksBurnedEvent(unlockTx, lockedAccount.address, ticket, neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock with approveAndCall on real FeeDisbursal", async () => {
@@ -708,7 +709,7 @@ contract(
 
       it("should silently exit on unlock of non-existing investor", async () => {
         await enableUnlocks();
-        const unlockTx = await unlockWithCallback(investor, new web3.BigNumber(1));
+        const unlockTx = await unlockWithCallback(investor, new BigNumber(1));
         const events = unlockTx.logs.filter(e => e.event === "LogFundsUnlocked");
         expect(events).to.be.empty;
       });
@@ -726,7 +727,7 @@ contract(
         const neumarks2 = await lock(investor2, ticket);
         await enableUnlocks();
         // simulate trade
-        const tradedAmount = neumarks2.mul(0.71389012).round(0);
+        const tradedAmount = neumarks2.times(0.71389012).round(0);
         await neumark.transfer(investor, tradedAmount, {
           from: investor2,
         });
@@ -742,12 +743,12 @@ contract(
         const neumarks = await lock(investor, ticket);
         await enableUnlocks();
         // change to mul(0) for test to fail
-        const tradedAmount = neumarks.mul(0.71389012).round(0);
+        const tradedAmount = neumarks.times(0.71389012).round(0);
         await neumark.transfer(investor2, tradedAmount, {
           from: investor,
         });
         await expect(
-          neumark.approveAndCall(lockedAccount.address, neumarks.sub(tradedAmount), "", {
+          neumark.approveAndCall(lockedAccount.address, neumarks.minus(tradedAmount), "", {
             from: investor,
           }),
         ).to.be.rejectedWith(EvmError);
@@ -758,7 +759,7 @@ contract(
         const neumarks = await lock(investor, ticket);
         await enableUnlocks();
         // allow 1/3 amount
-        await neumark.approve(lockedAccount.address, neumarks.mul(0.3), {
+        await neumark.approve(lockedAccount.address, neumarks.times(0.3), {
           from: investor,
         });
         await expect(lockedAccount.unlock({ from: investor })).to.be.rejectedWith(EvmError);
@@ -769,7 +770,7 @@ contract(
         const neumarks = await lock(investor, ticket);
         await enableUnlocks();
         // simulate trade
-        const tradedAmount = neumarks.mul(0.71389012).round(0);
+        const tradedAmount = neumarks.times(0.71389012).round(0);
         await neumark.transfer(investor2, tradedAmount, {
           from: investor,
         });
@@ -839,8 +840,8 @@ contract(
         const penalty2 = await calculateUnlockPenalty(ticket2);
         await expectPenaltyEvent(unlockTx, investor2, penalty2);
         await expectPenaltyBalance(penalty2);
-        expectUnlockEvent(unlockTx, investor2, ticket2.sub(penalty2), neumarks2);
-        await makeWithdraw(investor2, ticket2.sub(penalty2));
+        expectUnlockEvent(unlockTx, investor2, ticket2.minus(penalty2), neumarks2);
+        await makeWithdraw(investor2, ticket2.minus(penalty2));
       });
 
       it("should unlock without burning neumarks on release all", async () => {
@@ -907,9 +908,9 @@ contract(
           from: admin,
           gasPrice,
         });
-        const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+        const gasCost = gasPrice.times(tx.receipt.gasUsed);
         const adminEthAfterBalance = await promisify(web3.eth.getBalance)(admin);
-        expect(adminEthAfterBalance).to.be.bignumber.eq(adminEthBalance.add(amount).sub(gasCost));
+        expect(adminEthAfterBalance).to.be.bignumber.eq(adminEthBalance.add(amount).minus(gasCost));
       });
 
       function getKeyByValue(object, value) {
@@ -1034,7 +1035,7 @@ contract(
         feeDisbursalAddress,
         18 * monthInSeconds,
         etherToWei(1)
-          .mul(0.1)
+          .times(0.1)
           .round(),
       );
       await accessPolicy.setUserRole(admin, roles.lockedAccountAdmin, target.address, 1);

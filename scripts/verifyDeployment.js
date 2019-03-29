@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 require("babel-register");
+const BigNumber = require("../test/helpers/bignumber");
 const commandLineArgs = require("command-line-args");
 const getConfig = require("../migrations/config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
@@ -183,9 +184,9 @@ module.exports = async function inspectETO() {
   const rateOracle = await ITokenExchangeRateOracle.at(await universe.tokenExchangeRateOracle());
   const ethRate = await rateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress);
   const rateExpirationDelta = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
-  const now = new web3.BigNumber(Math.floor(new Date() / 1000));
+  const now = new BigNumber(Math.floor(new Date() / 1000));
   console.log("Obtained eth to eur rate ", ethRate[0].div(config.Q18).toNumber());
-  const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
+  const isRateExpired = ethRate[1].lte(now.minus(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   console.log("---------------------------------------------");
 

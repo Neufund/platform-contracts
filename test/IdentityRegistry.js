@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
@@ -35,7 +36,7 @@ contract(
     });
 
     function deserializeUpgradedClaims(claims) {
-      const claimsN = new web3.BigNumber(claims, 16);
+      const claimsN = new BigNumber(claims, 16);
       return updatedReferenceClaims(
         claimsN.mod(2).eq(1),
         claimsN

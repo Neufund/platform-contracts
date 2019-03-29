@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { deployAccessControl } from "./helpers/deployContracts";
@@ -20,7 +21,7 @@ import EvmError from "./helpers/EVMThrow";
 import { contractId, ZERO_ADDRESS } from "./helpers/constants";
 import { promisify } from "./helpers/evmCommands";
 
-const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
+const gasPrice = new BigNumber(0x01); // this low gas price is forced by code coverage
 const EtherToken = artifacts.require("EtherToken");
 
 contract("EtherToken", ([broker, reclaimer, ...investors]) => {
@@ -313,7 +314,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       const senderTokenBalance = await etherToken.balanceOf(investors[0]);
       expect(senderTokenBalance).to.be.bignumber.eq(0);
 
-      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const gasCost = gasPrice.times(tx.receipt.gasUsed);
       const senderEthBalance = await promisify(web3.eth.getBalance)(investors[0]);
       expect(senderEthBalance).to.be.bignumber.eq(initialSenderEthBalance.minus(gasCost));
 
@@ -347,7 +348,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       const totalSupply = await etherToken.totalSupply.call();
       expect(totalSupply).to.be.bignumber.eq(initialBalance.minus(amountToWithdraw));
 
-      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const gasCost = gasPrice.times(tx.receipt.gasUsed);
       const senderTokenBalance = await etherToken.balanceOf(investors[0]);
       const senderEtherBalance = await promisify(web3.eth.getBalance)(investors[0]);
       const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
@@ -381,7 +382,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       const totalSupply = await etherToken.totalSupply.call();
       expect(totalSupply).to.be.bignumber.eq(initialBalance.minus(additionalAmountToSend));
 
-      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const gasCost = gasPrice.times(tx.receipt.gasUsed);
       const senderTokenBalance = await etherToken.balanceOf(investors[0]);
       const senderEtherBalance = await promisify(web3.eth.getBalance)(investors[0]);
       const reciverTokenBalance = await etherToken.balanceOf(investors[1]);
@@ -416,7 +417,7 @@ contract("EtherToken", ([broker, reclaimer, ...investors]) => {
       const totalSupply = await etherToken.totalSupply.call();
       expect(totalSupply).to.be.bignumber.eq(initialBalance);
 
-      const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+      const gasCost = gasPrice.times(tx.receipt.gasUsed);
       const senderTokenBalance = await etherToken.balanceOf(investorWithNoEtherTokens);
       const senderEtherBalance = await promisify(web3.eth.getBalance)(investorWithNoEtherTokens);
 

@@ -2,6 +2,7 @@
 /* eslint-disable no-continue */
 
 require("babel-register");
+const BigNumber = require("../test/helpers/bignumber");
 const moment = require("moment");
 const commandLineArgs = require("command-line-args");
 const confirm = require("node-ask").confirm;
@@ -46,7 +47,7 @@ module.exports = async function deploy() {
     for (const k of Object.keys(terms)) {
       if (typeof terms[k] === "string") {
         try {
-          mod[k] = new web3.BigNumber(terms[k]);
+          mod[k] = new BigNumber(terms[k]);
         } catch (e) {
           mod[k] = terms[k];
         }

@@ -1,3 +1,4 @@
+import { BigNumber } from "../helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { deployUniverse, deployPlatformTerms } from "../helpers/deployContracts";
@@ -104,7 +105,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     });
 
     it("should overflow on deposit", async () => {
-      const initialBalance = new web3.BigNumber(2).pow(256).minus(1);
+      const initialBalance = new BigNumber(2).pow(256).minus(1);
       await equityToken.issueTokens(initialBalance, {
         from: company,
       });
@@ -231,7 +232,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IBasicToken tests", () => {
-    const initialBalance = new web3.BigNumber(5092819281);
+    const initialBalance = new BigNumber(5092819281);
     const getToken = () => equityToken;
 
     beforeEach(async () => {
@@ -244,7 +245,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IERC20Allowance tests", () => {
-    const initialBalance = new web3.BigNumber(71723919);
+    const initialBalance = new BigNumber(71723919);
     const getToken = () => equityToken;
 
     beforeEach(async () => {
@@ -257,7 +258,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IERC677Token tests", () => {
-    const initialBalance = new web3.BigNumber(438181);
+    const initialBalance = new BigNumber(438181);
     const getToken = () => equityToken;
     let erc667cb;
     const getTestErc667cb = () => erc667cb;
@@ -273,7 +274,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("IERC223Token tests", () => {
-    const initialBalance = new web3.BigNumber(438181);
+    const initialBalance = new BigNumber(438181);
     const getToken = () => equityToken;
     let erc223cb;
     const getTestErc223cb = () => erc223cb;
@@ -289,7 +290,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   });
 
   describe("withdrawal tests", () => {
-    const initialBalance = new web3.BigNumber("79827398197221");
+    const initialBalance = new BigNumber("79827398197221");
     const getToken = () => {
       // patch deposit and withdraw
       equityToken.withdraw = equityToken.destroyTokens;

@@ -1,5 +1,6 @@
 require("babel-register");
 const fs = require("fs");
+const BigNumber = require("../test/helpers/bignumber");
 const { join } = require("path");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
@@ -173,14 +174,14 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   if (final === CommitmentState.Setup) {
     console.log("Setting start date");
     // set date in a week as start date
-    const startDate = new web3.BigNumber(Math.floor(new Date() / 1000) + 15 * dayInSeconds);
+    const startDate = new BigNumber(Math.floor(new Date() / 1000) + 15 * dayInSeconds);
     await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
       from: issuer.address,
     });
     return etoCommitment;
   }
   // mock start date if we intend to move to next state
-  const startDate = new web3.BigNumber(Math.floor(new Date() / 1000) - 3 * dayInSeconds);
+  const startDate = new BigNumber(Math.floor(new Date() / 1000) - 3 * dayInSeconds);
   // mock log event start date
   const whitelistD = etoDefiniton.durTerms.WHITELIST_DURATION.add(1);
   const publicD = etoDefiniton.durTerms.PUBLIC_DURATION.add(1);
@@ -188,24 +189,24 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   const claimD = etoDefiniton.durTerms.CLAIM_DURATION.add(1);
   let logStartDate = startDate;
   if (final >= CommitmentState.Public) {
-    logStartDate = logStartDate.sub(whitelistD);
+    logStartDate = logStartDate.minus(whitelistD);
   }
   if (final === CommitmentState.Refund) {
-    logStartDate = logStartDate.sub(publicD);
+    logStartDate = logStartDate.minus(publicD);
   } else {
     if (final >= CommitmentState.Signing) {
-      logStartDate = logStartDate.sub(publicD);
+      logStartDate = logStartDate.minus(publicD);
     }
     if (final >= CommitmentState.Claim) {
-      logStartDate = logStartDate.sub(signingDelay);
+      logStartDate = logStartDate.minus(signingDelay);
     }
     if (final >= CommitmentState.Payout) {
-      logStartDate = logStartDate.sub(claimD);
+      logStartDate = logStartDate.minus(claimD);
     }
   }
   console.log(
     `Setting start date ${startDate.toNumber()} and log date ${logStartDate.toNumber()}
-     with diff ${startDate.sub(logStartDate).toNumber()}`,
+     with diff ${startDate.minus(logStartDate).toNumber()}`,
   );
   await etoCommitment._mockStartDate(
     etoTerms.address,
@@ -226,7 +227,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   const minTicketEth = minTicketEurUlps
     .div(currentETHRate[0])
     .round(0, 4)
-    .mul(Q18);
+    .times(Q18);
 
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
@@ -236,7 +237,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(1.71621)),
+    minTicketEth.add(Q18.times(1.71621)),
     "ETH",
   );
   await investICBMAmount(
@@ -244,7 +245,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEurUlps.add(Q18.mul(768)),
+    minTicketEurUlps.add(Q18.times(768)),
     "EUR",
   );
   if (final === CommitmentState.Whitelist) {
@@ -259,7 +260,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
+    minTicketEth.add(Q18.times(3.71621)),
     "ETH",
   );
   await investICBMAmount(
@@ -267,7 +268,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
+    minTicketEth.add(Q18.times(3.71621)),
     "ETH",
   );
   if (final === CommitmentState.Public) {
@@ -282,7 +283,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log("Going to signing");
   // we must invest minimum value
-  const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
+  const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.times(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
   );
   await investAmount(

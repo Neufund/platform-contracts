@@ -1,3 +1,4 @@
+import { BigNumber } from "./bignumber";
 import * as fs from "fs";
 
 export function parseNmkDataset(fileName) {
@@ -10,6 +11,6 @@ export function parseNmkDataset(fileName) {
 
   return lines.map(line => {
     const eurNmk = line.split(",");
-    return [new web3.BigNumber(eurNmk[0]).round(18, 4), new web3.BigNumber(eurNmk[1]).round(18, 4)];
+    return [new BigNumber(eurNmk[0]).round(18, 4), new BigNumber(eurNmk[1]).round(18, 4)];
   });
 }

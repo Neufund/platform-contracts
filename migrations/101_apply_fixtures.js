@@ -1,4 +1,5 @@
 require("babel-register");
+const BigNumber = require("../test/helpers/bignumber");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./config").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
@@ -62,7 +63,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     ]);
 
     console.log("send ether to simple exchange");
-    await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
+    await simpleExchange.send(CONFIG.Q18.times(10), { from: DEPLOYER });
 
     console.log(
       `amending agreement for EuroToken ${euroToken.address} and Universe ${universe.address}`,
@@ -95,8 +96,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     console.log("set actual ETH and NEU to EUR price");
-    const EUR_ETH_RATE = CONFIG.Q18.mul(new web3.BigNumber("360.9828182"));
-    const EUR_NEU_RATE = CONFIG.Q18.mul(new web3.BigNumber("0.2828182"));
+    const EUR_ETH_RATE = CONFIG.Q18.times(new BigNumber("360.9828182"));
+    const EUR_NEU_RATE = CONFIG.Q18.times(new BigNumber("0.2828182"));
     const euroTokenAddress = await universe.euroToken();
     const etherTokenAddress = await universe.etherToken();
     const neuTokenAddress = await universe.neumark();
@@ -122,11 +123,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log("deposit in EtherToken");
     await etherToken.deposit({
       from: fas.INV_HAS_ETH_T_NO_KYC.address,
-      value: CONFIG.Q18.mul(1187.198273981),
+      value: CONFIG.Q18.times(1187.198273981),
     });
     await etherToken.deposit({
       from: fas.INV_EUR_ICBM_HAS_KYC.address,
-      value: CONFIG.Q18.mul(387.198273981),
+      value: CONFIG.Q18.times(387.198273981),
     });
 
     console.log("set KYC, sophisiticated, bankAccount");
@@ -149,12 +150,22 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     console.log("deposit in EuroToken");
-    await euroToken.deposit(fas.INV_HAS_EUR_HAS_KYC.address, CONFIG.Q18.mul(10278127.1988), "0x0", {
-      from: DEPLOYER,
-    });
-    await euroToken.deposit(fas.INV_ICBM_EUR_M_HAS_KYC.address, CONFIG.Q18.mul(1271.1988), "0x0", {
-      from: DEPLOYER,
-    });
+    await euroToken.deposit(
+      fas.INV_HAS_EUR_HAS_KYC.address,
+      CONFIG.Q18.times(10278127.1988),
+      "0x0",
+      {
+        from: DEPLOYER,
+      },
+    );
+    await euroToken.deposit(
+      fas.INV_ICBM_EUR_M_HAS_KYC.address,
+      CONFIG.Q18.times(1271.1988),
+      "0x0",
+      {
+        from: DEPLOYER,
+      },
+    );
 
     console.log("let euroLock to receive and send old euro token");
     await icbmEuroToken.setAllowedTransferFrom(euroLock.address, true);
@@ -174,7 +185,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       await promisify(web3.eth.sendTransaction)({
         from: DEPLOYER,
         to: fas[f].address,
-        value: CONFIG.Q18.mul(14.21182),
+        value: CONFIG.Q18.times(14.21182),
       });
     }
   });

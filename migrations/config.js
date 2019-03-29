@@ -1,3 +1,4 @@
+const BigNumber = require("../test/helpers/bignumber");
 const moment = require("moment");
 const deployableArtifacts = require("../test/helpers/artifacts").artifacts;
 const path = require("path");
@@ -13,7 +14,7 @@ export function getNetworkDefinition(network) {
 }
 
 export function getConfig(web3, network, accounts) {
-  const Q18 = web3.toBigNumber("10").pow(18);
+  const Q18 = new BigNumber("10").pow(18);
 
   let config;
   // icbmConfig kept for dev networks to recreate whole system
@@ -21,12 +22,12 @@ export function getConfig(web3, network, accounts) {
     Q18,
     // ICBMLockedAccount
     LOCK_DURATION: 18 * 30 * 24 * 60 * 60,
-    PENALTY_FRACTION: web3.toBigNumber("0.1").mul(Q18),
+    PENALTY_FRACTION: new BigNumber("0.1").times(Q18),
     // Commitment
     START_DATE: moment("2017-11-12T11:00:00.000Z").valueOf() / 1000,
-    CAP_EUR: web3.toBigNumber("200000000").mul(Q18),
-    MIN_TICKET_EUR: web3.toBigNumber("290").mul(Q18),
-    ETH_EUR_FRACTION: web3.toBigNumber("290").mul(Q18),
+    CAP_EUR: new BigNumber("200000000").times(Q18),
+    MIN_TICKET_EUR: new BigNumber("290").times(Q18),
+    ETH_EUR_FRACTION: new BigNumber("290").times(Q18),
     // Agreements
     RESERVATION_AGREEMENT: "ipfs:QmbH7mtyWpwTxigGtvnbYJAJ9ZZPe1FDxr9hTc2mNwpRe2", // attached to Commitment
     NEUMARK_HOLDER_AGREEMENT: "ipfs:QmVQfuibCipv9j6v4cSYTnvkjoBnx3DqSLNY3PKg8MZbP4", // attached to Neumark
@@ -44,12 +45,12 @@ export function getConfig(web3, network, accounts) {
   // platform config - new settings go here
   const platformConfig = {
     // euro token settings
-    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.mul(1),
-    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.mul(5),
-    MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS: Q18.mul(25),
+    MIN_DEPOSIT_AMOUNT_EUR_ULPS: Q18.times(1),
+    MIN_WITHDRAW_AMOUNT_EUR_ULPS: Q18.times(5),
+    MAX_SIMPLE_EXCHANGE_ALLOWANCE_EUR_ULPS: Q18.times(25),
     // euro token fees
-    EURT_WITHDRAWAL_FEE_FRAC: Q18.mul(0.005),
-    EURT_DEPOSIT_FEE_FRAC: Q18.mul(0),
+    EURT_WITHDRAWAL_FEE_FRAC: Q18.times(0.005),
+    EURT_DEPOSIT_FEE_FRAC: Q18.times(0),
     // Maps roles to addresses
     addresses: {
       EURT_DEPOSIT_MANAGER: "0xB9B0c83590A442bc8D01a9823E6df66762B64755",

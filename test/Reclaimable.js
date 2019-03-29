@@ -45,7 +45,7 @@ contract("Reclaimable", ([deployer, reclaimer, other]) => {
 
     expect(before).to.be.bignumber.equal(amount);
     expect(after).to.be.bignumber.zero;
-    expect(reclaimerAfter.sub(reclaimerBefore)).to.be.bignumber.equal(amount);
+    expect(reclaimerAfter.minus(reclaimerBefore)).to.be.bignumber.equal(amount);
   });
 
   it("should only allow ROLE_RECLAIMER to reclaim", async () => {

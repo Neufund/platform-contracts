@@ -1,5 +1,6 @@
 import invariant from "invariant";
 import EvmError from "./EVMThrow";
+import { BigNumber } from "./bignumber";
 
 const web3Utils = require("web3/lib/utils/utils");
 
@@ -16,8 +17,8 @@ export default function(chai) {
       "expected #{this} to not be a hex string",
     );
 
-    const bytes32BN = new web3.BigNumber(bytes32, 16);
-    const expectedBytes32BN = new web3.BigNumber(expectedBytes32, 16);
+    const bytes32BN = new BigNumber(bytes32, 16);
+    const expectedBytes32BN = new BigNumber(expectedBytes32, 16);
 
     this.assert(
       bytes32BN.eq(expectedBytes32BN),

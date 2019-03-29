@@ -1,3 +1,4 @@
+import { BigNumber } from "../helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { deployAccessControl } from "../helpers/deployContracts";
@@ -70,7 +71,7 @@ contract("ICBMEuroToken", ([_, depositManager, other, broker, reclaimer, ...inve
     });
 
     it("should overflow totalSupply on deposit", async () => {
-      const initialBalance = new web3.BigNumber(2).pow(256).sub(1);
+      const initialBalance = new BigNumber(2).pow(256).minus(1);
       await euroToken.deposit(investors[0], initialBalance, {
         from: depositManager,
       });
@@ -128,7 +129,7 @@ contract("ICBMEuroToken", ([_, depositManager, other, broker, reclaimer, ...inve
         from: broker,
       });
       const afterBalance = await euroToken.balanceOf.call(investors[1]);
-      expect(afterBalance).to.be.bignumber.eq(initialBalance.mul(2));
+      expect(afterBalance).to.be.bignumber.eq(initialBalance.times(2));
     });
 
     it("should transfer between allowed investors", async () => {

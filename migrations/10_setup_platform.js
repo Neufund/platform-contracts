@@ -64,11 +64,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
       CONFIG.addresses.TOKEN_RATE_ORACLE,
       CONFIG.addresses.GAS_STIPEND_SERVICE,
     ];
-    const serviceInitialBalance = CONFIG.Q18.mul(CONFIG.isLiveDeployment ? 0.5 : 100);
+    const serviceInitialBalance = CONFIG.Q18.times(CONFIG.isLiveDeployment ? 0.5 : 100);
     for (const service of transactingServices) {
       const serviceBalance = await promisify(web3.eth.getBalance)(service);
       if (serviceBalance.lt(serviceInitialBalance)) {
-        const missingBalance = serviceInitialBalance.sub(serviceBalance);
+        const missingBalance = serviceInitialBalance.minus(serviceBalance);
         console.log(`Sending ${missingBalance.toNumber()} to ${service}`);
         await promisify(web3.eth.sendTransaction)({
           from: DEPLOYER,

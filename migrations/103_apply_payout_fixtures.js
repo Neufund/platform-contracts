@@ -33,12 +33,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     // distribute into next snapshot
     console.log("Disbursing some ETH to NEU holders");
-    const ethDisbursalAmount = Q18.mul(128.12812);
+    const ethDisbursalAmount = Q18.times(128.12812);
     await etherToken.depositAndTransfer(feeDisbursalAddress, ethDisbursalAmount, "", {
       value: ethDisbursalAmount,
     });
     console.log("Disbursing some EUR to NEU holders");
-    const eurDisbursalAmount = Q18.mul(110000.12812);
+    const eurDisbursalAmount = Q18.times(110000.12812);
     await euroToken.depositAndTransfer(
       DEPLOYER,
       feeDisbursalAddress,

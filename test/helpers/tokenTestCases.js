@@ -1,3 +1,4 @@
+import { BigNumber } from "./bignumber";
 import { expect } from "chai";
 import { eventValue, eventValueAtIndex } from "./events";
 import EvmError from "./EVMThrow";
@@ -117,7 +118,7 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
   });
 
   it("should allow approval higher than balance", async () => {
-    const amount = initialBalance.mul(2);
+    const amount = initialBalance.times(2);
     const tx = await token().approve(toAddr, amount, { from: fromAddr });
     expectApproveEvent(tx, fromAddr, toAddr, amount);
     const allowance = await token().allowance.call(fromAddr, toAddr);
@@ -132,7 +133,7 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
   it("should allow re-setting approval amount", async () => {
     await token().approve(toAddr, initialBalance, { from: fromAddr });
     await token().approve(toAddr, 0, { from: fromAddr });
-    const amount = initialBalance.mul(0.912381872).round();
+    const amount = initialBalance.times(0.912381872).round();
     const tx = await token().approve(toAddr, amount, { from: fromAddr });
     expectApproveEvent(tx, fromAddr, toAddr, amount);
     const allowance = await token().allowance.call(fromAddr, toAddr);
@@ -211,7 +212,7 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
 
   it("should return correct balances after transferring part of approval", async () => {
     await token().approve(broker, initialBalance, { from: fromAddr });
-    const amount = initialBalance.mul(0.87162378).round();
+    const amount = initialBalance.times(0.87162378).round();
     // transfer amount
     const tx = await token().transferFrom(fromAddr, toAddr, amount, {
       from: broker,
@@ -219,7 +220,7 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
     expectTransferEvent(tx, fromAddr, toAddr, amount);
     // check balances
     const balanceFrom = await token().balanceOf.call(fromAddr);
-    expect(balanceFrom).to.be.bignumber.eq(initialBalance.sub(amount));
+    expect(balanceFrom).to.be.bignumber.eq(initialBalance.minus(amount));
     const balanceThird = await token().balanceOf.call(toAddr);
     expect(balanceThird).to.be.bignumber.eq(amount);
     const balanceTo = await token().balanceOf.call(broker);
@@ -235,17 +236,17 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
     expect(totalSupply).to.be.bignumber.eq(initialBalance);
     // allowance should be remaining amount
     const finalAllowance = await token().allowance.call(fromAddr, broker);
-    expect(finalAllowance).to.be.bignumber.eq(initialBalance.sub(amount));
+    expect(finalAllowance).to.be.bignumber.eq(initialBalance.minus(amount));
   });
 
   it("should return correct balances after transferring approval in tranches", async () => {
     await token().approve(broker, initialBalance, { from: fromAddr });
-    const tranche1 = initialBalance.mul(0.7182).round();
+    const tranche1 = initialBalance.times(0.7182).round();
     const tranche2 = initialBalance
-      .sub(tranche1)
-      .mul(0.1189273)
+      .minus(tranche1)
+      .times(0.1189273)
       .round();
-    const tranche3 = initialBalance.sub(tranche1.add(tranche2));
+    const tranche3 = initialBalance.minus(tranche1.add(tranche2));
     // transfer in tranches
     const tx1 = await token().transferFrom(fromAddr, toAddr, tranche1, {
       from: broker,
@@ -279,7 +280,7 @@ export function standardTokenTests(token, fromAddr, toAddr, broker, initialBalan
   });
 
   it("should reject transferFrom if 1 'wei' above approval", async () => {
-    const amount = initialBalance.mul(0.281972).round();
+    const amount = initialBalance.times(0.281972).round();
     await token().approve(broker, amount, { from: fromAddr });
     // transfer more than amount but within balance
     await expect(
@@ -404,9 +405,9 @@ export function testWithdrawal(token, investor, initialBalance, withdrawEventFOv
   });
 
   it("should withdraw whole balance in tranches", async () => {
-    const tranche1 = initialBalance.mul(0.7182).round();
-    const tranche2 = initialBalance.sub(tranche1).sub(1);
-    const tranche3 = new web3.BigNumber(1);
+    const tranche1 = initialBalance.times(0.7182).round();
+    const tranche2 = initialBalance.minus(tranche1).minus(1);
+    const tranche3 = new BigNumber(1);
     const tx1 = await token().withdraw(tranche1, { from: investor });
     expectWithdrawEv(tx1, investor, tranche1);
     expectTransferEvent(tx1, investor, ZERO_ADDRESS, tranche1);

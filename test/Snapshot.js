@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import moment from "moment";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
@@ -42,7 +43,7 @@ contract("Snapshot", () => {
     // encodes day number from unix epoch on 128 MSB of 256 word
     // day boundary on 00:00 UTC
     function encodeSnapshotId(noOfDays) {
-      return new web3.BigNumber(2).pow(128).mul(noOfDays);
+      return new BigNumber(2).pow(128).times(noOfDays);
     }
 
     async function expectDays(timestamp, expectedNoOfDays) {
@@ -101,16 +102,16 @@ contract("Snapshot", () => {
     await snapshotTest.setValue(200);
     const after = await createSnapshot();
 
-    assert.isFalse(await snapshotTest.hasValueAt.call(before.sub(1)));
+    assert.isFalse(await snapshotTest.hasValueAt.call(before.minus(1)));
     assert.isTrue(await snapshotTest.hasValueAt.call(before));
-    assert.isTrue(await snapshotTest.hasValueAt.call(middle.sub(1)));
+    assert.isTrue(await snapshotTest.hasValueAt.call(middle.minus(1)));
     assert.isTrue(await snapshotTest.hasValueAt.call(middle));
-    assert.isTrue(await snapshotTest.hasValueAt.call(after.sub(1)));
-    expect(await snapshotTest.getValueAt.call(before.sub(1), 41)).to.be.bignumber.eq(41);
+    assert.isTrue(await snapshotTest.hasValueAt.call(after.minus(1)));
+    expect(await snapshotTest.getValueAt.call(before.minus(1), 41)).to.be.bignumber.eq(41);
     expect(await snapshotTest.getValueAt.call(before, 41)).to.be.bignumber.eq(100);
-    expect(await snapshotTest.getValueAt.call(middle.sub(1), 41)).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(middle.minus(1), 41)).to.be.bignumber.eq(100);
     expect(await snapshotTest.getValueAt.call(middle, 41)).to.be.bignumber.eq(200);
-    expect(await snapshotTest.getValueAt.call(after.sub(1), 41)).to.be.bignumber.eq(200);
+    expect(await snapshotTest.getValueAt.call(after.minus(1), 41)).to.be.bignumber.eq(200);
   });
 
   it("should create daily snapshots", async () => {
@@ -135,7 +136,7 @@ contract("Snapshot", () => {
 
     const day3 = await snapshotTest.snapshotAt.call(currentTimestamp + 3 * day);
 
-    expect(await snapshotTest.getValueAt.call(day0.sub(1), 41)).to.be.bignumber.eq(41);
+    expect(await snapshotTest.getValueAt.call(day0.minus(1), 41)).to.be.bignumber.eq(41);
     expect(await snapshotTest.getValueAt.call(day0, 41)).to.be.bignumber.eq(100);
     expect(await snapshotTest.getValueAt.call(day1, 41)).to.be.bignumber.eq(200);
     expect(await snapshotTest.getValueAt.call(day2, 41)).to.be.bignumber.eq(300);
@@ -217,9 +218,9 @@ contract("Snapshot", () => {
       await snapshotTest.setValue(ii * 10 + 1);
       await increaseTime(moment.duration({ days: 1 }));
     }
-    const daysMsb = new web3.BigNumber(2).pow(128);
+    const daysMsb = new BigNumber(2).pow(128);
     // make sure all boundaries crossed
-    const expectedSnapshotId = day0.add(daysMsb.mul(simulatedDays));
+    const expectedSnapshotId = day0.add(daysMsb.times(simulatedDays));
     expect(await snapshotTest.currentSnapshotId()).to.be.bignumber.eq(expectedSnapshotId);
   });
 
@@ -233,9 +234,9 @@ contract("Snapshot", () => {
 
     expect(await snapshotTest.getValueAt.call(day0.add(1), 41)).to.be.bignumber.eq(100);
     expect(
-      await snapshotTest.getValueAt.call(day0.add(day1.sub(day0).div(2)), 41),
+      await snapshotTest.getValueAt.call(day0.add(day1.minus(day0).div(2)), 41),
     ).to.be.bignumber.eq(100);
-    expect(await snapshotTest.getValueAt.call(day1.sub(1), 41)).to.be.bignumber.eq(100);
+    expect(await snapshotTest.getValueAt.call(day1.minus(1), 41)).to.be.bignumber.eq(100);
   });
 
   it("should return value for snapshot ids after last physical entry was created", async () => {
@@ -257,7 +258,7 @@ contract("Snapshot", () => {
     const befSnapshotId = getSnapshotIdFromEvent(befTx);
     const aftSnapshotId = getSnapshotIdFromEvent(aftTx);
     // should have 1 day difference
-    expect(aftSnapshotId.sub(befSnapshotId)).to.be.bignumber.eq(new web3.BigNumber(2).pow(128));
+    expect(aftSnapshotId.minus(befSnapshotId)).to.be.bignumber.eq(new BigNumber(2).pow(128));
   });
 
   it("should clone snapshot id", async () => {

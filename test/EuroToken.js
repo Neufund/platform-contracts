@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import {
@@ -30,9 +31,9 @@ const EuroToken = artifacts.require("EuroToken");
 const TestTokenControllerPassThrough = artifacts.require("TestTokenControllerPassThrough");
 const TestMockableTokenController = artifacts.require("TestMockableTokenController");
 
-const minDepositAmountEurUlps = Q18.mul(500);
-const minWithdrawAmountEurUlps = Q18.mul(20);
-const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
+const minDepositAmountEurUlps = Q18.times(500);
+const minWithdrawAmountEurUlps = Q18.times(20);
+const maxSimpleExchangeAllowanceEurUlps = Q18.times(50);
 
 const defaultDepositRef = toBytes32(0x123);
 
@@ -156,7 +157,7 @@ contract(
         const initialBalance1 = minDepositAmountEurUlps.add(1);
         const initialBalance2 = minDepositAmountEurUlps.add(2);
         const initialBalance3 = minDepositAmountEurUlps.add(3);
-        const total = minDepositAmountEurUlps.mul(3).add(6);
+        const total = minDepositAmountEurUlps.times(3).add(6);
         await identityRegistry.setMultipleClaims(
           investors.slice(0, 3),
           [
@@ -299,7 +300,7 @@ contract(
       });
 
       it("should fail deposit many if one amount is too low", async () => {
-        const initialBalance1 = minDepositAmountEurUlps.sub(2);
+        const initialBalance1 = minDepositAmountEurUlps.minus(2);
         const initialBalance2 = minDepositAmountEurUlps.add(2);
         const initialBalance3 = minDepositAmountEurUlps.add(3);
         await identityRegistry.setMultipleClaims(
@@ -331,7 +332,7 @@ contract(
       });
 
       it("should overflow totalSupply on deposit", async () => {
-        const initialBalance = new web3.BigNumber(2).pow(256).sub(1);
+        const initialBalance = new BigNumber(2).pow(256).minus(1);
         // deposit only to KYC investors
         await identityRegistry.setClaims(
           investors[0],
@@ -426,7 +427,7 @@ contract(
           from: broker,
         });
         const afterBalance = await euroToken.balanceOf.call(investors[1]);
-        expect(afterBalance).to.be.bignumber.eq(initialBalance.mul(2));
+        expect(afterBalance).to.be.bignumber.eq(initialBalance.times(2));
       });
 
       it("should reject transfer by broker if account frozen", async () => {
@@ -839,7 +840,7 @@ contract(
         const totalDeposit = depositAmount.add(preDepositAmount);
         expect(totalSupply).to.be.bignumber.eq(totalDeposit);
         let balance = await euroToken.balanceOf(investor);
-        expect(balance).to.be.bignumber.eq(totalDeposit.sub(transferAmount));
+        expect(balance).to.be.bignumber.eq(totalDeposit.minus(transferAmount));
         balance = await euroToken.balanceOf(etoAddress);
         expect(balance).to.be.bignumber.eq(transferAmount);
         expect(await euroToken.agreementSignedAtBlock(investor)).to.be.bignumber.not.eq(0);
@@ -847,53 +848,53 @@ contract(
       }
 
       it("should deposit and transfer all", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(50.29190129));
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(50.29190129));
         await depositAndTransferCase(
           investors[0],
           investors[1],
-          new web3.BigNumber(0),
+          new BigNumber(0),
           initialBalance,
           initialBalance,
         );
       });
 
       it("should deposit and transfer less", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(1276912.29190129));
         await depositAndTransferCase(
           investors[0],
           investors[1],
-          new web3.BigNumber(0),
+          new BigNumber(0),
           initialBalance,
-          initialBalance.sub(1),
+          initialBalance.minus(1),
         );
       });
 
       it("should pre deposit, deposit and transfer 1 wei more", async () => {
         await tokenController.applySettings(0, 0, 0, { from: eurtLegalManager });
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(1276912.29190129));
         await depositAndTransferCase(
           investors[0],
           investors[1],
-          new web3.BigNumber(2),
+          new BigNumber(2),
           initialBalance,
           initialBalance.add(1),
         );
       });
 
       it("should pre deposit, deposit and transfer more", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(1276912.29190129));
         await depositAndTransferCase(
           investors[0],
           investors[1],
-          Q18.mul(76219.2812),
+          Q18.times(76219.2812),
           initialBalance,
-          initialBalance.add(Q18.mul(6271.112)),
+          initialBalance.add(Q18.times(6271.112)),
         );
       });
 
       it("should pre deposit, deposit and transfer all", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(1276912.29190129));
-        const preDeposit = Q18.mul(8212.9121074);
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(1276912.29190129));
+        const preDeposit = Q18.times(8212.9121074);
         await depositAndTransferCase(
           investors[0],
           investors[1],
@@ -904,12 +905,12 @@ contract(
       });
 
       it("should revert on deposit and transfer above balance", async () => {
-        const initialBalance = minDepositAmountEurUlps.add(Q18.mul(50.29190129));
+        const initialBalance = minDepositAmountEurUlps.add(Q18.times(50.29190129));
         await expect(
           depositAndTransferCase(
             investors[0],
             investors[1],
-            new web3.BigNumber(0),
+            new BigNumber(0),
             initialBalance,
             initialBalance.add(1),
           ),
@@ -988,7 +989,7 @@ contract(
       });
 
       it("should reject deposit and transfer if value is too low", async () => {
-        const initialBalance = minDepositAmountEurUlps.sub(50);
+        const initialBalance = minDepositAmountEurUlps.minus(50);
         const etoAddress = investors[1];
 
         await prepareDepositAndTransfer(investors[0], etoAddress);
@@ -1030,7 +1031,7 @@ contract(
       });
 
       it("should accept agreement", async () => {
-        const balance = Q18.mul(11281.128901);
+        const balance = Q18.times(11281.128901);
         await identityRegistry.setClaims(
           investors[0],
           toBytes32(identityClaims.isNone),
@@ -1099,8 +1100,8 @@ contract(
       it("should emit withdraw settlement event", async () => {
         const tx = await euroToken.settleWithdraw(
           investors[0],
-          Q18.mul(998.181),
-          Q18.mul(1000),
+          Q18.times(998.181),
+          Q18.times(1000),
           toBytes32(0x981182),
           toBytes32(0x111626262),
           { from: depositManager },
@@ -1109,16 +1110,16 @@ contract(
           tx,
           investors[0],
           depositManager,
-          Q18.mul(998.181),
-          Q18.mul(1000),
+          Q18.times(998.181),
+          Q18.times(1000),
           toBytes32(0x981182),
           toBytes32(0x111626262),
         );
         await expect(
           euroToken.settleWithdraw(
             investors[0],
-            Q18.mul(998.181),
-            Q18.mul(1000),
+            Q18.times(998.181),
+            Q18.times(1000),
             toBytes32(0x981182),
             toBytes32(0x111626262),
             { from: eurtLegalManager },

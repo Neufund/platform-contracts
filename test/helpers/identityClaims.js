@@ -1,9 +1,10 @@
+const BigNumber = require("./bignumber");
 const Web3 = require("web3");
 
 const web3 = new Web3();
 
 export function deserializeClaims(claims) {
-  const claimsN = new web3.BigNumber(claims, 16);
+  const claimsN = new BigNumber(claims, 16);
   return referenceClaims(
     claimsN.mod(2).eq(1),
     claimsN

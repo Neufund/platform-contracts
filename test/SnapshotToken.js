@@ -3,9 +3,9 @@ import { erc223TokenTests, deployTestErc223Callback } from "./helpers/tokenTestC
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
 import { ZERO_ADDRESS } from "./helpers/constants";
 import { testTokenController } from "./helpers/tokenControllerTestCases";
+import { BigNumber } from "./helpers/bignumber";
 
-const BigNumber = web3.BigNumber;
-const TKN_DECIMALS = new BigNumber(10).toPower(18);
+const TKN_DECIMALS = new BigNumber(10).pow(18);
 
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
 
@@ -17,7 +17,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
   });
 
   describe("IERC223Token tests", () => {
-    const initialBalanceTkn = TKN_DECIMALS.mul(91279837.398827).round();
+    const initialBalanceTkn = TKN_DECIMALS.times(91279837.398827).round();
     const getToken = () => testSnapshotToken;
     let erc223cb;
     const getTestErc223cb = () => erc223cb;

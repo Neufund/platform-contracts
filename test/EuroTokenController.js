@@ -9,9 +9,9 @@ import { contractId, Q18, toBytes32, ZERO_ADDRESS } from "./helpers/constants";
 import { TriState } from "./helpers/triState";
 
 const EuroTokenController = artifacts.require("EuroTokenController");
-const minDepositAmountEurUlps = Q18.mul(500);
-const minWithdrawAmountEurUlps = Q18.mul(20);
-const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
+const minDepositAmountEurUlps = Q18.times(500);
+const minWithdrawAmountEurUlps = Q18.times(20);
+const maxSimpleExchangeAllowanceEurUlps = Q18.times(50);
 
 contract(
   "EuroTokenController",
@@ -177,9 +177,9 @@ contract(
 
       it("should apply settings", async () => {
         const settingsTx = await tokenController.applySettings(
-          Q18.mul(10),
-          Q18.mul(20),
-          Q18.mul(30),
+          Q18.times(10),
+          Q18.times(20),
+          Q18.times(30),
           {
             from: eurtLegalManager,
           },
@@ -193,21 +193,21 @@ contract(
         // check first to and from
         expectAllowedToEvent(settingsTx, "0x147df49452f805d1a35e7ca314f564d1087b112f", true, 0);
         expectAllowedFromEvent(settingsTx, "0x147df49452f805d1a35e7ca314f564d1087b112f", true, 0);
-        expectLogSettingsChanged(settingsTx, Q18.mul(10), Q18.mul(20), Q18.mul(30));
+        expectLogSettingsChanged(settingsTx, Q18.times(10), Q18.times(20), Q18.times(30));
 
-        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(10));
-        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.mul(20));
+        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.times(10));
+        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.times(20));
         expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
-          Q18.mul(30),
+          Q18.times(30),
         );
 
-        await tokenController.applySettings(Q18.mul(40), Q18.mul(50), Q18.mul(60), {
+        await tokenController.applySettings(Q18.times(40), Q18.times(50), Q18.times(60), {
           from: eurtLegalManager,
         });
-        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.mul(40));
-        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.mul(50));
+        expect(await tokenController.minDepositAmountEurUlps()).to.be.bignumber.eq(Q18.times(40));
+        expect(await tokenController.minWithdrawAmountEurUlps()).to.be.bignumber.eq(Q18.times(50));
         expect(await tokenController.maxSimpleExchangeAllowanceEurUlps()).to.be.bignumber.eq(
-          Q18.mul(60),
+          Q18.times(60),
         );
       });
 
@@ -238,7 +238,7 @@ contract(
           },
         ]);
 
-        await tokenController.applySettings(Q18.mul(10), Q18.mul(20), Q18.mul(30), {
+        await tokenController.applySettings(Q18.times(10), Q18.times(20), Q18.times(30), {
           from: eurtLegalManager,
         });
 
@@ -272,12 +272,12 @@ contract(
 
       it("should apply fee settings", async () => {
         // set to 10% and 50% of deposit and withdraw amount respectively
-        const tx = await tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), {
+        const tx = await tokenController.applyFeeSettings(Q18.times(0.1), Q18.times(0.5), {
           from: depositManager,
         });
-        expectLogFeeSettingsChanged(tx, Q18.mul(0.1), Q18.mul(0.5));
-        expect(await tokenController.depositFeeFraction()).to.be.bignumber.eq(Q18.mul(0.1));
-        expect(await tokenController.withdrawalFeeFraction()).to.be.bignumber.eq(Q18.mul(0.5));
+        expectLogFeeSettingsChanged(tx, Q18.times(0.1), Q18.times(0.5));
+        expect(await tokenController.depositFeeFraction()).to.be.bignumber.eq(Q18.times(0.1));
+        expect(await tokenController.withdrawalFeeFraction()).to.be.bignumber.eq(Q18.times(0.5));
         // set back to 0
         const tx2 = await tokenController.applyFeeSettings(0, 0, { from: depositManager });
         expectLogFeeSettingsChanged(tx2, 0, 0);
@@ -287,10 +287,12 @@ contract(
 
       it("rejects on invalid fee settings", async () => {
         // fees > 100% (Q18) are invalid
-        await expect(tokenController.applyFeeSettings(Q18, Q18.mul(0.1), { from: depositManager }))
-          .to.revert;
-        await expect(tokenController.applyFeeSettings(Q18.mul(0.1), Q18, { from: depositManager }))
-          .to.revert;
+        await expect(
+          tokenController.applyFeeSettings(Q18, Q18.times(0.1), { from: depositManager }),
+        ).to.revert;
+        await expect(
+          tokenController.applyFeeSettings(Q18.times(0.1), Q18, { from: depositManager }),
+        ).to.revert;
       });
 
       it("should change deposit manager", async () => {
@@ -302,9 +304,11 @@ contract(
         await createAccessPolicy(accessControl, [
           { subject: identity1, role: roles.eurtDepositManager },
         ]);
-        await tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: identity1 });
+        await tokenController.applyFeeSettings(Q18.times(0.1), Q18.times(0.5), { from: identity1 });
         await expect(
-          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: depositManager }),
+          tokenController.applyFeeSettings(Q18.times(0.1), Q18.times(0.5), {
+            from: depositManager,
+          }),
         ).to.revert;
         expect(await tokenController.depositManager()).to.eq(identity1);
       });
@@ -333,7 +337,7 @@ contract(
 
       it("rejects on setting fees not from deposit manager", async () => {
         await expect(
-          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: identity1 }),
+          tokenController.applyFeeSettings(Q18.times(0.1), Q18.times(0.5), { from: identity1 }),
         ).to.revert;
       });
 
@@ -342,7 +346,9 @@ contract(
           { subject: depositManager, role: roles.eurtDepositManager, state: TriState.Deny },
         ]);
         await expect(
-          tokenController.applyFeeSettings(Q18.mul(0.1), Q18.mul(0.5), { from: depositManager }),
+          tokenController.applyFeeSettings(Q18.times(0.1), Q18.times(0.5), {
+            from: depositManager,
+          }),
         ).to.revert;
       });
     });
@@ -532,8 +538,9 @@ contract(
           .true;
         expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps.add(1)))
           .to.be.true;
-        expect(await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps.sub(1)))
-          .to.be.false;
+        expect(
+          await tokenController.onGenerateTokens(_, explicit, minDepositAmountEurUlps.minus(1)),
+        ).to.be.false;
       });
 
       it("should disallow deposit for non KYC/frozen", async () => {
@@ -589,8 +596,9 @@ contract(
           .true;
         expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps.add(1)))
           .to.be.true;
-        expect(await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps.sub(1)))
-          .to.be.false;
+        expect(
+          await tokenController.onDestroyTokens(_, explicit, minWithdrawAmountEurUlps.minus(1)),
+        ).to.be.false;
       });
 
       it("should disallow withdraw for non KYC/frozen", async () => {

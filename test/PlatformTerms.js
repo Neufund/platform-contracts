@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound, etherToWei } from "./helpers/unitConverter";
@@ -35,18 +36,18 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   it("should calculate platform fee correctly", async () => {
-    const amount = Q18.mul(1928.818172);
+    const amount = Q18.times(1928.818172);
     const feeAmount = await platformTerms.calculatePlatformFee(amount);
     const fee = defaultTerms.PLATFORM_FEE_FRACTION;
-    expect(feeAmount).to.be.bignumber.eq(divRound(amount.mul(fee), Q18));
+    expect(feeAmount).to.be.bignumber.eq(divRound(amount.times(fee), Q18));
   });
 
   it("should calculate platform token fee correctly", async () => {
     // tokens have 0 precision
-    const amountInt = new web3.BigNumber("7128918927");
+    const amountInt = new BigNumber("7128918927");
     const feeAmount = await platformTerms.calculatePlatformTokenFee(amountInt);
     const fee = defaultTerms.TOKEN_PARTICIPATION_FEE_FRACTION;
-    expect(feeAmount).to.be.bignumber.eq(amountInt.mul(fee.div(Q18)).round(0, 4));
+    expect(feeAmount).to.be.bignumber.eq(amountInt.times(fee.div(Q18)).round(0, 4));
   });
 
   it("should calculate neumark share when reward is 0 wei", async () => {
@@ -87,7 +88,6 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   const upTo40DecimalPlacesList = [...Array(41).keys()];
-  const BigNumber = web3.BigNumber;
   upTo40DecimalPlacesList.forEach(decimalPlaces => {
     it(`should set distribution when reward has ${decimalPlaces} decimals`, async () => {
       BigNumber.config({ DECIMAL_PLACES: decimalPlaces });

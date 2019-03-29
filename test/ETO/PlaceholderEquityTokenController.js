@@ -1,3 +1,4 @@
+import { BigNumber } from "../helpers/bignumber";
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
 import { contractId, ZERO_ADDRESS, toBytes32, Q18 } from "../helpers/constants";
@@ -107,8 +108,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(await equityTokenController.capTable()).to.deep.eq([[], []]);
       // no shareholder info yet
       expect(await equityTokenController.shareholderInformation()).to.deep.eq([
-        new web3.BigNumber(0),
-        new web3.BigNumber(0),
+        new BigNumber(0),
+        new BigNumber(0),
         ZERO_ADDRESS,
       ]);
       // but offering is there
@@ -145,7 +146,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     );
 
     it("should allow generating and destroying tokens only by registered ETO in Offering state", async () => {
-      const amount = new web3.BigNumber(281871);
+      const amount = new BigNumber(281871);
       await expect(testCommitment._generateTokens(amount)).to.be.revert;
       await testCommitment._triggerStateTransition(
         CommitmentState.Setup,
@@ -175,7 +176,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
       );
       const sharesAmount = 2761;
-      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      const amount = new BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
       let tx = await testCommitment._triggerStateTransition(
         CommitmentState.Whitelist,
@@ -216,8 +217,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(sharesAmount);
       const expectedValuation = newTotalShares
-        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
-        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+        .times(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
+        .times(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
       expectLogISHAAmended(
         tx,
         toBytes32("0x0"),
@@ -229,7 +230,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // verify offerings and cap table
       expect(await equityTokenController.capTable()).to.deep.equal([
         [equityToken.address],
-        [new web3.BigNumber(sharesAmount)],
+        [new BigNumber(sharesAmount)],
       ]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([
         [testCommitment.address],
@@ -263,7 +264,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         toBytes32("0x0"),
         await testCommitment.signedInvestmentAgreementUrl(),
         etoTermsDict.EXISTING_COMPANY_SHARES,
-        etoTermsDict.EXISTING_COMPANY_SHARES.mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE).mul(
+        etoTermsDict.EXISTING_COMPANY_SHARES.times(constTokenTerms.EQUITY_TOKENS_PER_SHARE).times(
           tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
         ),
         shareholderRights.address,
@@ -339,7 +340,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
       );
       const sharesAmount = 2761;
-      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      const amount = new BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
 
       const tx = await testCommitment._triggerStateTransition(
@@ -369,7 +370,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
       );
       const sharesAmount = 2761;
-      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      const amount = new BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
       // eto failed - must destroy before state transition
       await testCommitment._destroyTokens(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
@@ -386,7 +387,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         {
           ALLOW_RETAIL_INVESTORS: false,
           ENABLE_TRANSFERS_ON_SUCCESS: true,
-          MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+          MAX_TICKET_EUR_ULPS: Q18.times(100000),
         },
       );
       // now testCommitment will be replaced with new commitment
@@ -411,7 +412,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const expectedShares = sharesAmount * 2 - 1; // we destroyed 1 share
       expect(await equityTokenController.capTable()).to.deep.equal([
         [equityToken.address],
-        [new web3.BigNumber(expectedShares)],
+        [new BigNumber(expectedShares)],
       ]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([
         [newCommitment.address],
@@ -427,7 +428,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     it("rejects fail ETO from ETO not registered before", async () => {});
 
     async function testTransfersInOffering(transfersEnabled) {
-      const amount = new web3.BigNumber(281871);
+      const amount = new BigNumber(281871);
       // transfers disabled before offering - typical transfer
       expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
         .be.false;
@@ -503,7 +504,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       await deployController({
         ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
-        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+        MAX_TICKET_EUR_ULPS: Q18.times(100000),
       });
       await deployETO();
       await testTransfersInOffering(true);
@@ -515,7 +516,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
       );
       const sharesAmount = 2761;
-      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      const amount = new BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
 
       await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
@@ -533,7 +534,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
       );
       // make investments
-      const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
+      const amount = new BigNumber(7162 * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
       // finish offering
       await testCommitment._triggerStateTransition(
@@ -836,7 +837,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   });
 
   describe("EquityToken basic functions", () => {
-    const initialBalance = new web3.BigNumber(5092819281);
+    const initialBalance = new BigNumber(5092819281);
     const getToken = () => equityToken;
 
     beforeEach(async () => {
@@ -844,7 +845,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       await deployController({
         ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
-        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+        MAX_TICKET_EUR_ULPS: Q18.times(100000),
       });
       await deployETO();
       // register new offering

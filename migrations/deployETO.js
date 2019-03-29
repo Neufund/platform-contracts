@@ -1,3 +1,4 @@
+import { BigNumber } from "../test/helpers/bignumber";
 import createAccessPolicy from "../test/helpers/createAccessPolicy";
 import { deserializeClaims } from "../test/helpers/identityClaims";
 import roles from "../test/helpers/roles";
@@ -75,7 +76,7 @@ export async function deployETO(
     ...(canManageUniverse ? good("YES") : wrong("NO")),
   );
   const deployerBalance = await promisify(ETOCommitment.web3.eth.getBalance)(deployer);
-  const deployerHasBalance = deployerBalance.gte(config.Q18.mul(0.5));
+  const deployerHasBalance = deployerBalance.gte(config.Q18.times(0.5));
   const deployerBalanceEth = deployerBalance.div(Q18).round(4, 4);
   console.log(
     `Checking if DEPLOYER ${deployer} has 0.5 ETH`,
@@ -218,7 +219,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   let idx = 1;
   for (const startOf of startOfs.slice(1)) {
     const dateSet = !startOf.eq(0);
-    const startDate = new Date(startOf.mul(1000).toNumber());
+    const startDate = new Date(startOf.times(1000).toNumber());
     console.log(
       `State ${CommitmentStateRev[idx]} starts at:`,
       ...(dateSet ? good(startDate) : wrong("NOT SET")),
@@ -298,9 +299,9 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const euroTokenAddress = await universe.euroToken();
   const ethRate = await rateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress);
   const rateExpirationDelta = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
-  const now = new web3.BigNumber(Math.floor(new Date() / 1000));
+  const now = new BigNumber(Math.floor(new Date() / 1000));
   console.log("Obtained eth to eur rate ", ethRate);
-  const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
+  const isRateExpired = ethRate[1].lte(now.minus(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   const feeDisbursal = await universe.feeDisbursal();
   console.log(
@@ -315,7 +316,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const contribution = await eto.calculateContribution(
     "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
     false,
-    Q18.mul(3),
+    Q18.times(3),
   );
   console.log("------------------------------------------------------");
   console.log(`Example contribution ${contribution}`);
@@ -366,8 +367,8 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
       // throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
     }
     addresses.push(ticket.address);
-    amounts.push(Q18.mul(parsedDiscountAmount));
-    priceFracs.push(Q18.mul(parsedPriceFrac));
+    amounts.push(Q18.times(parsedDiscountAmount));
+    priceFracs.push(Q18.times(parsedPriceFrac));
     console.log(
       `Will add ${
         ticket.address

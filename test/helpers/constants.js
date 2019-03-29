@@ -1,8 +1,9 @@
 const Web3 = require("web3");
+const BigNumber = require("./bignumber");
 
 export const web3 = new Web3();
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-export const Q18 = web3.toBigNumber("10").pow(18);
+export const Q18 = new BigNumber("10").pow(18);
 export const hourInSeconds = 60 * 60;
 export const dayInSeconds = 24 * hourInSeconds;
 export const monthInSeconds = 30 * dayInSeconds;

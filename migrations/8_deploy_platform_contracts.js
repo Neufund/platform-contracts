@@ -38,7 +38,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const DEPLOYER = getDeployerAccount(network, accounts);
     console.log("checking if DEPLOYER has enough ETH");
     const deployerBalance = await promisify(web3.eth.getBalance)(DEPLOYER);
-    if (deployerBalance.lt(CONFIG.Q18.mul(5))) {
+    if (deployerBalance.lt(CONFIG.Q18.times(5))) {
       throw new Error(
         `DEPLOYER ${DEPLOYER} requires min 5 ETH balance, has ${deployerBalance.toNumber()}`,
       );

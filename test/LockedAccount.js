@@ -1,3 +1,4 @@
+import { BigNumber } from "./helpers/bignumber";
 import { expect } from "chai";
 import moment from "moment";
 import { hasEvent, eventValue, decodeLogs, eventWithIdxValue } from "./helpers/events";
@@ -38,9 +39,9 @@ const TestNullContract = artifacts.require("TestNullContract");
 const NullCommitment = artifacts.require("NullCommitment");
 const EuroTokenController = artifacts.require("EuroTokenController");
 
-const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
+const gasPrice = new BigNumber(0x01); // this low gas price is forced by code coverage
 const LOCK_PERIOD = 18 * monthInSeconds;
-const UNLOCK_PENALTY_FRACTION = Q18.mul(0.1).round(0, 0);
+const UNLOCK_PENALTY_FRACTION = Q18.times(0.1).round(0, 0);
 const equityTokenAddress = "0x07a689aa85943bee87b65eb83726d7f6ec8acf01";
 
 contract(
@@ -85,8 +86,8 @@ contract(
           gasPrice,
         });
         const afterBalance = await promisify(web3.eth.getBalance)(investorAddress);
-        const gasCost = gasPrice.mul(tx.receipt.gasUsed);
-        expect(afterBalance).to.be.bignumber.eq(initalBalance.add(amount).sub(gasCost));
+        const gasCost = gasPrice.times(tx.receipt.gasUsed);
+        expect(afterBalance).to.be.bignumber.eq(initalBalance.add(amount).minus(gasCost));
       }
 
       beforeEach(async () => {
@@ -152,7 +153,7 @@ contract(
         // notifies bank to pay out EUR, burns EURT
         await assetToken.withdraw(amount, { from });
         const afterBalance = await assetToken.balanceOf.call(from);
-        expect(afterBalance).to.be.bignumber.eq(initalBalance.sub(amount));
+        expect(afterBalance).to.be.bignumber.eq(initalBalance.minus(amount));
       }
 
       beforeEach(async () => {
@@ -161,9 +162,9 @@ contract(
           admin,
           admin,
           admin,
-          Q18.mul(0),
-          Q18.mul(0),
-          Q18.mul(50),
+          Q18.times(0),
+          Q18.times(0),
+          Q18.times(50),
         );
         [
           lockedAccount,
@@ -211,7 +212,7 @@ contract(
 
     function lockedAccountInvestTestCases(makeDeposit) {
       function calcNeuRelease(neu, ticket, balance) {
-        return divRound(ticket.mul(neu), balance);
+        return divRound(ticket.times(neu), balance);
       }
 
       async function commitFunds(
@@ -233,28 +234,28 @@ contract(
           lockedAccount.address,
           assetToken.address,
           ticket,
-          ticket.mul(2),
-          ticket.mul(3),
+          ticket.times(2),
+          ticket.times(3),
           equityTokenAddress,
-          ticket.mul(4),
+          ticket.times(4),
         );
         return releasedNeu;
       }
 
       it("should invest below balance", async () => {
-        const balance = Q18.mul(1571.1812);
+        const balance = Q18.times(1571.1812);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(671.2891));
+        const ticket = balance.minus(Q18.times(671.2891));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
         const icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu));
         // check totals
-        expect(await lockedAccount.totalLockedAmount()).to.be.bignumber.eq(balance.sub(ticket));
+        expect(await lockedAccount.totalLockedAmount()).to.be.bignumber.eq(balance.minus(ticket));
       });
 
       it("should invest balance", async () => {
-        const balance = Q18.mul(761.7212);
+        const balance = Q18.times(761.7212);
         const neumarks = await lock(investor, balance, makeDeposit);
         await commitFunds(investor, balance, balance, neumarks);
         const icbmBalance = await lockedAccount.balanceOf(investor);
@@ -268,7 +269,7 @@ contract(
       });
 
       it("reverts on invest over balance", async () => {
-        const balance = Q18.mul(76.42871);
+        const balance = Q18.times(76.42871);
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(
           commitFunds(investor, balance.add(1), balance.add(1), neumarks),
@@ -276,8 +277,8 @@ contract(
       });
 
       it("reverts on overflow 2**112", async () => {
-        const balance = Q18.mul(7635.18727);
-        const ticket = new web3.BigNumber(2).pow(112).add(1);
+        const balance = Q18.times(7635.18727);
+        const ticket = new BigNumber(2).pow(112).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(commitFunds(investor, ticket, balance, neumarks)).to.be.rejectedWith(
           "NF_LOCKED_NO_FUNDS",
@@ -285,7 +286,7 @@ contract(
       });
 
       it("reverts on investing 0 wei", async () => {
-        const balance = Q18.mul(7635.18727);
+        const balance = Q18.times(7635.18727);
         const neumarks = await lock(investor, balance, makeDeposit);
         await expect(commitFunds(investor, 0, balance, neumarks)).to.be.rejectedWith(
           "NF_LOCKED_NO_ZERO",
@@ -293,9 +294,9 @@ contract(
       });
 
       it("reverts on investment in unregistered commitment", async () => {
-        const balance = Q18.mul(15271.1812);
+        const balance = Q18.times(15271.1812);
         await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(671.2891));
+        const ticket = balance.minus(Q18.times(671.2891));
         await universe.setCollectionInterface(
           knownInterfaces.commitmentInterface,
           commitment1.address,
@@ -308,12 +309,12 @@ contract(
       });
 
       it("should invest balance in tranches", async () => {
-        const balance = Q18.mul(77837.87162173).add(1);
+        const balance = Q18.times(77837.87162173).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const tranche1 = Q18.mul(0.76281).sub(1);
-        const tranche2 = Q18.mul(8732.1882192).add(1);
-        const tranche3 = Q18.mul(12812.38923);
-        const tranche4 = Q18.mul(6.29832);
+        const tranche1 = Q18.times(0.76281).minus(1);
+        const tranche2 = Q18.times(8732.1882192).add(1);
+        const tranche3 = Q18.times(12812.38923);
+        const tranche4 = Q18.times(6.29832);
         const ticket = tranche1
           .add(tranche2)
           .add(tranche3)
@@ -326,21 +327,21 @@ contract(
         expect(pending[0]).to.be.bignumber.eq(ticket);
         expect(pending[1]).to.be.bignumber.eq(calcNeuRelease(neumarks, ticket, balance));
         // totals
-        expect(await lockedAccount.totalLockedAmount()).to.be.bignumber.eq(balance.sub(ticket));
+        expect(await lockedAccount.totalLockedAmount()).to.be.bignumber.eq(balance.minus(ticket));
         const lockedBalance = await lockedAccount.balanceOf(investor);
-        expect(lockedBalance[0]).to.be.bignumber.eq(balance.sub(ticket));
+        expect(lockedBalance[0]).to.be.bignumber.eq(balance.minus(ticket));
         expect(lockedBalance[1]).to.be.bignumber.eq(
-          calcNeuRelease(neumarks, balance.sub(ticket), balance),
+          calcNeuRelease(neumarks, balance.minus(ticket), balance),
         );
       });
 
       it("should invest 1 wei in final tranche", async () => {
         // spending whole balance in tranches
-        const balance = Q18.mul(876.2810821);
+        const balance = Q18.times(876.2810821);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const tranche1 = Q18.mul(121.76281).sub(1);
-        const tranche2 = balance.sub(tranche1.add(1));
-        const tranche3 = new web3.BigNumber(1);
+        const tranche1 = Q18.times(121.76281).minus(1);
+        const tranche2 = balance.minus(tranche1.add(1));
+        const tranche3 = new BigNumber(1);
 
         await commitFunds(investor, tranche1, balance, neumarks);
         await commitFunds(investor, tranche2, balance, neumarks);
@@ -361,10 +362,10 @@ contract(
       });
 
       it("should invest in multiple commitments", async () => {
-        const balance = Q18.mul(7281.2810821).add(1);
+        const balance = Q18.times(7281.2810821).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket1 = Q18.mul(1121.776281).sub(1);
-        const ticket2 = balance.sub(ticket1);
+        const ticket1 = Q18.times(1121.776281).minus(1);
+        const ticket2 = balance.minus(ticket1);
 
         await commitFunds(investor, ticket1, balance, neumarks);
         await commitFunds(investor, ticket2, balance, neumarks, commitment2);
@@ -374,12 +375,12 @@ contract(
         expect(pending1[0]).to.be.bignumber.eq(ticket1);
         expect(pending1[1]).to.be.bignumber.eq(neuTicket1);
         const pending2 = await lockedAccount.pendingCommitments(commitment2.address, investor);
-        const neuTicket2 = calcNeuRelease(neumarks.sub(neuTicket1), ticket2, balance.sub(ticket1));
+        const neuTicket2 = calcNeuRelease(neumarks.minus(neuTicket1), ticket2, balance.minus(ticket1));
         expect(pending2[0]).to.be.bignumber.eq(ticket2);
         expect(pending2[1]).to.be.bignumber.eq(neuTicket2);
 
         let icbmBalance = await lockedAccount.balanceOf(investor);
-        const remainingBalance = balance.sub(ticket1).sub(ticket2);
+        const remainingBalance = balance.minus(ticket1).minus(ticket2);
         expect(icbmBalance[0]).to.be.bignumber.eq(remainingBalance);
         expect(icbmBalance[1]).to.be.bignumber.eq(
           calcNeuRelease(neumarks, remainingBalance, balance),
@@ -388,8 +389,8 @@ contract(
         // refund 2
         await commitment2.refund(lockedAccount.address, { from: investor });
         icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket1));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(neuTicket1));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket1));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(neuTicket1));
         // refund 1
         await commitment1.refund(lockedAccount.address, { from: investor });
         icbmBalance = await lockedAccount.balanceOf(investor);
@@ -398,9 +399,9 @@ contract(
       });
 
       it("should get refund", async () => {
-        const balance = Q18.mul(1571.1812);
+        const balance = Q18.times(1571.1812);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(671.2891).add(1));
+        const ticket = balance.minus(Q18.times(671.2891).add(1));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
         let commitment = await lockedAccount.pendingCommitments(commitment1.address, investor);
         expect(commitment[0]).to.be.bignumber.eq(ticket);
@@ -419,9 +420,9 @@ contract(
       });
 
       it("should claim", async () => {
-        const balance = Q18.mul(1571.1812);
+        const balance = Q18.times(1571.1812);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(671.2891).add(1));
+        const ticket = balance.minus(Q18.times(671.2891).add(1));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
         let commitment = await lockedAccount.pendingCommitments(commitment1.address, investor);
         expect(commitment[0]).to.be.bignumber.eq(ticket);
@@ -431,21 +432,21 @@ contract(
         expect(commitment[0]).to.be.bignumber.eq(0);
         expect(commitment[1]).to.be.bignumber.eq(0);
         const icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu));
       });
 
       it("should get refund from multiple tranches", async () => {
-        const balance = Q18.mul(1571.1812).add(1);
+        const balance = Q18.times(1571.1812).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(671.2891));
+        const ticket = balance.minus(Q18.times(671.2891));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
-        const ticket2 = Q18.mul(32.182112).sub(1);
+        const ticket2 = Q18.times(32.182112).minus(1);
         const releasedNeu2 = await commitFunds(
           investor,
           ticket2,
-          balance.sub(ticket),
-          neumarks.sub(releasedNeu),
+          balance.minus(ticket),
+          neumarks.minus(releasedNeu),
         );
         const commitment = await lockedAccount.pendingCommitments(commitment1.address, investor);
         expect(commitment[0]).to.be.bignumber.eq(ticket.add(ticket2));
@@ -467,21 +468,21 @@ contract(
       });
 
       it("should get refund from many commitments", async () => {
-        const balance = Q18.mul(1571.1812);
+        const balance = Q18.times(1571.1812);
         const neumarks = await lock(investor, balance, makeDeposit);
 
-        const ticket = balance.sub(Q18.mul(671.2891));
+        const ticket = balance.minus(Q18.times(671.2891));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
         const committed = await lockedAccount.pendingCommitments(commitment1.address, investor);
         expect(committed[0]).to.be.bignumber.eq(ticket);
         expect(committed[1]).to.be.bignumber.eq(releasedNeu);
 
-        const ticket2 = Q18.mul(32.182112);
+        const ticket2 = Q18.times(32.182112);
         const releasedNeu2 = await commitFunds(
           investor,
           ticket2,
-          balance.sub(ticket),
-          neumarks.sub(releasedNeu),
+          balance.minus(ticket),
+          neumarks.minus(releasedNeu),
           commitment2,
         );
         const committed2 = await lockedAccount.pendingCommitments(commitment2.address, investor);
@@ -494,8 +495,8 @@ contract(
         expectLogFundsRefunded(tx, investor, commitment1.address, ticket, releasedNeu);
         // commitment 2 money is not back, remove from balance
         const icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket2));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu2));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket2));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu2));
 
         const tx2 = await commitment2.refund(lockedAccount.address, { from: investor });
         const logs2 = decodeLogs(tx2, lockedAccount.address, lockedAccount.abi);
@@ -509,7 +510,7 @@ contract(
 
       it("should ignore refunds if not invested before", async () => {
         // check unknown commitment contract, investor and when there was no preceding investment
-        const balance = Q18.mul(761.7212).add(1);
+        const balance = Q18.times(761.7212).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
         await commitFunds(investor, balance, balance, neumarks);
         let icbmBalance = await lockedAccount.balanceOf(investor);
@@ -520,7 +521,7 @@ contract(
       });
 
       it("should ignore duplicate refunds", async () => {
-        const balance = Q18.mul(761.7212).add(1);
+        const balance = Q18.times(761.7212).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
         await commitFunds(investor, balance, balance, neumarks);
         let icbmBalance = await lockedAccount.balanceOf(investor);
@@ -534,19 +535,19 @@ contract(
       });
 
       it("reverts on refund if account unlocked", async () => {
-        const balance = Q18.mul(761.7212).add(1);
+        const balance = Q18.times(761.7212).add(1);
         const neumarks = await lock(investor, balance, makeDeposit);
         const releasedNeu = await commitFunds(investor, Q18, balance, neumarks);
-        await unlockWithApprove(investor, neumarks.sub(releasedNeu));
+        await unlockWithApprove(investor, neumarks.minus(releasedNeu));
         await expect(
           commitment1.refund(lockedAccount.address, { from: investor }),
         ).to.be.rejectedWith("NF_LOCKED_ACCOUNT_LIQUIDATED");
       });
 
       it("should not refund after claim", async () => {
-        const balance = Q18.mul(8716.111812);
+        const balance = Q18.times(8716.111812);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(1671.28991));
+        const ticket = balance.minus(Q18.times(1671.28991));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
 
         await commitment1.claim(lockedAccount.address, { from: investor });
@@ -558,42 +559,42 @@ contract(
         expect(hasEvent(tx, "LogFundsRefunded")).to.be.false;
         // funds were spent
         const icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu));
       });
 
       it("should refund from commitment 1 and claim from  commitment 2", async () => {
-        const balance = Q18.mul(8716.111812).sub(3);
+        const balance = Q18.times(8716.111812).minus(3);
         const neumarks = await lock(investor, balance, makeDeposit);
-        const ticket = balance.sub(Q18.mul(1671.28991));
+        const ticket = balance.minus(Q18.times(1671.28991));
         const releasedNeu = await commitFunds(investor, ticket, balance, neumarks);
-        const ticket2 = Q18.mul(0.219280912).add(1);
+        const ticket2 = Q18.times(0.219280912).add(1);
         const releasedNeu2 = await commitFunds(
           investor,
           ticket2,
-          balance.sub(ticket),
-          neumarks.sub(releasedNeu),
+          balance.minus(ticket),
+          neumarks.minus(releasedNeu),
           commitment2,
         );
         let icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket).sub(ticket2));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu).sub(releasedNeu2));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket).minus(ticket2));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu).minus(releasedNeu2));
         // refund 1
         await commitment1.refund(lockedAccount.address, { from: investor });
         icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket2));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu2));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket2));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu2));
         // claim2
         await commitment2.claim(lockedAccount.address, { from: investor });
         icbmBalance = await lockedAccount.balanceOf(investor);
-        expect(icbmBalance[0]).to.be.bignumber.eq(balance.sub(ticket2));
-        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.sub(releasedNeu2));
+        expect(icbmBalance[0]).to.be.bignumber.eq(balance.minus(ticket2));
+        expect(icbmBalance[1]).to.be.bignumber.eq(neumarks.minus(releasedNeu2));
       });
 
       it("should silently ignore unexpected claims", async () => {
         // non existing investor
         await commitment1.claim(lockedAccount.address, { from: investor });
-        const balance = Q18.mul(8716.111812);
+        const balance = Q18.times(8716.111812);
         const neumarks = await lock(investor, balance, makeDeposit);
         let icbmBalance = await lockedAccount.balanceOf(investor);
         expect(icbmBalance[0]).to.be.bignumber.eq(balance);
@@ -601,7 +602,7 @@ contract(
         icbmBalance = await lockedAccount.balanceOf(investor);
         expect(icbmBalance[0]).to.be.bignumber.eq(balance);
 
-        const ticket = balance.sub(Q18.mul(1671.28991));
+        const ticket = balance.minus(Q18.times(1671.28991));
         await commitFunds(investor, ticket, balance, neumarks);
 
         await commitment2.claim(lockedAccount.address, { from: investor });
@@ -610,7 +611,7 @@ contract(
 
     function lockedAccountMigrationTestCases(makeDeposit) {
       function splitNeu(tranche, ticket, neumarks) {
-        return divRound(tranche.mul(neumarks), ticket);
+        return divRound(tranche.times(neumarks), ticket);
       }
       async function addOne(
         ticket,
@@ -618,7 +619,7 @@ contract(
         finalMigration = true,
         initialMigration = true,
       ) {
-        const neumarks = ticket.mul(6.5).round(0, 4);
+        const neumarks = ticket.times(6.5).round(0, 4);
         // lock investor
         await makeDeposit(investorAddress, controller.address, ticket);
         await controller.investToken(neumarks, { from: investorAddress });
@@ -638,7 +639,7 @@ contract(
       }
 
       async function migrateOne(ticket, investorAddress, destinationAddress, allowMerge = false) {
-        const neumarks = ticket.mul(6.5).round(0, 4);
+        const neumarks = ticket.times(6.5).round(0, 4);
         const initialLockedAmount = await lockedAccount.totalLockedAmount();
         const initialIcbmLockedAmount = await icbmLockedAccount.totalLockedAmount();
         const initialNumberOfInvestors = await lockedAccount.totalInvestors();
@@ -648,11 +649,7 @@ contract(
         const assetBalanceSourceBefore = await icbmAssetToken.balanceOf.call(
           icbmLockedAccount.address,
         );
-        let investorBalanceTargetBefore = [
-          new web3.BigNumber(0),
-          new web3.BigNumber(0),
-          new web3.BigNumber(0),
-        ];
+        let investorBalanceTargetBefore = [new BigNumber(0), new BigNumber(0), new BigNumber(0)];
         if (allowMerge) {
           investorBalanceTargetBefore = await lockedAccount.balanceOf(destinationAddress);
         }
@@ -671,13 +668,13 @@ contract(
         );
         // check invariants
         expect(await icbmLockedAccount.totalLockedAmount()).to.be.bignumber.equal(
-          initialIcbmLockedAmount.sub(ticket),
+          initialIcbmLockedAmount.minus(ticket),
         );
         expect(await lockedAccount.totalLockedAmount()).to.be.bignumber.equal(
           initialLockedAmount.add(ticket),
         );
         expect(await icbmLockedAccount.totalInvestors()).to.be.bignumber.equal(
-          initialIcbmNumberOfInvestors.sub(1),
+          initialIcbmNumberOfInvestors.minus(1),
         );
         let newInvestors = 1;
         if (allowMerge && !investorBalanceTargetBefore[2].eq(0)) {
@@ -696,7 +693,7 @@ contract(
           icbmLockedAccount.address,
         );
         const assetBalanceTargetAfter = await assetToken.balanceOf.call(lockedAccount.address);
-        expect(assetBalanceSourceAfter).to.be.bignumber.eq(assetBalanceSourceBefore.sub(ticket));
+        expect(assetBalanceSourceAfter).to.be.bignumber.eq(assetBalanceSourceBefore.minus(ticket));
         expect(assetBalanceTargetAfter).to.be.bignumber.eq(assetBalanceTargetBefore.add(ticket));
         // check balance in new locked account
         const investorBalanceTargetAfter = await lockedAccount.balanceOf(destinationAddress);
@@ -717,20 +714,20 @@ contract(
 
       it("reverts on call migrateInvestor not from source", async () => {
         await expect(
-          lockedAccount.migrateInvestor(investor, Q18.mul(1), Q18.mul(1), startTimestamp, {
+          lockedAccount.migrateInvestor(investor, Q18.times(1), Q18.times(1), startTimestamp, {
             from: admin,
           }),
         ).to.be.rejectedWith("NF_INV_SOURCE");
       });
 
       it("should migrate investor", async () => {
-        const ticket = Q18.mul(781.28192);
+        const ticket = Q18.times(781.28192);
         await addOne(ticket, investor);
         await migrateOne(ticket, investor, investor);
       });
 
       it("migrate same investor twice should do nothing", async () => {
-        const ticket = Q18.mul(711.28192).add(1);
+        const ticket = Q18.times(711.28192).add(1);
         await addOne(ticket, investor);
         await migrateOne(ticket, investor, investor);
         const tx = await icbmLockedAccount.migrate({ from: investor });
@@ -738,7 +735,7 @@ contract(
       });
 
       it("migrate non existing investor should do nothing", async () => {
-        const ticket = Q18.mul(719.98192);
+        const ticket = Q18.times(719.98192);
         await addOne(ticket, investor);
         await migrateOne(ticket, investor, investor);
         const tx = await icbmLockedAccount.migrate({ from: investor2 });
@@ -746,8 +743,8 @@ contract(
       });
 
       it("should migrate two", async () => {
-        const ticket1 = Q18.mul(761.87178912);
-        const ticket2 = Q18.mul(8728.82812).sub(1);
+        const ticket1 = Q18.times(761.87178912);
+        const ticket2 = Q18.times(8728.82812).minus(1);
         await addOne(ticket1, investor, false);
         await addOne(ticket2, investor2, true, false);
         await migrateOne(ticket1, investor, investor);
@@ -755,7 +752,7 @@ contract(
       });
 
       it("should migrate to different destination address", async () => {
-        const ticket = Q18.mul(37.172121);
+        const ticket = Q18.times(37.172121);
         await addOne(ticket, investor);
         // destination wallet must be verified
         await setClaims(investor2);
@@ -771,8 +768,8 @@ contract(
       });
 
       it("should not squat existing investor", async () => {
-        const ticket1 = Q18.mul(761.87178912);
-        const ticket2 = Q18.mul(871628.82812).add(1);
+        const ticket1 = Q18.times(761.87178912);
+        const ticket2 = Q18.times(871628.82812).add(1);
         await addOne(ticket1, investor, false);
         await addOne(ticket2, investor2, true, false);
         await setClaims(investor2);
@@ -789,8 +786,8 @@ contract(
       });
 
       it("should merge two migrations via destination address", async () => {
-        const ticket1 = Q18.mul(761.87178912);
-        const ticket2 = Q18.mul(871628.82812).add(1);
+        const ticket1 = Q18.times(761.87178912);
+        const ticket2 = Q18.times(871628.82812).add(1);
         await addOne(ticket1, investor, false);
         await addOne(ticket2, investor2, true, false);
         await setClaims(investor3);
@@ -803,8 +800,8 @@ contract(
       });
 
       it("should merge two migrations via destination address with later unlock date", async () => {
-        const ticket1 = Q18.mul(761.87178912);
-        const ticket2 = Q18.mul(5162112.82812);
+        const ticket1 = Q18.times(761.87178912);
+        const ticket2 = Q18.times(5162112.82812);
         await addOne(ticket1, investor, false);
         await increaseTime(daysToSeconds(3));
         await addOne(ticket2, investor2, true, false);
@@ -825,7 +822,7 @@ contract(
         expect(destinations[0]).to.be.empty;
         expect(destinations[1]).to.be.empty;
         // investor2 is investing
-        const ticket2 = Q18.mul(8728.182812);
+        const ticket2 = Q18.times(8728.182812);
         await addOne(ticket2, investor2);
         // will set many destinations
         await setClaims(investor4);
@@ -836,9 +833,9 @@ contract(
         expectLogMigrationDestination(tx, 0, investor2, investor3, 0);
         destinations = await lockedAccount.getInvestorMigrationWallets(investor2);
         expect(destinations[0]).to.deep.eq([investor3]);
-        expect(destinations[1]).to.deep.eq([new web3.BigNumber(0)]);
+        expect(destinations[1]).to.deep.eq([new BigNumber(0)]);
         // set multiple destinations
-        const ticket3 = Q18.mul(817.213);
+        const ticket3 = Q18.times(817.213);
         tx = await lockedAccount.setInvestorMigrationWallets([investor, investor3], [ticket3, 0], {
           from: investor2,
         });
@@ -847,13 +844,13 @@ contract(
         destinations = await lockedAccount.getInvestorMigrationWallets(investor2);
         expect(destinations[0]).to.deep.eq([investor, investor3]);
         // console.log(destinations[1]);
-        // console.log([ticket3, new web3.BigNumber(0)]);
-        // expect(destinations[1]).to.have.same.deep.members([ticket3, new web3.BigNumber(0)]);
+        // console.log([ticket3, new BigNumber(0)]);
+        // expect(destinations[1]).to.have.same.deep.members([ticket3, new BigNumber(0)]);
         // set single destination again - to yourself
         tx = await lockedAccount.setInvestorMigrationWallet(investor2, { from: investor2 });
         destinations = await lockedAccount.getInvestorMigrationWallets(investor2);
         expect(destinations[0]).to.deep.eq([investor2]);
-        expect(destinations[1]).to.deep.eq([new web3.BigNumber(0)]);
+        expect(destinations[1]).to.deep.eq([new BigNumber(0)]);
         expectLogMigrationDestination(tx, 0, investor2, investor2, 0);
         await migrateOne(ticket2, investor2, investor2);
         destinations = await lockedAccount.getInvestorMigrationWallets(investor2);
@@ -862,7 +859,7 @@ contract(
       });
 
       it("rejects on overspend during split", async () => {
-        const ticket2 = Q18.mul(8728.182812);
+        const ticket2 = Q18.times(8728.182812);
         await addOne(ticket2, investor2);
         await setClaims(investor2);
         await setClaims(investor3);
@@ -880,9 +877,9 @@ contract(
           "NF_LOCKED_ACCOUNT_SPLIT_OVERSPENT",
         );
         // equal spend (in tranches) will pass
-        const tranche1 = Q18.mul(0.289182);
-        const tranche2 = Q18.mul(837.21983);
-        const tranche3 = Q18.mul(5281.93892932);
+        const tranche1 = Q18.times(0.289182);
+        const tranche2 = Q18.times(837.21983);
+        const tranche3 = Q18.times(5281.93892932);
         await lockedAccount.setInvestorMigrationWallets(
           [investor2, investor2, investor2, investor2],
           [tranche1, tranche2, tranche3, 0],
@@ -892,12 +889,12 @@ contract(
       });
 
       it("rejects on underspend during split", async () => {
-        const ticket2 = Q18.mul(9128.817231);
+        const ticket2 = Q18.times(9128.817231);
         await addOne(ticket2, investor2);
         await setClaims(investor2);
         await setClaims(investor3);
         // tries to underspend
-        await lockedAccount.setInvestorMigrationWallets([investor2], [ticket2.sub(1)], {
+        await lockedAccount.setInvestorMigrationWallets([investor2], [ticket2.minus(1)], {
           from: investor2,
         });
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
@@ -905,20 +902,20 @@ contract(
         );
         await lockedAccount.setInvestorMigrationWallets(
           [investor2, investor3],
-          [ticket2.sub(2), 1],
+          [ticket2.minus(2), 1],
           { from: investor2 },
         );
         await expect(migrateOne(ticket2.add(1), investor2, investor2)).to.be.rejectedWith(
           "NF_LOCKED_ACCOUNT_SPLIT_UNDERSPENT",
         );
         // equal spend (in tranches) will pass
-        const tranche1 = Q18.mul(1.873289182);
-        const tranche2 = Q18.mul(8371.8732);
-        const tranche3 = Q18.mul(65.918827817);
+        const tranche1 = Q18.times(1.873289182);
+        const tranche2 = Q18.times(8371.8732);
+        const tranche3 = Q18.times(65.918827817);
         const tranche4 = ticket2
-          .sub(tranche1)
-          .sub(tranche2)
-          .sub(tranche3);
+          .minus(tranche1)
+          .minus(tranche2)
+          .minus(tranche3);
         await lockedAccount.setInvestorMigrationWallets(
           [investor2, investor2, investor2, investor2],
           [tranche1, tranche2, tranche3, tranche4],
@@ -929,7 +926,7 @@ contract(
 
       it("should split into many separate destinations", async () => {
         // investor2 is investing
-        const ticket2 = Q18.mul(81728.182812);
+        const ticket2 = Q18.times(81728.182812);
         const neumarks = await addOne(ticket2, investor2);
         const initialBalance = await icbmLockedAccount.balanceOf(investor2);
         // split into 4 accounts including himself
@@ -938,13 +935,13 @@ contract(
         await setClaims(investor3);
         await setClaims(investor2);
         // define splits
-        const tranche1 = Q18.mul(8217.281).sub(1);
-        const tranche2 = Q18.mul(451.182).add(1);
-        const tranche3 = Q18.mul(0.9992182);
+        const tranche1 = Q18.times(8217.281).minus(1);
+        const tranche2 = Q18.times(451.182).add(1);
+        const tranche3 = Q18.times(0.9992182);
         const tranche4 = ticket2
-          .sub(tranche1)
-          .sub(tranche2)
-          .sub(tranche3);
+          .minus(tranche1)
+          .minus(tranche2)
+          .minus(tranche3);
         await lockedAccount.setInvestorMigrationWallets(
           [investor4, investor, investor3, investor2],
           [tranche1, tranche2, tranche3, tranche4],
@@ -954,22 +951,22 @@ contract(
         const tx = await icbmLockedAccount.migrate({ from: investor2 });
         // expect 4 locked events
         const tranche1Neu = splitNeu(tranche1, ticket2, neumarks);
-        const tranche2Neu = splitNeu(tranche2, ticket2.sub(tranche1), neumarks.sub(tranche1Neu));
+        const tranche2Neu = splitNeu(tranche2, ticket2.minus(tranche1), neumarks.minus(tranche1Neu));
         const tranche3Neu = splitNeu(
           tranche3,
-          ticket2.sub(tranche1).sub(tranche2),
-          neumarks.sub(tranche1Neu).sub(tranche2Neu),
+          ticket2.minus(tranche1).minus(tranche2),
+          neumarks.minus(tranche1Neu).minus(tranche2Neu),
         );
         const tranche4Neu = splitNeu(
           tranche4,
           ticket2
-            .sub(tranche1)
-            .sub(tranche2)
-            .sub(tranche3),
+            .minus(tranche1)
+            .minus(tranche2)
+            .minus(tranche3),
           neumarks
-            .sub(tranche1Neu)
-            .sub(tranche2Neu)
-            .sub(tranche3Neu),
+            .minus(tranche1Neu)
+            .minus(tranche2Neu)
+            .minus(tranche3Neu),
         );
         expectLockEvent(tx, 0, investor4, tranche1, tranche1Neu);
         expectLockEvent(tx, 1, investor, tranche2, tranche2Neu);
@@ -998,9 +995,9 @@ contract(
         // investor2 splits into 3 investor, investor3 and investor4
         // investor merges into investor3
         // investor4 splits into investor4 and investor3
-        const ticket = Q18.mul(763.91982);
-        const ticket2 = Q18.mul(81728.182812);
-        const ticket4 = Q18.mul(1652.8821);
+        const ticket = Q18.times(763.91982);
+        const ticket2 = Q18.times(81728.182812);
+        const ticket4 = Q18.times(1652.8821);
         const neumarks = await addOne(ticket, investor, false);
         const neumarks2 = await addOne(ticket2, investor2, false, false);
         const neumarks4 = await addOne(ticket4, investor4, true, false);
@@ -1009,8 +1006,8 @@ contract(
         await setClaims(investor3);
         await setClaims(investor2);
         // split 4
-        const tranche43 = Q18.mul(76.18721);
-        const tranche4 = ticket4.sub(tranche43);
+        const tranche43 = Q18.times(76.18721);
+        const tranche4 = ticket4.minus(tranche43);
         await lockedAccount.setInvestorMigrationWallets(
           [investor3, investor4],
           [tranche43, tranche4],
@@ -1027,9 +1024,9 @@ contract(
         // expect 2 locked events
         expectLockEvent(tx, 0, investor3, ticket, neumarks);
         // split 2
-        const tranche21 = Q18.mul(671.2812);
-        const tranche23 = Q18.mul(1.9992182);
-        const tranche24 = ticket2.sub(tranche21).sub(tranche23);
+        const tranche21 = Q18.times(671.2812);
+        const tranche23 = Q18.times(1.9992182);
+        const tranche24 = ticket2.minus(tranche21).minus(tranche23);
         await lockedAccount.setInvestorMigrationWallets(
           [investor, investor3, investor4],
           [tranche21, tranche23, tranche24],
@@ -1076,8 +1073,8 @@ contract(
         if (assetToken.address === (await universe.etherToken())) {
           return;
         }
-        const overflow = Q18.mul(50.49);
-        const ticket = new web3.BigNumber(2).pow(112).add(overflow);
+        const overflow = Q18.times(50.49);
+        const ticket = new BigNumber(2).pow(112).add(overflow);
         await addOne(overflow, investor);
         // destination wallet must be verified
         await setClaims(investor);
@@ -1096,8 +1093,8 @@ contract(
         if (assetToken.address === (await universe.etherToken())) {
           return;
         }
-        const overflow = new web3.BigNumber(1);
-        const ticket = new web3.BigNumber(2).pow(112).add(overflow);
+        const overflow = new BigNumber(1);
+        const ticket = new BigNumber(2).pow(112).add(overflow);
         await addOne(ticket, investor);
         // destination wallet must be verified
         await setClaims(investor);
@@ -1164,8 +1161,8 @@ contract(
         );
         await assertCorrectUnlock(unlockTx, investor, ticket, penalty);
         await expectPenaltyEvent(unlockTx, investor, penalty);
-        expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        expectUnlockEvent(unlockTx, investor, ticket.minus(penalty), neumarks);
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock two investors both with penalty", async () => {
@@ -1178,7 +1175,7 @@ contract(
         const penalty1 = await calculateUnlockPenalty(ticket1);
         await expectPenaltyEvent(unlockTx, investor, penalty1);
         await expectPenaltyBalance(penalty1);
-        expectUnlockEvent(unlockTx, investor, ticket1.sub(penalty1), neumarks1);
+        expectUnlockEvent(unlockTx, investor, ticket1.minus(penalty1), neumarks1);
         expect(await neumark.balanceOf(investor2)).to.be.bignumber.eq(neumarks2);
         expect(await neumark.totalSupply()).to.be.bignumber.eq(neumarks2);
         expect(await assetToken.balanceOf(lockedAccount.address)).to.be.bignumber.eq(ticket2);
@@ -1188,7 +1185,7 @@ contract(
         const penalty2 = await calculateUnlockPenalty(ticket2);
         await expectPenaltyEvent(unlockTx, investor2, penalty2);
         await expectPenaltyBalance(penalty1.add(penalty2));
-        expectUnlockEvent(unlockTx, investor2, ticket2.sub(penalty2), neumarks2);
+        expectUnlockEvent(unlockTx, investor2, ticket2.minus(penalty2), neumarks2);
       });
 
       it("should reject unlock with approval on contract disbursal that has tokenFallback not implemented", async () => {
@@ -1211,8 +1208,8 @@ contract(
         const penalty = await calculateUnlockPenalty(ticket);
         await assertCorrectUnlock(unlockTx, investor, ticket, penalty);
         await expectPenaltyEvent(unlockTx, investor, penalty);
-        expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        expectUnlockEvent(unlockTx, investor, ticket.minus(penalty), neumarks);
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock with approveAndCall on simple address disbursal", async () => {
@@ -1225,9 +1222,9 @@ contract(
         const logs = decodeLogs(unlockTx, lockedAccount.address, lockedAccount.abi);
         unlockTx.logs.push(...logs);
         await expectPenaltyEvent(unlockTx, investor, penalty);
-        expectUnlockEvent(unlockTx, investor, ticket.sub(penalty), neumarks);
+        expectUnlockEvent(unlockTx, investor, ticket.minus(penalty), neumarks);
         expectNeumarksBurnedEvent(unlockTx, lockedAccount.address, ticket, neumarks);
-        await makeWithdraw(investor, ticket.sub(penalty));
+        await makeWithdraw(investor, ticket.minus(penalty));
       });
 
       it("should unlock with approveAndCall on real FeeDisbursal", async () => {
@@ -1253,7 +1250,7 @@ contract(
 
       it("should silently exit on unlock of non-existing investor", async () => {
         await setPenaltyDisbursal(operatorWallet);
-        const unlockTx = await unlockWithCallback(investor, new web3.BigNumber(1));
+        const unlockTx = await unlockWithCallback(investor, new BigNumber(1));
         const events = unlockTx.logs.filter(e => e.event === "LogFundsUnlocked");
         expect(events).to.be.empty;
       });
@@ -1271,7 +1268,7 @@ contract(
         const neumarks2 = await lock(investor2, ticket, makeDeposit);
         await setPenaltyDisbursal(testDisbursal.address);
         // simulate trade
-        const tradedAmount = neumarks2.mul(0.71389012).round(0);
+        const tradedAmount = neumarks2.times(0.71389012).round(0);
         await neumark.transfer(investor, tradedAmount, {
           from: investor2,
         });
@@ -1287,12 +1284,12 @@ contract(
         const neumarks = await lock(investor, ticket, makeDeposit);
         await setPenaltyDisbursal(testDisbursal.address);
         // change to mul(0) for test to fail
-        const tradedAmount = neumarks.mul(0.71389012).round(0);
+        const tradedAmount = neumarks.times(0.71389012).round(0);
         await neumark.transfer(investor2, tradedAmount, {
           from: investor,
         });
         await expect(
-          neumark.approveAndCall(lockedAccount.address, neumarks.sub(tradedAmount), "", {
+          neumark.approveAndCall(lockedAccount.address, neumarks.minus(tradedAmount), "", {
             from: investor,
           }),
         ).to.be.rejectedWith(EvmError);
@@ -1303,7 +1300,7 @@ contract(
         const neumarks = await lock(investor, ticket, makeDeposit);
         await setPenaltyDisbursal(testDisbursal.address);
         // allow 1/3 amount
-        await neumark.approve(lockedAccount.address, neumarks.mul(0.3), {
+        await neumark.approve(lockedAccount.address, neumarks.times(0.3), {
           from: investor,
         });
         await expect(lockedAccount.unlock({ from: investor })).to.be.rejectedWith(EvmError);
@@ -1314,7 +1311,7 @@ contract(
         const neumarks = await lock(investor, ticket, makeDeposit);
         await setPenaltyDisbursal(testDisbursal.address);
         // simulate trade
-        const tradedAmount = neumarks.mul(0.71389012).round(0);
+        const tradedAmount = neumarks.times(0.71389012).round(0);
         await neumark.transfer(investor2, tradedAmount, {
           from: investor,
         });
@@ -1384,8 +1381,8 @@ contract(
         const penalty2 = await calculateUnlockPenalty(ticket2);
         await expectPenaltyEvent(unlockTx, investor2, penalty2);
         await expectPenaltyBalance(penalty2);
-        expectUnlockEvent(unlockTx, investor2, ticket2.sub(penalty2), neumarks2);
-        await makeWithdraw(investor2, ticket2.sub(penalty2));
+        expectUnlockEvent(unlockTx, investor2, ticket2.minus(penalty2), neumarks2);
+        await makeWithdraw(investor2, ticket2.minus(penalty2));
       });
 
       it("should reject unlock if disbursal pool is not set");
@@ -1427,9 +1424,9 @@ contract(
           from: admin,
           gasPrice,
         });
-        const gasCost = gasPrice.mul(tx.receipt.gasUsed);
+        const gasCost = gasPrice.times(tx.receipt.gasUsed);
         const adminEthAfterBalance = await promisify(web3.eth.getBalance)(admin);
-        expect(adminEthAfterBalance).to.be.bignumber.eq(adminEthBalance.add(amount).sub(gasCost));
+        expect(adminEthAfterBalance).to.be.bignumber.eq(adminEthBalance.add(amount).minus(gasCost));
       });
     }
 
@@ -1475,7 +1472,7 @@ contract(
       expect(investorBalance[0]).to.be.bignumber.equal(ticket.add(initialLockedBalance[0]));
       expect(investorBalance[1]).to.be.bignumber.equal(neumarks.add(initialLockedBalance[1]));
       // verify longstop date independently
-      let unlockDate = new web3.BigNumber(timebase + 18 * 30 * dayInSeconds);
+      let unlockDate = new BigNumber(timebase + 18 * 30 * dayInSeconds);
       if (initialLockedBalance[2] > 0) {
         // earliest date is preserved for repeated investor address
         unlockDate = initialLockedBalance[2];
@@ -1534,7 +1531,7 @@ contract(
     }
 
     async function calculateUnlockPenalty(ticket) {
-      return ticket.mul(await lockedAccount.penaltyFraction()).div(etherToWei(1));
+      return ticket.times(await lockedAccount.penaltyFraction()).div(etherToWei(1));
     }
 
     async function assertCorrectUnlock(tx, investorAddress, ticket, penalty) {
@@ -1658,7 +1655,7 @@ contract(
       // apply settings on token controller - again
       await universe.setSingleton(knownInterfaces.feeDisbursal, disbursalAddress, { from: admin });
       if (tokenController) {
-        await tokenController.applySettings(Q18.mul(0), Q18.mul(0), Q18.mul(50), { from: admin });
+        await tokenController.applySettings(Q18.times(0), Q18.times(0), Q18.times(50), { from: admin });
       }
     }
 

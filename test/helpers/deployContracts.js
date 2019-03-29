@@ -1,3 +1,4 @@
+import { BigNumber } from "./bignumber";
 import { TriState, GLOBAL } from "./triState";
 import roles from "./roles";
 import { knownInterfaces } from "./knownInterfaces";
@@ -202,11 +203,11 @@ export async function deploySimpleExchangeUniverse(
 }
 
 export const defaultPlatformTerms = {
-  PLATFORM_FEE_FRACTION: Q18.mul(0.03),
-  TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul(0.02),
-  PLATFORM_NEUMARK_SHARE: new web3.BigNumber(2),
+  PLATFORM_FEE_FRACTION: Q18.times(0.03),
+  TOKEN_PARTICIPATION_FEE_FRACTION: Q18.times(0.02),
+  PLATFORM_NEUMARK_SHARE: new BigNumber(2),
   IS_ICBM_INVESTOR_WHITELISTED: true,
-  MIN_TICKET_EUR_ULPS: Q18.mul(100),
+  MIN_TICKET_EUR_ULPS: Q18.times(100),
   DATE_TO_WHITELIST_MIN_DURATION: daysToSeconds(7),
   TOKEN_RATE_EXPIRES_AFTER: hoursToSeconds(4),
   MIN_WHITELIST_DURATION: daysToSeconds(0),
