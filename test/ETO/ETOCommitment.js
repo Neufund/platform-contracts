@@ -2665,13 +2665,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   }
 
   async function deployETOTermsConstraints(args = {}) {
+    const two = new web3.BigNumber(2);
     const defaultETOTermsArgs = {
       canSetTransferability: true,
       hasNominee: true,
       minTicketSize: 0,
-      maxTicketSize: Q18.mul(1000000000), // 1b
+      maxTicketSize: two.pow(128),
       minInvestmentAmount: 0,
-      maxInvestmentAmount: Q18.mul(1000000000), // 1b
+      maxInvestmentAmount: two.pow(128),
       name: "Some Constraint",
     };
     const mergedArgs = Object.assign(defaultETOTermsArgs, args);
