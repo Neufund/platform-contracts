@@ -126,7 +126,7 @@ contract ETOTermsConstraints is IContractId {
     // Implements IContractId
     //
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x277dd384c6724be17e45c87c435d78a0384bfb93c0118a888ee7b4c75df9314b, 0);
+        return (0xce2be4f5f23c4a6f67ed925fce56afa57c9c8b274b4dfca8d0b1104aa4a6b53a, 0);
     }
 
 }

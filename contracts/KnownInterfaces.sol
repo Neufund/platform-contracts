@@ -95,5 +95,5 @@ contract KnownInterfaces {
     bytes4 internal constant KNOWN_INTERFACE_PAYMENT_TOKEN = 0xb2a0042a;
 
     // ETO Contraints, aka Products keccak256("ETOTermsConstraints")
-    bytes4 internal constant KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS = 0x277dd384;
+    bytes4 internal constant KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS = 0xce2be4f5;
 }
