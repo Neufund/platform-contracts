@@ -26,6 +26,7 @@ export const artifacts = {
   FEE_DISBURSAL_CONTROLLER: "FeeDisbursalController",
   // interfaces used in migrations
   TOKEN_EXCHANGE_RATE_ORACLE: "ITokenExchangeRateOracle",
+  ETO_TERMS_CONSTRAINTS: "ETITermsConstraints",
   // not implemented
   // PLATFORM_PORTFOLIO: "IPlatformPortfolio"
 };

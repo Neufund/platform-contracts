@@ -43,6 +43,7 @@ import {
 import { expectLogFundsCommitted } from "../helpers/commitment";
 import EvmError from "../helpers/EVMThrow";
 
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const EquityToken = artifacts.require("EquityToken");
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const MockPlaceholderEquityTokenController = artifacts.require(
@@ -88,6 +89,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   let tokenTermsDict;
   let etoTerms;
   let etoTermsDict;
+  // let etoTermsConstraints;
+  // let etoTermsConstraintsDict;
   let shareholderRights;
   // let shareholderTermsDict;
   let durationTerms;
@@ -2661,6 +2664,43 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     }
   }
 
+  async function deployETOTermsConstraints(args = {}) {
+    const defaultETOTermsArgs = {
+      canSetTransferability: true,
+      hasNominee: true,
+      minTicketSize: 0,
+      maxTicketSize: Q18.mul(1000000000), // 1b
+      minInvestmentAmount: 0,
+      maxInvestmentAmount: Q18.mul(1000000000), // 1b
+      name: "Some Constraint",
+    };
+    const mergedArgs = Object.assign(defaultETOTermsArgs, args);
+    const constraints = await ETOTermsConstraints.new(
+      mergedArgs.canSetTransferability,
+      mergedArgs.hasNominee,
+      mergedArgs.minTicketSize,
+      mergedArgs.maxTicketSize,
+      mergedArgs.minInvestmentAmount,
+      mergedArgs.maxInvestmentAmount,
+      mergedArgs.name,
+      // not important for testing purposes
+      0,
+      0,
+      0,
+      0,
+    );
+
+    // add the constraints to the universe
+    await universe.setCollectionsInterfaces(
+      [knownInterfaces.etoTermsConstraints],
+      [constraints.address],
+      [true],
+      { from: admin },
+    );
+
+    return constraints;
+  }
+
   async function deployETO(options) {
     const opts = Object.assign({ ovrArtifact: ETOCommitment }, options);
     // deploy ETO Terms: here deployment of single ETO contracts start
@@ -2713,6 +2753,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         company,
       );
     }
+    // deploy default terms
+    const etoTermsConstraints = await deployETOTermsConstraints();
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
@@ -2720,6 +2762,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       nominee,
       company,
       etoTerms.address,
+      etoTermsConstraints.address,
       equityToken.address,
     );
     // add ETO contracts to collections in universe in one transaction -> must be atomic
