@@ -89,7 +89,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   let tokenTermsDict;
   let etoTerms;
   let etoTermsDict;
-  // let etoTermsConstraints;
+  let etoTermsConstraints;
   // let etoTermsConstraintsDict;
   let shareholderRights;
   // let shareholderTermsDict;
@@ -218,7 +218,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should set start date", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       const tx = await etoCommitment.setStartDate(
         etoTerms.address,
         equityToken.address,
@@ -236,7 +236,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should reset start date", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -244,7 +244,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectStateStarts({ Whitelist: startDate, Refund: 0 }, defaultDurationTable());
 
       let newStartDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds * 2);
-      newStartDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      newStartDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, newStartDate, {
         from: company,
       });
@@ -255,7 +255,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting initial start date closer than DATE_TO_WHITELIST_MIN_DURATION to now", async () => {
       // set exactly DATE_TO_WHITELIST_MIN_DURATION - 1 second
       startDate = new web3.BigNumber((await latestTimestamp()) - 1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await expect(
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: company,
@@ -265,7 +265,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date", async () => {
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -286,7 +286,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting date not from company", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await expect(
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: investors[0],
@@ -296,7 +296,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("rejects setting date before block.timestamp", async () => {
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION()).add(1);
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION()).add(1);
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -315,7 +315,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting agreement by nominee when start date is set", async () => {
       await etoCommitment.amendAgreement("ABBA", { from: nominee });
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -1709,7 +1709,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           },
         );
         startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-        startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+        startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
         await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: company,
         });
@@ -2754,7 +2754,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     }
     // deploy default terms
-    const etoTermsConstraints = await deployETOTermsConstraints();
+    etoTermsConstraints = await deployETOTermsConstraints();
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
@@ -2844,7 +2844,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
   async function prepareETOForPublic() {
     startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-    startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+    startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
     await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
       from: company,
     });
