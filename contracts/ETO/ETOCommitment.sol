@@ -85,6 +85,8 @@ contract ETOCommitment is
     uint128 private PLATFORM_NEUMARK_SHARE;
     // token rate expires after
     uint128 private TOKEN_RATE_EXPIRES_AFTER;
+    // max investment amount
+    uint256 private MAX_INVESTMENT_AMOUNT_EUR_ULPS;
 
     // wallet that keeps Platform Operator share of neumarks
     //  and where token participation fee is temporarily stored
@@ -97,7 +99,7 @@ contract ETOCommitment is
     // terms contracts
     ETOTerms private ETO_TERMS;
     // terms constraings (a.k.a. "Product")
-    ETOTermsConstraints private ETO_TERMS_CONSTRAINTS;
+    ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
     // reference to platform terms
     PlatformTerms private PLATFORM_TERMS;
 
@@ -240,6 +242,8 @@ contract ETOCommitment is
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
+
+        MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
 
         setupStateMachine(
             ETO_TERMS.DURATION_TERMS(),
@@ -544,7 +548,7 @@ contract ETOCommitment is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 0);
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 1);
     }
 
     ////////////////////////
@@ -563,7 +567,7 @@ contract ETOCommitment is
         // add 1 to MIN_TICKET_TOKEN because it was produced by floor and check only MAX CAP
         // WHITELIST CAP will not induce state transition as fixed slots should be able to invest till the end of Whitelist
         // also put the minimum ticket size plus one cent as eur equivalent to see wether we would cross the threshold
-        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, ETO_TERMS.MIN_TICKET_EUR_ULPS() + 1**16);
+        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, ETO_TERMS.MIN_TICKET_EUR_ULPS());
         if (capExceeded) {
             if (oldState == ETOState.Whitelist) {
                 return ETOState.Public;
@@ -845,7 +849,7 @@ contract ETOCommitment is
             maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
         }
         // check for exceeding max investment amount as defined by the constraints
-        if ( equivEurUlps + _totalEquivEurUlps > ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS() ) {
+        if ( !maxCapExceeded && (equivEurUlps + _totalEquivEurUlps > MAX_INVESTMENT_AMOUNT_EUR_ULPS )) {
             maxCapExceeded = true;
         }
     }

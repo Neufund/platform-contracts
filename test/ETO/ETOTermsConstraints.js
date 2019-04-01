@@ -2,7 +2,7 @@ import { expect } from "chai";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
-const DEFAULT_ARGUMENTS = [true, true, 1, 20, 5, 40, "some name", 1, 1, 1, 1];
+const DEFAULT_ARGUMENTS = [true, true, 1, 20, 5, 40, "some name", 1, 1, "de", 0];
 
 contract("ETOTermsContraints", () => {
   it("should deploy and retain all values submitted", async () => {
@@ -15,8 +15,8 @@ contract("ETOTermsContraints", () => {
     expect(await constraints.MAX_INVESTMENT_AMOUNT_EUR_ULPS()).to.be.bignumber.eq(40);
     expect(await constraints.OFFERING_DOCUMENT_TYPE()).to.be.bignumber.eq(1);
     expect(await constraints.OFFERING_DOCUMENT_SUB_TYPE()).to.be.bignumber.eq(1);
-    expect(await constraints.JURISDICTION()).to.be.bignumber.eq(1);
-    expect(await constraints.ASSET_TYPE()).to.be.bignumber.eq(1);
+    expect(await constraints.JURISDICTION()).to.equal("de");
+    expect(await constraints.ASSET_TYPE()).to.be.bignumber.eq(0);
     expect(await constraints.NAME()).to.eq("some name");
   });
 
@@ -53,6 +53,12 @@ contract("ETOTermsContraints", () => {
     const args = [...DEFAULT_ARGUMENTS];
     args[4] = 0;
     args[5] = 0;
+    await expect(ETOTermsConstraints.new(...args)).to.revert;
+  });
+
+  it("should not allow VMAs to be transferable", async () => {
+    const args = [...DEFAULT_ARGUMENTS];
+    args[10] = 1;
     await expect(ETOTermsConstraints.new(...args)).to.revert;
   });
 });

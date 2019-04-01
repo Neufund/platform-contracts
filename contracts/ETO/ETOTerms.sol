@@ -356,7 +356,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 0);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 1);
     }
 
     ////////////////////////

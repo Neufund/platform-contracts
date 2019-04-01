@@ -2686,7 +2686,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       // not important for testing purposes
       0,
       0,
-      0,
+      "de",
       0,
     );
 

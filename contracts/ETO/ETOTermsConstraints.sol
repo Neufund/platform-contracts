@@ -25,11 +25,6 @@ contract ETOTermsConstraints is IContractId {
         VMA // Vermögensanlage
     }
 
-    enum Jurisdiction {
-        DE, // germany
-        LI // Liechtenstein
-    }
-
     ////////////////////////
     // Immutable state
     ////////////////////////
@@ -77,7 +72,7 @@ contract ETOTermsConstraints is IContractId {
     OfferingDocumentSubType public OFFERING_DOCUMENT_SUB_TYPE;
 
     // jurisdiction in which the ETO will be conducted
-    Jurisdiction public JURISDICTION;
+    string public JURISDICTION;
 
     // legal type of asset that will be used
     AssetType public ASSET_TYPE;
@@ -97,7 +92,7 @@ contract ETOTermsConstraints is IContractId {
         string name,
         OfferingDocumentType offeringDocumentType,
         OfferingDocumentSubType offeringDocumentSubType,
-        Jurisdiction jurisdiction,
+        string jurisdiction,
         AssetType assetType
     )
         public
@@ -107,6 +102,7 @@ contract ETOTermsConstraints is IContractId {
         require(minTicketSizeEurUlps<=maxInvestmentAmountEurUlps);
         require(maxTicketSizeEurUlps>0);
         require(maxInvestmentAmountEurUlps>0);
+        require(assetType != AssetType.VMA || !canSetTransferability);
 
 
         CAN_SET_TRANSFERABILITY = canSetTransferability;
