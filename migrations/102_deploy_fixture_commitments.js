@@ -52,7 +52,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
-        deployedConstraintsAddresses[0],
+        deployedConstraintsAddresses[5],
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
