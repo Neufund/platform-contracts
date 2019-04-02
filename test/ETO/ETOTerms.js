@@ -371,6 +371,19 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS",
       );
     });
+
+    it("should reject on maximum ticket too high", async () => {
+      const [modifiedConstraints] = await deployETOTermsConstraints(ETOTermsConstraints, {
+        MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(5000),
+      });
+      const [modifiedTerms] = await redeployTerms({
+        MIN_TICKET_EUR_ULPS: (await modifiedConstraints.MAX_TICKET_SIZE_EUR_ULPS()).add(1),
+      });
+
+      await expect(modifiedTerms.requireValidTerms(modifiedConstraints.address)).to.be.rejectedWith(
+        "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS",
+      );
+    });
   });
 
   describe("general calculations", () => {
