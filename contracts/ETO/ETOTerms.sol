@@ -36,7 +36,6 @@ contract ETOTerms is
     ////////////////////////
 
     bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-    uint256 public constant MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS = 100000 * 10**18;
 
     ////////////////////////
     // Immutable state
@@ -56,16 +55,11 @@ contract ETOTerms is
     uint256 public MIN_TICKET_EUR_ULPS;
     // maximum ticket for sophisiticated investors
     uint256 public MAX_TICKET_EUR_ULPS;
-    // maximum ticket for simple investors
-    uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     // transfers are always disabled during token offering
     // if set to False transfers on Equity Token will remain disabled after offering
     // once those terms are on-chain this flags fully controls token transferability
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
-    // tells if offering accepts retail investors. if so, registered prospectus is required
-    // and ENABLE_TRANSFERS_ON_SUCCESS is forced to be false as per current platform policy
-    bool public ALLOW_RETAIL_INVESTORS;
     // represents the discount % for whitelist participants
     uint256 public WHITELIST_DISCOUNT_FRAC;
     // represents the discount % for public participants, using values > 0 will result
@@ -137,7 +131,6 @@ contract ETOTerms is
         uint256 existingCompanyShares,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
-        bool allowRetailInvestors,
         bool enableTransfersOnSuccess,
         string investorOfferingDocumentUrl,
         ShareholderRights shareholderRights,
@@ -175,7 +168,6 @@ contract ETOTerms is
         EXISTING_COMPANY_SHARES = existingCompanyShares;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
-        ALLOW_RETAIL_INVESTORS = allowRetailInvestors;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         INVESTOR_OFFERING_DOCUMENT_URL = investorOfferingDocumentUrl;
         SHAREHOLDER_RIGHTS = shareholderRights;
@@ -305,20 +297,12 @@ contract ETOTerms is
         isEligible = claims.isVerified && !claims.accountFrozen;
     }
 
-    /// @notice checks terms against platform terms, reverts on invalid
+    /// @notice checks terms against terms constraints, reverts on invalid
     function requireValidTerms(ETOTermsConstraints termsConstraints)
         public
         constant
         returns (bool)
     {
-        // apply constraints on retail fundraising
-        if (ALLOW_RETAIL_INVESTORS) {
-            // make sure transfers are disabled after offering for retail investors
-            require(!ENABLE_TRANSFERS_ON_SUCCESS, "NF_MUST_DISABLE_TRANSFERS");
-        } else {
-            // only qualified investors allowed defined as tickets > 100000 EUR
-            require(MIN_TICKET_EUR_ULPS >= MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS, "NF_MIN_QUALIFIED_INVESTOR_TICKET");
-        }
         // min ticket must be > token price
         require(MIN_TICKET_EUR_ULPS >= TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS(), "NF_MIN_TICKET_LT_TOKEN_PRICE");
         // it must be possible to collect more funds than max number of tokens

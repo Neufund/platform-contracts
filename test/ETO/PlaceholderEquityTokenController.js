@@ -384,7 +384,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         tokenTerms,
         shareholderRights,
         {
-          ALLOW_RETAIL_INVESTORS: false,
           ENABLE_TRANSFERS_ON_SUCCESS: true,
           MAX_TICKET_EUR_ULPS: Q18.mul(100000),
         },
@@ -494,14 +493,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       }
     }
     it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
-      await deployController({ ALLOW_RETAIL_INVESTORS: true, ENABLE_TRANSFERS_ON_SUCCESS: false });
+      await deployController({ ENABLE_TRANSFERS_ON_SUCCESS: false });
       await deployETO();
       await testTransfersInOffering(false);
     });
 
     it("should allow transfers after eto if requested in terms", async () => {
       await deployController({
-        ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
@@ -842,7 +840,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     beforeEach(async () => {
       // token must be transferable to run standard test suite
       await deployController({
-        ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });

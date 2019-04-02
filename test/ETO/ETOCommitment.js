@@ -19,7 +19,6 @@ import {
   deployETOTerms,
   deployTokenTerms,
   constTokenTerms,
-  constETOTerms,
   deployETOTermsConstraints,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
@@ -1123,10 +1122,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should enable transfer on equity token on success", async () => {
       await deployETO({
         ovrETOTerms: {
-          MIN_TICKET_EUR_ULPS: constETOTerms.MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS,
+          MIN_TICKET_EUR_ULPS: Q18.mul(0),
           MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
           ENABLE_TRANSFERS_ON_SUCCESS: true,
-          ALLOW_RETAIL_INVESTORS: false,
         },
       });
       await prepareETOForPublic();
@@ -1228,7 +1226,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
           ENABLE_TRANSFERS_ON_SUCCESS: false,
           PUBLIC_DISCOUNT_FRAC: publicDiscount,
-          ALLOW_RETAIL_INVESTORS: true,
         },
       });
       // check that whitelist investment is not affected by public discount

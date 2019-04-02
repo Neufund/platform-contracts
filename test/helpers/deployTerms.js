@@ -28,10 +28,6 @@ export const constTokenTerms = {
   EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
 };
 
-export const constETOTerms = {
-  MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS: Q18.mul(100000),
-};
-
 export const defTokenTerms = {
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
@@ -45,7 +41,6 @@ export const defEtoTerms = {
   EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
-  ALLOW_RETAIL_INVESTORS: true,
   ENABLE_TRANSFERS_ON_SUCCESS: false,
   INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
   SHAREHOLDER_RIGHTS: null,
