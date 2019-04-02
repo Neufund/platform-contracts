@@ -168,6 +168,11 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     { address: fas.INV_HAS_EUR_HAS_KYC.address, discountAmount: 0, discount: 0 },
     { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, discountAmount: 500000, discount: 0.5 },
     { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address, discountAmount: 500000, discount: 0.5 },
+    {
+      address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
+      discountAmount: 500000,
+      discount: 0.5,
+    },
   ];
   await deployWhitelist(artifacts, CONFIG, etoCommitment.address, whitelist);
   if (final === CommitmentState.Setup) {
@@ -270,6 +275,22 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     minTicketEth.add(Q18.mul(3.71621)),
     "ETH",
   );
+  await investICBMAmount(
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    minTicketEth.add(Q18.mul(3.71621)),
+    "ETH",
+  );
+  await investICBMAmount(
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
+    CONFIG,
+    universe,
+    etoCommitment,
+    minTicketEth.add(Q18.mul(3.71621)),
+    "ETH",
+  );
   if (final === CommitmentState.Public) {
     return etoCommitment;
   }
@@ -322,6 +343,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment.claimMany([
     fas.INV_HAS_EUR_HAS_KYC.address,
     fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
+    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
     fas.INV_ICBM_ETH_M_HAS_KYC.address,
   ]);
   // shift time

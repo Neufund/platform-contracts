@@ -127,14 +127,14 @@ export function getFixtureAccounts(accounts) {
     throw new Error("node must present at least 9 unlocked accounts for fixtures");
   }
 
-  const makeAccount = (addr, typ, verified) => {
-    if (typ !== "external") {
+  const makeAccount = (address, type, verified) => {
+    if (type !== "external") {
       // account must be unlocked
-      if (!accounts.find(a => addr.toLowerCase() === a.toLowerCase())) {
-        throw new Error(`Account ${addr} must be unlocked to use fixtures`);
+      if (!accounts.find(a => address.toLowerCase() === a.toLowerCase())) {
+        throw new Error(`Account ${address} must be unlocked to use fixtures`);
       }
     }
-    return { address: addr, type: typ, verified };
+    return { address, type, verified };
   };
 
   return {
@@ -143,11 +143,31 @@ export function getFixtureAccounts(accounts) {
       "investor",
       false,
     ),
+
+    INV_ETH_ICBM_NO_KYC_2: makeAccount(
+      "0xDE185A5c2Bd3913fAC1F64102e3DEFD9E1797C4d",
+      "investor",
+      false,
+    ),
+
     INV_EUR_ICBM_HAS_KYC: makeAccount(
       "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
       "investor",
       true,
     ),
+
+    INV_EUR_ICBM_HAS_KYC_SEED: makeAccount(
+      "0xB3a2eb675288Bff642F5036235ffb541a4289E71",
+      "investor",
+      true,
+    ),
+
+    INV_EUR_ICBM_HAS_KYC_SEED_2: makeAccount(
+      "0x7b85041Fe5E05A31a961445c3321EE426015D45F",
+      "investor",
+      true,
+    ),
+
     INV_ETH_EUR_ICBM_M_HAS_KYC: makeAccount(
       "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
       "investor",
@@ -158,6 +178,13 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
+
+    INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH: makeAccount(
+      "0xA622f39780fC8722243b49ACF3bFFEEb9B9201F2",
+      "investor",
+      true,
+    ),
+
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
       "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
       "investor",
@@ -168,6 +195,19 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
+
+    INV_ICBM_ETH_M_HAS_KYC_DUP_2: makeAccount(
+      "0xFa8ae4e924e14C834Ad48238a55A24Af97A8f3F3",
+      "investor",
+      true,
+    ),
+
+    INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO: makeAccount(
+      "0x4A20381D628AEEc776335a89bb32106a8F9d4323",
+      "investor",
+      true,
+    ),
+
     INV_ICBM_EUR_M_HAS_KYC: makeAccount(
       "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
       "investor",

@@ -24,6 +24,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
       value: CONFIG.Q18.mul(161.1289798),
     });
     await commitment.commit({
+      from: fas.INV_ETH_ICBM_NO_KYC_2.address,
+      value: CONFIG.Q18.mul(161.1289798),
+    });
+    await commitment.commit({
       from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address,
       value: CONFIG.Q18.mul(218.1289798),
     });
@@ -32,7 +36,19 @@ module.exports = function deployContracts(deployer, network, accounts) {
       value: CONFIG.Q18.mul(218.1289798),
     });
     await commitment.commit({
+      from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
+      value: CONFIG.Q18.mul(218.1289798),
+    });
+    await commitment.commit({
       from: fas.INV_ICBM_ETH_M_HAS_KYC.address,
+      value: CONFIG.Q18.mul(1211.1289798),
+    });
+    await commitment.commit({
+      from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
+      value: CONFIG.Q18.mul(1211.1289798),
+    });
+    await commitment.commit({
+      from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
       value: CONFIG.Q18.mul(1211.1289798),
     });
     await commitment.commit({
@@ -49,14 +65,24 @@ module.exports = function deployContracts(deployer, network, accounts) {
     amountEur = CONFIG.Q18.mul(71827);
     await euroToken.deposit(fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, amountEur);
     await euroToken.deposit(fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address, amountEur);
+    await euroToken.deposit(
+      fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
+      amountEur,
+    );
     await euroToken.approve(commitment.address, amountEur, {
       from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address,
     });
     await euroToken.approve(commitment.address, amountEur, {
       from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address,
     });
+    await euroToken.approve(commitment.address, amountEur, {
+      from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
+    });
     await commitment.commitEuro({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address });
     await commitment.commitEuro({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address });
+    await commitment.commitEuro({
+      from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
+    });
     amountEur = CONFIG.Q18.mul(812988.1988);
     await euroToken.deposit(fas.INV_ICBM_EUR_M_HAS_KYC.address, amountEur);
     await euroToken.approve(commitment.address, amountEur, {
