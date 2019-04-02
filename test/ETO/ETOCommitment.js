@@ -563,7 +563,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expectValidClaimState(nomineeSignTx, contribution);
     });
 
-    it("go from public to signing by reaching max cap exactly", async () => {
+    it("go from public to signing by reaching max cap exactly (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -583,7 +583,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expectValidClaimState(nomineeSignTx, contribution);
     });
 
-    it("go from public to signing by reaching max cap within minimum ticket", async () => {
+    it("go from public to signing by reaching max cap exactly (max investment amount)", async () => {
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount, "EUR");
+      // we should be signing NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+    });
+
+    it("go from public to signing by reaching max cap within minimum ticket (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -597,7 +611,22 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
     });
 
-    it("stay in public by not reaching max cap because less than gap", async () => {
+    it("go from public to signing by reaching max cap within minimum ticket (max investment amount)", async () => {
+      const minTicket = Q18.mul(200);
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount.sub(minTicket).add(1), "EUR");
+      // we should be signing NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+    });
+
+    it("stay in public by not reaching max cap because less than gap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -609,7 +638,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
     });
 
-    it("reverts on crossing max cap", async () => {
+    it("stay in public by not reaching max cap because less than gap (max investment amount)", async () => {
+      const minTicket = Q18.mul(200);
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount.sub(minTicket), "EUR");
+      // we should be signing NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+    });
+
+    it("reverts on crossing max cap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -617,6 +660,19 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expect(
         investAmount(investors[4], missingAmount.add(tokenTermsDict.TOKEN_PRICE_EUR_ULPS), "EUR"),
       ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
+    });
+
+    it("reverts on crossing max cap (max investment amount)", async () => {
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount.mul(2) },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await expect(investAmount(investors[4], maxInvestAmount.add(Q18), "EUR")).to.be.rejectedWith(
+        "NF_ETO_MAX_TOK_CAP",
+      );
     });
 
     it("go from whitelist to signing by reaching max cap", async () => {
@@ -2729,7 +2785,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     }
     // deploy default terms
-    etoTermsConstraints = await deployETOTermsConstraintsUniverse();
+    etoTermsConstraints = await deployETOTermsConstraintsUniverse(opts.ovrETOTermsConstraints);
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
