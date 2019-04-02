@@ -23,11 +23,13 @@ contract("TimedStateMachine", () => {
   });
 
   it("should have initial state", async () => {
-    expect(await timedStateMachine.state.call()).to.be.bignumber.eq(CommitmentState.Before);
+    const initialState = await timedStateMachine.state.call();
+    expect(initialState).to.be.bignumber.eq(CommitmentState.Before);
   });
 
   it("should have desired state ordering", async () => {
-    await timedStateMachine.testStateOrdering();
+    const passed = await timedStateMachine.testStateOrdering();
+    expect(passed).to.be.true;
   });
 
   it("should enter states at desired time", async () => {
