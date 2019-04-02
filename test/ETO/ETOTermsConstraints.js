@@ -1,64 +1,91 @@
 import { expect } from "chai";
+import { deployETOTermsConstraints } from "../helpers/deployTerms";
+import { Q18 } from "../helpers/constants";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
-const DEFAULT_ARGUMENTS = [true, true, 1, 20, 5, 40, "some name", 1, 1, "de", 0];
-
 contract("ETOTermsContraints", () => {
+  it("should deploy default args", async () => {
+    await deployETOTermsConstraints(ETOTermsConstraints);
+  });
+
   it("should deploy and retain all values submitted", async () => {
-    const constraints = await ETOTermsConstraints.new(...DEFAULT_ARGUMENTS);
-    expect(await constraints.CAN_SET_TRANSFERABILITY()).to.eq(true);
-    expect(await constraints.HAS_NOMINEE()).to.eq(true);
-    expect(await constraints.MIN_TICKET_SIZE_EUR_ULPS()).to.be.bignumber.eq(1);
-    expect(await constraints.MAX_TICKET_SIZE_EUR_ULPS()).to.be.bignumber.eq(20);
-    expect(await constraints.MIN_INVESTMENT_AMOUNT_EUR_ULPS()).to.be.bignumber.eq(5);
-    expect(await constraints.MAX_INVESTMENT_AMOUNT_EUR_ULPS()).to.be.bignumber.eq(40);
-    expect(await constraints.OFFERING_DOCUMENT_TYPE()).to.be.bignumber.eq(1);
-    expect(await constraints.OFFERING_DOCUMENT_SUB_TYPE()).to.be.bignumber.eq(1);
-    expect(await constraints.JURISDICTION()).to.equal("de");
-    expect(await constraints.ASSET_TYPE()).to.be.bignumber.eq(0);
-    expect(await constraints.NAME()).to.eq("some name");
+    const [constraints, terms] = await deployETOTermsConstraints(ETOTermsConstraints, {
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(2),
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(50),
+    });
+    expect(await constraints.CAN_SET_TRANSFERABILITY()).to.eq(terms.CAN_SET_TRANSFERABILITY);
+    expect(await constraints.HAS_NOMINEE()).to.eq(terms.HAS_NOMINEE);
+    expect(await constraints.MIN_TICKET_SIZE_EUR_ULPS()).to.be.bignumber.eq(
+      terms.MIN_TICKET_SIZE_EUR_ULPS,
+    );
+    expect(await constraints.MAX_TICKET_SIZE_EUR_ULPS()).to.be.bignumber.eq(
+      terms.MAX_TICKET_SIZE_EUR_ULPS,
+    );
+    expect(await constraints.MIN_INVESTMENT_AMOUNT_EUR_ULPS()).to.be.bignumber.eq(
+      terms.MIN_INVESTMENT_AMOUNT_EUR_ULPS,
+    );
+    expect(await constraints.MAX_INVESTMENT_AMOUNT_EUR_ULPS()).to.be.bignumber.eq(
+      terms.MAX_INVESTMENT_AMOUNT_EUR_ULPS,
+    );
+    expect(await constraints.OFFERING_DOCUMENT_TYPE()).to.be.bignumber.eq(
+      terms.OFFERING_DOCUMENT_TYPE,
+    );
+    expect(await constraints.OFFERING_DOCUMENT_SUB_TYPE()).to.be.bignumber.eq(
+      terms.OFFERING_DOCUMENT_SUB_TYPE,
+    );
+    expect(await constraints.JURISDICTION()).to.equal(terms.JURISDICTION);
+    expect(await constraints.ASSET_TYPE()).to.be.bignumber.eq(terms.ASSET_TYPE);
+    expect(await constraints.NAME()).to.eq(terms.NAME);
   });
 
   it("should enforce maxticketsize larger than minticket size", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[2] = 10;
-    args[3] = 5;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(10),
+      MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(2),
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
   it("should enforce maxinvestmentsize larger than mininvestmentsize", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[4] = 100;
-    args[5] = 50;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(1000),
+      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(500),
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
   it("should enforce maxinvestmentsize to be larger than minticketsize", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[2] = 100;
-    args[3] = 200;
-    args[5] = 50;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+      MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(100),
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
   it("should enforce maxticketsize to be larger than 0", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[2] = 0;
-    args[3] = 0;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+      MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
   it("should enforce maxinvestmentsize to be larger than 0", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[4] = 0;
-    args[5] = 0;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
   it("should not allow VMAs to be transferable", async () => {
-    const args = [...DEFAULT_ARGUMENTS];
-    args[10] = 1;
-    await expect(ETOTermsConstraints.new(...args)).to.revert;
+    const args = {
+      ASSET_TYPE: Q18.mul(1), // This is now a WMA
+      CAN_SET_TRANSFERABILITY: true,
+    };
+    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 });

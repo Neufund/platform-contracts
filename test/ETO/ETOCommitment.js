@@ -20,6 +20,7 @@ import {
   deployTokenTerms,
   constTokenTerms,
   constETOTerms,
+  deployETOTermsConstraints,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -2664,32 +2665,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     }
   }
 
-  async function deployETOTermsConstraints(args = {}) {
-    const two = new web3.BigNumber(2);
-    const defaultETOTermsArgs = {
-      canSetTransferability: true,
-      hasNominee: true,
-      minTicketSize: 0,
-      maxTicketSize: two.pow(128),
-      minInvestmentAmount: 0,
-      maxInvestmentAmount: two.pow(128),
-      name: "Some Constraint",
-    };
-    const mergedArgs = Object.assign(defaultETOTermsArgs, args);
-    const constraints = await ETOTermsConstraints.new(
-      mergedArgs.canSetTransferability,
-      mergedArgs.hasNominee,
-      mergedArgs.minTicketSize,
-      mergedArgs.maxTicketSize,
-      mergedArgs.minInvestmentAmount,
-      mergedArgs.maxInvestmentAmount,
-      mergedArgs.name,
-      // not important for testing purposes
-      0,
-      0,
-      "de",
-      0,
-    );
+  async function deployETOTermsConstraintsUniverse(args = {}) {
+    const [constraints] = await deployETOTermsConstraints(ETOTermsConstraints, args);
 
     // add the constraints to the universe
     await universe.setCollectionsInterfaces(
@@ -2755,7 +2732,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     }
     // deploy default terms
-    etoTermsConstraints = await deployETOTermsConstraints();
+    etoTermsConstraints = await deployETOTermsConstraintsUniverse();
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,

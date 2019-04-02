@@ -1,5 +1,8 @@
 import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
 
+const two = new web3.BigNumber(2);
+const intMax = two.pow(128);
+
 export const defaultShareholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(1),
   TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
@@ -51,6 +54,20 @@ export const defEtoTerms = {
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
   PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
+};
+
+export const defTermsConstraints = {
+  CAN_SET_TRANSFERABILITY: true,
+  HAS_NOMINEE: true,
+  MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+  MAX_TICKET_SIZE_EUR_ULPS: intMax,
+  MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+  MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
+  NAME: "Some Contraints",
+  OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
+  OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
+  JURISDICTION: "de",
+  ASSET_TYPE: new web3.BigNumber(0),
 };
 
 export function validateTerms(artifact, terms) {
@@ -154,4 +171,12 @@ export async function deployETOTerms(
   const [termsKeys, termsValues] = validateTerms(artifact, etoTerms);
   const deployedTerms = await artifact.new.apply(this, termsValues);
   return [deployedTerms, etoTerms, termsKeys, termsValues];
+}
+
+export async function deployETOTermsConstraints(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defTermsConstraints;
+  const constraintsTerms = Object.assign({}, defaults, terms || {});
+  const [constraintsTermsKeys, constraintsTermsValues] = validateTerms(artifact, constraintsTerms);
+  const etoTermsConstraints = await artifact.new.apply(this, constraintsTermsValues);
+  return [etoTermsConstraints, constraintsTerms, constraintsTermsKeys, constraintsTermsValues];
 }
