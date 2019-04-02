@@ -1122,7 +1122,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should enable transfer on equity token on success", async () => {
       await deployETO({
         ovrETOTerms: {
-          MIN_TICKET_EUR_ULPS: Q18.mul(0),
+          MIN_TICKET_EUR_ULPS: Q18.mul(100),
           MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
           ENABLE_TRANSFERS_ON_SUCCESS: true,
         },
