@@ -3,7 +3,7 @@ help:
 	@echo "container - builds development/testing container"
 	@echo "run - runs ganache inside container"
 	@echo "deploy - deploys contracts inside container"
-	@echo "test-container - build container and deploys artifacts
+	@echo "test-container - build container and deploys artifacts"
 
 dev:
 	yarn
