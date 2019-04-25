@@ -127,14 +127,14 @@ export function getFixtureAccounts(accounts) {
     throw new Error("node must present at least 9 unlocked accounts for fixtures");
   }
 
-  const makeAccount = (address, type, verified) => {
+  const makeAccount = (address, type, verified, shouldHaveEther = true) => {
     if (type !== "external") {
       // account must be unlocked
       if (!accounts.find(a => address.toLowerCase() === a.toLowerCase())) {
         throw new Error(`Account ${address} must be unlocked to use fixtures`);
       }
     }
-    return { address, type, verified };
+    return { address, type, verified, shouldHaveEther };
   };
 
   return {
@@ -183,6 +183,7 @@ export function getFixtureAccounts(accounts) {
       "0xA622f39780fC8722243b49ACF3bFFEEb9B9201F2",
       "investor",
       true,
+      false,
     ),
 
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
