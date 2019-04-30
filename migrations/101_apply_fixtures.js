@@ -129,6 +129,11 @@ module.exports = function deployContracts(deployer, network, accounts) {
       value: CONFIG.Q18.mul(387.198273981),
     });
 
+    await etherToken.deposit({
+      from: fas.INV_EUR_ICBM_HAS_KYC_2.address,
+      value: CONFIG.Q18.mul(387.198273981),
+    });
+
     console.log("set KYC, sophisiticated, bankAccount");
     const requireKYC = Object.keys(fas)
       .filter(fa => fas[fa].verified)

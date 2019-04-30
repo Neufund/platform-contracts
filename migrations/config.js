@@ -156,6 +156,12 @@ export function getFixtureAccounts(accounts) {
       true,
     ),
 
+    INV_EUR_ICBM_HAS_KYC_2: makeAccount(
+      "0xa6F99FB42828965439b5d6d2D4153EB68Ba376F7",
+      "investor",
+      true,
+    ),
+
     INV_EUR_ICBM_HAS_KYC_SEED: makeAccount(
       "0xB3a2eb675288Bff642F5036235ffb541a4289E71",
       "investor",

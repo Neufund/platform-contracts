@@ -62,6 +62,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
       from: fas.INV_EUR_ICBM_HAS_KYC.address,
     });
     await commitment.commitEuro({ from: fas.INV_EUR_ICBM_HAS_KYC.address });
+
+    await euroToken.deposit(fas.INV_EUR_ICBM_HAS_KYC_2.address, amountEur);
+    await euroToken.approve(commitment.address, amountEur, {
+      from: fas.INV_EUR_ICBM_HAS_KYC_2.address,
+    });
+    await commitment.commitEuro({ from: fas.INV_EUR_ICBM_HAS_KYC_2.address });
+
     amountEur = CONFIG.Q18.mul(71827);
     await euroToken.deposit(fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, amountEur);
     await euroToken.deposit(fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address, amountEur);
