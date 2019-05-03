@@ -8,6 +8,7 @@ import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
 import "../Universe.sol";
+import "../KnownInterfaces.sol";
 
 
 /// @title base terms of Equity Token Offering
@@ -16,7 +17,8 @@ import "../Universe.sol";
 contract ETOTerms is
     IdentityRecord,
     Math,
-    IContractId
+    IContractId,
+    KnownInterfaces
 {
 
     ////////////////////////
@@ -81,6 +83,8 @@ contract ETOTerms is
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
     Universe public UNIVERSE;
+    // terms constraints (a.k.a. "Product")
+    ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
 
     // variables from token terms for local use
     // minimum number of tokens being offered. will set min cap
@@ -138,7 +142,8 @@ contract ETOTerms is
         string equityTokenSymbol,
         uint256 shareNominalValueEurUlps,
         uint256 whitelistDiscountFrac,
-        uint256 publicDiscountFrac
+        uint256 publicDiscountFrac,
+        ETOTermsConstraints etoTermsConstraints
     )
         public
     {
@@ -156,6 +161,10 @@ contract ETOTerms is
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
+        require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
+
+        // save reference to constraints
+        ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
 
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
@@ -179,6 +188,9 @@ contract ETOTerms is
         WHITELIST_MANAGER = msg.sender;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
+
+        // validate all settings
+        require(requireValidTerms());
     }
 
     ////////////////////////
@@ -298,7 +310,7 @@ contract ETOTerms is
     }
 
     /// @notice checks terms against terms constraints, reverts on invalid
-    function requireValidTerms(ETOTermsConstraints termsConstraints)
+    function requireValidTerms()
         public
         constant
         returns (bool)
@@ -309,28 +321,28 @@ contract ETOTerms is
         require(ESTIMATED_MAX_CAP_EUR_ULPS() >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
 
         // ticket size checks
-        require(MIN_TICKET_EUR_ULPS >= termsConstraints.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
-        require(MAX_TICKET_EUR_ULPS <= termsConstraints.MAX_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
+        require(MIN_TICKET_EUR_ULPS >= ETO_TERMS_CONSTRAINTS.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+        require(MAX_TICKET_EUR_ULPS <= ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
 
         // only allow transferabilty if this is allowed in general
-        require(!ENABLE_TRANSFERS_ON_SUCCESS || termsConstraints.CAN_SET_TRANSFERABILITY(), "NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
+        require(!ENABLE_TRANSFERS_ON_SUCCESS || ETO_TERMS_CONSTRAINTS.CAN_SET_TRANSFERABILITY(), "NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
 
         // duration checks
-        require(DURATION_TERMS.WHITELIST_DURATION() >= termsConstraints.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
-        require(DURATION_TERMS.WHITELIST_DURATION() <= termsConstraints.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
+        require(DURATION_TERMS.WHITELIST_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
+        require(DURATION_TERMS.WHITELIST_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
 
-        require(DURATION_TERMS.PUBLIC_DURATION() >= termsConstraints.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
-        require(DURATION_TERMS.PUBLIC_DURATION() <= termsConstraints.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
+        require(DURATION_TERMS.PUBLIC_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
+        require(DURATION_TERMS.PUBLIC_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
 
         uint256 totalDuration = DURATION_TERMS.WHITELIST_DURATION() + DURATION_TERMS.PUBLIC_DURATION();
-        require(totalDuration >= termsConstraints.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
-        require(totalDuration <= termsConstraints.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
+        require(totalDuration >= ETO_TERMS_CONSTRAINTS.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
+        require(totalDuration <= ETO_TERMS_CONSTRAINTS.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
 
-        require(DURATION_TERMS.SIGNING_DURATION() >= termsConstraints.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
-        require(DURATION_TERMS.SIGNING_DURATION() <= termsConstraints.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
+        require(DURATION_TERMS.SIGNING_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
+        require(DURATION_TERMS.SIGNING_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
 
-        require(DURATION_TERMS.CLAIM_DURATION() >= termsConstraints.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
-        require(DURATION_TERMS.CLAIM_DURATION() <= termsConstraints.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
+        require(DURATION_TERMS.CLAIM_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
+        require(DURATION_TERMS.CLAIM_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
 
         return true;
     }

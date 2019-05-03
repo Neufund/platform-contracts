@@ -100,7 +100,7 @@ contract ETOCommitment is
 
     // terms contracts
     ETOTerms private ETO_TERMS;
-    // terms constraings (a.k.a. "Product")
+    // terms constraints (a.k.a. "Product")
     ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
     // reference to platform terms
     PlatformTerms private PLATFORM_TERMS;
@@ -207,7 +207,6 @@ contract ETOCommitment is
         address nominee,
         address companyLegalRep,
         ETOTerms etoTerms,
-        ETOTermsConstraints etoTermsConstraints,
         IEquityToken equityToken
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
@@ -219,10 +218,8 @@ contract ETOCommitment is
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
 
-        ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
-        require(etoTerms.requireValidTerms(ETO_TERMS_CONSTRAINTS));
+        ETO_TERMS_CONSTRAINTS = etoTerms.ETO_TERMS_CONSTRAINTS();
 
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
