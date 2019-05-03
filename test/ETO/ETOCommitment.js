@@ -648,7 +648,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       });
       await skipTimeTo(publicStartDate.add(1));
       await investAmount(investors[4], maxInvestAmount.sub(minTicket), "EUR");
-      // we should be signing NOW
+      // we should be public NOW
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
     });
 
@@ -670,7 +670,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
-      await expect(investAmount(investors[4], maxInvestAmount.add(Q18), "EUR")).to.be.rejectedWith(
+      await expect(investAmount(investors[4], maxInvestAmount.add(1), "EUR")).to.be.rejectedWith(
         "NF_ETO_MAX_TOK_CAP",
       );
     });
