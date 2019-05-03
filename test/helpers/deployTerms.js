@@ -61,7 +61,7 @@ export const defTermsConstraints = {
   NAME: "Some Contraints",
   OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
   OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
-  JURISDICTION: "de",
+  JURISDICTION: "DE",
   ASSET_TYPE: new web3.BigNumber(0),
 };
 

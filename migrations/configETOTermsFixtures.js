@@ -1,7 +1,7 @@
 import { web3, Q18 } from "../test/helpers/constants";
 
 const two = new web3.BigNumber(2);
-const intMax = two.pow(128);
+const intMax = two.pow(256) - 1;
 
 export const constraints = [
   // HNWI ETO DE
@@ -15,7 +15,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "de",
+    JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(1),
   },
   // HNWI ETO LI
@@ -29,7 +29,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "li",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
   },
   // PRIVATE ETO LI
@@ -43,7 +43,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "li",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
   },
   // MINI ETO LI
@@ -71,7 +71,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(20000000),
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
-    JURISDICTION: "li",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
   },
   // RETAIL ETO DE
@@ -85,7 +85,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "de",
+    JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(0),
   },
   // RETAIL ETO LI 2
@@ -99,7 +99,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "li",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(1),
   },
   // FF ETO
@@ -113,7 +113,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "de",
+    JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(0),
   },
 ];
