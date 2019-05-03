@@ -87,6 +87,8 @@ contract ETOCommitment is
     uint128 private TOKEN_RATE_EXPIRES_AFTER;
     // max investment amount
     uint256 private MAX_INVESTMENT_AMOUNT_EUR_ULPS;
+    // min ticket size, taken from eto terms
+    uint256 private MIN_TICKET_EUR_ULPS;
 
     // wallet that keeps Platform Operator share of neumarks
     //  and where token participation fee is temporarily stored
@@ -238,13 +240,13 @@ contract ETOCommitment is
         ETO_TERMS = etoTerms;
         EQUITY_TOKEN = equityToken;
 
+        MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
         MAX_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS();
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
-        MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
+        MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, MIN_TICKET_EUR_ULPS);
 
         MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
-
         setupStateMachine(
             ETO_TERMS.DURATION_TERMS(),
             IETOCommitmentObserver(EQUITY_TOKEN.tokenController())
@@ -567,7 +569,7 @@ contract ETOCommitment is
         // add 1 to MIN_TICKET_TOKEN because it was produced by floor and check only MAX CAP
         // WHITELIST CAP will not induce state transition as fixed slots should be able to invest till the end of Whitelist
         // also put the minimum ticket size plus one cent as eur equivalent to see wether we would cross the threshold
-        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, ETO_TERMS.MIN_TICKET_EUR_ULPS());
+        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, MIN_TICKET_EUR_ULPS);
         if (capExceeded) {
             if (oldState == ETOState.Whitelist) {
                 return ETOState.Public;
