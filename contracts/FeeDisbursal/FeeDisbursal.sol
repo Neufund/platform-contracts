@@ -93,7 +93,7 @@ contract FeeDisbursal is
     ////////////////////////
     // Constants
     ////////////////////////
-    uint256 constant UINT256_MAX = 2**256 - 1;
+    uint256 private constant UINT256_MAX = 2**256 - 1;
 
 
     ////////////////////////
