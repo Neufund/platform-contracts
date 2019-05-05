@@ -403,6 +403,8 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
     startDate: await etoCommitment.startOf(1),
     nominee: await etoCommitment.nominee(),
     company: await etoCommitment.companyLegalRep(),
+    equityToken: await etoCommitment.equityToken(),
+    etoTerms: await etoCommitment.etoTerms(),
     definition: etoDefinition,
   };
   const whitelist = {};
