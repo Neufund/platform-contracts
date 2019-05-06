@@ -161,7 +161,9 @@ contract ETOTerms is
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
-        require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
+
+        // TODO comment back in!!
+        // require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
 
         // save reference to constraints
         ETO_TERMS_CONSTRAINTS = etoTermsConstraints;

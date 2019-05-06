@@ -1,4 +1,5 @@
 import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
+import { knownInterfaces } from "../helpers/knownInterfaces";
 
 const two = new web3.BigNumber(2);
 const intMax = two.pow(128);
@@ -154,6 +155,7 @@ export async function deployETOTerms(
   durationTerms,
   tokenTerms,
   shareholderRights,
+  termsConstraints,
   terms,
   fullTerms,
 ) {
@@ -163,6 +165,7 @@ export async function deployETOTerms(
   etoTerms.DURATION_TERMS = durationTerms.address;
   etoTerms.TOKEN_TERMS = tokenTerms.address;
   etoTerms.SHAREHOLDER_RIGHTS = shareholderRights.address;
+  etoTerms.ETO_TERMS_CONSTRAINTS = termsConstraints.address;
   const [termsKeys, termsValues] = validateTerms(artifact, etoTerms);
   const deployedTerms = await artifact.new.apply(this, termsValues);
   return [deployedTerms, etoTerms, termsKeys, termsValues];
@@ -174,4 +177,17 @@ export async function deployETOTermsConstraints(artifact, terms, fullTerms) {
   const [constraintsTermsKeys, constraintsTermsValues] = validateTerms(artifact, constraintsTerms);
   const etoTermsConstraints = await artifact.new.apply(this, constraintsTermsValues);
   return [etoTermsConstraints, constraintsTerms, constraintsTermsKeys, constraintsTermsValues];
+}
+
+export async function deployETOTermsConstraintsUniverse(admin, universe, artifact, terms) {
+  const constraints = await deployETOTermsConstraints(artifact, terms);
+  // add the constraints to the universe
+  await universe.setCollectionsInterfaces(
+    [knownInterfaces.etoTermsConstraints],
+    [constraints.address],
+    [true],
+    { from: admin },
+  );
+
+  return constraints;
 }

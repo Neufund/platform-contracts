@@ -1283,6 +1283,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           ENABLE_TRANSFERS_ON_SUCCESS: false,
           PUBLIC_DISCOUNT_FRAC: publicDiscount,
         },
+        ovrETOTermsConstraints: {
+          CAN_SET_TRANSFERABILITY: false
+        }
       });
       // check that whitelist investment is not affected by public discount
       await etoTerms.addWhitelisted(
