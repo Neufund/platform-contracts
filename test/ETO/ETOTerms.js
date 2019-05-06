@@ -88,6 +88,10 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     }
   }
 
+  it("should save ETOTerms Contraints", async () => {
+    expect(await etoTerms.ETO_TERMS_CONSTRAINTS()).to.eq(termsConstraints.address);
+  });
+
   it("should verify terms in ETOTerms", async () => {
     await verifyTerms(etoTerms, termsKeys, terms);
   });
