@@ -1284,8 +1284,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           PUBLIC_DISCOUNT_FRAC: publicDiscount,
         },
         ovrETOTermsConstraints: {
-          CAN_SET_TRANSFERABILITY: false
-        }
+          CAN_SET_TRANSFERABILITY: false,
+        },
       });
       // check that whitelist investment is not affected by public discount
       await etoTerms.addWhitelisted(
@@ -2744,12 +2744,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     );
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, opts.ovrDurations);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, opts.ovrTokenTerms);
+    etoTermsConstraints = await deployETOTermsConstraintsUniverse(opts.ovrETOTermsConstraints);
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
       tokenTerms,
       shareholderRights,
+      etoTermsConstraints,
       opts.ovrETOTerms,
     );
     // deploy equity token controller which is company management contract
@@ -2763,6 +2765,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     } else {
       equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
     }
+
     // deploy equity token
     if (opts.ovrEquityToken) {
       // change token controller
@@ -2787,8 +2790,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         company,
       );
     }
-    // deploy default terms
-    etoTermsConstraints = await deployETOTermsConstraintsUniverse(opts.ovrETOTermsConstraints);
+
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
@@ -2796,7 +2798,6 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       nominee,
       company,
       etoTerms.address,
-      etoTermsConstraints.address,
       equityToken.address,
     );
     // add ETO contracts to collections in universe in one transaction -> must be atomic

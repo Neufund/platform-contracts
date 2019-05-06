@@ -251,9 +251,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
           PUBLIC_DURATION: minPublicDuration.sub(1),
         });
         // redeploy with new durationTerms
-        await expect(redeployTerms()).to.be.rejectedWith(
-          "NF_ETO_TERMS_PUB_D_MIN"
-        );
+        await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_PUB_D_MIN");
       } else {
         this.skip();
       }
