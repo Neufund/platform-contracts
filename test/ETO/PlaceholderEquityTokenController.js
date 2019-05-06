@@ -10,6 +10,7 @@ import {
   deployShareholderRights,
   deployTokenTerms,
   constTokenTerms,
+  deployETOTermsConstraintsUniverse,
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { decodeLogs, eventValue, eventWithIdxValue, hasEvent } from "../helpers/events";
@@ -21,6 +22,8 @@ import {
   erc677TokenTests,
   standardTokenTests,
 } from "../helpers/tokenTestCases";
+
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -47,6 +50,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   let testCommitment;
   let shareholderRights;
   let durationTerms;
+  let termsConstraints;
 
   beforeEach(async () => {
     [universe] = await deployUniverse(admin, admin);
@@ -383,6 +387,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         durationTerms,
         tokenTerms,
         shareholderRights,
+        termsConstraints,
         {
           ENABLE_TRANSFERS_ON_SUCCESS: true,
           MAX_TICKET_EUR_ULPS: Q18.mul(100000),
@@ -894,7 +899,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
   });
 
-  async function deployController(termsOverride) {
+  async function deployController(termsOverride, constraintsOverride) {
+    [termsConstraints] = await deployETOTermsConstraintsUniverse(
+      admin,
+      universe,
+      ETOTermsConstraints,
+      constraintsOverride,
+    );
+
     // default terms have non transferable token
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
@@ -902,6 +914,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       durationTerms,
       tokenTerms,
       shareholderRights,
+      termsConstraints,
       termsOverride,
     );
     equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
