@@ -180,14 +180,18 @@ export async function deployETOTermsConstraints(artifact, terms, fullTerms) {
 }
 
 export async function deployETOTermsConstraintsUniverse(admin, universe, artifact, terms) {
-  const constraints = await deployETOTermsConstraints(artifact, terms);
+  const [
+    etoTermsConstraints,
+    constraintsTerms,
+    constraintsTermsKeys,
+    constraintsTermsValues,
+  ] = await deployETOTermsConstraints(artifact, terms);
   // add the constraints to the universe
   await universe.setCollectionsInterfaces(
     [knownInterfaces.etoTermsConstraints],
-    [constraints.address],
+    [etoTermsConstraints.address],
     [true],
     { from: admin },
   );
-
-  return constraints;
+  return [etoTermsConstraints, constraintsTerms, constraintsTermsKeys, constraintsTermsValues];
 }

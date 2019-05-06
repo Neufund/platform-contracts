@@ -7,6 +7,7 @@ import {
   deployDurationTerms,
   deployTokenTerms,
   deployETOTermsConstraintsUniverse,
+  deployETOTermsConstraints,
   constTokenTerms,
   deployETOTerms,
 } from "../helpers/deployTerms";
@@ -87,6 +88,22 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       }
     }
   }
+
+  it("should reject constraints not in universe", async () => {
+    [termsConstraints] = await deployETOTermsConstraints(ETOTermsConstraints, {});
+
+    await expect(
+      deployETOTerms(
+        universe,
+        ETOTerms,
+        durationTerms,
+        etoTokenTerms,
+        shareholderRights,
+        termsConstraints,
+        {},
+      ),
+    ).to.be.rejectedWith("NF_TERMS_NOT_IN_UNIVERSE");
+  });
 
   it("should save ETOTerms Contraints", async () => {
     expect(await etoTerms.ETO_TERMS_CONSTRAINTS()).to.eq(termsConstraints.address);

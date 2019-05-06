@@ -163,7 +163,7 @@ contract ETOTerms is
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
         // TODO comment back in!!
-        // require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints));
+        require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints), "NF_TERMS_NOT_IN_UNIVERSE");
 
         // save reference to constraints
         ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
