@@ -5,7 +5,7 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfac
 
 const promisify = require("../test/helpers/evmCommands").promisify;
 
-const constraints = require("./configETOTermsFixtures").constraints;
+const constraints = require("./config").constraints;
 const deployedAddresses = require("./configETOTermsFixtures").deployedAddresses;
 
 module.exports = function deployContracts(deployer, network, accounts) {
