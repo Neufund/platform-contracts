@@ -109,6 +109,7 @@ export async function deployETO(
     durationTerms,
     tokenTerms,
     shareholderRights,
+    { address: etoTermsConstraintsAddress },
     defETOTerms,
     true,
   );
@@ -137,7 +138,6 @@ export async function deployETO(
     nominee,
     company,
     etoTerms.address,
-    etoTermsConstraintsAddress,
     equityToken.address,
   );
   logDeployed(etoCommitment);

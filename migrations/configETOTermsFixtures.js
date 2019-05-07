@@ -1,7 +1,7 @@
 import { web3, Q18 } from "../test/helpers/constants";
 
 const two = new web3.BigNumber(2);
-const intMax = two.pow(256) - 1;
+const intMax = two.pow(256).sub(1);
 
 export const constraints = [
   // HNWI ETO DE
