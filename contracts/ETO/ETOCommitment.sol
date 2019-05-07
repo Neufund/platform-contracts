@@ -11,6 +11,7 @@ import "../Agreement.sol";
 import "../Math.sol";
 import "../Serialization.sol";
 import "../KnownInterfaces.sol";
+import "../Standards/IFeeDisbursal.sol";
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -522,6 +523,18 @@ contract ETOCommitment is
         amountEurUlps = ticket.amountEurUlps;
         claimedOrRefunded = ticket.claimOrRefundSettled;
         usedLockedAccount = ticket.usedLockedAccount;
+    }
+
+    // recycle all payment tokens held on this contract as a result of NEU proceeds
+    function recycle(address[] tokens)
+        public
+        onlyState(ETOState.Payout) 
+    {
+        IFeeDisbursal disbursal = IFeeDisbursal(UNIVERSE.feeDisbursal());
+        for (uint256 i = 0; i < tokens.length; i += 1) {
+            address token = tokens[i];
+            disbursal.reject(token, NEUMARK, 256**2-1);
+        }
     }
 
     //
