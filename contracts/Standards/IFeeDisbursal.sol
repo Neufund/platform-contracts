@@ -79,7 +79,7 @@ contract IFeeDisbursal is
     ////////////////////////
     // Constants
     ////////////////////////
-    uint256 constant UINT256_MAX = 2**256 - 1;
+    uint256 internal constant UINT256_MAX = 2**256 - 1;
 
 
     ////////////////////////
@@ -205,9 +205,4 @@ contract IFeeDisbursal is
     /// @notice update current controller
     function changeFeeDisbursalController(IFeeDisbursalController newController)
         public;
-
-    /// @notice legacy callback used by ICBMLockedAccount: approve and call pattern
-    function receiveApproval(address from, uint256 amount, address tokenAddress, bytes data)
-        public
-        returns (bool success);
 }
