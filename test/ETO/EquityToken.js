@@ -7,6 +7,7 @@ import {
   deployETOTerms,
   deployTokenTerms,
   constTokenTerms,
+  deployETOTermsConstraintsUniverse,
 } from "../helpers/deployTerms";
 import {
   basicTokenTests,
@@ -30,6 +31,8 @@ import { increaseTime } from "../helpers/evmCommands";
 import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 import EvmError from "../helpers/EVMThrow";
 
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
+
 const EquityToken = artifacts.require("EquityToken");
 const TestMockableEquityTokenController = artifacts.require("TestMockableEquityTokenController");
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
@@ -45,6 +48,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let universe;
   let etoTerms, etoTermsDict;
   let tokenTerms;
+  let termsConstraints;
 
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
@@ -53,12 +57,20 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
+
+    [termsConstraints] = await deployETOTermsConstraintsUniverse(
+      admin,
+      universe,
+      ETOTermsConstraints,
+    );
+
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
       tokenTerms,
       shareholderRights,
+      termsConstraints,
     );
     equityTokenController = await TestMockableEquityTokenController.new(universe.address);
 

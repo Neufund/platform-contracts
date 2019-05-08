@@ -19,7 +19,7 @@ import {
   deployETOTerms,
   deployTokenTerms,
   constTokenTerms,
-  constETOTerms,
+  deployETOTermsConstraints,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -43,6 +43,7 @@ import {
 import { expectLogFundsCommitted } from "../helpers/commitment";
 import EvmError from "../helpers/EVMThrow";
 
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const EquityToken = artifacts.require("EquityToken");
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const MockPlaceholderEquityTokenController = artifacts.require(
@@ -88,6 +89,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   let tokenTermsDict;
   let etoTerms;
   let etoTermsDict;
+  let etoTermsConstraints;
+  // let etoTermsConstraintsDict;
   let shareholderRights;
   // let shareholderTermsDict;
   let durationTerms;
@@ -215,7 +218,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should set start date", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       const tx = await etoCommitment.setStartDate(
         etoTerms.address,
         equityToken.address,
@@ -233,7 +236,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should reset start date", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -241,7 +244,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectStateStarts({ Whitelist: startDate, Refund: 0 }, defaultDurationTable());
 
       let newStartDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds * 2);
-      newStartDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      newStartDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, newStartDate, {
         from: company,
       });
@@ -252,7 +255,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting initial start date closer than DATE_TO_WHITELIST_MIN_DURATION to now", async () => {
       // set exactly DATE_TO_WHITELIST_MIN_DURATION - 1 second
       startDate = new web3.BigNumber((await latestTimestamp()) - 1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await expect(
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: company,
@@ -262,7 +265,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date", async () => {
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -283,7 +286,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting date not from company", async () => {
       // company confirms terms and sets start date
       startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await expect(
         etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: investors[0],
@@ -293,7 +296,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("rejects setting date before block.timestamp", async () => {
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION()).add(1);
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION()).add(1);
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -312,7 +315,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("rejects setting agreement by nominee when start date is set", async () => {
       await etoCommitment.amendAgreement("ABBA", { from: nominee });
       startDate = new web3.BigNumber(await latestTimestamp()).add(1);
-      startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
       await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
         from: company,
       });
@@ -560,7 +563,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expectValidClaimState(nomineeSignTx, contribution);
     });
 
-    it("go from public to signing by reaching max cap exactly", async () => {
+    it("go from public to signing by reaching max cap exactly (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -580,7 +583,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expectValidClaimState(nomineeSignTx, contribution);
     });
 
-    it("go from public to signing by reaching max cap within minimum ticket", async () => {
+    it("go from public to signing by reaching max cap exactly (max investment amount)", async () => {
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount, "EUR");
+      // we should be signing NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+    });
+
+    it("go from public to signing by reaching max cap within minimum ticket (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -594,7 +611,22 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
     });
 
-    it("stay in public by not reaching max cap because less than gap", async () => {
+    it("go from public to signing by reaching max cap within minimum ticket (max investment amount)", async () => {
+      const minTicket = Q18.mul(200);
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount.sub(minTicket).add(1), "EUR");
+      // we should be signing NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+    });
+
+    it("stay in public by not reaching max cap because less than gap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -606,7 +638,21 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
     });
 
-    it("reverts on crossing max cap", async () => {
+    it("stay in public by not reaching max cap because less than gap (max investment amount)", async () => {
+      const minTicket = Q18.mul(200);
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], maxInvestAmount.sub(minTicket), "EUR");
+      // we should be public NOW
+      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Public);
+    });
+
+    it("reverts on crossing max cap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -614,6 +660,19 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expect(
         investAmount(investors[4], missingAmount.add(tokenTermsDict.TOKEN_PRICE_EUR_ULPS), "EUR"),
       ).to.be.rejectedWith("NF_ETO_MAX_TOK_CAP");
+    });
+
+    it("reverts on crossing max cap (max investment amount)", async () => {
+      const maxInvestAmount = Q18.mul(5000000);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount.mul(2) },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await expect(investAmount(investors[4], maxInvestAmount.add(1), "EUR")).to.be.rejectedWith(
+        "NF_ETO_MAX_TOK_CAP",
+      );
     });
 
     it("go from whitelist to signing by reaching max cap", async () => {
@@ -1119,10 +1178,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should enable transfer on equity token on success", async () => {
       await deployETO({
         ovrETOTerms: {
-          MIN_TICKET_EUR_ULPS: constETOTerms.MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS,
+          MIN_TICKET_EUR_ULPS: Q18.mul(100),
           MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
           ENABLE_TRANSFERS_ON_SUCCESS: true,
-          ALLOW_RETAIL_INVESTORS: false,
         },
       });
       await prepareETOForPublic();
@@ -1224,7 +1282,9 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           MAX_TICKET_EUR_ULPS: Q18.mul(15000000),
           ENABLE_TRANSFERS_ON_SUCCESS: false,
           PUBLIC_DISCOUNT_FRAC: publicDiscount,
-          ALLOW_RETAIL_INVESTORS: true,
+        },
+        ovrETOTermsConstraints: {
+          CAN_SET_TRANSFERABILITY: false,
         },
       });
       // check that whitelist investment is not affected by public discount
@@ -1442,10 +1502,84 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   });
 
   describe("calculateContribution", () => {
+    const MAX_TICKET_EUR_ULPS = Q18.mul(15000000);
+    const MAX_INVESTMENT_AMOUNT_EUR_ULPS = MAX_TICKET_EUR_ULPS.mul(2).sub(1); // two full tickets cannot be invested, one eur less though yes
+
     beforeEach(async () => {
-      await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await deployETO({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS },
+      });
       await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), { from: admin });
       await prepareETOForPublic();
+    });
+
+    it("should set max cap when exceeded max investment amount in public phase", async () => {
+      await deployETO({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate.add(1));
+
+      // invest one full ticket
+      await investAmount(investors[0], MAX_TICKET_EUR_ULPS, "EUR");
+
+      // this is exactly MAX_INVESTMENT_AMOUNT_EUR_ULPS now
+      const contrib1 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS.sub(1),
+      );
+      expect(contrib1[6]).to.be.false;
+
+      // this is one more than MAX_INVESTMENT_AMOUNT_EUR_ULPS
+      const contrib2 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS,
+      );
+      expect(contrib2[6]).to.be.true;
+    });
+
+    it("should set max cap when exceeded max investment amount in whitelist phase", async () => {
+      await deployETO({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
+        ovrTokenTerms: {
+          MAX_NUMBER_OF_TOKENS: Q18.mul(1000),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: Q18.mul(1000),
+        }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await prepareETOForPublic();
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1]],
+        [Q18.mul(0), Q18.mul(0)],
+        [Q18.mul(1), Q18.mul(1)],
+        {
+          from: deployer,
+        },
+      );
+
+      // invest one full ticket
+      await investAmount(investors[0], MAX_TICKET_EUR_ULPS, "EUR");
+
+      // this is exactly MAX_INVESTMENT_AMOUNT_EUR_ULPS now
+      const contrib1 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS.sub(1),
+      );
+      expect(contrib1[6]).to.be.false;
+
+      // this is one more than MAX_INVESTMENT_AMOUNT_EUR_ULPS
+      const contrib2 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS,
+      );
+      expect(contrib2[6]).to.be.true;
     });
 
     it("should calculate contribution", async () => {
@@ -1706,7 +1840,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           },
         );
         startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-        startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+        startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
         await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
           from: company,
         });
@@ -2661,6 +2795,20 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     }
   }
 
+  async function deployETOTermsConstraintsUniverse(args = {}) {
+    const [constraints] = await deployETOTermsConstraints(ETOTermsConstraints, args);
+
+    // add the constraints to the universe
+    await universe.setCollectionsInterfaces(
+      [knownInterfaces.etoTermsConstraints],
+      [constraints.address],
+      [true],
+      { from: admin },
+    );
+
+    return constraints;
+  }
+
   async function deployETO(options) {
     const opts = Object.assign({ ovrArtifact: ETOCommitment }, options);
     // deploy ETO Terms: here deployment of single ETO contracts start
@@ -2670,12 +2818,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     );
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, opts.ovrDurations);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, opts.ovrTokenTerms);
+    etoTermsConstraints = await deployETOTermsConstraintsUniverse(opts.ovrETOTermsConstraints);
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
       tokenTerms,
       shareholderRights,
+      etoTermsConstraints,
       opts.ovrETOTerms,
     );
     // deploy equity token controller which is company management contract
@@ -2689,6 +2839,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     } else {
       equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
     }
+
     // deploy equity token
     if (opts.ovrEquityToken) {
       // change token controller
@@ -2713,6 +2864,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         company,
       );
     }
+
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
@@ -2801,7 +2953,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
   async function prepareETOForPublic() {
     startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
-    startDate = startDate.add(await platformTerms.DATE_TO_WHITELIST_MIN_DURATION());
+    startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
     await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
       from: company,
     });

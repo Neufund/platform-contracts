@@ -1,19 +1,15 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { divRound } from "../helpers/unitConverter";
-import EvmError from "../helpers/EVMThrow";
-import {
-  deployUniverse,
-  deployPlatformTerms,
-  deployIdentityRegistry,
-} from "../helpers/deployContracts";
+import { deployUniverse, deployIdentityRegistry } from "../helpers/deployContracts";
 import {
   deployShareholderRights,
   deployDurationTerms,
   deployTokenTerms,
-  deployETOTerms,
+  deployETOTermsConstraintsUniverse,
+  deployETOTermsConstraints,
   constTokenTerms,
-  constETOTerms,
+  deployETOTerms,
 } from "../helpers/deployTerms";
 import { Q18, contractId, web3 } from "../helpers/constants";
 
@@ -21,10 +17,11 @@ const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
 contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ...investors]) => {
   let universe;
-  let platformTerms;
+  let termsConstraints;
   let etoTerms;
   let terms, termsKeys;
   let shareholderRights;
@@ -36,13 +33,16 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   beforeEach(async () => {
     [universe] = await deployUniverse(admin, admin);
     await deployIdentityRegistry(universe, admin, admin);
-    [platformTerms] = await deployPlatformTerms(universe, admin);
+
     [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights(
       ShareholderRights,
     );
     [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms(ETODurationTerms);
     [etoTokenTerms, tokenTerms, tokenTermsKeys] = await deployTokenTerms(ETOTokenTerms);
-    [etoTerms, terms, termsKeys] = await redeployTerms();
+    [etoTerms, terms, termsKeys] = await redeployTerms(
+      {},
+      { MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200) },
+    );
   });
 
   it("should deploy", async () => {
@@ -57,18 +57,23 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     for (const k of Object.keys(constTokenTerms)) {
       expect(await etoTokenTerms[k]()).to.be.bignumber.eq(constTokenTerms[k]);
     }
-    for (const k of Object.keys(constETOTerms)) {
-      expect(await etoTerms[k]()).to.be.bignumber.eq(constETOTerms[k]);
-    }
   });
 
-  async function redeployTerms(etoTermsOverride) {
+  async function redeployTerms(etoTermsOverride, constraintsOverride) {
+    [termsConstraints] = await deployETOTermsConstraintsUniverse(
+      admin,
+      universe,
+      ETOTermsConstraints,
+      constraintsOverride,
+    );
+
     return deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
       etoTokenTerms,
       shareholderRights,
+      termsConstraints,
       etoTermsOverride,
     );
   }
@@ -83,6 +88,26 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       }
     }
   }
+
+  it("should reject constraints not in universe", async () => {
+    [termsConstraints] = await deployETOTermsConstraints(ETOTermsConstraints, {});
+
+    await expect(
+      deployETOTerms(
+        universe,
+        ETOTerms,
+        durationTerms,
+        etoTokenTerms,
+        shareholderRights,
+        termsConstraints,
+        {},
+      ),
+    ).to.be.rejectedWith("NF_TERMS_NOT_IN_UNIVERSE");
+  });
+
+  it("should save ETOTerms Contraints", async () => {
+    expect(await etoTerms.ETO_TERMS_CONSTRAINTS()).to.eq(termsConstraints.address);
+  });
 
   it("should verify terms in ETOTerms", async () => {
     await verifyTerms(etoTerms, termsKeys, terms);
@@ -105,7 +130,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   it("ShareholderRights todo: also verify constant parameters");
 
   it("should verify default eto terms against platform terms", async () => {
-    await etoTerms.requireValidTerms(platformTerms.address);
+    await etoTerms.requireValidTerms();
   });
 
   it("should convert equity token amount to shares", async () => {
@@ -126,12 +151,12 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   describe("terms validation", () => {
     it("rejects on platform terms with minimum ticket too small", async () => {
       // change to sub(0) for this test to fail
-      const [modifiedTerms] = await redeployTerms({
-        MIN_TICKET_EUR_ULPS: (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1),
-      });
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        EvmError,
-      );
+      await expect(
+        redeployTerms(
+          { MIN_TICKET_EUR_ULPS: Q18.mul(200).sub(1) },
+          { MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200) },
+        ),
+      ).to.be.rejectedWith("NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
     });
 
     /*
@@ -159,23 +184,9 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     */
 
     it("reverts on retail eto with transfers enabled", async () => {
-      const [modifiedTerms] = await redeployTerms({
-        ALLOW_RETAIL_INVESTORS: true,
-        ENABLE_TRANSFERS_ON_SUCCESS: true,
-      });
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_MUST_DISABLE_TRANSFERS",
-      );
-    });
-
-    it("reverts on non retail eto with minimum tickets too small", async () => {
-      const [modifiedTerms] = await redeployTerms({
-        ALLOW_RETAIL_INVESTORS: false,
-        MIN_TICKET_EUR_ULPS: constETOTerms.MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS.sub(1),
-      });
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_MIN_QUALIFIED_INVESTOR_TICKET",
-      );
+      await expect(
+        redeployTerms({ ENABLE_TRANSFERS_ON_SUCCESS: true }, { CAN_SET_TRANSFERABILITY: false }),
+      ).to.be.rejectedWith("NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
     });
 
     // MIN_TICKET_LT_TOKEN_PRICE
@@ -183,10 +194,12 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
         TOKEN_PRICE_EUR_ULPS: terms.MIN_TICKET_EUR_ULPS.add(1),
       });
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_MIN_TICKET_LT_TOKEN_PRICE",
-      );
+      await expect(
+        redeployTerms(
+          { TOKEN_TERMS: etoTokenTerms },
+          { MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(10).sub(1) },
+        ),
+      ).to.be.rejectedWith("NF_MIN_TICKET_LT_TOKEN_PRICE");
     });
 
     // MAX_FUNDS_LT_MIN_TICKET - otherwise it's impossible to succesfully complete ETO
@@ -202,12 +215,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MAX_NUMBER_OF_TOKENS),
       );
       // use a little bit smaller fraction to cross into < max cap (smaller fraction -> bigger discount)
-      const [modifiedTerms] = await redeployTerms({
-        PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction).add(10),
-      });
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_MAX_FUNDS_LT_MIN_TICKET",
-      );
+      await expect(
+        redeployTerms({
+          PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction).add(10),
+        }),
+      ).to.be.rejectedWith("NF_MAX_FUNDS_LT_MIN_TICKET");
     });
 
     it("should reject TOKEN TERMS on min cap less than one share", async () => {
@@ -224,25 +236,22 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     it("should accept new duration terms", async () => {
       // change to sub(0) for this test to fail
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).add(1),
+        WHITELIST_DURATION: (await termsConstraints.MIN_WHITELIST_DURATION()).add(1),
       });
       // redeploy with new durationTerms
       const [modifiedTerms] = await redeployTerms();
-      await modifiedTerms.requireValidTerms(platformTerms.address);
+      await modifiedTerms.requireValidTerms();
     });
 
     it("should reject on platform terms with whitelist duration too small", async function() {
-      const minWhitelistDuration = await platformTerms.MIN_WHITELIST_DURATION();
+      const minWhitelistDuration = await termsConstraints.MIN_WHITELIST_DURATION();
       // minimum limit must be > 0
       if (minWhitelistDuration.gt(0)) {
         [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-          WHITELIST_DURATION: (await platformTerms.MIN_WHITELIST_DURATION()).sub(1),
+          WHITELIST_DURATION: (await termsConstraints.MIN_WHITELIST_DURATION()).sub(1),
         });
         // redeploy with new durationTerms
-        const [modifiedTerms] = await redeployTerms();
-        await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "NF_ETO_TERMS_WL_D_MIN",
-        );
+        await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_WL_D_MIN");
       } else {
         this.skip();
       }
@@ -250,26 +259,20 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("should reject on platform terms with whitelist duration too large", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).add(1),
+        WHITELIST_DURATION: (await termsConstraints.MAX_WHITELIST_DURATION()).add(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_WL_D_MAX",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_WL_D_MAX");
     });
 
     it("should reject on platform terms with public duration too small", async function() {
-      const minPublicDuration = await platformTerms.MIN_PUBLIC_DURATION();
+      const minPublicDuration = await termsConstraints.MIN_PUBLIC_DURATION();
       if (minPublicDuration.gt(0)) {
         [durationTerms] = await deployDurationTerms(ETODurationTerms, {
           PUBLIC_DURATION: minPublicDuration.sub(1),
         });
         // redeploy with new durationTerms
-        const [modifiedTerms] = await redeployTerms();
-        await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "NF_ETO_TERMS_PUB_D_MIN",
-        );
+        await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_PUB_D_MIN");
       } else {
         this.skip();
       }
@@ -277,86 +280,65 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("should reject on platform terms with public duration too large", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        PUBLIC_DURATION: (await platformTerms.MAX_PUBLIC_DURATION()).add(1),
+        PUBLIC_DURATION: (await termsConstraints.MAX_PUBLIC_DURATION()).add(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_PUB_D_MAX",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_PUB_D_MAX");
     });
 
     it("should reject on platform terms with signing duration too small", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        SIGNING_DURATION: (await platformTerms.MIN_SIGNING_DURATION()).sub(1),
+        SIGNING_DURATION: (await termsConstraints.MIN_SIGNING_DURATION()).sub(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_SIG_MIN",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_SIG_MIN");
     });
 
     it("should reject on platform terms with signing duration too large", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        SIGNING_DURATION: (await platformTerms.MAX_SIGNING_DURATION()).add(1),
+        SIGNING_DURATION: (await termsConstraints.MAX_SIGNING_DURATION()).add(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_SIG_MAX",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_SIG_MAX");
     });
 
     it("should reject on platform terms with claim duration too small", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        CLAIM_DURATION: (await platformTerms.MIN_CLAIM_DURATION()).sub(1),
+        CLAIM_DURATION: (await termsConstraints.MIN_CLAIM_DURATION()).sub(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_CLAIM_MIN",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_CLAIM_MIN");
     });
 
     it("should reject on platform terms with claim duration too large", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        CLAIM_DURATION: (await platformTerms.MAX_CLAIM_DURATION()).add(1),
+        CLAIM_DURATION: (await termsConstraints.MAX_CLAIM_DURATION()).add(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_CLAIM_MAX",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_CLAIM_MAX");
     });
 
     it("should reject on platform terms with total duration too small", async () => {
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-        WHITELIST_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2),
-        PUBLIC_DURATION: (await platformTerms.MIN_OFFER_DURATION()).div(2).sub(1),
+        WHITELIST_DURATION: (await termsConstraints.MIN_OFFER_DURATION()).div(2),
+        PUBLIC_DURATION: (await termsConstraints.MIN_OFFER_DURATION()).div(2).sub(1),
       });
       // redeploy with new durationTerms
-      const [modifiedTerms] = await redeployTerms();
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_TOT_O_MIN",
-      );
+      await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_TOT_O_MIN");
     });
 
     it("should reject on platform terms with total duration too large", async function() {
-      const maxOfferDuration = await platformTerms.MAX_OFFER_DURATION();
-      const maxWlPubDuration = (await platformTerms.MAX_WHITELIST_DURATION()).add(
-        await platformTerms.MAX_PUBLIC_DURATION(),
+      const maxOfferDuration = await termsConstraints.MAX_OFFER_DURATION();
+      const maxWlPubDuration = (await termsConstraints.MAX_WHITELIST_DURATION()).add(
+        await termsConstraints.MAX_PUBLIC_DURATION(),
       );
       if (maxWlPubDuration.gt(maxOfferDuration)) {
         // todo: this test has many internal cases and needs improvement, with current platform settings it will not be executed
         [durationTerms] = await deployDurationTerms(ETODurationTerms, {
-          WHITELIST_DURATION: (await platformTerms.MAX_WHITELIST_DURATION()).sub(1),
+          WHITELIST_DURATION: (await termsConstraints.MAX_WHITELIST_DURATION()).sub(1),
         });
         // redeploy with new durationTerms
-        const [modifiedTerms] = await redeployTerms();
-        await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-          "NF_ETO_TERMS_TOT_O_MAX",
-        );
+        await expect(redeployTerms()).to.be.rejectedWith("NF_ETO_TERMS_TOT_O_MAX");
       } else {
         this.skip();
       }
@@ -372,12 +354,29 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
     });
 
     it("should reject on minimum ticket too small", async () => {
-      const [modifiedTerms] = await redeployTerms({
-        MIN_TICKET_EUR_ULPS: (await platformTerms.MIN_TICKET_EUR_ULPS()).sub(1),
-      });
-      await expect(modifiedTerms.requireValidTerms(platformTerms.address)).to.be.rejectedWith(
-        "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS",
-      );
+      await expect(
+        redeployTerms(
+          {
+            MIN_TICKET_EUR_ULPS: Q18.mul(200).sub(1),
+          },
+          {
+            MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+          },
+        ),
+      ).to.be.rejectedWith("NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+    });
+
+    it("should reject on maximum ticket too high", async () => {
+      await expect(
+        redeployTerms(
+          {
+            MIN_TICKET_EUR_ULPS: Q18.mul(5000).add(1),
+          },
+          {
+            MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(5000),
+          },
+        ),
+      ).to.be.rejectedWith("NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
     });
   });
 

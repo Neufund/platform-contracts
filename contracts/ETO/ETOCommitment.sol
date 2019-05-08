@@ -2,6 +2,7 @@ pragma solidity 0.4.25;
 
 import "./ETOTimedStateMachine.sol";
 import "./ETOTerms.sol";
+import "./ETOTermsConstraints.sol";
 import "../Universe.sol";
 import "../Company/IEquityToken.sol";
 import "../ICBM/LockedAccount.sol";
@@ -9,7 +10,7 @@ import "../AccessControl/AccessControlled.sol";
 import "../Agreement.sol";
 import "../Math.sol";
 import "../Serialization.sol";
-
+import "../KnownInterfaces.sol";
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -23,7 +24,8 @@ contract ETOCommitment is
     ETOTimedStateMachine,
     Math,
     Serialization,
-    IContractId
+    IContractId,
+    KnownInterfaces
 {
 
     ////////////////////////
@@ -83,6 +85,10 @@ contract ETOCommitment is
     uint128 private PLATFORM_NEUMARK_SHARE;
     // token rate expires after
     uint128 private TOKEN_RATE_EXPIRES_AFTER;
+    // max investment amount
+    uint256 private MAX_INVESTMENT_AMOUNT_EUR_ULPS;
+    // min ticket size, taken from eto terms
+    uint256 private MIN_TICKET_EUR_ULPS;
 
     // wallet that keeps Platform Operator share of neumarks
     //  and where token participation fee is temporarily stored
@@ -94,6 +100,8 @@ contract ETOCommitment is
 
     // terms contracts
     ETOTerms private ETO_TERMS;
+    // terms constraints (a.k.a. "Product")
+    ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
     // reference to platform terms
     PlatformTerms private PLATFORM_TERMS;
 
@@ -210,7 +218,8 @@ contract ETOCommitment is
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
         require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
-        require(etoTerms.requireValidTerms(PLATFORM_TERMS));
+
+        ETO_TERMS_CONSTRAINTS = etoTerms.ETO_TERMS_CONSTRAINTS();
 
         PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
@@ -228,11 +237,13 @@ contract ETOCommitment is
         ETO_TERMS = etoTerms;
         EQUITY_TOKEN = equityToken;
 
+        MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
         MAX_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS();
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
-        MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, etoTerms.MIN_TICKET_EUR_ULPS());
+        MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, MIN_TICKET_EUR_ULPS);
 
+        MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
         setupStateMachine(
             ETO_TERMS.DURATION_TERMS(),
             IETOCommitmentObserver(EQUITY_TOKEN.tokenController())
@@ -260,13 +271,13 @@ contract ETOCommitment is
         assert(startDate < 0xFFFFFFFF);
         // must be more than NNN days (platform terms!)
         require(
-            startDate > block.timestamp && startDate - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION(),
+            startDate > block.timestamp && startDate - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION(),
             "NF_ETO_DATE_TOO_EARLY");
         // prevent re-setting start date if ETO starts too soon
         uint256 startAt = startOfInternal(ETOState.Whitelist);
         // block.timestamp must be less than startAt, otherwise timed state transition is done
         require(
-            startAt == 0 || (startAt - block.timestamp > PLATFORM_TERMS.DATE_TO_WHITELIST_MIN_DURATION()),
+            startAt == 0 || (startAt - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION()),
             "NF_ETO_START_TOO_SOON");
         runStateMachine(uint32(startDate));
         // todo: lock ETO_TERMS whitelist to be more trustless
@@ -498,7 +509,7 @@ contract ETOCommitment is
             (,neuRewardUlps) = calculateNeumarkDistribution(NEUMARK.incremental(newInvestorContributionEurUlps));
         }
         // crossing max cap can always happen
-        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt);
+        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt, newInvestorContributionEurUlps);
     }
 
     function investorTicket(address investor)
@@ -536,7 +547,7 @@ contract ETOCommitment is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 0);
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 1);
     }
 
     ////////////////////////
@@ -554,7 +565,8 @@ contract ETOCommitment is
     {
         // add 1 to MIN_TICKET_TOKEN because it was produced by floor and check only MAX CAP
         // WHITELIST CAP will not induce state transition as fixed slots should be able to invest till the end of Whitelist
-        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0);
+        // also put the minimum ticket size plus one cent as eur equivalent to see wether we would cross the threshold
+        bool capExceeded = isCapExceeded(false, MIN_TICKET_TOKENS + 1, 0, MIN_TICKET_EUR_ULPS);
         if (capExceeded) {
             if (oldState == ETOState.Whitelist) {
                 return ETOState.Public;
@@ -769,7 +781,7 @@ contract ETOCommitment is
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
-        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256), "NF_ETO_MAX_TOK_CAP");
+        require(!isCapExceeded(applyDiscounts, equityTokenInt256, fixedSlotEquityTokenInt256, equivEurUlps), "NF_ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
         // bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
@@ -825,14 +837,19 @@ contract ETOCommitment is
         );
     }
 
-    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt)
+    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt, uint256 equivEurUlps)
         private
         constant
         returns (bool maxCapExceeded)
-    {
+    {   
+        // check for exceeding tokens
         maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_NUMBER_OF_TOKENS;
         if (applyDiscounts && !maxCapExceeded) {
             maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+        }
+        // check for exceeding max investment amount as defined by the constraints
+        if ( !maxCapExceeded && (equivEurUlps + _totalEquivEurUlps > MAX_INVESTMENT_AMOUNT_EUR_ULPS )) {
+            maxCapExceeded = true;
         }
     }
 

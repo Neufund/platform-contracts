@@ -2,11 +2,13 @@ pragma solidity 0.4.25;
 
 import "./ETODurationTerms.sol";
 import "./ETOTokenTerms.sol";
+import "./ETOTermsConstraints.sol";
 import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
 import "../Company/ShareholderRights.sol";
 import "../Math.sol";
 import "../Universe.sol";
+import "../KnownInterfaces.sol";
 
 
 /// @title base terms of Equity Token Offering
@@ -15,7 +17,8 @@ import "../Universe.sol";
 contract ETOTerms is
     IdentityRecord,
     Math,
-    IContractId
+    IContractId,
+    KnownInterfaces
 {
 
     ////////////////////////
@@ -35,7 +38,6 @@ contract ETOTerms is
     ////////////////////////
 
     bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-    uint256 public constant MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS = 100000 * 10**18;
 
     ////////////////////////
     // Immutable state
@@ -55,16 +57,11 @@ contract ETOTerms is
     uint256 public MIN_TICKET_EUR_ULPS;
     // maximum ticket for sophisiticated investors
     uint256 public MAX_TICKET_EUR_ULPS;
-    // maximum ticket for simple investors
-    uint256 public MAX_TICKET_SIMPLE_EUR_ULPS;
     // should enable transfers on ETO success
     // transfers are always disabled during token offering
     // if set to False transfers on Equity Token will remain disabled after offering
     // once those terms are on-chain this flags fully controls token transferability
     bool public ENABLE_TRANSFERS_ON_SUCCESS;
-    // tells if offering accepts retail investors. if so, registered prospectus is required
-    // and ENABLE_TRANSFERS_ON_SUCCESS is forced to be false as per current platform policy
-    bool public ALLOW_RETAIL_INVESTORS;
     // represents the discount % for whitelist participants
     uint256 public WHITELIST_DISCOUNT_FRAC;
     // represents the discount % for public participants, using values > 0 will result
@@ -86,6 +83,8 @@ contract ETOTerms is
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
     Universe public UNIVERSE;
+    // terms constraints (a.k.a. "Product")
+    ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
 
     // variables from token terms for local use
     // minimum number of tokens being offered. will set min cap
@@ -136,7 +135,6 @@ contract ETOTerms is
         uint256 existingCompanyShares,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
-        bool allowRetailInvestors,
         bool enableTransfersOnSuccess,
         string investorOfferingDocumentUrl,
         ShareholderRights shareholderRights,
@@ -144,7 +142,8 @@ contract ETOTerms is
         string equityTokenSymbol,
         uint256 shareNominalValueEurUlps,
         uint256 whitelistDiscountFrac,
-        uint256 publicDiscountFrac
+        uint256 publicDiscountFrac,
+        ETOTermsConstraints etoTermsConstraints
     )
         public
     {
@@ -163,6 +162,12 @@ contract ETOTerms is
         require(minTicketEurUlps<=maxTicketEurUlps);
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
+        // TODO comment back in!!
+        require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints), "NF_TERMS_NOT_IN_UNIVERSE");
+
+        // save reference to constraints
+        ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
+
         // copy token terms variables
         MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
         MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
@@ -174,7 +179,6 @@ contract ETOTerms is
         EXISTING_COMPANY_SHARES = existingCompanyShares;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
-        ALLOW_RETAIL_INVESTORS = allowRetailInvestors;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         INVESTOR_OFFERING_DOCUMENT_URL = investorOfferingDocumentUrl;
         SHAREHOLDER_RIGHTS = shareholderRights;
@@ -186,6 +190,9 @@ contract ETOTerms is
         WHITELIST_MANAGER = msg.sender;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
+
+        // validate all settings
+        require(requireValidTerms());
     }
 
     ////////////////////////
@@ -304,42 +311,40 @@ contract ETOTerms is
         isEligible = claims.isVerified && !claims.accountFrozen;
     }
 
-    /// @notice checks terms against platform terms, reverts on invalid
-    function requireValidTerms(PlatformTerms platformTerms)
+    /// @notice checks terms against terms constraints, reverts on invalid
+    function requireValidTerms()
         public
         constant
         returns (bool)
     {
-        // apply constraints on retail fundraising
-        if (ALLOW_RETAIL_INVESTORS) {
-            // make sure transfers are disabled after offering for retail investors
-            require(!ENABLE_TRANSFERS_ON_SUCCESS, "NF_MUST_DISABLE_TRANSFERS");
-        } else {
-            // only qualified investors allowed defined as tickets > 100000 EUR
-            require(MIN_TICKET_EUR_ULPS >= MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS, "NF_MIN_QUALIFIED_INVESTOR_TICKET");
-        }
         // min ticket must be > token price
         require(MIN_TICKET_EUR_ULPS >= TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS(), "NF_MIN_TICKET_LT_TOKEN_PRICE");
         // it must be possible to collect more funds than max number of tokens
         require(ESTIMATED_MAX_CAP_EUR_ULPS() >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
 
-        require(MIN_TICKET_EUR_ULPS >= platformTerms.MIN_TICKET_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
-        // duration checks
-        require(DURATION_TERMS.WHITELIST_DURATION() >= platformTerms.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
-        require(DURATION_TERMS.WHITELIST_DURATION() <= platformTerms.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
+        // ticket size checks
+        require(MIN_TICKET_EUR_ULPS >= ETO_TERMS_CONSTRAINTS.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+        require(MAX_TICKET_EUR_ULPS <= ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
 
-        require(DURATION_TERMS.PUBLIC_DURATION() >= platformTerms.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
-        require(DURATION_TERMS.PUBLIC_DURATION() <= platformTerms.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
+        // only allow transferabilty if this is allowed in general
+        require(!ENABLE_TRANSFERS_ON_SUCCESS || ETO_TERMS_CONSTRAINTS.CAN_SET_TRANSFERABILITY(), "NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
+
+        // duration checks
+        require(DURATION_TERMS.WHITELIST_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MIN");
+        require(DURATION_TERMS.WHITELIST_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_WHITELIST_DURATION(), "NF_ETO_TERMS_WL_D_MAX");
+
+        require(DURATION_TERMS.PUBLIC_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MIN");
+        require(DURATION_TERMS.PUBLIC_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_PUBLIC_DURATION(), "NF_ETO_TERMS_PUB_D_MAX");
 
         uint256 totalDuration = DURATION_TERMS.WHITELIST_DURATION() + DURATION_TERMS.PUBLIC_DURATION();
-        require(totalDuration >= platformTerms.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
-        require(totalDuration <= platformTerms.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
+        require(totalDuration >= ETO_TERMS_CONSTRAINTS.MIN_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MIN");
+        require(totalDuration <= ETO_TERMS_CONSTRAINTS.MAX_OFFER_DURATION(), "NF_ETO_TERMS_TOT_O_MAX");
 
-        require(DURATION_TERMS.SIGNING_DURATION() >= platformTerms.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
-        require(DURATION_TERMS.SIGNING_DURATION() <= platformTerms.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
+        require(DURATION_TERMS.SIGNING_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MIN");
+        require(DURATION_TERMS.SIGNING_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_SIGNING_DURATION(), "NF_ETO_TERMS_SIG_MAX");
 
-        require(DURATION_TERMS.CLAIM_DURATION() >= platformTerms.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
-        require(DURATION_TERMS.CLAIM_DURATION() <= platformTerms.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
+        require(DURATION_TERMS.CLAIM_DURATION() >= ETO_TERMS_CONSTRAINTS.MIN_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MIN");
+        require(DURATION_TERMS.CLAIM_DURATION() <= ETO_TERMS_CONSTRAINTS.MAX_CLAIM_DURATION(), "NF_ETO_TERMS_CLAIM_MAX");
 
         return true;
     }
@@ -349,7 +354,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 0);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 1);
     }
 
     ////////////////////////

@@ -13,6 +13,7 @@ const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 const promisify = require("../test/helpers/evmCommands").promisify;
+const deployedConstraintsAddresses = require("./configETOTermsFixtures").deployedAddresses;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -51,6 +52,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
+        deployedConstraintsAddresses[5],
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -138,7 +140,17 @@ module.exports = function deployContracts(deployer, network, accounts) {
   });
 };
 
-async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
+async function simulateETO(
+  DEPLOYER,
+  CONFIG,
+  universe,
+  nominee,
+  issuer,
+  etoDefiniton,
+  fas,
+  final,
+  etoTermsConstraintsAddress,
+) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
@@ -150,6 +162,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     etoDefiniton.shareholderTerms,
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
+    etoTermsConstraintsAddress,
   );
   // nominee sets agreement
   console.log("Nominee sets agreements");

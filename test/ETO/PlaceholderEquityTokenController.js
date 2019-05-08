@@ -10,6 +10,7 @@ import {
   deployShareholderRights,
   deployTokenTerms,
   constTokenTerms,
+  deployETOTermsConstraintsUniverse,
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { decodeLogs, eventValue, eventWithIdxValue, hasEvent } from "../helpers/events";
@@ -21,6 +22,8 @@ import {
   erc677TokenTests,
   standardTokenTests,
 } from "../helpers/tokenTestCases";
+
+const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -47,6 +50,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   let testCommitment;
   let shareholderRights;
   let durationTerms;
+  let termsConstraints;
 
   beforeEach(async () => {
     [universe] = await deployUniverse(admin, admin);
@@ -383,8 +387,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         durationTerms,
         tokenTerms,
         shareholderRights,
+        termsConstraints,
         {
-          ALLOW_RETAIL_INVESTORS: false,
           ENABLE_TRANSFERS_ON_SUCCESS: true,
           MAX_TICKET_EUR_ULPS: Q18.mul(100000),
         },
@@ -494,14 +498,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       }
     }
     it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
-      await deployController({ ALLOW_RETAIL_INVESTORS: true, ENABLE_TRANSFERS_ON_SUCCESS: false });
+      await deployController({ ENABLE_TRANSFERS_ON_SUCCESS: false });
       await deployETO();
       await testTransfersInOffering(false);
     });
 
     it("should allow transfers after eto if requested in terms", async () => {
       await deployController({
-        ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
@@ -842,7 +845,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     beforeEach(async () => {
       // token must be transferable to run standard test suite
       await deployController({
-        ALLOW_RETAIL_INVESTORS: false,
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
@@ -897,7 +899,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
   });
 
-  async function deployController(termsOverride) {
+  async function deployController(termsOverride, constraintsOverride) {
+    [termsConstraints] = await deployETOTermsConstraintsUniverse(
+      admin,
+      universe,
+      ETOTermsConstraints,
+      constraintsOverride,
+    );
+
     // default terms have non transferable token
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
@@ -905,6 +914,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       durationTerms,
       tokenTerms,
       shareholderRights,
+      termsConstraints,
       termsOverride,
     );
     equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);

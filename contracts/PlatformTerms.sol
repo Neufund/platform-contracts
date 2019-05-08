@@ -28,27 +28,8 @@ contract PlatformTerms is Math, IContractId {
     // no max ticket in general prospectus regulation
     // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
 
-    // min duration from setting the date to ETO start
-    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 7 days;
     // token rate expires after
     uint256 public constant TOKEN_RATE_EXPIRES_AFTER = 4 hours;
-
-    // duration constraints
-    uint256 public constant MIN_WHITELIST_DURATION = 0 days;
-    uint256 public constant MAX_WHITELIST_DURATION = 30 days;
-    uint256 public constant MIN_PUBLIC_DURATION = 0 days;
-    uint256 public constant MAX_PUBLIC_DURATION = 60 days;
-
-    // minimum length of whole offer
-    uint256 public constant MIN_OFFER_DURATION = 1 days;
-    // quarter should be enough for everyone
-    uint256 public constant MAX_OFFER_DURATION = 90 days;
-
-    uint256 public constant MIN_SIGNING_DURATION = 14 days;
-    uint256 public constant MAX_SIGNING_DURATION = 60 days;
-
-    uint256 public constant MIN_CLAIM_DURATION = 7 days;
-    uint256 public constant MAX_CLAIM_DURATION = 30 days;
 
     // time after which claimable tokens become recycleable in fee disbursal pool
     uint256 public constant DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION = 4 * 365 days;

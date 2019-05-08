@@ -1,4 +1,8 @@
 import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
+import { knownInterfaces } from "../helpers/knownInterfaces";
+
+const two = new web3.BigNumber(2);
+const intMax = two.pow(128);
 
 export const defaultShareholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(1),
@@ -25,10 +29,6 @@ export const constTokenTerms = {
   EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
 };
 
-export const constETOTerms = {
-  MIN_QUALIFIED_INVESTOR_TICKET_EUR_ULPS: Q18.mul(100000),
-};
-
 export const defTokenTerms = {
   MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
   MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
@@ -42,7 +42,6 @@ export const defEtoTerms = {
   EXISTING_COMPANY_SHARES: new web3.BigNumber(32000),
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
-  ALLOW_RETAIL_INVESTORS: true,
   ENABLE_TRANSFERS_ON_SUCCESS: false,
   INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
   SHAREHOLDER_RIGHTS: null,
@@ -51,6 +50,20 @@ export const defEtoTerms = {
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
   PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
+};
+
+export const defTermsConstraints = {
+  CAN_SET_TRANSFERABILITY: true,
+  HAS_NOMINEE: true,
+  MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+  MAX_TICKET_SIZE_EUR_ULPS: intMax,
+  MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+  MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
+  NAME: "Some Contraints",
+  OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
+  OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
+  JURISDICTION: "DE",
+  ASSET_TYPE: new web3.BigNumber(0),
 };
 
 export function validateTerms(artifact, terms) {
@@ -142,6 +155,7 @@ export async function deployETOTerms(
   durationTerms,
   tokenTerms,
   shareholderRights,
+  termsConstraints,
   terms,
   fullTerms,
 ) {
@@ -151,7 +165,33 @@ export async function deployETOTerms(
   etoTerms.DURATION_TERMS = durationTerms.address;
   etoTerms.TOKEN_TERMS = tokenTerms.address;
   etoTerms.SHAREHOLDER_RIGHTS = shareholderRights.address;
+  etoTerms.ETO_TERMS_CONSTRAINTS = termsConstraints.address;
   const [termsKeys, termsValues] = validateTerms(artifact, etoTerms);
   const deployedTerms = await artifact.new.apply(this, termsValues);
   return [deployedTerms, etoTerms, termsKeys, termsValues];
+}
+
+export async function deployETOTermsConstraints(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defTermsConstraints;
+  const constraintsTerms = Object.assign({}, defaults, terms || {});
+  const [constraintsTermsKeys, constraintsTermsValues] = validateTerms(artifact, constraintsTerms);
+  const etoTermsConstraints = await artifact.new.apply(this, constraintsTermsValues);
+  return [etoTermsConstraints, constraintsTerms, constraintsTermsKeys, constraintsTermsValues];
+}
+
+export async function deployETOTermsConstraintsUniverse(admin, universe, artifact, terms) {
+  const [
+    etoTermsConstraints,
+    constraintsTerms,
+    constraintsTermsKeys,
+    constraintsTermsValues,
+  ] = await deployETOTermsConstraints(artifact, terms);
+  // add the constraints to the universe
+  await universe.setCollectionsInterfaces(
+    [knownInterfaces.etoTermsConstraints],
+    [etoTermsConstraints.address],
+    [true],
+    { from: admin },
+  );
+  return [etoTermsConstraints, constraintsTerms, constraintsTermsKeys, constraintsTermsValues];
 }

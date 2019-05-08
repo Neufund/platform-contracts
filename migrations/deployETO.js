@@ -32,6 +32,7 @@ export async function deployETO(
   defShareholderRights,
   defDurations,
   defTokenTerms,
+  etoTermsConstraintsAddress,
 ) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Neumark = artifacts.require(config.artifacts.NEUMARK);
@@ -108,6 +109,7 @@ export async function deployETO(
     durationTerms,
     tokenTerms,
     shareholderRights,
+    { address: etoTermsConstraintsAddress },
     defETOTerms,
     true,
   );

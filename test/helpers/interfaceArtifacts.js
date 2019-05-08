@@ -40,6 +40,7 @@ export const interfaceToArtifacts = {
   [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER, ""],
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
   [keyToKey.paymentTokenInterface]: ["IERC223Token"],
+  [keyToKey.etoTermsConstraints]: [artifacts.ETO_TERMS_CONSTRAINTS, ""],
 };
 
 // verify all known interfaces are mapped
