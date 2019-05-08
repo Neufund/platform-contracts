@@ -77,6 +77,9 @@ contract ETOTermsConstraints is IContractId {
     // legal type of asset that will be used
     AssetType public ASSET_TYPE;
 
+    // address of the offering operator, will receive platform share from ETOCommitment
+    address public TOKEN_OFFERING_OPERATOR;
+
 
     ////////////////////////
     // Constructor
@@ -93,7 +96,8 @@ contract ETOTermsConstraints is IContractId {
         OfferingDocumentType offeringDocumentType,
         OfferingDocumentSubType offeringDocumentSubType,
         string jurisdiction,
-        AssetType assetType
+        AssetType assetType,
+        address tokenOfferingOperator
     )
         public
     {   
@@ -103,7 +107,7 @@ contract ETOTermsConstraints is IContractId {
         require(maxTicketSizeEurUlps>0);
         require(maxInvestmentAmountEurUlps>0);
         require(assetType != AssetType.VMA || !canSetTransferability);
-
+        require(tokenOfferingOperator != address(0x0));
 
         CAN_SET_TRANSFERABILITY = canSetTransferability;
         HAS_NOMINEE = hasNominee;
@@ -116,6 +120,7 @@ contract ETOTermsConstraints is IContractId {
         OFFERING_DOCUMENT_SUB_TYPE = offeringDocumentSubType;
         JURISDICTION = jurisdiction;
         ASSET_TYPE = assetType;
+        TOKEN_OFFERING_OPERATOR = tokenOfferingOperator;
     }
 
     //
