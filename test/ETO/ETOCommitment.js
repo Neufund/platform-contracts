@@ -1502,10 +1502,84 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   });
 
   describe("calculateContribution", () => {
+    const MAX_TICKET_EUR_ULPS = Q18.mul(15000000);
+    const MAX_INVESTMENT_AMOUNT_EUR_ULPS = MAX_TICKET_EUR_ULPS.mul(2).sub(1); // two full tickets cannot be invested, one eur less though yes
+
     beforeEach(async () => {
-      await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
+      await deployETO({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS },
+      });
       await identityRegistry.setClaims(investors[0], "0x0", toBytes32("0x1"), { from: admin });
       await prepareETOForPublic();
+    });
+
+    it("should set max cap when exceeded max investment amount in public phase", async () => {
+      await deployETO({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate.add(1));
+
+      // invest one full ticket
+      await investAmount(investors[0], MAX_TICKET_EUR_ULPS, "EUR");
+
+      // this is exactly MAX_INVESTMENT_AMOUNT_EUR_ULPS now
+      const contrib1 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS.sub(1),
+      );
+      expect(contrib1[6]).to.be.false;
+
+      // this is one more than MAX_INVESTMENT_AMOUNT_EUR_ULPS
+      const contrib2 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS,
+      );
+      expect(contrib2[6]).to.be.true;
+    });
+
+    it("should set max cap when exceeded max investment amount in whitelist phase", async () => {
+      await deployETO({
+        ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
+        ovrTokenTerms: {
+          MAX_NUMBER_OF_TOKENS: Q18.mul(1000),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: Q18.mul(1000),
+        }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await prepareETOForPublic();
+      await etoTerms.addWhitelisted(
+        [investors[0], investors[1]],
+        [Q18.mul(0), Q18.mul(0)],
+        [Q18.mul(1), Q18.mul(1)],
+        {
+          from: deployer,
+        },
+      );
+
+      // invest one full ticket
+      await investAmount(investors[0], MAX_TICKET_EUR_ULPS, "EUR");
+
+      // this is exactly MAX_INVESTMENT_AMOUNT_EUR_ULPS now
+      const contrib1 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS.sub(1),
+      );
+      expect(contrib1[6]).to.be.false;
+
+      // this is one more than MAX_INVESTMENT_AMOUNT_EUR_ULPS
+      const contrib2 = await etoCommitment.calculateContribution(
+        investors[1],
+        false,
+        MAX_TICKET_EUR_ULPS,
+      );
+      expect(contrib2[6]).to.be.true;
     });
 
     it("should calculate contribution", async () => {
