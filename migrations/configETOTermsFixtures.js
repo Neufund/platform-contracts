@@ -3,9 +3,9 @@ import { web3, Q18 } from "../test/helpers/constants";
 const two = new web3.BigNumber(2);
 const intMax = two.pow(256).sub(1);
 
-// TODO add correct Addresses from AGA
-export const TOKEN_OFFERING_OPERATOR_DE = "0xC5a96Db085dDA36FfBE390f455315D30D6D3DC52";
-export const TOKEN_OFFERING_OPERATOR_LI = "0x99C85bb64564D9eF9A99621301f22C9993Cb89E3";
+// same as on production system
+export const TOKEN_OFFERING_OPERATOR_DE = "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4";
+export const TOKEN_OFFERING_OPERATOR_LI = "0x0084C8f023D51896807a32d6f3e1AAc307eD891D";
 
 export const constraints = [
   // HNWI ETO DE

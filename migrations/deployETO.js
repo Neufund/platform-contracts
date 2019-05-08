@@ -134,7 +134,6 @@ export async function deployETO(
   console.log(`Deploying ${config.artifacts.STANDARD_ETO_COMMITMENT}`);
   const etoCommitment = await ETOCommitment.new(
     universe.address,
-    config.addresses.PLATFORM_OPERATOR_WALLET,
     nominee,
     company,
     etoTerms.address,
