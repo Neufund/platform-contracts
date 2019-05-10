@@ -112,6 +112,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
   let startDate;
   let durTable;
   let publicStartDate;
+  // save addess of tokenOfferingOperator
+  let tokenOfferingOperator;
 
   beforeEach(async () => {
     // deploy access policy and universe contract, admin account has all permissions of the platform
@@ -183,7 +185,8 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       expect(await etoCommitment.nominee()).to.eq(nominee);
       expect(await etoCommitment.companyLegalRep()).to.eq(company);
       const singletons = await etoCommitment.singletons();
-      expect(singletons[0]).to.eq(platformWallet);
+
+      expect(singletons[0]).to.eq(tokenOfferingOperator);
       expect(singletons[1]).to.eq(universe.address);
       expect(singletons[2]).to.eq(platformTerms.address);
 
@@ -2819,6 +2822,13 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, opts.ovrDurations);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, opts.ovrTokenTerms);
     etoTermsConstraints = await deployETOTermsConstraintsUniverse(opts.ovrETOTermsConstraints);
+    // save and verfiy tokenofferingoperator
+    tokenOfferingOperator = await etoTermsConstraints.TOKEN_OFFERING_OPERATOR();
+    const oldClaims = await identityRegistry.getClaims(tokenOfferingOperator);
+    await identityRegistry.setClaims(tokenOfferingOperator, oldClaims, toBytes32(web3.toHex(1)), {
+      from: admin,
+    });
+
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
       ETOTerms,
@@ -2868,13 +2878,14 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     // deploy ETOCommitment
     etoCommitment = await opts.ovrArtifact.new(
       universe.address,
-      platformWallet,
       nominee,
       company,
       etoTerms.address,
       equityToken.address,
     );
+
     // add ETO contracts to collections in universe in one transaction -> must be atomic
+
     await universe.setCollectionsInterfaces(
       [
         knownInterfaces.commitmentInterface,
@@ -2885,6 +2896,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       [true, true, true],
       { from: admin },
     );
+
     // nominee sets legal agreements
     await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
     await etoCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
@@ -2936,7 +2948,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     const claims = await identityRegistry.getMultipleClaims([
       await eto.nominee(),
       await eto.companyLegalRep(),
-      (await eto.singletons())[0], // platform operator wallet
+      tokenOfferingOperator,
     ]);
     for (const claim of claims) {
       // must be properly verified
@@ -3264,12 +3276,12 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expectLogAdditionalContribution(signedTx, 1, company, euroToken.address, contribution[3]);
     // platform operator got their NEU (contribution[8] contains amount of new money created)
     const expectedComputedNeu = await neumark.incremental["uint256,uint256"](0, contribution[8]);
-    expect(await neumark.balanceOf(platformWallet)).to.be.bignumber.eq(
+    expect(await neumark.balanceOf(tokenOfferingOperator)).to.be.bignumber.eq(
       platformShare(expectedComputedNeu),
     );
     expectLogPlatformNeuReward(
       signedTx,
-      platformWallet,
+      tokenOfferingOperator,
       await neumark.totalSupply(),
       platformShare(expectedComputedNeu),
     );
@@ -3590,10 +3602,15 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     expect(event.args.amount).to.be.bignumber.eq(amount);
   }
 
-  function expectLogPlatformNeuReward(tx, platformWalletAddress, totalReward, platformReward) {
+  function expectLogPlatformNeuReward(
+    tx,
+    tokenOfferingOperatorAddress,
+    totalReward,
+    platformReward,
+  ) {
     const event = eventValue(tx, "LogPlatformNeuReward");
     expect(event).to.exist;
-    expect(event.args.platformWallet).to.eq(platformWalletAddress);
+    expect(event.args.tokenOfferingOperator).to.eq(tokenOfferingOperatorAddress);
     expect(event.args.totalRewardNmkUlps).to.be.bignumber.eq(totalReward);
     expect(event.args.platformRewardNmkUlps).to.be.bignumber.eq(platformReward);
   }
