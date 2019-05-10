@@ -90,9 +90,6 @@ contract ETOCommitment is
     // min ticket size, taken from eto terms
     uint256 private MIN_TICKET_EUR_ULPS;
 
-    // wallet that keeps Platform Operator share of neumarks
-    //  and where token participation fee is temporarily stored
-    address private PLATFORM_WALLET;
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
     // nominee address
@@ -104,6 +101,8 @@ contract ETOCommitment is
     ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
     // reference to platform terms
     PlatformTerms private PLATFORM_TERMS;
+    // reference to the offering operator
+    address public TOKEN_OFFERING_OPERATOR;
 
     ////////////////////////
     // Mutable state
@@ -177,7 +176,7 @@ contract ETOCommitment is
 
     // logged on claim state transition indicating NEU reward available
     event LogPlatformNeuReward(
-        address platformWallet,
+        address tokenOfferingOperator,
         uint256 totalRewardNmkUlps,
         uint256 platformRewardNmkUlps
     );
@@ -203,7 +202,6 @@ contract ETOCommitment is
     /// anyone may be a deployer, the platform acknowledges the contract by adding it to Universe Commitment collection
     constructor(
         Universe universe,
-        address platformWallet,
         address nominee,
         address companyLegalRep,
         ETOTerms etoTerms,
@@ -217,11 +215,11 @@ contract ETOCommitment is
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
         require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
-        require(platformWallet != address(0) && nominee != address(0) && companyLegalRep != address(0));
+        require(nominee != address(0) && companyLegalRep != address(0));
 
         ETO_TERMS_CONSTRAINTS = etoTerms.ETO_TERMS_CONSTRAINTS();
+        TOKEN_OFFERING_OPERATOR = ETO_TERMS_CONSTRAINTS.TOKEN_OFFERING_OPERATOR();
 
-        PLATFORM_WALLET = platformWallet;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
         PLATFORM_NEUMARK_SHARE = uint128(PLATFORM_TERMS.PLATFORM_NEUMARK_SHARE());
@@ -449,12 +447,12 @@ contract ETOCommitment is
         public
         constant
         returns (
-            address platformWallet,
+            address tokenOfferingOperator,
             address universe,
             address platformTerms
             )
-    {
-        platformWallet = PLATFORM_WALLET;
+    {   
+        tokenOfferingOperator = TOKEN_OFFERING_OPERATOR;
         universe = UNIVERSE;
         platformTerms = PLATFORM_TERMS;
     }
@@ -691,7 +689,7 @@ contract ETOCommitment is
         // platform operator gets share of NEU
         uint256 rewardNmk = NEUMARK.balanceOf(this);
         (uint256 platformNmk,) = calculateNeumarkDistribution(rewardNmk);
-        assert(NEUMARK.transfer(PLATFORM_WALLET, platformNmk, ""));
+        assert(NEUMARK.transfer(TOKEN_OFFERING_OPERATOR, platformNmk, ""));
         // company legal rep receives funds
         if (_additionalContributionEth > 0) {
             assert(ETHER_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEth, ""));
@@ -702,7 +700,7 @@ contract ETOCommitment is
         }
         // issue missing tokens
         EQUITY_TOKEN.issueTokens(_tokenParticipationFeeInt);
-        emit LogPlatformNeuReward(PLATFORM_WALLET, rewardNmk, platformNmk);
+        emit LogPlatformNeuReward(TOKEN_OFFERING_OPERATOR, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
     }

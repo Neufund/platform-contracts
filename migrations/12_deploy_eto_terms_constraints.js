@@ -56,6 +56,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         constraint.OFFERING_DOCUMENT_SUB_TYPE,
         constraint.JURISDICTION,
         constraint.ASSET_TYPE,
+        constraint.TOKEN_OFFERING_OPERATOR,
       );
       const etoTermsConstraints = await ETOTermsConstraints.deployed();
       // save address

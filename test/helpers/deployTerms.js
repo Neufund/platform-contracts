@@ -59,11 +59,12 @@ export const defTermsConstraints = {
   MAX_TICKET_SIZE_EUR_ULPS: intMax,
   MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
   MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
-  NAME: "Some Contraints",
+  NAME: "Some Constraints",
   OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
   OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
   JURISDICTION: "DE",
   ASSET_TYPE: new web3.BigNumber(0),
+  TOKEN_OFFERING_OPERATOR: "0xC5a96Db085dDA36FfBE390f455315D30D6D3DC52",
 };
 
 export function validateTerms(artifact, terms) {

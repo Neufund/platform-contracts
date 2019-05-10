@@ -13,7 +13,6 @@ contract MockETOCommitment is
     /// anyone may be a deployer, the platform acknowledges the contract by adding it to Universe Commitment collection
     constructor(
         Universe universe,
-        address platformWallet,
         address nominee,
         address companyLegalRep,
         ETOTerms etoTerms,
@@ -21,7 +20,6 @@ contract MockETOCommitment is
     )
         ETOCommitment(
             universe,
-            platformWallet,
             nominee,
             companyLegalRep,
             etoTerms,
