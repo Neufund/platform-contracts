@@ -3,6 +3,10 @@ import { web3, Q18 } from "../test/helpers/constants";
 const two = new web3.BigNumber(2);
 const intMax = two.pow(256).sub(1);
 
+// same as on production system
+export const TOKEN_OFFERING_OPERATOR_DE = "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4";
+export const TOKEN_OFFERING_OPERATOR_LI = "0x0084C8f023D51896807a32d6f3e1AAc307eD891D";
+
 export const constraints = [
   // HNWI ETO DE
   {
@@ -17,6 +21,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(1),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_DE,
   },
   // HNWI ETO LI
   {
@@ -31,6 +36,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // PRIVATE ETO LI
   {
@@ -45,6 +51,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // MINI ETO LI
   {
@@ -59,6 +66,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "li",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // EU-SME ETO LI
   {
@@ -73,6 +81,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
     JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // RETAIL ETO DE
   {
@@ -87,6 +96,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // RETAIL ETO LI 2
   {
@@ -101,6 +111,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(1),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
   // FF ETO
   {
@@ -115,6 +126,7 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
     JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(0),
+    TOKEN_OFFERING_OPERATOR: TOKEN_OFFERING_OPERATOR_LI,
   },
 ];
 
