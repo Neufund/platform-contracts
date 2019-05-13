@@ -2,6 +2,8 @@ require("babel-register");
 const confirm = require("node-ask").confirm;
 const getConfig = require("./config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
+const { join } = require("path");
+const fs = require("fs");
 
 const promisify = require("../test/helpers/evmCommands").promisify;
 
@@ -41,6 +43,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
 
+    const describedConstraints = {};
     for (const constraint of constraints) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
       await deployer.deploy(
@@ -68,6 +71,17 @@ module.exports = function deployContracts(deployer, network, accounts) {
         [etoTermsConstraints.address],
         [true],
       );
+      describedConstraints[etoTermsConstraints.address] = constraint;
     }
+
+    // save information to fixtures file
+    const etoConstraintsFixturesPath = join(
+      __dirname,
+      "../build/eto_terms_contraints_fixtures.json",
+    );
+    fs.writeFile(etoConstraintsFixturesPath, JSON.stringify(describedConstraints, null, 2), err => {
+      if (err) throw new Error(err);
+    });
+    console.log(`ETO constraints described in ${etoConstraintsFixturesPath}`);
   });
 };
