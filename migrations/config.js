@@ -147,7 +147,7 @@ export function getFixtureAccounts(accounts) {
         throw new Error(`Account ${address} must be unlocked to use fixtures`);
       }
     }
-    return { address, type, verified, shouldHaveEther };
+    return { address, type, verified, shouldHaveEther, seed, derivationPath, privateKey };
   };
 
   return {
@@ -234,7 +234,7 @@ export function getFixtureAccounts(accounts) {
 
     INV_ICBM_ETH_M_HAS_KYC: makeAccount(
       "mimic lumber mother guide coil theory elite fly tiny wink seed issue cupboard limb luggage reflect ladder menu menu still deny basket spring evil",
-      "unknown",
+      null,
       "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390",
       "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
       "investor",
@@ -269,7 +269,7 @@ export function getFixtureAccounts(accounts) {
 
     INV_ICBM_EUR_M_HAS_KYC: makeAccount(
       "behind cool coyote edit have demise arena glare early embrace potato tray unit repair shine huge duty hybrid relax cage embrace cinnamon please hip",
-      "unknown",
+      null,
       "0x86894df4dae0eec4d7d13d08c32d92e614161790accdf1820981b45e6a74f07a",
       "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
       "investor",
@@ -285,7 +285,7 @@ export function getFixtureAccounts(accounts) {
     ),
     INV_HAS_ETH_T_NO_KYC: makeAccount(
       "regret neglect aware fold early ribbon hollow require inspire arm never rocket armor buddy traffic lunch provide coil foil knock hospital season annual wing",
-      "unknown",
+      null,
       "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef",
       "0x008Cf11F0439C3e85f736B84244dfA04C6382c22",
       "investor",
@@ -293,7 +293,7 @@ export function getFixtureAccounts(accounts) {
     ),
     INV_EMPTY_HAS_KYC: makeAccount(
       "else width refuse blood month clock rib blast adjust surprise gather potato olympic post area creek power student oak inflict memory document when scene",
-      "unknown",
+      null,
       "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096",
       "0x0012f184BA450a1E4e2E90110c57D84b06354770",
       "investor",
@@ -302,7 +302,7 @@ export function getFixtureAccounts(accounts) {
     // nominees
     NOMINEE_NEUMINI: makeAccount(
       "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
-      "unknown",
+      null,
       "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
       "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
       "nominee",
@@ -328,7 +328,7 @@ export function getFixtureAccounts(accounts) {
     ISSUER_PUBLIC: makeAccount(
       "nerve crucial garlic essence egg exclude dry expect good when brush flame lemon bird brass twin track sound civil frequent special budget start fork",
       "m/44'/60'/0'/0",
-      "0x9be0993812c14583c58e4456cce1ab50ce9bd8e891eb754518c13cffc27b95c3",
+      "0x7584f650f14599bf2d7e1692c2724d01bfa1ccaa8197ed8d34e0c6aed70e0dfe",
       "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
       "issuer",
       true,
@@ -343,15 +343,15 @@ export function getFixtureAccounts(accounts) {
     ),
     ISSUER_CLAIMS: makeAccount(
       "recall insane member poet resemble mirror royal skull observe hope avoid present broom salt twin document gorilla wage notice page tide idle cram exotic",
-      "unknown",
-      "0x8f39956fd29869c2a51107c19b33ea4ed531cdc3c01d8cf7a9a4dada684adc48",
+      null,
+      "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6",
       "0x007D45D94368AE57ac8351604dC1cB3236150727",
       "issuer",
       true,
     ),
     ISSUER_PAYOUT: makeAccount(
       "math friend anger chimney enable gas woman rookie lady index special clever insane dose tongue master topic current renew pact plug surprise captain today",
-      "unknown",
+      null,
       "0x8f39956fd29869c2a51107c19b33ea4ed531cdc3c01d8cf7a9a4dada684adc48",
       "0x00866b5e4F539b215a28476aD5A364425599F206",
       "issuer",
@@ -359,7 +359,7 @@ export function getFixtureAccounts(accounts) {
     ),
     ISSUER_REFUND: makeAccount(
       "volcano eye expire jaguar tail zero shrug trip creek glass receive adult shift anger ceiling man twist census blood bubble resist jelly wine cost",
-      "unknown",
+      null,
       "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1",
       "0x0028625dcBc24a821b40864294D66507fEC70B7F",
       "issuer",
@@ -367,7 +367,7 @@ export function getFixtureAccounts(accounts) {
     ),
     ISSUER_SETUP_NO_ST: makeAccount(
       "denial drive symbol magic staff tool across vivid lift crime switch silly loan same company robot aim pluck stereo section team one wheat desert",
-      "unknown",
+      null,
       "0x8822940f1f642d9ad1d08d1cf6c5bc919f33e3ceb8365e91e694cfe67578997a",
       "0x0015650359DaF66f6633DEeb490a059027B0e396",
       "issuer",
@@ -437,27 +437,35 @@ export function getFixtureAccounts(accounts) {
       "investor",
       true,
     ),
+    DEPLOYER: makeAccount(
+      "bread sick proud swift orchard wish model mammal brass ready dinner pave runway can twelve best bundle filter stuff sister paddle kangaroo keep supply",
+      null,
+      "0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1",
+      "0x8a194c13308326173423119F8dCb785CE14C732B",
+      "external",
+      false,
+    ),
     // external accounts
     NANO_1: makeAccount(
-      "stored on nano",
-      "unknown",
-      "stored on nano",
+      null,
+      null,
+      null,
       "0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D",
       "external",
       false,
     ),
     NANO_2: makeAccount(
-      "stored on nano",
-      "unknown",
-      "stored on nano",
+      null,
+      null,
+      null,
       "0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C",
       "external",
       false,
     ),
     NANO_3: makeAccount(
-      "stored on nano",
-      "unknown",
-      "stored on nano",
+      null,
+      null,
+      null,
       "0xaa4689311f3C3E88848CFd90f7dAA25eA2aacDD3",
       "external",
       false,
