@@ -21,6 +21,10 @@ const devNetworkDeploymentConfigOverride = {
     TOKEN_RATE_ORACLE: "0xB3E69d2637076D265bFb056bF5F35d9155535CD6",
     GAS_STIPEND_SERVICE: "0x29c57b5F27b249Ab3c11Badf6efc4B2308bc75Dd",
   },
+  // for now this is the same as SPARE_3
+  TOKEN_OFFERING_OPERATOR_DE: "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
+  // for now this is the same as SPARE_4
+  TOKEN_OFFERING_OPERATOR_LI: "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
 };
 // forked mainnet override
 const forkedLiveNetworkDeploymentConfigOverride = {

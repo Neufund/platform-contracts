@@ -46,20 +46,24 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const describedConstraints = {};
     for (const constraint of constraints) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
+      const updatedConstraint = {
+        ...constraint,
+        TOKEN_OFFERING_OPERATOR: CONFIG[constraint.TOKEN_OFFERING_OPERATOR],
+      };
       await deployer.deploy(
         ETOTermsConstraints,
-        constraint.CAN_SET_TRANSFERABILITY,
-        constraint.HAS_NOMINEE,
-        constraint.MIN_TICKET_SIZE_EUR_ULPS,
-        constraint.MAX_TICKET_SIZE_EUR_ULPS,
-        constraint.MIN_INVESTMENT_AMOUNT_EUR_ULPS,
-        constraint.MAX_INVESTMENT_AMOUNT_EUR_ULPS,
-        constraint.NAME,
-        constraint.OFFERING_DOCUMENT_TYPE,
-        constraint.OFFERING_DOCUMENT_SUB_TYPE,
-        constraint.JURISDICTION,
-        constraint.ASSET_TYPE,
-        constraint.TOKEN_OFFERING_OPERATOR,
+        updatedConstraint.CAN_SET_TRANSFERABILITY,
+        updatedConstraint.HAS_NOMINEE,
+        updatedConstraint.MIN_TICKET_SIZE_EUR_ULPS,
+        updatedConstraint.MAX_TICKET_SIZE_EUR_ULPS,
+        updatedConstraint.MIN_INVESTMENT_AMOUNT_EUR_ULPS,
+        updatedConstraint.MAX_INVESTMENT_AMOUNT_EUR_ULPS,
+        updatedConstraint.NAME,
+        updatedConstraint.OFFERING_DOCUMENT_TYPE,
+        updatedConstraint.OFFERING_DOCUMENT_SUB_TYPE,
+        updatedConstraint.JURISDICTION,
+        updatedConstraint.ASSET_TYPE,
+        updatedConstraint.TOKEN_OFFERING_OPERATOR,
       );
       const etoTermsConstraints = await ETOTermsConstraints.deployed();
       // save address
@@ -71,7 +75,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
         [etoTermsConstraints.address],
         [true],
       );
-      describedConstraints[etoTermsConstraints.address] = constraint;
+
+      describedConstraints[etoTermsConstraints.address] = updatedConstraint;
     }
 
     // save information to fixtures file
