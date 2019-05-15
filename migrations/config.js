@@ -127,12 +127,10 @@ export function getConfig(web3, network, accounts) {
   return config;
 }
 
-/// todo: move to separate file
-/// todo: drop accounts parameter and checks
 export function getFixtureAccounts(accounts) {
-  /*if (accounts.length < 9) {
+  if (accounts.length < 9) {
     throw new Error("node must present at least 9 unlocked accounts for fixtures");
-  }*/
+  }
 
   const makeAccount = (
     seed,
@@ -143,12 +141,6 @@ export function getFixtureAccounts(accounts) {
     verified,
     shouldHaveEther = true,
   ) => {
-    if (type !== "external") {
-      // account must be unlocked
-      if (!accounts.find(a => address.toLowerCase() === a.toLowerCase())) {
-        throw new Error(`Account ${address} must be unlocked to use fixtures`);
-      }
-    }
     return { address, type, verified, shouldHaveEther, seed, derivationPath, privateKey };
   };
 
@@ -208,7 +200,7 @@ export function getFixtureAccounts(accounts) {
     ),
 
     INV_ETH_EUR_ICBM_M_HAS_KYC: makeAccount(
-      "then route cage lyrics arrange car pigeon gas rely canoe turn all weapon pepper lemon festival joy option drama forget tortoise useful canvas viable",
+      "then route cage lyrics arrange car pigeon gas rely canoe turn all weapon pepper lemon festival joy option drama forget tortoise useful canvas viable",
       "m/44'/60'/0'/0",
       "0xfd4f06f51658d687910bb3675b5c093d4f93fff1183110101e0101fa88e08e5a",
       "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",

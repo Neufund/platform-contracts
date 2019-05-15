@@ -2,8 +2,8 @@ const Web3 = require("web3");
 const ProviderEngine = require("web3-provider-engine");
 // eslint-disable-next-line
 const Web3Subprovider = require("web3-provider-engine/subproviders/web3.js");
-const HookedWalletEthTxSubprovider = require('web3-provider-engine/subproviders/hooked-wallet-ethtx');
-const Wallet = require('ethereumjs-wallet');
+const HookedWalletEthTxSubprovider = require("web3-provider-engine/subproviders/hooked-wallet-ethtx");
+const Wallet = require("ethereumjs-wallet");
 const getFixtureAccounts = require("./migrations/config").getFixtureAccounts;
 
 module.exports = MultiWalletSubprovider;
@@ -20,19 +20,19 @@ function MultiWalletSubprovider(wallets, opts) {
     return map;
   }, {});
 
-  opts.getAccounts = function (cb) {
+  opts.getAccounts = function(cb) {
     cb(null, Object.keys(indexedWallets));
-  }
+  };
 
-  opts.getPrivateKey = function (address, cb) {
+  opts.getPrivateKey = function(address, cb) {
     if (!(address in indexedWallets)) {
       cb(new Error(`Account ${address} not found`));
     } else {
       cb(null, indexedWallets[address]);
     }
-  }
+  };
 
-  WalletSubprovider.super_.call(this, opts)
+  WalletSubprovider.super_.call(this, opts);
 }
 
 export function multiWalletProvider(nodeUrl) {
@@ -41,7 +41,7 @@ export function multiWalletProvider(nodeUrl) {
 
   const fas = getFixtureAccounts(accounts);
   const wallets = [];
-  for(const name of fas) {
+  for (const name of fas) {
     const wallet = new Wallet.fromPrivateKey(fas[name].privateKey);
     wallets.push(wallet);
   }
