@@ -127,10 +127,12 @@ export function getConfig(web3, network, accounts) {
   return config;
 }
 
+/// todo: move to separate file
+/// todo: drop accounts parameter and checks
 export function getFixtureAccounts(accounts) {
-  if (accounts.length < 9) {
+  /*if (accounts.length < 9) {
     throw new Error("node must present at least 9 unlocked accounts for fixtures");
-  }
+  }*/
 
   const makeAccount = (
     seed,
@@ -215,11 +217,7 @@ export function getFixtureAccounts(accounts) {
     ),
     INV_ETH_EUR_ICBM_M_HAS_KYC_DUP: makeAccount(
       "escape filter champion bring denial siege cactus vivid used march smile over ocean repeat poet word media fluid fluid quantum faculty tattoo attract crush",
-      "m/44'/60'/0'/0/0",
       "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec",
-      "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
-      "investor",
-      true,
     ),
 
     INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH: makeAccount(
