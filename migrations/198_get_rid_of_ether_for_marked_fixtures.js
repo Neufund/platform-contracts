@@ -7,6 +7,7 @@ const promisify = require("../test/helpers/evmCommands").promisify;
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
+  if (CONFIG.isLiveDeployment) return;
 
   const DEPLOYER = getDeployerAccount(network, accounts);
   deployer.then(async () => {
