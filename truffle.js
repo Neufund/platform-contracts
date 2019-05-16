@@ -46,6 +46,11 @@ const nanoProvider = (providerUrl, nanoPath, network) =>
     ? require("./nanoWeb3Provider").nanoWeb3Provider(providerUrl, nanoPath)
     : undefined;
 
+const multiWalletProvider = (providerUrl, network) =>
+  process.argv.some(arg => arg === network)
+    ? require("./multiWalletProvider").multiWalletProvider(providerUrl)
+    : undefined;
+
 module.exports = {
   networks: {
     localhost: {
@@ -56,6 +61,7 @@ module.exports = {
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: multiWalletProvider("http://localhost:8545", "localhost"),
     },
     inprocess: {
       network_id: "*",

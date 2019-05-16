@@ -127,12 +127,8 @@ export function getConfig(web3, network, accounts) {
   return config;
 }
 
-export function getFixtureAccounts(accounts) {
-  if (accounts.length < 9) {
-    throw new Error("node must present at least 9 unlocked accounts for fixtures");
-  }
-
-  const makeAccount = (
+export function getFixtureAccounts() {
+  function makeAccount(
     seed,
     derivationPath,
     privateKey,
@@ -140,11 +136,27 @@ export function getFixtureAccounts(accounts) {
     type,
     verified,
     shouldHaveEther = true,
-  ) => {
-    return { address, type, verified, shouldHaveEther, seed, derivationPath, privateKey };
-  };
+  ) {
+    return {
+      address,
+      type,
+      verified,
+      shouldHaveEther,
+      seed,
+      derivationPath,
+      privateKey,
+    };
+  }
 
   return {
+    DEPLOYER: makeAccount(
+      "bread sick proud swift orchard wish model mammal brass ready dinner pave runway can twelve best bundle filter stuff sister paddle kangaroo keep supply",
+      null,
+      "0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1",
+      "0x8a194c13308326173423119F8dCb785CE14C732B",
+      "external",
+      false,
+    ),
     INV_ETH_ICBM_NO_KYC: makeAccount(
       "argue resemble sustain tattoo know goat parade idea science okay loan float solution used order dune essay achieve illness keen guitar stumble idea strike",
       "m/44'/60'/0'/0",
@@ -208,8 +220,12 @@ export function getFixtureAccounts(accounts) {
       true,
     ),
     INV_ETH_EUR_ICBM_M_HAS_KYC_DUP: makeAccount(
-      "escape filter champion bring denial siege cactus vivid used march smile over ocean repeat poet word media fluid fluid quantum faculty tattoo attract crush",
+      "escape filter champion bring denial siege cactus vivid used march smile over ocean repeat poet word media fluid fluid quantum faculty tattoo attract crush",
+      "m/44'/60'/0'/0/0",
       "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec",
+      "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
+      "investor",
+      true,
     ),
 
     INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH: makeAccount(
@@ -426,14 +442,6 @@ export function getFixtureAccounts(accounts) {
       "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
       "investor",
       true,
-    ),
-    DEPLOYER: makeAccount(
-      "bread sick proud swift orchard wish model mammal brass ready dinner pave runway can twelve best bundle filter stuff sister paddle kangaroo keep supply",
-      null,
-      "0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1",
-      "0x8a194c13308326173423119F8dCb785CE14C732B",
-      "external",
-      false,
     ),
     // external accounts
     NANO_1: makeAccount(
