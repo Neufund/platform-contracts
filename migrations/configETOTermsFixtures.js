@@ -51,7 +51,7 @@ export const constraints = [
   },
   // MINI ETO LI
   {
-    NAME: "private eto li",
+    NAME: "mini eto li",
     CAN_SET_TRANSFERABILITY: true,
     HAS_NOMINEE: true,
     MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(10),
@@ -60,7 +60,7 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(5000000),
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(0),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(0),
-    JURISDICTION: "li",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(0),
     TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
   },
