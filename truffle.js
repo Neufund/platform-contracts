@@ -46,11 +46,10 @@ const nanoProvider = (providerUrl, nanoPath, network) =>
     ? require("./nanoWeb3Provider").nanoWeb3Provider(providerUrl, nanoPath)
     : undefined;
 
-const multiWalletProvider = providerUrl => {
-  const provider = require("./multiWalletProvider").multiWalletProvider(providerUrl);
-
-  return provider;
-};
+const multiWalletProvider = (providerUrl, network) =>
+  process.argv.some(arg => arg === network)
+    ? require("./multiWalletProvider").multiWalletProvider(providerUrl)
+    : undefined;
 
 module.exports = {
   networks: {
@@ -58,8 +57,9 @@ module.exports = {
       network_id: "*",
       gas: 6700000,
       gasPrice: 21000000000,
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
-      provider: multiWalletProvider("http://localhost:8545"),
+      provider: multiWalletProvider("http://localhost:8545", "localhost"),
     },
     inprocess: {
       network_id: "*",
@@ -72,8 +72,12 @@ module.exports = {
       network_id: "17",
       gas: 6700000,
       gasPrice: 21000000000,
-      provider: multiWalletProvider("http://parity-instant-seal-byzantium-enabled:8545"),
+      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: multiWalletProvider(
+        "http://parity-instant-seal-byzantium-enabled:8545",
+        "nf_private",
+      ),
     },
     nf_private_io: {
       network_id: "17",
@@ -81,7 +85,7 @@ module.exports = {
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
-      provider: multiWalletProvider("http://dev02.neudev.net:8545"),
+      provider: multiWalletProvider("http://dev02.neudev.net:8545", "nf_private_io"),
     },
     coverage: {
       network_id: "*",
