@@ -1,6 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./config").getFixtureAccounts;
+const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -62,11 +62,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
       from: fas.INV_EUR_ICBM_HAS_KYC.address,
     });
     await commitment.commitEuro({ from: fas.INV_EUR_ICBM_HAS_KYC.address });
-
     await euroToken.deposit(fas.INV_EUR_ICBM_HAS_KYC_2.address, amountEur);
+
     await euroToken.approve(commitment.address, amountEur, {
       from: fas.INV_EUR_ICBM_HAS_KYC_2.address,
     });
+
     await commitment.commitEuro({ from: fas.INV_EUR_ICBM_HAS_KYC_2.address });
 
     amountEur = CONFIG.Q18.mul(71827);

@@ -2,7 +2,7 @@ require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./config").getFixtureAccounts;
+const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const deployETO = require("./deployETO").deployETO;
 const checkETO = require("./deployETO").checkETO;

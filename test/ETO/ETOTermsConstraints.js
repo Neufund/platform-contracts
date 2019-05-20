@@ -60,25 +60,33 @@ contract("ETOTermsContraints", () => {
       MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
       MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
       MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
-      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(100),
+      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(200).sub(1),
     };
     await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
   });
 
-  it("should enforce maxticketsize to be larger than 0", async () => {
+  it("should interpret 0 on maxticketsize to be unlimited", async () => {
     const args = {
-      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(500),
       MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
     };
-    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
+    await deployETOTermsConstraints(ETOTermsConstraints, args);
   });
 
-  it("should enforce maxinvestmentsize to be larger than 0", async () => {
-    const args = {
-      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+  it("should interpret 0 on maxinvestmentsize as unlimited", async () => {
+    let args = {
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(500),
       MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
     };
-    await expect(deployETOTermsConstraints(ETOTermsConstraints, args)).to.revert;
+    await deployETOTermsConstraints(ETOTermsConstraints, args);
+
+    args = {
+      MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+      MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+      MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
+      MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0), // 0 will work here too
+    };
+    await deployETOTermsConstraints(ETOTermsConstraints, args);
   });
 
   it("should not allow VMAs to be transferable", async () => {

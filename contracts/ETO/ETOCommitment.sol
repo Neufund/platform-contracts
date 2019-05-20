@@ -242,6 +242,10 @@ contract ETOCommitment is
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, MIN_TICKET_EUR_ULPS);
 
         MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
+        // set it to max(unit256) to reduce number of operations later
+        if (MAX_INVESTMENT_AMOUNT_EUR_ULPS == 0) {
+            MAX_INVESTMENT_AMOUNT_EUR_ULPS -= 1;
+        }
         setupStateMachine(
             ETO_TERMS.DURATION_TERMS(),
             IETOCommitmentObserver(EQUITY_TOKEN.tokenController())
@@ -451,7 +455,7 @@ contract ETOCommitment is
             address universe,
             address platformTerms
             )
-    {   
+    {
         tokenOfferingOperator = TOKEN_OFFERING_OPERATOR;
         universe = UNIVERSE;
         platformTerms = PLATFORM_TERMS;
@@ -839,13 +843,13 @@ contract ETOCommitment is
         private
         constant
         returns (bool maxCapExceeded)
-    {   
+    {
         // check for exceeding tokens
         maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_NUMBER_OF_TOKENS;
         if (applyDiscounts && !maxCapExceeded) {
             maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
         }
-        // check for exceeding max investment amount as defined by the constraints
+        // check for exceeding max investment amount as defined by the constraints, MAX_INVESTMENT_AMOUNT_EUR_ULPS is always > 0
         if ( !maxCapExceeded && (equivEurUlps + _totalEquivEurUlps > MAX_INVESTMENT_AMOUNT_EUR_ULPS )) {
             maxCapExceeded = true;
         }

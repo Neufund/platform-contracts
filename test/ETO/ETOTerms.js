@@ -378,6 +378,18 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         ),
       ).to.be.rejectedWith("NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
     });
+
+    it("should interpret MAX_TICKET_SIZE_EUR_ULPS == 0 as unlimited", async () => {
+      await redeployTerms(
+        {
+          MIN_TICKET_EUR_ULPS: Q18.mul(5000),
+          MAX_TICKET_EUR_ULPS: Q18.mul(10000),
+        },
+        {
+          MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+        },
+      );
+    });
   });
 
   describe("general calculations", () => {
