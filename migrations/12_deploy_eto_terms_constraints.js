@@ -44,7 +44,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
     }
 
     const describedConstraints = {};
-    for (const constraint of constraints) {
+    // deploy only 1 pack of products
+    for (const constraint of constraints.filter(c => c._deploymentMetadata.step === 1)) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
       const updatedConstraint = {
         ...constraint,
@@ -70,11 +71,20 @@ module.exports = function deployContracts(deployer, network, accounts) {
       deployedAddresses.push(etoTermsConstraints.address);
 
       console.log("Adding to terms constraints collection in universe");
-      await universe.setCollectionsInterfaces(
-        [knownInterfaces.etoTermsConstraints],
-        [etoTermsConstraints.address],
-        [true],
+      await universe.setCollectionInterface(
+        knownInterfaces.etoTermsConstraints,
+        etoTermsConstraints.address,
+        true,
       );
+      // leave all products ON on test network
+      if (!constraint._deploymentMetadata.available && CONFIG.isLiveDeployment) {
+        console.log("... and immediately removing because constraints no longer active");
+        await universe.setCollectionInterface(
+          knownInterfaces.etoTermsConstraints,
+          etoTermsConstraints.address,
+          false,
+        );
+      }
 
       describedConstraints[etoTermsConstraints.address] = updatedConstraint;
     }
