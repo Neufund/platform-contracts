@@ -55,7 +55,7 @@ contract ETOTerms is
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
     uint256 public MIN_TICKET_EUR_ULPS;
-    // maximum ticket for sophisiticated investors
+    // maximum ticket, is never 0, will be set to maximum possible cap to reduce number of conditions later
     uint256 public MAX_TICKET_EUR_ULPS;
     // should enable transfers on ETO success
     // transfers are always disabled during token offering
@@ -162,9 +162,7 @@ contract ETOTerms is
         require(minTicketEurUlps<=maxTicketEurUlps);
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
-        // TODO comment back in!!
         require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints), "NF_TERMS_NOT_IN_UNIVERSE");
-
         // save reference to constraints
         ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
 
@@ -324,7 +322,12 @@ contract ETOTerms is
 
         // ticket size checks
         require(MIN_TICKET_EUR_ULPS >= ETO_TERMS_CONSTRAINTS.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
-        require(MAX_TICKET_EUR_ULPS <= ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
+        uint256 constraintsMaxTicket = ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS();
+        require(
+            constraintsMaxTicket == 0 || // unlimited investment allowed
+            (MAX_TICKET_EUR_ULPS <= constraintsMaxTicket), // or max ticket of eto is NOT unlimited and lte the terms allow
+            "NF_ETO_TERMS_MAX_TICKET_EUR_ULPS"
+        );
 
         // only allow transferabilty if this is allowed in general
         require(!ENABLE_TRANSFERS_ON_SUCCESS || ETO_TERMS_CONSTRAINTS.CAN_SET_TRANSFERABILITY(), "NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
