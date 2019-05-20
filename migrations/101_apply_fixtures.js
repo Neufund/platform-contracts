@@ -2,7 +2,6 @@ require("babel-register");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
-const promisify = require("../test/helpers/evmCommands").promisify;
 const toBytes32 = require("../test/helpers/constants").toBytes32;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const roles = require("../test/helpers/roles").default;
@@ -182,14 +181,5 @@ module.exports = function deployContracts(deployer, network, accounts) {
       from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
     });
     await icbmEuroLock.migrate({ from: fas.INV_ICBM_EUR_M_HAS_KYC.address });
-
-    console.log("add ether to test accounts");
-    for (const f of Object.keys(fas)) {
-      await promisify(web3.eth.sendTransaction)({
-        from: DEPLOYER,
-        to: fas[f].address,
-        value: CONFIG.Q18.mul(14.21182),
-      });
-    }
   });
 };

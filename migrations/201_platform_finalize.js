@@ -87,10 +87,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log(`deployment finished at block ${endBlockNo}`);
 
     const networkDefinition = getNetworkDefinition(network);
-
     networkDefinition.unlockedAccounts = accounts;
-
-    networkDefinition.provider.stop();
     networkDefinition.provider = undefined;
 
     const initialBlock = global._initialBlockNo || -1;
