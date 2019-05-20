@@ -491,6 +491,17 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       );
     });
 
+    it("interprets MAX_TICKET_EUR_ULPS == 0 as unlimited", async () => {
+      // larger than in default terms
+      const ticket = Q18.mul(5000001);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(ticket) },
+        ovrETOTermsConstraints: { MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0) },
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[0], ticket, "EUR");
+    });
+
     it("rejects investment above max ticket if already invested max ticket", async () => {
       await deployEtoWithTicket({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(100000) } });
       await skipTimeTo(publicStartDate.add(1));
@@ -676,6 +687,17 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expect(investAmount(investors[4], maxInvestAmount.add(1), "EUR")).to.be.rejectedWith(
         "NF_ETO_MAX_TOK_CAP",
       );
+    });
+
+    it("interprets MAX_INVESTMENT_AMOUNT_EUR_ULPS == 0 as unlimited", async () => {
+      const investmentAmount = Q18.mul(5000001);
+      await deployEtoWithTicket({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: investmentAmount },
+        ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0) }, // max invest is unlimited
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+      });
+      await skipTimeTo(publicStartDate.add(1));
+      await investAmount(investors[4], investmentAmount, "EUR");
     });
 
     it("go from whitelist to signing by reaching max cap", async () => {
