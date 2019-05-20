@@ -27,6 +27,7 @@
     "eslint-plugin-mocha": "^4.11.0",
     "eslint-plugin-prettier": "^2.2.0",
     "eslint-plugin-react": "^7.0.1",
+    "ethereumjs-wallet": "^0.6.3",
     "ganache-cli": "^6.4.1",
     "ganache-core": "^2.5.3",
     "git-rev-sync": "^1.9.1",

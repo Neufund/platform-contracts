@@ -89,6 +89,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const networkDefinition = getNetworkDefinition(network);
     networkDefinition.unlockedAccounts = accounts;
     networkDefinition.provider = undefined;
+
     const initialBlock = global._initialBlockNo || -1;
     const meta = {
       CONFIG,
