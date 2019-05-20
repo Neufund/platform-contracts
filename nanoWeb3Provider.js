@@ -23,6 +23,7 @@ export function nanoWeb3Provider(providerUrl, nanoPath) {
     // console.log("================================");
   });
   engine.start();
+  engine.stop();
 
   return engine;
 }

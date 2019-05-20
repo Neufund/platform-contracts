@@ -23,7 +23,7 @@ if [ -d ./build ]; then
   rm -r ./build
 fi
 # cp -r ./platform-contracts-artifacts/build ./build
-yarn truffle deploy --network=$NETWORK
+yarn truffle deploy --network $NETWORK
 # copy deployed artifacts
 if [ -d ./platform-contracts-artifacts/$NETWORK ]; then
   rm -r ./platform-contracts-artifacts/$NETWORK

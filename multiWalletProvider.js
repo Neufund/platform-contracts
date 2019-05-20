@@ -9,9 +9,6 @@ const getFixtureAccounts = require("./migrations/getFixtureAccounts").getFixture
 
 const inherits = require("util").inherits;
 
-// module.exports = MultiWalletSubprovider;
-
-// need to import `inhertis` from some ethereum-js-utils etc. see below
 // https://github.com/ethereumjs/ethereumjs-wallet/blob/master/src/provider-engine.js
 // https://github.com/MetaMask/web3-provider-engine/blob/master/subproviders/hooked-wallet.js
 inherits(MultiWalletSubprovider, HookedWalletEthTxSubprovider);
