@@ -1,6 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./config").getFixtureAccounts;
+const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const promisify = require("../test/helpers/evmCommands").promisify;
 
@@ -15,7 +15,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("Distribute ether to fixtures accounts");
     for (const f of Object.keys(fas)) {
-      const valueToSend = web3.toWei(10, "ether");
+      const valueToSend = web3.toWei(100000, "ether");
 
       await promisify(web3.eth.sendTransaction)({
         from: DEPLOYER,

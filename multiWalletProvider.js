@@ -4,7 +4,9 @@ const ProviderEngine = require("web3-provider-engine");
 const Web3Subprovider = require("web3-provider-engine/subproviders/web3.js");
 const HookedWalletEthTxSubprovider = require("web3-provider-engine/subproviders/hooked-wallet-ethtx");
 const Wallet = require("ethereumjs-wallet");
-const getFixtureAccounts = require("./migrations/config").getFixtureAccounts;
+
+const getFixtureAccounts = require("./migrations/getFixtureAccounts").getFixtureAccounts;
+
 const inherits = require("util").inherits;
 
 // module.exports = MultiWalletSubprovider;
@@ -17,25 +19,23 @@ inherits(MultiWalletSubprovider, HookedWalletEthTxSubprovider);
 function MultiWalletSubprovider(wallets, params) {
   const opts = params || {};
 
-  const getPrivateKey = (address, cb) => {
+  const indexedWallets = wallets.reduce((map, wallet) => {
+    const address = wallet.getAddressString().toLowerCase();
+    map[address] = wallet.getPrivateKey();
+    return map;
+  }, {});
+
+  opts.getAccounts = cb => {
+    cb(null, Object.keys(indexedWallets));
+  };
+  opts.getPrivateKey = (address, cb) => {
+    address = address.toLowerCase();
     if (!(address in indexedWallets)) {
       cb(new Error(`Account ${address} not found`));
     } else {
       cb(null, indexedWallets[address]);
     }
   };
-
-  opts.getAccounts = cb =>
-    cb(
-      null,
-      Object.keys(
-        wallets.reduce((map, wallet) => {
-          map[wallet.getAddressString()] = getPrivateKey();
-          return map;
-        }, {}),
-      ),
-    );
-  opts.getPrivateKey = getPrivateKey;
 
   MultiWalletSubprovider.super_.call(this, opts);
 }
@@ -47,7 +47,6 @@ export function multiWalletProvider(nodeUrl) {
   const fas = getFixtureAccounts();
   const wallets = [];
   for (const name of Object.keys(fas)) {
-    // TODO: Remove this check
     if (fas[name].privateKey !== null) {
       const privateKey = Buffer.from(fas[name].privateKey.substr(2), "hex");
       const wallet = new Wallet.fromPrivateKey(privateKey);
@@ -55,10 +54,8 @@ export function multiWalletProvider(nodeUrl) {
     }
   }
 
+  engine.addProvider(new MultiWalletSubprovider(wallets));
   engine.addProvider(new Web3Subprovider(web3HttpProvider));
-
-  const multiWallet = new MultiWalletSubprovider(wallets);
-  engine.addProvider(multiWallet);
   engine.start();
 
   return engine;

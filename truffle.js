@@ -46,22 +46,20 @@ const nanoProvider = (providerUrl, nanoPath, network) =>
     ? require("./nanoWeb3Provider").nanoWeb3Provider(providerUrl, nanoPath)
     : undefined;
 
-const multiWalletProvider = (providerUrl, network) =>
-  process.argv.some(arg => arg === network)
-    ? require("./multiWalletProvider").multiWalletProvider(providerUrl)
-    : undefined;
+const multiWalletProvider = providerUrl => {
+  const provider = require("./multiWalletProvider").multiWalletProvider(providerUrl);
+
+  return provider;
+};
 
 module.exports = {
   networks: {
     localhost: {
       network_id: "*",
-      host: "localhost",
-      port: 8545,
       gas: 6700000,
       gasPrice: 21000000000,
-      from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
-      provider: multiWalletProvider("http://localhost:8545", "localhost"),
+      provider: multiWalletProvider("http://localhost:8545"),
     },
     inprocess: {
       network_id: "*",
@@ -71,7 +69,7 @@ module.exports = {
       }),
     },
     nf_private: {
-      host: "parity-instant-seal-byzantium-enabled",
+      host: "localhost", //"parity-instant-seal-byzantium-enabled",
       port: 8545,
       network_id: "17",
       gas: 6700000,

@@ -1,6 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./config").getFixtureAccounts;
+const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const promisify = require("../test/helpers/evmCommands").promisify;
 
