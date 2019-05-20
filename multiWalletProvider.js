@@ -21,6 +21,8 @@ function MultiWalletSubprovider(wallets, params) {
 
   const indexedWallets = wallets.reduce((map, wallet) => {
     const address = wallet.getAddressString().toLowerCase();
+
+    // eslint-disable-next-line
     map[address] = wallet.getPrivateKey();
     return map;
   }, {});
@@ -29,11 +31,11 @@ function MultiWalletSubprovider(wallets, params) {
     cb(null, Object.keys(indexedWallets));
   };
   opts.getPrivateKey = (address, cb) => {
-    address = address.toLowerCase();
-    if (!(address in indexedWallets)) {
-      cb(new Error(`Account ${address} not found`));
+    const lowercasedAddress = address.toLowerCase();
+    if (!(lowercasedAddress in indexedWallets)) {
+      cb(new Error(`Account ${lowercasedAddress} not found`));
     } else {
-      cb(null, indexedWallets[address]);
+      cb(null, indexedWallets[lowercasedAddress]);
     }
   };
 
@@ -49,7 +51,7 @@ export function multiWalletProvider(nodeUrl) {
   for (const name of Object.keys(fas)) {
     if (fas[name].privateKey !== null) {
       const privateKey = Buffer.from(fas[name].privateKey.substr(2), "hex");
-      const wallet = new Wallet.fromPrivateKey(privateKey);
+      const wallet = new Wallet(privateKey);
       wallets.push(wallet);
     }
   }
@@ -57,6 +59,7 @@ export function multiWalletProvider(nodeUrl) {
   engine.addProvider(new MultiWalletSubprovider(wallets));
   engine.addProvider(new Web3Subprovider(web3HttpProvider));
   engine.start();
+  engine.stop();
 
   return engine;
 }
