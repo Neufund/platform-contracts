@@ -57,11 +57,11 @@ contract ETOTermsConstraints is IContractId {
 
     // minimum ticket size for this investment type
     uint256 public MIN_TICKET_SIZE_EUR_ULPS;
-    // maximum ticket size for this investment type
+    // maximum ticket size for this investment type, 0 means unlimited
     uint256 public MAX_TICKET_SIZE_EUR_ULPS;
     // minimum total investment amount this investment type
     uint256 public MIN_INVESTMENT_AMOUNT_EUR_ULPS;
-    // maximum total investment amount this investment type
+    // maximum total investment amount this investment type, 0 means unlimited
     uint256 public MAX_INVESTMENT_AMOUNT_EUR_ULPS;
 
     // public name
@@ -101,11 +101,9 @@ contract ETOTermsConstraints is IContractId {
     )
         public
     {   
-        require(minTicketSizeEurUlps<=maxTicketSizeEurUlps);
-        require(minInvestmentAmountEurUlps<=maxInvestmentAmountEurUlps);
-        require(minTicketSizeEurUlps<=maxInvestmentAmountEurUlps);
-        require(maxTicketSizeEurUlps>0);
-        require(maxInvestmentAmountEurUlps>0);
+        require(maxTicketSizeEurUlps == 0 || minTicketSizeEurUlps<=maxTicketSizeEurUlps);
+        require(maxInvestmentAmountEurUlps == 0 || minInvestmentAmountEurUlps<=maxInvestmentAmountEurUlps);
+        require(maxInvestmentAmountEurUlps == 0 || minTicketSizeEurUlps<=maxInvestmentAmountEurUlps);
         require(assetType != AssetType.VMA || !canSetTransferability);
         require(tokenOfferingOperator != address(0x0));
 
