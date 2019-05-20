@@ -12,8 +12,6 @@ const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
-const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
-  .getFixtureAndAddressByName;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -44,10 +42,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
       );
 
-      const { constraintFixture, constraintAddress } = getETOConstraintFixtureAndAddressByName(
-        etoTerms.etoTermsConstraints,
-      );
-
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
@@ -57,7 +51,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
-        constraintAddress,
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -66,10 +59,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         CONFIG,
         fas,
         etoCommitment,
-        {
-          ...etoTerms,
-          etoTermsConstraints: constraintFixture,
-        },
+        etoTerms,
         await etoCommitment.state(),
       );
       describedETOs[etoCommitment.address] = stringify(desc);
@@ -83,17 +73,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   });
 };
 
-async function simulateETO(
-  DEPLOYER,
-  CONFIG,
-  universe,
-  nominee,
-  issuer,
-  etoDefiniton,
-  fas,
-  final,
-  etoTermsConstraintsAddress,
-) {
+async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
@@ -105,7 +85,7 @@ async function simulateETO(
     etoDefiniton.shareholderTerms,
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
-    etoTermsConstraintsAddress,
+    etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
   );
   // nominee sets agreement
   console.log("Nominee sets agreements");

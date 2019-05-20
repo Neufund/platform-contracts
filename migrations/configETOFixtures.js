@@ -1,5 +1,8 @@
 import { web3, Q18, daysToSeconds } from "../test/helpers/constants";
 
+const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
+  .getFixtureAndAddressByName;
+
 const defEtoTerms = {
   shareholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
@@ -29,7 +32,7 @@ const defEtoTerms = {
     DURATION_TERMS: null,
     TOKEN_TERMS: null,
     EXISTING_COMPANY_SHARES: new web3.BigNumber(40976),
-    MIN_TICKET_EUR_ULPS: Q18.mul(100),
+    MIN_TICKET_EUR_ULPS: Q18.mul(10),
     MAX_TICKET_EUR_ULPS: Q18.mul(5000000),
     ENABLE_TRANSFERS_ON_SUCCESS: false,
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
@@ -40,7 +43,7 @@ const defEtoTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
-  etoTermsConstraints: "retail eto li security",
+  etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
@@ -71,6 +74,7 @@ const defEtoHwniTerms = {
     MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1534 * 10000),
   },
   etoTerms: {
+    ETO_TERMS_CONSTRAINTS: null,
     DURATION_TERMS: null,
     TOKEN_TERMS: null,
     EXISTING_COMPANY_SHARES: new web3.BigNumber(41976),
@@ -85,7 +89,7 @@ const defEtoHwniTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
-  etoTermsConstraints: "retail eto li security",
+  etoTermsConstraints: "hnwi eto de security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
@@ -102,8 +106,16 @@ const defEtoHwniTerms = {
 // }
 
 export function prepareEtoTerms(name) {
+  // find eto terms mockup
   const terms = name === "ETOInWhitelistState" ? defEtoHwniTerms : defEtoTerms;
+  // resolve eto constraints name
+  const { constraintFixture, constraintAddress } = getETOConstraintFixtureAndAddressByName(
+    terms.etoTermsConstraints,
+  );
   const copy = Object.assign({}, terms);
   copy.name = name;
+  // provide correct address in eto terms
+  copy.etoTermsConstraints = constraintFixture;
+  copy.etoTerms.ETO_TERMS_CONSTRAINTS = constraintAddress;
   return copy;
 }

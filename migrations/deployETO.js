@@ -102,7 +102,7 @@ export async function deployETO(
   console.log("Deploying ETOTokenTerms");
   const [tokenTerms] = await deployTokenTerms(ETOTokenTerms, defTokenTerms, true);
   logDeployed(tokenTerms);
-  console.log("Deploying ETOTerms");
+  console.log(`Deploying ETOTerms from ETOTermsConstraints ${etoTermsConstraintsAddress}`);
   const [etoTerms] = await deployETOTerms(
     universe,
     ETOTerms,
@@ -204,13 +204,15 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log(
     `Isolated universe...${neuAccessPolicy.address === accessPolicy.address ? "NO" : "YES"}`,
   );
-  let platformTermsVerified = true;
+  let termsConstraintsVerified = true;
   try {
-    platformTermsVerified = await etoTerms.requireValidTerms.call(singletons[2]);
+    termsConstraintsVerified = await etoTerms.requireValidTerms.call();
   } catch (e) {
-    platformTermsVerified = false;
+    termsConstraintsVerified = false;
   }
-  console.log(`Platform Terms verified...${platformTermsVerified ? good("YES") : wrong("NO")}`);
+  console.log(
+    `Terms Constraints verified...${termsConstraintsVerified ? good("YES") : wrong("NO")}`,
+  );
   // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
   console.log("------------------------------------------------------");
   const state = await eto.state();
