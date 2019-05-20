@@ -40,6 +40,7 @@ const defEtoTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
+  etoTermsConstraints: "retail eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
@@ -84,6 +85,7 @@ const defEtoHwniTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
+  etoTermsConstraints: "retail eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };

@@ -128,3 +128,13 @@ export const constraints = [
 
 // this will be populated in migration step 12 and then can be used when deploying mock ETOs
 export const deployedAddresses = [];
+
+export const getFixtureAndAddressByName = name => {
+  for (let i = 0; i < constraints.length; i += 1)
+    if (constraints[i].NAME === name)
+      return {
+        constraintFixture: constraints[i],
+        constraintAddress: deployedAddresses[i],
+      };
+  return {};
+};
