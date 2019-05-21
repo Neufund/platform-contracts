@@ -1,6 +1,5 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const toBytes32 = require("../test/helpers/constants").toBytes32;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
@@ -14,9 +13,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const DEPLOYER = getDeployerAccount(network, accounts);
 
   const SimpleExchange = artifacts.require(CONFIG.artifacts.GAS_EXCHANGE);
-  const EtherToken = artifacts.require(CONFIG.artifacts.ETHER_TOKEN);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
-  const ICBMEuroToken = artifacts.require(CONFIG.artifacts.ICBM_EURO_TOKEN);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const ITokenExchangeRateOracle = artifacts.require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
   const IdentityRegistry = artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY);
@@ -32,14 +29,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const universe = await Universe.deployed();
     const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
     const euroToken = await EuroToken.at(await universe.euroToken());
-    const etherToken = await EtherToken.at(await universe.etherToken());
     const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
     const simpleExchange = await SimpleExchange.at(await universe.gasExchange());
     const euroLock = await LockedAccount.at(await universe.euroLock());
     const etherLock = await LockedAccount.at(await universe.etherLock());
     const icbmEuroLock = await ICBMLockedAccount.at(await universe.icbmEuroLock());
     const icbmEtherLock = await ICBMLockedAccount.at(await universe.icbmEtherLock());
-    const icbmEuroToken = await ICBMEuroToken.at(await icbmEuroLock.assetToken());
 
     console.log("make KYC for platform wallet");
     await identityRegistry.setClaims(

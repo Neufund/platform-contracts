@@ -36,7 +36,7 @@
   "INV_EUR_ICBM_HAS_KYC": {
     "address": "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -47,7 +47,7 @@
   "INV_EUR_ICBM_HAS_KYC_2": {
     "address": "0x619f0a73f02b8ac8F58440c21E15A461E69011a5",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -58,7 +58,7 @@
   "INV_EUR_ICBM_HAS_KYC_SEED": {
     "address": "0xB3a2eb675288Bff642F5036235ffb541a4289E71",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -69,7 +69,7 @@
   "INV_EUR_ICBM_HAS_KYC_SEED_2": {
     "address": "0x7b85041Fe5E05A31a961445c3321EE426015D45F",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -80,7 +80,7 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC": {
     "address": "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "hasBankAccount": true
     },
@@ -92,7 +92,7 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP": {
     "address": "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "hasBankAccount": true
     },
@@ -104,7 +104,7 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH": {
     "address": "0xA622f39780fC8722243b49ACF3bFFEEb9B9201F2",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": false,
@@ -115,7 +115,7 @@
   "INV_ICBM_ETH_M_HAS_KYC": {
     "address": "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "isSophisticatedInvestor": true
     },
@@ -127,7 +127,7 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
     "address": "0xF7784a74Cc59d1e6e1C10ca2053f34D68d280aE7",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "isSophisticatedInvestor": true
     },
@@ -139,7 +139,7 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
     "address": "0xFa8ae4e924e14C834Ad48238a55A24Af97A8f3F3",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "isSophisticatedInvestor": true
     },
@@ -151,7 +151,7 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
     "address": "0x4A20381D628AEEc776335a89bb32106a8F9d4323",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -162,7 +162,7 @@
   "INV_ICBM_EUR_M_HAS_KYC": {
     "address": "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "hasBankAccount": true
     },
@@ -174,7 +174,7 @@
   "INV_HAS_EUR_HAS_KYC": {
     "address": "0x0009C1d95C547d53E3b962059Be11802b5e85BA3",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true,
       "hasBankAccount": true
     },
@@ -194,7 +194,7 @@
   "INV_EMPTY_HAS_KYC": {
     "address": "0x0012f184BA450a1E4e2E90110c57D84b06354770",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -205,7 +205,7 @@
   "NOMINEE_NEUMINI": {
     "address": "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
     "type": "nominee",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -216,7 +216,7 @@
   "ISSUER_SETUP": {
     "address": "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -227,7 +227,7 @@
   "ISSUER_WHITELIST": {
     "address": "0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -238,7 +238,7 @@
   "ISSUER_PUBLIC": {
     "address": "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -249,7 +249,7 @@
   "ISSUER_SIGNING": {
     "address": "0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -260,7 +260,7 @@
   "ISSUER_CLAIMS": {
     "address": "0x007D45D94368AE57ac8351604dC1cB3236150727",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -271,7 +271,7 @@
   "ISSUER_PAYOUT": {
     "address": "0x00866b5e4F539b215a28476aD5A364425599F206",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -282,7 +282,7 @@
   "ISSUER_REFUND": {
     "address": "0x0028625dcBc24a821b40864294D66507fEC70B7F",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -293,7 +293,7 @@
   "ISSUER_SETUP_NO_ST": {
     "address": "0x0015650359DaF66f6633DEeb490a059027B0e396",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -304,7 +304,7 @@
   "ISSUER_PREVIEW": {
     "address": "0x238FB566005f59Fd5915dde954AB9FA7352Da641",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -315,7 +315,7 @@
   "ISSUER_PENDING": {
     "address": "0x0A00992Aea13E8E10287b577256717Aa4910a0Bb",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -326,7 +326,7 @@
   "ISSUER_LISTED": {
     "address": "0x007fF055641147d0a170a7A73B00F0eeb2f07f12",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -337,7 +337,7 @@
   "ISSUER_PROSPECTUS_APPROVED": {
     "address": "0x4B07fd23BAA7198061caEd44cF470B0F20cE1b7e",
     "type": "issuer",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -348,7 +348,7 @@
   "SPARE_1": {
     "address": "0x9369dFD79049B7C3CF48d54435287b0AFd5227Da",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -359,7 +359,7 @@
   "SPARE_2": {
     "address": "0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -370,7 +370,7 @@
   "SPARE_3": {
     "address": "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,
@@ -381,7 +381,7 @@
   "SPARE_4": {
     "address": "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
     "type": "investor",
-    "kycClaims": {
+    "identityClaims": {
       "isVerified": true
     },
     "shouldHaveEther": true,

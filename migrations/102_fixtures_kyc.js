@@ -2,19 +2,8 @@ require("babel-register");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
-const promisify = require("../test/helpers/evmCommands").promisify;
 const toBytes32 = require("../test/helpers/constants").toBytes32;
-const identityClaims = require("../test/helpers/identityClaims").identityClaims;
-
-function serializeClaims(isVerified, isSophisticatedInvestor, hasBankAccount, isAccountFrozen) {
-  const claims =
-    (isVerified ? identityClaims.isVerified : 0) +
-    (isSophisticatedInvestor ? identityClaims.isSophisticatedInvestor : 0) +
-    (hasBankAccount ? identityClaims.hasBankAccount : 0) +
-    (isAccountFrozen ? identityClaims.isAccountFrozen : 0);
-
-  return toBytes32(claims);
-}
+const serializeClaims = require("../test/helpers/identityClaims").serializeClaims;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -28,13 +17,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const fas = getFixtureAccounts();
 
     console.log("Add KYC claims to fixtures accounts");
-    const requireKyc = Object.keys(fas).filter(fa => fas[fa].kycClaims !== undefined);
+    const requireKyc = Object.keys(fas).filter(fa => fas[fa].identityClaims !== undefined);
 
     const requireKycAddresses = requireKyc.map(fa => fas[fa].address);
 
     const zeroClaims = requireKyc.map(() => toBytes32("0x0"));
     const verifiedClaims = requireKyc.map(fa => {
-      const claims = fas[fa].kycClaims;
+      const claims = fas[fa].identityClaims;
 
       return serializeClaims(
         claims.isVerified,
@@ -43,8 +32,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         claims.accountFrozen,
       );
     });
-
-    console.log(verifiedClaims);
 
     const universe = await Universe.deployed();
     const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());

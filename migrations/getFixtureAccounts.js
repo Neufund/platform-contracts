@@ -1,9 +1,9 @@
 const fs = require("fs");
 
-const fixtures_data_path = __dirname + "/fixtures.json";
-const fixtures_data = JSON.parse(fs.readFileSync(fixtures_data_path));
+const fixturesDataPath = `${__dirname}/fixture_accounts_definitions.json`;
+const fixturesData = JSON.parse(fs.readFileSync(fixturesDataPath));
 
 export function getFixtureAccounts() {
   // TODO: Validate is fixtures are correct
-  return fixtures_data;
+  return fixturesData;
 }
