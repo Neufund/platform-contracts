@@ -130,13 +130,14 @@ export const constraints = [
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(OfferingDocumentSubType.Regular),
     JURISDICTION: "DE",
     ASSET_TYPE: new web3.BigNumber(AssetType.Security),
-    TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
+    TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_DE",
     _deploymentMetadata: { step: 1, available: false },
   },
 ];
 
 // this will be populated in migration step 12 and then can be used when deploying mock ETOs
 export const deployedAddresses = [];
+export const describedConstraints = {};
 
 export const getFixtureAndAddressByName = name => {
   for (let i = 0; i < constraints.length; i += 1)

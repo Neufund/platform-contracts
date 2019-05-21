@@ -362,5 +362,6 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
   }
   desc.whitelist = whitelist;
   desc.investors = investors;
+  desc.etoTermsConstraints = await etoTerms.ETO_TERMS_CONSTRAINTS();
   return desc;
 }
