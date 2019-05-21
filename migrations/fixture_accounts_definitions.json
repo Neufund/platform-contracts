@@ -23,7 +23,11 @@
     "shouldHaveEther": true,
     "seed": "argue resemble sustain tattoo know goat parade idea science okay loan float solution used order dune essay achieve illness keen guitar stumble idea strike",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93"
+    "privateKey": "0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "INV_ETH_ICBM_NO_KYC_2": {
     "address": "0xDE185A5c2Bd3913fAC1F64102e3DEFD9E1797C4d",
@@ -31,7 +35,11 @@
     "shouldHaveEther": true,
     "seed": "force squeeze drift rigid dizzy cave random menu gap pudding trip elevator bleak essence decide camp screen glass oppose possible bunker piece merit much",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x26725897cd95531f8f06c963a29424af96ca61684f619316752112702d58e0b0"
+    "privateKey": "0x26725897cd95531f8f06c963a29424af96ca61684f619316752112702d58e0b0",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "INV_EUR_ICBM_HAS_KYC": {
     "address": "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
@@ -42,7 +50,11 @@
     "shouldHaveEther": true,
     "seed": "juice chest position grace weather matter turn delay space abuse winter slice tell flip use between crouch shop open leg elegant bracket lamp day",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0xb8c9391742bcf13c2efe56aa8d158ff8b50191a11d9fe5021d8b31cd86f96f46"
+    "privateKey": "0xb8c9391742bcf13c2efe56aa8d158ff8b50191a11d9fe5021d8b31cd86f96f46",
+    "balances": {
+      "etherToken": 387.198273981,
+      "euroToken": 0
+    }
   },
   "INV_EUR_ICBM_HAS_KYC_2": {
     "address": "0x619f0a73f02b8ac8F58440c21E15A461E69011a5",
@@ -53,7 +65,11 @@
     "shouldHaveEther": true,
     "seed": "artwork orbit lobster supreme auto orphan quick neither stumble brown museum merit light over cube split nation divide submit diary intact junior win lens",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x42869be50f95ccdb68c21efe2af9a3a318325b191ea86b92a54bee6c1944efa6"
+    "privateKey": "0x42869be50f95ccdb68c21efe2af9a3a318325b191ea86b92a54bee6c1944efa6",
+    "balances": {
+      "etherToken": 10,
+      "euroToken": 0
+    }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED": {
     "address": "0xB3a2eb675288Bff642F5036235ffb541a4289E71",
@@ -64,7 +80,11 @@
     "shouldHaveEther": true,
     "seed": "ribbon unfair dial explain device weather future version wood buyer finish purchase hair million sample forward join praise input violin mercy business purse weekend",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x4d17a67ae5e8eae9b9c86d9bc8386d83fd1c40081fa5bad7dc370d3134849a7f"
+    "privateKey": "0x4d17a67ae5e8eae9b9c86d9bc8386d83fd1c40081fa5bad7dc370d3134849a7f",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED_2": {
     "address": "0x7b85041Fe5E05A31a961445c3321EE426015D45F",
@@ -75,7 +95,11 @@
     "shouldHaveEther": true,
     "seed": "collect oval chimney manual fancy volcano summer fish twice runway cradle filter polar bless dune flame erupt angle fly dinosaur gather bronze seek silver",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xf8d1d4e602186bfd0b3363c54ed403d97a8041fe5703c46f8e60df92903259d3"
+    "privateKey": "0xf8d1d4e602186bfd0b3363c54ed403d97a8041fe5703c46f8e60df92903259d3",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC": {
     "address": "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
@@ -87,7 +111,15 @@
     "shouldHaveEther": true,
     "seed": "then route cage lyrics arrange car pigeon gas rely canoe turn all weapon pepper lemon festival joy option drama forget tortoise useful canvas viable",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0xfd4f06f51658d687910bb3675b5c093d4f93fff1183110101e0101fa88e08e5a"
+    "privateKey": "0xfd4f06f51658d687910bb3675b5c093d4f93fff1183110101e0101fa88e08e5a",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true,
+      "euroToken": true
+    }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP": {
     "address": "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
@@ -99,7 +131,15 @@
     "shouldHaveEther": true,
     "seed": "escape filter champion bring denial siege cactus vivid used march smile over ocean repeat poet word media fluid fluid quantum faculty tattoo attract crush",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec"
+    "privateKey": "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true,
+      "euroToken": true
+    }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH": {
     "address": "0xA622f39780fC8722243b49ACF3bFFEEb9B9201F2",
@@ -110,7 +150,15 @@
     "shouldHaveEther": false,
     "seed": "kid welcome lion describe repair champion submit sing sugar vault avoid jar adapt little page boost happy sing vivid stone web rescue grape bicycle",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x6e6030bc2d1abf8147c6f3617b55c9fdef4814c075f8c4c192695b55cacdbf88"
+    "privateKey": "0x6e6030bc2d1abf8147c6f3617b55c9fdef4814c075f8c4c192695b55cacdbf88",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true,
+      "euroToken": true
+    }
   },
   "INV_ICBM_ETH_M_HAS_KYC": {
     "address": "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
@@ -122,7 +170,14 @@
     "shouldHaveEther": true,
     "seed": "mimic lumber mother guide coil theory elite fly tiny wink seed issue cupboard limb luggage reflect ladder menu menu still deny basket spring evil",
     "derivationPath": null,
-    "privateKey": "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390"
+    "privateKey": "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true
+    }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
     "address": "0xF7784a74Cc59d1e6e1C10ca2053f34D68d280aE7",
@@ -134,7 +189,14 @@
     "shouldHaveEther": true,
     "seed": "subject loan retire wash stairs joke dry boy submit already tuition sponsor focus small giggle tornado smile wheel income pudding palm zone tragic property",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xdf6419aea83e2c8fbcba5aafee313ce55ded93b89b1b60853e95af09ca2f792b"
+    "privateKey": "0xdf6419aea83e2c8fbcba5aafee313ce55ded93b89b1b60853e95af09ca2f792b",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true
+    }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
     "address": "0xFa8ae4e924e14C834Ad48238a55A24Af97A8f3F3",
@@ -146,7 +208,14 @@
     "shouldHaveEther": true,
     "seed": "long ordinary situate fashion crime razor salon impact science powder aisle extra midnight dream hurt plastic bless soon viable abandon insect fabric hope brown",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x85e93122c429e8d4422016262b5a81437d8257457eb85aa2c393c3b0f5e3ea91"
+    "privateKey": "0x85e93122c429e8d4422016262b5a81437d8257457eb85aa2c393c3b0f5e3ea91",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true
+    }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
     "address": "0x4A20381D628AEEc776335a89bb32106a8F9d4323",
@@ -157,7 +226,15 @@
     "shouldHaveEther": true,
     "seed": "subway ritual clarify city picnic mean trip vocal neglect candy gaze parrot rocket typical hammer nasty library govern engage afford smooth wild rookie able",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x6935e67ba2870b1f236ce99fc34048b4b80ddb86f981e4c7241cab00a31583b7"
+    "privateKey": "0x6935e67ba2870b1f236ce99fc34048b4b80ddb86f981e4c7241cab00a31583b7",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    },
+    "icbmMigrations": {
+      "etherToken": true,
+      "euroToken": true
+    }
   },
   "INV_ICBM_EUR_M_HAS_KYC": {
     "address": "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
@@ -169,7 +246,14 @@
     "shouldHaveEther": true,
     "seed": "behind cool coyote edit have demise arena glare early embrace potato tray unit repair shine huge duty hybrid relax cage embrace cinnamon please hip",
     "derivationPath": null,
-    "privateKey": "0x86894df4dae0eec4d7d13d08c32d92e614161790accdf1820981b45e6a74f07a"
+    "privateKey": "0x86894df4dae0eec4d7d13d08c32d92e614161790accdf1820981b45e6a74f07a",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 1271.1988
+    },
+    "icbmMigrations": {
+      "euroToken": true
+    }
   },
   "INV_HAS_EUR_HAS_KYC": {
     "address": "0x0009C1d95C547d53E3b962059Be11802b5e85BA3",
@@ -181,7 +265,11 @@
     "shouldHaveEther": true,
     "seed": "orange iron recycle unusual cannon theory myth echo dizzy prefer arrange ugly fatigue sell rain burden meadow tiny tone spy glance agent catalog clock",
     "derivationPath": "unkown",
-    "privateKey": "0x75130945b6fba959304790f2664a4c1c5333750b63a0dd110f49b5156397f60c"
+    "privateKey": "0x75130945b6fba959304790f2664a4c1c5333750b63a0dd110f49b5156397f60c",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 10278127.1988
+    }
   },
   "INV_HAS_ETH_T_NO_KYC": {
     "address": "0x008Cf11F0439C3e85f736B84244dfA04C6382c22",
@@ -189,7 +277,11 @@
     "shouldHaveEther": true,
     "seed": "regret neglect aware fold early ribbon hollow require inspire arm never rocket armor buddy traffic lunch provide coil foil knock hospital season annual wing",
     "derivationPath": null,
-    "privateKey": "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef"
+    "privateKey": "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef",
+    "balances": {
+      "etherToken": 1187.198273981,
+      "euroToken": 0
+    }
   },
   "INV_EMPTY_HAS_KYC": {
     "address": "0x0012f184BA450a1E4e2E90110c57D84b06354770",
@@ -200,7 +292,11 @@
     "shouldHaveEther": true,
     "seed": "else width refuse blood month clock rib blast adjust surprise gather potato olympic post area creek power student oak inflict memory document when scene",
     "derivationPath": null,
-    "privateKey": "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096"
+    "privateKey": "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "NOMINEE_NEUMINI": {
     "address": "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
@@ -211,7 +307,11 @@
     "shouldHaveEther": true,
     "seed": "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
     "derivationPath": null,
-    "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649"
+    "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_SETUP": {
     "address": "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
@@ -222,7 +322,11 @@
     "shouldHaveEther": true,
     "seed": "rare work reason ladder hurdle junior moment sad lens panic random photo cave essence simple better merit stage road that humor term assist arrange",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x941a09e617aeb905e13c58d700d48875d5f05eeec1de1981d3227e3bbc72b689"
+    "privateKey": "0x941a09e617aeb905e13c58d700d48875d5f05eeec1de1981d3227e3bbc72b689",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_WHITELIST": {
     "address": "0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2",
@@ -233,7 +337,11 @@
     "shouldHaveEther": true,
     "seed": "clarify picnic oppose degree live place want slot hospital motion voyage rent dawn daughter space image unable alone romance output maze inch addict way",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x9be0993812c14583c58e4456cce1ab50ce9bd8e891eb754518c13cffc27b95c3"
+    "privateKey": "0x9be0993812c14583c58e4456cce1ab50ce9bd8e891eb754518c13cffc27b95c3",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_PUBLIC": {
     "address": "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
@@ -244,7 +352,11 @@
     "shouldHaveEther": true,
     "seed": "nerve crucial garlic essence egg exclude dry expect good when brush flame lemon bird brass twin track sound civil frequent special budget start fork",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x7584f650f14599bf2d7e1692c2724d01bfa1ccaa8197ed8d34e0c6aed70e0dfe"
+    "privateKey": "0x7584f650f14599bf2d7e1692c2724d01bfa1ccaa8197ed8d34e0c6aed70e0dfe",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_SIGNING": {
     "address": "0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0",
@@ -255,7 +367,11 @@
     "shouldHaveEther": true,
     "seed": "skull broom ripple hour owner hurry render roof disagree drum eye narrow essay country unusual sadness jealous waste margin document east guitar tunnel dolphin",
     "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x45f9d8f48f127a4804bcd313f26f6e5cc9f1c0f6d2eae1850b935f68af417d15"
+    "privateKey": "0x45f9d8f48f127a4804bcd313f26f6e5cc9f1c0f6d2eae1850b935f68af417d15",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_CLAIMS": {
     "address": "0x007D45D94368AE57ac8351604dC1cB3236150727",
@@ -266,7 +382,11 @@
     "shouldHaveEther": true,
     "seed": "recall insane member poet resemble mirror royal skull observe hope avoid present broom salt twin document gorilla wage notice page tide idle cram exotic",
     "derivationPath": null,
-    "privateKey": "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6"
+    "privateKey": "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_PAYOUT": {
     "address": "0x00866b5e4F539b215a28476aD5A364425599F206",
@@ -277,7 +397,11 @@
     "shouldHaveEther": true,
     "seed": "math friend anger chimney enable gas woman rookie lady index special clever insane dose tongue master topic current renew pact plug surprise captain today",
     "derivationPath": null,
-    "privateKey": "0x8f39956fd29869c2a51107c19b33ea4ed531cdc3c01d8cf7a9a4dada684adc48"
+    "privateKey": "0x8f39956fd29869c2a51107c19b33ea4ed531cdc3c01d8cf7a9a4dada684adc48",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_REFUND": {
     "address": "0x0028625dcBc24a821b40864294D66507fEC70B7F",
@@ -288,7 +412,11 @@
     "shouldHaveEther": true,
     "seed": "volcano eye expire jaguar tail zero shrug trip creek glass receive adult shift anger ceiling man twist census blood bubble resist jelly wine cost",
     "derivationPath": null,
-    "privateKey": "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1"
+    "privateKey": "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_SETUP_NO_ST": {
     "address": "0x0015650359DaF66f6633DEeb490a059027B0e396",
@@ -299,7 +427,11 @@
     "shouldHaveEther": true,
     "seed": "denial drive symbol magic staff tool across vivid lift crime switch silly loan same company robot aim pluck stereo section team one wheat desert",
     "derivationPath": null,
-    "privateKey": "0x8822940f1f642d9ad1d08d1cf6c5bc919f33e3ceb8365e91e694cfe67578997a"
+    "privateKey": "0x8822940f1f642d9ad1d08d1cf6c5bc919f33e3ceb8365e91e694cfe67578997a",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_PREVIEW": {
     "address": "0x238FB566005f59Fd5915dde954AB9FA7352Da641",
@@ -310,7 +442,11 @@
     "shouldHaveEther": true,
     "seed": "suspect exist outer organ reveal large display quit skull pony citizen coconut curious brand music child cancel valid rabbit garbage burst tiny fantasy check",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xac9c5791f78090ae521ba514cb973307c0c8e759172de86f7538085f2dd42df3"
+    "privateKey": "0xac9c5791f78090ae521ba514cb973307c0c8e759172de86f7538085f2dd42df3",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_PENDING": {
     "address": "0x0A00992Aea13E8E10287b577256717Aa4910a0Bb",
@@ -321,7 +457,11 @@
     "shouldHaveEther": true,
     "seed": "undo seek ball wagon dove region despair mountain unit paddle limb rather puppy slot disagree thunder execute garage stone use first session finger detail",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xb5848686d0bc7e90cf0af17d539dc594d8ad5e4676f19a3e5cd7b49f7a4628e9"
+    "privateKey": "0xb5848686d0bc7e90cf0af17d539dc594d8ad5e4676f19a3e5cd7b49f7a4628e9",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_LISTED": {
     "address": "0x007fF055641147d0a170a7A73B00F0eeb2f07f12",
@@ -332,7 +472,11 @@
     "shouldHaveEther": true,
     "seed": "credit short venture what speak castle embark nurse juice wild holiday pulp mixed gas jelly bachelor soft novel game matrix faculty vote argue black",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x73d36b0a24c4fd181a718672c627fd0caadd8d9ac0df72267f89f8f117d2fd39"
+    "privateKey": "0x73d36b0a24c4fd181a718672c627fd0caadd8d9ac0df72267f89f8f117d2fd39",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "ISSUER_PROSPECTUS_APPROVED": {
     "address": "0x4B07fd23BAA7198061caEd44cF470B0F20cE1b7e",
@@ -343,7 +487,11 @@
     "shouldHaveEther": true,
     "seed": "pulp car away mind fuel say swear language fade auto bottom body blame regular account cruise bread update clap language soup diagram man gate",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x2b7dc7e315fdd1192f5c9240f9ddd1032f7696107f0d177599e1a362f1e8e054"
+    "privateKey": "0x2b7dc7e315fdd1192f5c9240f9ddd1032f7696107f0d177599e1a362f1e8e054",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "SPARE_1": {
     "address": "0x9369dFD79049B7C3CF48d54435287b0AFd5227Da",
@@ -354,7 +502,11 @@
     "shouldHaveEther": true,
     "seed": "morning panther view ahead fashion client shallow sustain tool cost illegal wish alter demise extend trend task glory alert hurdle rail fragile vital about",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xcc5e22b1568ea35e732a0952f6d873fd06190add23bfafe312afbb465f2d98c6"
+    "privateKey": "0xcc5e22b1568ea35e732a0952f6d873fd06190add23bfafe312afbb465f2d98c6",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "SPARE_2": {
     "address": "0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D",
@@ -365,7 +517,11 @@
     "shouldHaveEther": true,
     "seed": "winter emerge indoor gather check ketchup fiction rotate actress hammer antenna brown bubble primary fury various put gallery scheme reform harsh inflict agent ball",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x87d63fa9252e2bdc5122559618c3726fe5f4539ab94b5220d1060b7df498f199"
+    "privateKey": "0x87d63fa9252e2bdc5122559618c3726fe5f4539ab94b5220d1060b7df498f199",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "SPARE_3": {
     "address": "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
@@ -376,7 +532,11 @@
     "shouldHaveEther": true,
     "seed": "cricket index proud frame aerobic swear certain decrease vacant quick clock fantasy flock napkin puzzle tackle pony camp test property one garlic voice decline",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xbd3861e2a5999d22a99531f8b028e7ea15e788625a8fd19dd4959479fb93dc6f"
+    "privateKey": "0xbd3861e2a5999d22a99531f8b028e7ea15e788625a8fd19dd4959479fb93dc6f",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "SPARE_4": {
     "address": "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
@@ -387,7 +547,11 @@
     "shouldHaveEther": true,
     "seed": "tourist voice pilot search buyer parrot maid flush pulse silver void liar provide cushion burden mean relax oven plastic vessel grunt black twice vast",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0x797a981f658de6799b6dc1b079a6af3f4feaea5f23133f3c2c054ddfeee60ab8"
+    "privateKey": "0x797a981f658de6799b6dc1b079a6af3f4feaea5f23133f3c2c054ddfeee60ab8",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0
+    }
   },
   "NANO_1": {
     "address": "0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D",
