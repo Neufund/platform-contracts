@@ -12,7 +12,6 @@ const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
-const deployedConstraintsAddresses = require("./configETOTermsFixtures").deployedAddresses;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -42,6 +41,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log(
         `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
       );
+
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
@@ -51,7 +51,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
-        deployedConstraintsAddresses[5],
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -74,17 +73,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   });
 };
 
-async function simulateETO(
-  DEPLOYER,
-  CONFIG,
-  universe,
-  nominee,
-  issuer,
-  etoDefiniton,
-  fas,
-  final,
-  etoTermsConstraintsAddress,
-) {
+async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
@@ -96,7 +85,7 @@ async function simulateETO(
     etoDefiniton.shareholderTerms,
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
-    etoTermsConstraintsAddress,
+    etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
   );
   // nominee sets agreement
   console.log("Nominee sets agreements");
@@ -373,5 +362,6 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
   }
   desc.whitelist = whitelist;
   desc.investors = investors;
+  desc.etoTermsConstraints = await etoTerms.ETO_TERMS_CONSTRAINTS();
   return desc;
 }

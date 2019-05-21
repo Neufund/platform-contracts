@@ -80,6 +80,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
         `DEPLOYER needs ${roles.accessController} on ${accessPolicy.address} to run this script`,
       );
     }
+    // that will give deterministic address on dev networks
+    let UNIVERSE_DEPLOYER = "0x30fD2af22459B61F5bdfdDcaeF9BFaD6AcBF9fDC";
     if (CONFIG.isLiveDeployment) {
       console.log("LIVE DEPLOYMENT");
       console.log("Deployment parameters:");
@@ -87,9 +89,14 @@ module.exports = function deployContracts(deployer, network, accounts) {
       if (!(await confirm("Are you sure you want to deploy? [y/n] "))) {
         throw new Error("Aborting!");
       }
+      // that will use standard DEPLOYER on live
+      UNIVERSE_DEPLOYER = DEPLOYER;
     }
     console.log("Universe deploying...");
-    await deployer.deploy(Universe, accessPolicy.address, forkArbiter.address);
+
+    await deployer.deploy(Universe, accessPolicy.address, forkArbiter.address, {
+      from: UNIVERSE_DEPLOYER,
+    });
     const universe = await Universe.deployed();
     console.log("Platform Terms deploying...");
     await deployer.deploy(PlatformTerms);

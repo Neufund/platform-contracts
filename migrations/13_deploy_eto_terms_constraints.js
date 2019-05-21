@@ -2,13 +2,13 @@ require("babel-register");
 const confirm = require("node-ask").confirm;
 const getConfig = require("./config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
-const { join } = require("path");
-const fs = require("fs");
 
 const promisify = require("../test/helpers/evmCommands").promisify;
+const stringify = require("../test/helpers/constants").stringify;
 
 const constraints = require("./config").constraints;
 const deployedAddresses = require("./configETOTermsFixtures").deployedAddresses;
+const describedConstraints = require("./configETOTermsFixtures").describedConstraints;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -43,8 +43,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
 
-    const describedConstraints = {};
-    for (const constraint of constraints) {
+    // deploy only 1 pack of products
+    for (const constraint of constraints.filter(c => c._deploymentMetadata.step === 1)) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
       const updatedConstraint = {
         ...constraint,
@@ -70,23 +70,22 @@ module.exports = function deployContracts(deployer, network, accounts) {
       deployedAddresses.push(etoTermsConstraints.address);
 
       console.log("Adding to terms constraints collection in universe");
-      await universe.setCollectionsInterfaces(
-        [knownInterfaces.etoTermsConstraints],
-        [etoTermsConstraints.address],
-        [true],
+      await universe.setCollectionInterface(
+        knownInterfaces.etoTermsConstraints,
+        etoTermsConstraints.address,
+        true,
       );
+      // leave all products ON on test network
+      if (!constraint._deploymentMetadata.available && CONFIG.isLiveDeployment) {
+        console.log("... and immediately removing because constraints no longer active");
+        await universe.setCollectionInterface(
+          knownInterfaces.etoTermsConstraints,
+          etoTermsConstraints.address,
+          false,
+        );
+      }
 
-      describedConstraints[etoTermsConstraints.address] = updatedConstraint;
+      describedConstraints[etoTermsConstraints.address] = stringify(updatedConstraint);
     }
-
-    // save information to fixtures file
-    const etoConstraintsFixturesPath = join(
-      __dirname,
-      "../build/eto_terms_contraints_fixtures.json",
-    );
-    fs.writeFile(etoConstraintsFixturesPath, JSON.stringify(describedConstraints, null, 2), err => {
-      if (err) throw new Error(err);
-    });
-    console.log(`ETO constraints described in ${etoConstraintsFixturesPath}`);
   });
 };
