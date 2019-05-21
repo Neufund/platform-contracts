@@ -80,7 +80,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       [{ subject: DEPLOYER, role: roles.eurtDepositManager }],
       [],
     );
-    const fas = getFixtureAccounts(accounts);
+
     console.log("set Euro LockedAccount migration");
     await icbmEuroLock.enableMigration(euroLock.address);
     if ((await icbmEuroLock.currentMigrationTarget()) !== euroLock.address) {
@@ -116,70 +116,5 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("DEPLOYER can create snapshots");
     await accessPolicy.setUserRole(DEPLOYER, roles.snapshotCreator, "0x0", TriState.Allow);
-
-    // setup fixture accounts
-    console.log("deposit in EtherToken");
-    await etherToken.deposit({
-      from: fas.INV_HAS_ETH_T_NO_KYC.address,
-      value: CONFIG.Q18.mul(1187.198273981),
-    });
-    await etherToken.deposit({
-      from: fas.INV_EUR_ICBM_HAS_KYC.address,
-      value: CONFIG.Q18.mul(387.198273981),
-    });
-
-    await etherToken.deposit({
-      from: fas.INV_EUR_ICBM_HAS_KYC_2.address,
-      value: CONFIG.Q18.mul(387.198273981),
-    });
-
-    console.log("set KYC, sophisiticated, bankAccount");
-    const requireKYC = Object.keys(fas)
-      .filter(fa => fas[fa].verified)
-      .map(fa => fas[fa].address);
-    const zeroClaims = requireKYC.map(() => toBytes32("0x0"));
-    const verifiedClaims = requireKYC.map(() => toBytes32("0x1"));
-    // special verified claims
-    verifiedClaims[2] = toBytes32("0x7");
-    verifiedClaims[3] = toBytes32("0x7");
-    verifiedClaims[4] = toBytes32("0x5");
-    verifiedClaims[5] = toBytes32("0x5");
-    await identityRegistry.setMultipleClaims(requireKYC, zeroClaims, verifiedClaims, {
-      from: DEPLOYER,
-    });
-    const claims = await identityRegistry.getClaims(requireKYC[3]);
-    if (claims !== verifiedClaims[3]) {
-      throw new Error("claims could not be set");
-    }
-
-    console.log("deposit in EuroToken");
-    await euroToken.deposit(fas.INV_HAS_EUR_HAS_KYC.address, CONFIG.Q18.mul(10278127.1988), "0x0", {
-      from: DEPLOYER,
-    });
-    await euroToken.deposit(fas.INV_ICBM_EUR_M_HAS_KYC.address, CONFIG.Q18.mul(1271.1988), "0x0", {
-      from: DEPLOYER,
-    });
-
-    console.log("let euroLock to receive and send old euro token");
-    await icbmEuroToken.setAllowedTransferFrom(euroLock.address, true);
-    await icbmEuroToken.setAllowedTransferTo(euroLock.address, true);
-
-    console.log("migrating locked accounts");
-    await icbmEtherLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address });
-    await icbmEtherLock.migrate({
-      from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
-    });
-    await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address });
-    await icbmEtherLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address });
-    await icbmEuroLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address });
-    await icbmEuroLock.migrate({ from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address });
-    await icbmEuroLock.migrate({ from: fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address });
-    await icbmEuroLock.migrate({
-      from: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
-    });
-    await icbmEuroLock.migrate({ from: fas.INV_ICBM_EUR_M_HAS_KYC.address });
   });
 };

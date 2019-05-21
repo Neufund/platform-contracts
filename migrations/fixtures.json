@@ -2,7 +2,6 @@
   "DEPLOYER": {
     "address": "0x8a194c13308326173423119F8dCb785CE14C732B",
     "type": "external",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": "bread sick proud swift orchard wish model mammal brass ready dinner pave runway can twelve best bundle filter stuff sister paddle kangaroo keep supply",
     "derivationPath": null,
@@ -12,7 +11,6 @@
   "DEPLOYER_UNIVERSE": {
     "address": "0x30fD2af22459B61F5bdfdDcaeF9BFaD6AcBF9fDC",
     "type": "external",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": "submit defy item boss situate isolate purse major retire nothing mammal usual boil hope sentence group vivid clutch another indoor slam illegal street dust",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -22,7 +20,6 @@
   "INV_ETH_ICBM_NO_KYC": {
     "address": "0x429123b08DF32b0006fd1F3b0Ef893A8993802f3",
     "type": "investor",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": "argue resemble sustain tattoo know goat parade idea science okay loan float solution used order dune essay achieve illness keen guitar stumble idea strike",
     "derivationPath": "m/44'/60'/0'/0",
@@ -31,7 +28,6 @@
   "INV_ETH_ICBM_NO_KYC_2": {
     "address": "0xDE185A5c2Bd3913fAC1F64102e3DEFD9E1797C4d",
     "type": "investor",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": "force squeeze drift rigid dizzy cave random menu gap pudding trip elevator bleak essence decide camp screen glass oppose possible bunker piece merit much",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -40,7 +36,9 @@
   "INV_EUR_ICBM_HAS_KYC": {
     "address": "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "juice chest position grace weather matter turn delay space abuse winter slice tell flip use between crouch shop open leg elegant bracket lamp day",
     "derivationPath": "m/44'/60'/0'/0",
@@ -49,7 +47,9 @@
   "INV_EUR_ICBM_HAS_KYC_2": {
     "address": "0x619f0a73f02b8ac8F58440c21E15A461E69011a5",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "artwork orbit lobster supreme auto orphan quick neither stumble brown museum merit light over cube split nation divide submit diary intact junior win lens",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -58,7 +58,9 @@
   "INV_EUR_ICBM_HAS_KYC_SEED": {
     "address": "0xB3a2eb675288Bff642F5036235ffb541a4289E71",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "ribbon unfair dial explain device weather future version wood buyer finish purchase hair million sample forward join praise input violin mercy business purse weekend",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -67,7 +69,9 @@
   "INV_EUR_ICBM_HAS_KYC_SEED_2": {
     "address": "0x7b85041Fe5E05A31a961445c3321EE426015D45F",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "collect oval chimney manual fancy volcano summer fish twice runway cradle filter polar bless dune flame erupt angle fly dinosaur gather bronze seek silver",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -76,7 +80,10 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC": {
     "address": "0xDf5F67E6e4c643a2ceD1f9De88A5da42E1507eFD",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
     "shouldHaveEther": true,
     "seed": "then route cage lyrics arrange car pigeon gas rely canoe turn all weapon pepper lemon festival joy option drama forget tortoise useful canvas viable",
     "derivationPath": "m/44'/60'/0'/0",
@@ -85,7 +92,10 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP": {
     "address": "0x7824e49353BD72E20B61717cf82a06a4EEE209e8",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
     "shouldHaveEther": true,
     "seed": "escape filter champion bring denial siege cactus vivid used march smile over ocean repeat poet word media fluid fluid quantum faculty tattoo attract crush",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -94,7 +104,9 @@
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH": {
     "address": "0xA622f39780fC8722243b49ACF3bFFEEb9B9201F2",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": false,
     "seed": "kid welcome lion describe repair champion submit sing sugar vault avoid jar adapt little page boost happy sing vivid stone web rescue grape bicycle",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -103,7 +115,10 @@
   "INV_ICBM_ETH_M_HAS_KYC": {
     "address": "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "isSophisticatedInvestor": true
+    },
     "shouldHaveEther": true,
     "seed": "mimic lumber mother guide coil theory elite fly tiny wink seed issue cupboard limb luggage reflect ladder menu menu still deny basket spring evil",
     "derivationPath": null,
@@ -112,7 +127,10 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
     "address": "0xF7784a74Cc59d1e6e1C10ca2053f34D68d280aE7",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "isSophisticatedInvestor": true
+    },
     "shouldHaveEther": true,
     "seed": "subject loan retire wash stairs joke dry boy submit already tuition sponsor focus small giggle tornado smile wheel income pudding palm zone tragic property",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -121,7 +139,10 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
     "address": "0xFa8ae4e924e14C834Ad48238a55A24Af97A8f3F3",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "isSophisticatedInvestor": true
+    },
     "shouldHaveEther": true,
     "seed": "long ordinary situate fashion crime razor salon impact science powder aisle extra midnight dream hurt plastic bless soon viable abandon insect fabric hope brown",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -130,7 +151,9 @@
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
     "address": "0x4A20381D628AEEc776335a89bb32106a8F9d4323",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "subway ritual clarify city picnic mean trip vocal neglect candy gaze parrot rocket typical hammer nasty library govern engage afford smooth wild rookie able",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -139,7 +162,10 @@
   "INV_ICBM_EUR_M_HAS_KYC": {
     "address": "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
     "shouldHaveEther": true,
     "seed": "behind cool coyote edit have demise arena glare early embrace potato tray unit repair shine huge duty hybrid relax cage embrace cinnamon please hip",
     "derivationPath": null,
@@ -148,7 +174,10 @@
   "INV_HAS_EUR_HAS_KYC": {
     "address": "0x0009C1d95C547d53E3b962059Be11802b5e85BA3",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
     "shouldHaveEther": true,
     "seed": "orange iron recycle unusual cannon theory myth echo dizzy prefer arrange ugly fatigue sell rain burden meadow tiny tone spy glance agent catalog clock",
     "derivationPath": "unkown",
@@ -157,7 +186,6 @@
   "INV_HAS_ETH_T_NO_KYC": {
     "address": "0x008Cf11F0439C3e85f736B84244dfA04C6382c22",
     "type": "investor",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": "regret neglect aware fold early ribbon hollow require inspire arm never rocket armor buddy traffic lunch provide coil foil knock hospital season annual wing",
     "derivationPath": null,
@@ -166,7 +194,9 @@
   "INV_EMPTY_HAS_KYC": {
     "address": "0x0012f184BA450a1E4e2E90110c57D84b06354770",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "else width refuse blood month clock rib blast adjust surprise gather potato olympic post area creek power student oak inflict memory document when scene",
     "derivationPath": null,
@@ -175,7 +205,9 @@
   "NOMINEE_NEUMINI": {
     "address": "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
     "type": "nominee",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
     "derivationPath": null,
@@ -184,7 +216,9 @@
   "ISSUER_SETUP": {
     "address": "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "rare work reason ladder hurdle junior moment sad lens panic random photo cave essence simple better merit stage road that humor term assist arrange",
     "derivationPath": "m/44'/60'/0'/0",
@@ -193,7 +227,9 @@
   "ISSUER_WHITELIST": {
     "address": "0x8e75544B848F0a32a1Ab119E3916Ec7138f3Bed2",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "clarify picnic oppose degree live place want slot hospital motion voyage rent dawn daughter space image unable alone romance output maze inch addict way",
     "derivationPath": "m/44'/60'/0'/0",
@@ -202,7 +238,9 @@
   "ISSUER_PUBLIC": {
     "address": "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "nerve crucial garlic essence egg exclude dry expect good when brush flame lemon bird brass twin track sound civil frequent special budget start fork",
     "derivationPath": "m/44'/60'/0'/0",
@@ -211,7 +249,9 @@
   "ISSUER_SIGNING": {
     "address": "0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "skull broom ripple hour owner hurry render roof disagree drum eye narrow essay country unusual sadness jealous waste margin document east guitar tunnel dolphin",
     "derivationPath": "m/44'/60'/0'/0",
@@ -220,7 +260,9 @@
   "ISSUER_CLAIMS": {
     "address": "0x007D45D94368AE57ac8351604dC1cB3236150727",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "recall insane member poet resemble mirror royal skull observe hope avoid present broom salt twin document gorilla wage notice page tide idle cram exotic",
     "derivationPath": null,
@@ -229,7 +271,9 @@
   "ISSUER_PAYOUT": {
     "address": "0x00866b5e4F539b215a28476aD5A364425599F206",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "math friend anger chimney enable gas woman rookie lady index special clever insane dose tongue master topic current renew pact plug surprise captain today",
     "derivationPath": null,
@@ -238,7 +282,9 @@
   "ISSUER_REFUND": {
     "address": "0x0028625dcBc24a821b40864294D66507fEC70B7F",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "volcano eye expire jaguar tail zero shrug trip creek glass receive adult shift anger ceiling man twist census blood bubble resist jelly wine cost",
     "derivationPath": null,
@@ -247,7 +293,9 @@
   "ISSUER_SETUP_NO_ST": {
     "address": "0x0015650359DaF66f6633DEeb490a059027B0e396",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "denial drive symbol magic staff tool across vivid lift crime switch silly loan same company robot aim pluck stereo section team one wheat desert",
     "derivationPath": null,
@@ -256,7 +304,9 @@
   "ISSUER_PREVIEW": {
     "address": "0x238FB566005f59Fd5915dde954AB9FA7352Da641",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "suspect exist outer organ reveal large display quit skull pony citizen coconut curious brand music child cancel valid rabbit garbage burst tiny fantasy check",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -265,7 +315,9 @@
   "ISSUER_PENDING": {
     "address": "0x0A00992Aea13E8E10287b577256717Aa4910a0Bb",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "undo seek ball wagon dove region despair mountain unit paddle limb rather puppy slot disagree thunder execute garage stone use first session finger detail",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -274,7 +326,9 @@
   "ISSUER_LISTED": {
     "address": "0x007fF055641147d0a170a7A73B00F0eeb2f07f12",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "credit short venture what speak castle embark nurse juice wild holiday pulp mixed gas jelly bachelor soft novel game matrix faculty vote argue black",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -283,7 +337,9 @@
   "ISSUER_PROSPECTUS_APPROVED": {
     "address": "0x4B07fd23BAA7198061caEd44cF470B0F20cE1b7e",
     "type": "issuer",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "pulp car away mind fuel say swear language fade auto bottom body blame regular account cruise bread update clap language soup diagram man gate",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -292,7 +348,9 @@
   "SPARE_1": {
     "address": "0x9369dFD79049B7C3CF48d54435287b0AFd5227Da",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "morning panther view ahead fashion client shallow sustain tool cost illegal wish alter demise extend trend task glory alert hurdle rail fragile vital about",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -301,7 +359,9 @@
   "SPARE_2": {
     "address": "0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "winter emerge indoor gather check ketchup fiction rotate actress hammer antenna brown bubble primary fury various put gallery scheme reform harsh inflict agent ball",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -310,7 +370,9 @@
   "SPARE_3": {
     "address": "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "cricket index proud frame aerobic swear certain decrease vacant quick clock fantasy flock napkin puzzle tackle pony camp test property one garlic voice decline",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -319,7 +381,9 @@
   "SPARE_4": {
     "address": "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
     "type": "investor",
-    "verified": true,
+    "kycClaims": {
+      "isVerified": true
+    },
     "shouldHaveEther": true,
     "seed": "tourist voice pilot search buyer parrot maid flush pulse silver void liar provide cushion burden mean relax oven plastic vessel grunt black twice vast",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -328,7 +392,6 @@
   "NANO_1": {
     "address": "0x79fe3C2DC5da59A5BEad8Cf71B2406Ad22ed2B3D",
     "type": "external",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": null,
     "derivationPath": null,
@@ -337,7 +400,6 @@
   "NANO_2": {
     "address": "0x97d2e2Bf8EeDB82300B3D07Cb097b8f97Dc5f47C",
     "type": "external",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": null,
     "derivationPath": null,
@@ -346,7 +408,6 @@
   "NANO_3": {
     "address": "0xaa4689311f3C3E88848CFd90f7dAA25eA2aacDD3",
     "type": "external",
-    "verified": false,
     "shouldHaveEther": true,
     "seed": null,
     "derivationPath": null,

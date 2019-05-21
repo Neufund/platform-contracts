@@ -349,7 +349,7 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
   const etoTerms = await ETOTerms.at(await etoCommitment.etoTerms());
   for (const addr of Object.keys(fas)) {
     const f = fas[addr];
-    if (f.type === "investor" && f.verified) {
+    if (f.type === "investor" && f.kycClaims !== undefined) {
       const ticket = await etoCommitment.investorTicket(f.address);
       if (ticket[0] > 0) {
         investors[f.address] = ticket;
