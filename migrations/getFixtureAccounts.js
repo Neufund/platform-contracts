@@ -27,6 +27,16 @@ export function getFixtureAccounts() {
       "external",
       false,
     ),
+    // used ONLY to deploy UNIVERSE so this address never changes, do not touch, do not use!
+    DEPLOYER_UNIVERSE: makeAccount(
+      "submit defy item boss situate isolate purse major retire nothing mammal usual boil hope sentence group vivid clutch another indoor slam illegal street dust",
+      "m/44'/60'/0'/0/0",
+      "0x7ccdc091ae2a3cccb338d1aa00f8ec7ff60f30abb9a447a17fe3326ebc0849f1",
+      "0x30fD2af22459B61F5bdfdDcaeF9BFaD6AcBF9fDC",
+      "external",
+      false,
+    ),
+    // fixture accounts
     INV_ETH_ICBM_NO_KYC: makeAccount(
       "argue resemble sustain tattoo know goat parade idea science okay loan float solution used order dune essay achieve illness keen guitar stumble idea strike",
       "m/44'/60'/0'/0",
