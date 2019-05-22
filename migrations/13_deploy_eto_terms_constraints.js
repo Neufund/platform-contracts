@@ -9,6 +9,7 @@ const stringify = require("../test/helpers/constants").stringify;
 const constraints = require("./config").constraints;
 const deployedAddresses = require("./configETOTermsFixtures").deployedAddresses;
 const describedConstraints = require("./configETOTermsFixtures").describedConstraints;
+const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -67,7 +68,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       );
       const etoTermsConstraints = await ETOTermsConstraints.deployed();
       // save address
-      deployedAddresses.push(etoTermsConstraints.address);
+      deployedAddresses.push(toChecksumAddress(etoTermsConstraints.address));
 
       console.log("Adding to terms constraints collection in universe");
       await universe.setCollectionInterface(
@@ -85,7 +86,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
         );
       }
 
-      describedConstraints[etoTermsConstraints.address] = stringify(updatedConstraint);
+      describedConstraints[toChecksumAddress(etoTermsConstraints.address)] = stringify(
+        updatedConstraint,
+      );
     }
   });
 };
