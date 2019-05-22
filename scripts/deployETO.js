@@ -10,6 +10,7 @@ const { join } = require("path");
 const deployETO = require("../migrations/deployETO").deployETO;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
+const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
 
 module.exports = async function deploy() {
   const optionDefinitions = [
@@ -38,30 +39,6 @@ module.exports = async function deploy() {
   const path = join(__dirname, "..", options.definition);
   const contents = fs.readFileSync(path);
   const parsed = JSON.parse(contents);
-
-  // recover bignumbers
-
-  function recoverBigNumbers(terms) {
-    const mod = {};
-    for (const k of Object.keys(terms)) {
-      if (typeof terms[k] === "string") {
-        try {
-          mod[k] = new web3.BigNumber(terms[k]);
-        } catch (e) {
-          mod[k] = terms[k];
-        }
-        continue;
-      }
-      if (typeof terms[k] === "boolean") {
-        mod[k] = terms[k];
-        continue;
-      }
-      throw new Error(
-        `Only boolean and string types are allowed in terms! Integers must be strings: ${k}`,
-      );
-    }
-    return mod;
-  }
 
   function explainTerms(name, terms) {
     console.log(`\n${name}:`);
