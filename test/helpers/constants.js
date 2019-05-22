@@ -51,6 +51,40 @@ export const stringify = o => {
   return op;
 };
 
+export const recoverBigNumbers = terms => {
+  const mod = {};
+  for (const k of Object.keys(terms)) {
+    if (typeof terms[k] === "string") {
+      // skip hexadecimals
+      if (terms[k].startsWith("0x")) {
+        mod[k] = terms[k];
+      } else {
+        // try to parse bignumbers
+        try {
+          mod[k] = new web3.BigNumber(terms[k]);
+        } catch (e) {
+          mod[k] = terms[k];
+        }
+      }
+    } else if (typeof terms[k] === "boolean" || terms[k] === null) {
+      mod[k] = terms[k];
+    } else if (typeof terms[k] === "object") {
+      if (terms[k].constructor && terms[k].constructor.name.includes("BigNumber")) {
+        mod[k] = terms[k];
+      } else {
+        mod[k] = recoverBigNumbers(terms[k]);
+      }
+    } else {
+      throw new Error(
+        `Only boolean and string types are allowed in terms! Integers must be strings: ${k}: ${
+          terms[k]
+        } (${typeof terms[k]})`,
+      );
+    }
+  }
+  return mod;
+};
+
 export function contractId(contractName) {
   return web3.sha3(`neufund-platform:${contractName}`);
 }

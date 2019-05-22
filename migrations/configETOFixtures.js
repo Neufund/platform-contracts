@@ -1,9 +1,9 @@
-import { web3, Q18, daysToSeconds } from "../test/helpers/constants";
+import { web3, Q18, daysToSeconds, recoverBigNumbers } from "../test/helpers/constants";
 
 const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
   .getFixtureAndAddressByName;
 
-const defEtoTerms = {
+export const defEtoTerms = {
   shareholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
@@ -48,7 +48,7 @@ const defEtoTerms = {
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
 
-const defEtoHwniTerms = {
+export const hnwiEtoDeSecurityTerms = {
   shareholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
@@ -94,6 +94,141 @@ const defEtoHwniTerms = {
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
 
+export const retailEtoDeVmaTerms = {
+  etoTerms: {
+    ETO_TERMS_CONSTRAINTS: "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
+    EXISTING_COMPANY_SHARES: "9000",
+    MIN_TICKET_EUR_ULPS: "10000000000000000000",
+    MAX_TICKET_EUR_ULPS: "10000000000000000000000000",
+    ENABLE_TRANSFERS_ON_SUCCESS: false,
+    EQUITY_TOKEN_NAME: "NOMERA",
+    EQUITY_TOKEN_SYMBOL: "NOM",
+    SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
+    WHITELIST_DISCOUNT_FRAC: "300000000000000000",
+    PUBLIC_DISCOUNT_FRAC: "0",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmcoZxecpVUaWCG2CjdNucNtRzKsCYBGaTkC54eW6MkRg3",
+  },
+  shareholderTerms: {
+    GENERAL_VOTING_RULE: "1",
+    TAG_ALONG_VOTING_RULE: "2",
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
+    HAS_FOUNDERS_VESTING: true,
+    GENERAL_VOTING_DURATION: "864000",
+    RESTRICTED_ACT_VOTING_DURATION: "1209600",
+    VOTING_FINALIZATION_DURATION: "604800",
+    TOKENHOLDERS_QUORUM_FRAC: "500000000000000000",
+    VOTING_MAJORITY_FRAC: "500000000000000000",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:Qmc8VBgn9bN5QkdHun4xCb7KnpPNV8W4rbPpAPcx7NjAmA",
+  },
+  durTerms: {
+    WHITELIST_DURATION: "604800",
+    PUBLIC_DURATION: "2592000",
+    SIGNING_DURATION: "5097600",
+    CLAIM_DURATION: "864000",
+  },
+  tokenTerms: {
+    MIN_NUMBER_OF_TOKENS: "10000000",
+    MAX_NUMBER_OF_TOKENS: "15000000",
+    TOKEN_PRICE_EUR_ULPS: "666666666666666667",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "15000000",
+  },
+  nominee: "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
+  company: "0x95137084d1b6F58D177523De894293913394aA12",
+  etoTermsConstraints: "retail eto de vma",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+};
+
+export const miniEtoLiTerms = {
+  etoTerms: {
+    ETO_TERMS_CONSTRAINTS: "0x6e2551b25241f1a937777e274Ed978C39823ad52",
+    EXISTING_COMPANY_SHARES: "5000",
+    MIN_TICKET_EUR_ULPS: "10000000000000000000",
+    MAX_TICKET_EUR_ULPS: "5000000000000000000000000",
+    ENABLE_TRANSFERS_ON_SUCCESS: true,
+    EQUITY_TOKEN_NAME: "Blok",
+    EQUITY_TOKEN_SYMBOL: "BLKK",
+    SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
+    WHITELIST_DISCOUNT_FRAC: "400000000000000000",
+    PUBLIC_DISCOUNT_FRAC: "0",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+  },
+  shareholderTerms: {
+    GENERAL_VOTING_RULE: "1",
+    TAG_ALONG_VOTING_RULE: "2",
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
+    HAS_FOUNDERS_VESTING: true,
+    GENERAL_VOTING_DURATION: "864000",
+    RESTRICTED_ACT_VOTING_DURATION: "1209600",
+    VOTING_FINALIZATION_DURATION: "604800",
+    TOKENHOLDERS_QUORUM_FRAC: "500000000000000000",
+    VOTING_MAJORITY_FRAC: "500000000000000000",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
+  },
+  durTerms: {
+    WHITELIST_DURATION: "604800",
+    PUBLIC_DURATION: "2592000",
+    SIGNING_DURATION: "5184000",
+    CLAIM_DURATION: "864000",
+  },
+  tokenTerms: {
+    MIN_NUMBER_OF_TOKENS: "5000000",
+    MAX_NUMBER_OF_TOKENS: "6000000",
+    TOKEN_PRICE_EUR_ULPS: "600000000000000000",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "5500000",
+  },
+  nominee: "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
+  company: "0x36Cec7081d2528a42D56fC1571D6D234dd2608EC",
+  etoTermsConstraints: "mini eto li",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+};
+
+export const hnwiEtoLiSecurityTerms = {
+  etoTerms: {
+    ETO_TERMS_CONSTRAINTS: "0x85bEa76f2ec57147F9942f68D896e10d6BCAcf03",
+    EXISTING_COMPANY_SHARES: "10050",
+    MIN_TICKET_EUR_ULPS: "100000000000000000000000",
+    MAX_TICKET_EUR_ULPS: "15920398009950248756218905",
+    ENABLE_TRANSFERS_ON_SUCCESS: true,
+    EQUITY_TOKEN_NAME: "Bionic",
+    EQUITY_TOKEN_SYMBOL: "BNIC",
+    SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
+    WHITELIST_DISCOUNT_FRAC: "300000000000000000",
+    PUBLIC_DISCOUNT_FRAC: "0",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+  },
+  shareholderTerms: {
+    GENERAL_VOTING_RULE: "1",
+    TAG_ALONG_VOTING_RULE: "2",
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
+    HAS_FOUNDERS_VESTING: true,
+    GENERAL_VOTING_DURATION: "864000",
+    RESTRICTED_ACT_VOTING_DURATION: "1209600",
+    VOTING_FINALIZATION_DURATION: "604800",
+    TOKENHOLDERS_QUORUM_FRAC: "500000000000000000",
+    VOTING_MAJORITY_FRAC: "500000000000000000",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
+  },
+  durTerms: {
+    WHITELIST_DURATION: "1209600",
+    PUBLIC_DURATION: "1209600",
+    SIGNING_DURATION: "5184000",
+    CLAIM_DURATION: "864000",
+  },
+  tokenTerms: {
+    MIN_NUMBER_OF_TOKENS: "10000000",
+    MAX_NUMBER_OF_TOKENS: "20000000",
+    TOKEN_PRICE_EUR_ULPS: "796019900497512438",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "20000000",
+  },
+  nominee: "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
+  company: "0xd9C46960cE6bE33BbED615087ABbD35Fda77d42C",
+  etoTermsConstraints: "hnwi eto li security",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+};
+
 // function cloneObject(obj) {
 //     const clone = {};
 //     for(const i in obj) {
@@ -105,9 +240,7 @@ const defEtoHwniTerms = {
 //     return clone;
 // }
 
-export function prepareEtoTerms(name) {
-  // find eto terms mockup
-  const terms = name === "ETOInWhitelistState" ? defEtoHwniTerms : defEtoTerms;
+export function prepareEtoTerms(name, terms) {
   // resolve eto constraints name
   const { constraintFixture, constraintAddress } = getETOConstraintFixtureAndAddressByName(
     terms.etoTermsConstraints,
@@ -115,7 +248,9 @@ export function prepareEtoTerms(name) {
   const copy = Object.assign({}, terms);
   copy.name = name;
   // provide correct address in eto terms
-  copy.etoTermsConstraints = constraintFixture;
+  const copyConstraints = Object.assign({}, constraintFixture);
+  delete copyConstraints._deploymentMetadata;
+  copy.etoTermsConstraints = copyConstraints;
   copy.etoTerms.ETO_TERMS_CONSTRAINTS = constraintAddress;
-  return copy;
+  return recoverBigNumbers(copy);
 }
