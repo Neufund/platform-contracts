@@ -12,6 +12,7 @@ const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
+const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -62,7 +63,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         await etoCommitment.state(),
       );
-      describedETOs[etoCommitment.address] = stringify(desc);
+      describedETOs[toChecksumAddress(etoCommitment.address)] = stringify(desc);
     }
 
     const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
@@ -333,14 +334,14 @@ async function investICBMAmount(investor, CONFIG, universe, etoCommitment, amoun
 
 async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
   const desc = {
-    address: etoCommitment.address,
+    address: toChecksumAddress(etoCommitment.address),
     name: etoDefinition.name,
     state,
     startDate: await etoCommitment.startOf(1),
-    nominee: await etoCommitment.nominee(),
-    company: await etoCommitment.companyLegalRep(),
-    equityToken: await etoCommitment.equityToken(),
-    etoTerms: await etoCommitment.etoTerms(),
+    nominee: toChecksumAddress(await etoCommitment.nominee()),
+    company: toChecksumAddress(await etoCommitment.companyLegalRep()),
+    equityToken: toChecksumAddress(await etoCommitment.equityToken()),
+    etoTerms: toChecksumAddress(await etoCommitment.etoTerms()),
     definition: etoDefinition,
   };
   const whitelist = {};

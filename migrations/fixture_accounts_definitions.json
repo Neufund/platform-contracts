@@ -323,18 +323,19 @@
     }
   },
   "ISSUER_PUBLIC": {
-    "address": "0x16cd5aC5A1b77FB72032E3A09E91A98bB21D8988",
+    "address": "0x36Cec7081d2528a42D56fC1571D6D234dd2608EC",
     "type": "issuer",
     "identityClaims": {
       "isVerified": true
     },
-    "seed": "nerve crucial garlic essence egg exclude dry expect good when brush flame lemon bird brass twin track sound civil frequent special budget start fork",
-    "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x7584f650f14599bf2d7e1692c2724d01bfa1ccaa8197ed8d34e0c6aed70e0dfe",
+    "seed": "month voyage ring assist airport head balance engine farm chicken vibrant noble useful more basic stable quiz slab lizard blind sadness already tribe addict",
+    "derivationPath": "m/44'/60'/0'",
+    "privateKey": "0x718e461177f610488c59a09f15c5a0b80e4ae864c0cb60a44de2de3d0b34830e",
     "balances": {
       "etherToken": 0,
       "euroToken": 0
-    }
+    },
+    "notes": "etoissuer3"
   },
   "ISSUER_SIGNING": {
     "address": "0xC8f867Cf4Ed30b4fF0Aa4c4c8c6b684397B219B0",
@@ -365,18 +366,19 @@
     }
   },
   "ISSUER_PAYOUT": {
-    "address": "0x00866b5e4F539b215a28476aD5A364425599F206",
+    "address": "0x95137084d1b6F58D177523De894293913394aA12",
     "type": "issuer",
     "identityClaims": {
       "isVerified": true
     },
-    "seed": "math friend anger chimney enable gas woman rookie lady index special clever insane dose tongue master topic current renew pact plug surprise captain today",
-    "derivationPath": null,
-    "privateKey": "0x8f39956fd29869c2a51107c19b33ea4ed531cdc3c01d8cf7a9a4dada684adc48",
+    "seed": "kind between patch dream voyage silver arm cannon ring frozen annual small eager ribbon lumber sentence vendor unfold smoke welcome involve become marine urge",
+    "derivationPath": "m/44'/60'/0'",
+    "privateKey": "0xf358d59968b9b281390d47cb99ae606f1260901b83feb32445f007a83a4879fa",
     "balances": {
       "etherToken": 0,
       "euroToken": 0
-    }
+    },
+    "notes": "etoissuer4"
   },
   "ISSUER_REFUND": {
     "address": "0x0028625dcBc24a821b40864294D66507fEC70B7F",
@@ -393,32 +395,34 @@
     }
   },
   "ISSUER_SETUP_NO_ST": {
-    "address": "0x0015650359DaF66f6633DEeb490a059027B0e396",
+    "address": "0xd9C46960cE6bE33BbED615087ABbD35Fda77d42C",
     "type": "issuer",
     "identityClaims": {
       "isVerified": true
     },
-    "seed": "denial drive symbol magic staff tool across vivid lift crime switch silly loan same company robot aim pluck stereo section team one wheat desert",
-    "derivationPath": null,
-    "privateKey": "0x8822940f1f642d9ad1d08d1cf6c5bc919f33e3ceb8365e91e694cfe67578997a",
+    "seed": "pair half example curious then expose mosquito sadness entry hard pulse vendor goose random target frown slam panda orange custom man purse foster marble",
+    "derivationPath": "m/44'/60'/0'",
+    "privateKey": "0x9e16f58b0e2c8d4cb335a113485dc6397be601086a89051625a906f039224ee9",
     "balances": {
       "etherToken": 0,
       "euroToken": 0
-    }
+    },
+    "notes": "etoissuer2"
   },
   "ISSUER_PREVIEW": {
-    "address": "0x238FB566005f59Fd5915dde954AB9FA7352Da641",
+    "address": "0x239fD29638c8f42e2675d84455a632157152df46",
     "type": "issuer",
     "identityClaims": {
       "isVerified": true
     },
-    "seed": "suspect exist outer organ reveal large display quit skull pony citizen coconut curious brand music child cancel valid rabbit garbage burst tiny fantasy check",
-    "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xac9c5791f78090ae521ba514cb973307c0c8e759172de86f7538085f2dd42df3",
+    "seed": "indoor travel birth trial squirrel where dog trial culture couch mansion undo rural private lazy error pluck feel leaf open hover treat spirit merit",
+    "derivationPath": "m/44'/60'/0'",
+    "privateKey": "0x41db9214402eb72c1a5ddbb2475996205e33ba9c2cd96fd0e07d78927c5d7a74",
     "balances": {
       "etherToken": 0,
       "euroToken": 0
-    }
+    },
+    "notes": "etoissuer1"
   },
   "ISSUER_PENDING": {
     "address": "0x0A00992Aea13E8E10287b577256717Aa4910a0Bb",

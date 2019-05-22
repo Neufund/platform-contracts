@@ -135,7 +135,7 @@ export const constraints = [
   },
 ];
 
-// this will be populated in migration step 12 and then can be used when deploying mock ETOs
+// this will be populated in migration step 13 and then can be used when deploying mock ETOs
 export const deployedAddresses = [];
 export const describedConstraints = {};
 
