@@ -7,7 +7,14 @@ const getDeployerAccount = require("./config").getDeployerAccount;
 const deployETO = require("./deployETO").deployETO;
 const checkETO = require("./deployETO").checkETO;
 const deployWhitelist = require("./deployETO").deployWhitelist;
-const prepareEtoTerms = require("./configETOFixtures").prepareEtoTerms;
+const {
+  prepareEtoTerms,
+  defEtoTerms,
+  hnwiEtoDeSecurityTerms,
+  retailEtoDeVmaTerms,
+  miniEtoLiTerms,
+  hnwiEtoLiSecurityTerms,
+} = require("./configETOFixtures");
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
@@ -26,19 +33,23 @@ module.exports = function deployContracts(deployer, network, accounts) {
   deployer.then(async () => {
     const universe = await Universe.deployed();
     const etoFixtures = {
-      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST],
-      [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP],
-      [CommitmentState.Whitelist]: ["ETOInWhitelistState", fas.ISSUER_WHITELIST],
-      [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC],
-      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING],
-      [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS],
-      [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT],
-      [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND],
+      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST, hnwiEtoLiSecurityTerms],
+      [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP, defEtoTerms],
+      [CommitmentState.Whitelist]: [
+        "ETOInWhitelistState",
+        fas.ISSUER_WHITELIST,
+        hnwiEtoDeSecurityTerms,
+      ],
+      [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
+      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, defEtoTerms],
+      [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, defEtoTerms],
+      [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
+      [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
     };
     const describedETOs = {};
     for (const state of Object.keys(etoFixtures)) {
       const etoVars = etoFixtures[state];
-      const etoTerms = prepareEtoTerms(etoVars[0]);
+      const etoTerms = prepareEtoTerms(etoVars[0], etoVars[2]);
       console.log(
         `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
       );
