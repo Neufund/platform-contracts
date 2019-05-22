@@ -14,7 +14,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
       __dirname,
       "../build/eto_terms_contraints_fixtures.json",
     );
-    console.log(describedConstraints);
     fs.writeFile(etoConstraintsFixturesPath, JSON.stringify(describedConstraints, null, 2), err => {
       if (err) throw new Error(err);
     });
