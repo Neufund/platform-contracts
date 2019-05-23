@@ -12,6 +12,7 @@ const devNetworkDeploymentConfigOverride = {
   artifacts: {
     ICBM_COMMITMENT: "MockICBMCommitment",
     STANDARD_ETO_COMMITMENT: "MockETOCommitment",
+    ETO_TERMS_CONSTRAINTS: "MockETOTermsConstraints",
   },
   // other addresses set to DEPLOYER
   addresses: {
