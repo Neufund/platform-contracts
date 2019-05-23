@@ -49,6 +49,22 @@ function getWhitelistForETO(etoDefinition, fas) {
   return whitelist;
 }
 
+function getClaimingAddressesForEto(etoDefinition, fas) {
+  const addresses = [];
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipation &&
+      fas[f].etoParticipation.claim &&
+      fas[f].etoParticipation.claim.includes(etoDefinition.name)
+    ) {
+      addresses.push(fas[f].address);
+      console.log(`Investor ${f} claims tokens from ETO ${etoDefinition.name}`);
+    }
+  }
+
+  return addresses;
+}
+
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
@@ -203,6 +219,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
+
   await investAmount(
     fas.INV_HAS_EUR_HAS_KYC.address,
     CONFIG,
@@ -219,6 +236,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     minTicketEurUlps.add(Q18.mul(768)),
     "EUR",
   );
+
   if (final === CommitmentState.Whitelist) {
     return etoCommitment;
   }
@@ -307,13 +325,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log("Going to payout");
   // claim tokens
-  await etoCommitment.claimMany([
-    fas.INV_HAS_EUR_HAS_KYC.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC.address,
-  ]);
+  const claimingEtoTokenAccounts = getClaimingAddressesForEto(etoDefiniton, fas);
+  await etoCommitment.claimMany(claimingEtoTokenAccounts);
   // shift time
   await etoCommitment._mockShiftBackTime(claimD);
   // no need to check state afterwards, payout ensures it

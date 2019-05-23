@@ -134,7 +134,13 @@
       },
       "presale": [],
       "sale": [],
-      "claim": []
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP": {
@@ -167,7 +173,13 @@
       },
       "presale": [],
       "sale": [],
-      "claim": []
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH": {
@@ -200,7 +212,13 @@
       },
       "presale": [],
       "sale": [],
-      "claim": []
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC": {
@@ -322,7 +340,13 @@
       },
       "presale": [],
       "sale": [],
-      "claim": []
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_HAS_ETH_T_NO_KYC": {
