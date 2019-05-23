@@ -52,12 +52,6 @@
       "etherToken": 387.198273981,
       "euroToken": 0,
       "initialEth": 5
-    },
-    "etoParticipation": {
-      "whitelist": {},
-      "presale": [],
-      "sale": [],
-      "claim": []
     }
   },
   "INV_EUR_ICBM_HAS_KYC_2": {
@@ -124,16 +118,29 @@
       "etherToken": true,
       "euroToken": true
     },
-    "etoParticipation": {
+    "etoParticipations": {
       "whitelist": {
-        "ETOInWhitelistState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPublicState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInSigningState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPayoutState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInRefundState": { "discountAmount": 500000, "discount": 0.5 }
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
       },
-      "presale": [],
-      "sale": [],
       "claim": [
         "ETOInWhitelistState",
         "ETOInPublicState",
@@ -162,17 +169,33 @@
       "etherToken": true,
       "euroToken": true
     },
-    "etoParticipation": {
+    "etoParticipations": {
       "whitelist": {
-        "ETOInWhitelistState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPublicState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInSigningState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInClaimState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPayoutState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInRefundState": { "discountAmount": 500000, "discount": 0.5 }
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInClaimState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
       },
-      "presale": [],
-      "sale": [],
       "claim": [
         "ETOInWhitelistState",
         "ETOInPublicState",
@@ -201,17 +224,33 @@
       "etherToken": true,
       "euroToken": true
     },
-    "etoParticipation": {
+    "etoParticipations": {
       "whitelist": {
-        "ETOInWhitelistState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPublicState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInSigningState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInClaimState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInPayoutState": { "discountAmount": 500000, "discount": 0.5 },
-        "ETOInRefundState": { "discountAmount": 500000, "discount": 0.5 }
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInClaimState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
       },
-      "presale": [],
-      "sale": [],
       "claim": [
         "ETOInWhitelistState",
         "ETOInPublicState",
@@ -238,6 +277,46 @@
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
@@ -257,6 +336,46 @@
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
@@ -276,6 +395,46 @@
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
@@ -295,6 +454,46 @@
     "icbmMigrations": {
       "etherToken": true,
       "euroToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_EUR_M_HAS_KYC": {
@@ -313,6 +512,46 @@
     },
     "icbmMigrations": {
       "euroToken": true
+    },
+    "etoParticipations": {
+      "presale": {
+        "ETOInWhitelistState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        },
+        "ETOInPublicState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        },
+        "ETOInSigningState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        },
+        "ETOInClaimState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        },
+        "ETOInPayoutState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        },
+        "ETOInRefundState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 768
+          }
+        }
+      }
     }
   },
   "INV_HAS_EUR_HAS_KYC": {
@@ -329,17 +568,71 @@
       "etherToken": 0,
       "euroToken": 10278127.1988
     },
-    "etoParticipation": {
+    "etoParticipations": {
       "whitelist": {
-        "ETOInWhitelistState": { "discountAmount": 0, "discount": 0 },
-        "ETOInPublicState": { "discountAmount": 0, "discount": 0 },
-        "ETOInSigningState": { "discountAmount": 0, "discount": 0 },
-        "ETOInClaimState": { "discountAmount": 0, "discount": 0 },
-        "ETOInPayoutState": { "discountAmount": 0, "discount": 0 },
-        "ETOInRefundState": { "discountAmount": 0, "discount": 0 }
+        "ETOInWhitelistState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPublicState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInSigningState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInClaimState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInRefundState": {
+          "discountAmount": 0,
+          "discount": 0
+        }
       },
-      "presale": [],
-      "sale": [],
+      "presale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 1.71621,
+            "icbm": 0
+          }
+        }
+      },
       "claim": [
         "ETOInWhitelistState",
         "ETOInPublicState",

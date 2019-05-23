@@ -49,6 +49,93 @@ function getWhitelistForETO(etoDefinition, fas) {
   return whitelist;
 }
 
+async function investInEtoDuringSale(
+  fas,
+  CONFIG,
+  universe,
+  etoCommitment,
+  etoDefinition,
+  minTicketEth,
+) {
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipation &&
+      fas[f].etoParticipation.sale &&
+      Object.keys(fas[f].etoParticipation.sale).includes(etoDefinition.name)
+    ) {
+      const saleParticipation = fas[f].etoParticipation.sale;
+      for (const currency of Object.keys(saleParticipation[etoDefinition.name])) {
+        const investment = saleParticipation[etoDefinition.name][currency];
+
+        if (investment["wallet"] && investment["wallet"] > 0) {
+          await investAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            minTicketEth.add(Q18.mul(investment["wallet"])),
+            currency,
+          );
+        }
+        if (investment["icbm"] && investment["icbm"] > 0) {
+          await investICBMAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            minTicketEurUlps.add(Q18.mul(investment["icbm"])),
+            currency,
+          );
+        }
+      }
+    }
+  }
+}
+
+async function investInEtoDuringPresale(
+  fas,
+  CONFIG,
+  universe,
+  etoCommitment,
+  etoDefinition,
+  minTicketEth,
+  minTicketEurUlps,
+) {
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipation &&
+      fas[f].etoParticipation.presale &&
+      Object.keys(fas[f].etoParticipation.presale).includes(etoDefinition.name)
+    ) {
+      const presaleParticipation = fas[f].etoParticipation.presale;
+      for (const currency of Object.keys(presaleParticipation[etoDefinition.name])) {
+        const investment = presaleParticipation[etoDefinition.name][currency];
+
+        if (investment["wallet"] && investment["wallet"] > 0) {
+          await investAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            minTicketEth.add(Q18.mul(investment["wallet"])),
+            currency,
+          );
+        }
+        if (investment["icbm"] && investment["icbm"] > 0) {
+          await investICBMAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            minTicketEurUlps.add(Q18.mul(investment["icbm"])),
+            currency,
+          );
+        }
+      }
+    }
+  }
+}
+
 function getClaimingAddressesForEto(etoDefinition, fas) {
   const addresses = [];
   for (const f of Object.keys(fas)) {
@@ -220,21 +307,14 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
 
-  await investAmount(
-    fas.INV_HAS_EUR_HAS_KYC.address,
+  await investInEtoDuringPresale(
+    fas,
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(1.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_EUR_M_HAS_KYC.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEurUlps.add(Q18.mul(768)),
-    "EUR",
+    etoDefiniton,
+    minTicketEth,
+    minTicketEurUlps,
   );
 
   if (final === CommitmentState.Whitelist) {
@@ -244,38 +324,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
+  await investInEtoDuringSale(fas, CONFIG, universe, etoCommitment, etoDefiniton, minTicketEth);
   if (final === CommitmentState.Public) {
     return etoCommitment;
   }
@@ -291,6 +340,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
   );
+
+  // TODO: Leave it here. It makes ETO successfull
   await investAmount(
     fas.INV_HAS_EUR_HAS_KYC.address,
     CONFIG,
