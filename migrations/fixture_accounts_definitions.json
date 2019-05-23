@@ -23,7 +23,8 @@
     "privateKey": "0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_ETH_ICBM_NO_KYC_2": {
@@ -34,7 +35,8 @@
     "privateKey": "0x26725897cd95531f8f06c963a29424af96ca61684f619316752112702d58e0b0",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC": {
@@ -48,7 +50,8 @@
     "privateKey": "0xb8c9391742bcf13c2efe56aa8d158ff8b50191a11d9fe5021d8b31cd86f96f46",
     "balances": {
       "etherToken": 387.198273981,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_2": {
@@ -62,7 +65,8 @@
     "privateKey": "0x42869be50f95ccdb68c21efe2af9a3a318325b191ea86b92a54bee6c1944efa6",
     "balances": {
       "etherToken": 10,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED": {
@@ -76,7 +80,8 @@
     "privateKey": "0x4d17a67ae5e8eae9b9c86d9bc8386d83fd1c40081fa5bad7dc370d3134849a7f",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED_2": {
@@ -90,7 +95,8 @@
     "privateKey": "0xf8d1d4e602186bfd0b3363c54ed403d97a8041fe5703c46f8e60df92903259d3",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC": {
@@ -105,7 +111,8 @@
     "privateKey": "0xfd4f06f51658d687910bb3675b5c093d4f93fff1183110101e0101fa88e08e5a",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
@@ -124,7 +131,8 @@
     "privateKey": "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
@@ -143,7 +151,8 @@
     "privateKey": "0x6e6030bc2d1abf8147c6f3617b55c9fdef4814c075f8c4c192695b55cacdbf88",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
@@ -162,7 +171,8 @@
     "privateKey": "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
@@ -180,7 +190,8 @@
     "privateKey": "0xdf6419aea83e2c8fbcba5aafee313ce55ded93b89b1b60853e95af09ca2f792b",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
@@ -198,7 +209,8 @@
     "privateKey": "0x85e93122c429e8d4422016262b5a81437d8257457eb85aa2c393c3b0f5e3ea91",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
@@ -215,7 +227,8 @@
     "privateKey": "0x6935e67ba2870b1f236ce99fc34048b4b80ddb86f981e4c7241cab00a31583b7",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
@@ -263,7 +276,8 @@
     "privateKey": "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef",
     "balances": {
       "etherToken": 1187.198273981,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EMPTY_HAS_KYC": {
@@ -277,7 +291,8 @@
     "privateKey": "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "NOMINEE_NEUMINI": {
@@ -291,7 +306,8 @@
     "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_SETUP": {
@@ -305,7 +321,8 @@
     "privateKey": "0x941a09e617aeb905e13c58d700d48875d5f05eeec1de1981d3227e3bbc72b689",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_WHITELIST": {
@@ -319,7 +336,8 @@
     "privateKey": "0x9be0993812c14583c58e4456cce1ab50ce9bd8e891eb754518c13cffc27b95c3",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PUBLIC": {
@@ -333,7 +351,8 @@
     "privateKey": "0x718e461177f610488c59a09f15c5a0b80e4ae864c0cb60a44de2de3d0b34830e",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer3"
   },
@@ -348,7 +367,8 @@
     "privateKey": "0x45f9d8f48f127a4804bcd313f26f6e5cc9f1c0f6d2eae1850b935f68af417d15",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_CLAIMS": {
@@ -362,7 +382,8 @@
     "privateKey": "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PAYOUT": {
@@ -376,7 +397,8 @@
     "privateKey": "0xf358d59968b9b281390d47cb99ae606f1260901b83feb32445f007a83a4879fa",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer4"
   },
@@ -391,7 +413,8 @@
     "privateKey": "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_SETUP_NO_ST": {
@@ -405,7 +428,8 @@
     "privateKey": "0x9e16f58b0e2c8d4cb335a113485dc6397be601086a89051625a906f039224ee9",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer2"
   },
@@ -420,7 +444,8 @@
     "privateKey": "0x41db9214402eb72c1a5ddbb2475996205e33ba9c2cd96fd0e07d78927c5d7a74",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer1"
   },
@@ -435,7 +460,8 @@
     "privateKey": "0xb5848686d0bc7e90cf0af17d539dc594d8ad5e4676f19a3e5cd7b49f7a4628e9",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_LISTED": {
@@ -449,7 +475,8 @@
     "privateKey": "0x73d36b0a24c4fd181a718672c627fd0caadd8d9ac0df72267f89f8f117d2fd39",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PROSPECTUS_APPROVED": {
@@ -463,7 +490,8 @@
     "privateKey": "0x2b7dc7e315fdd1192f5c9240f9ddd1032f7696107f0d177599e1a362f1e8e054",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "SPARE_1": {
@@ -477,7 +505,8 @@
     "privateKey": "0xcc5e22b1568ea35e732a0952f6d873fd06190add23bfafe312afbb465f2d98c6",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "SPARE_2": {
@@ -491,7 +520,8 @@
     "privateKey": "0x87d63fa9252e2bdc5122559618c3726fe5f4539ab94b5220d1060b7df498f199",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "SPARE_3": {
@@ -505,7 +535,8 @@
     "privateKey": "0xbd3861e2a5999d22a99531f8b028e7ea15e788625a8fd19dd4959479fb93dc6f",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "SPARE_4": {
@@ -519,7 +550,8 @@
     "privateKey": "0x797a981f658de6799b6dc1b079a6af3f4feaea5f23133f3c2c054ddfeee60ab8",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "NANO_1": {
