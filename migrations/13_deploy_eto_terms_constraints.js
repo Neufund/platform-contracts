@@ -44,6 +44,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
 
+    const newlyDeployedConstraints = [];
+
     // deploy only 1 pack of products
     for (const constraint of constraints.filter(c => c._deploymentMetadata.step === 1)) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
@@ -69,26 +71,34 @@ module.exports = function deployContracts(deployer, network, accounts) {
       const etoTermsConstraints = await ETOTermsConstraints.deployed();
       // save address
       deployedAddresses.push(toChecksumAddress(etoTermsConstraints.address));
-
-      console.log("Adding to terms constraints collection in universe");
-      await universe.setCollectionInterface(
-        knownInterfaces.etoTermsConstraints,
-        etoTermsConstraints.address,
-        true,
-      );
-      // leave all products ON on test network
-      if (!constraint._deploymentMetadata.available && CONFIG.isLiveDeployment) {
-        console.log("... and immediately removing because constraints no longer active");
-        await universe.setCollectionInterface(
-          knownInterfaces.etoTermsConstraints,
-          etoTermsConstraints.address,
-          false,
-        );
-      }
+      newlyDeployedConstraints.push(toChecksumAddress(etoTermsConstraints.address));
 
       describedConstraints[toChecksumAddress(etoTermsConstraints.address)] = stringify(
         updatedConstraint,
       );
+    }
+    console.log("Adding to terms constraints collection in universe");
+    const setCount = newlyDeployedConstraints.length;
+    await universe.setCollectionsInterfaces(
+      Array(setCount).fill(knownInterfaces.etoTermsConstraints),
+      newlyDeployedConstraints,
+      Array(setCount).fill(true),
+    );
+    // not available products should be switched off on production networks
+    if (CONFIG.isLiveDeployment) {
+      console.log("... and immediately removing because constraints no longer active");
+      const unavailableAddresses = newlyDeployedConstraints.filter(
+        a => !describedConstraints[a]._deploymentMetadata.available,
+      );
+      console.log(unavailableAddresses);
+      const resetCount = unavailableAddresses.length;
+      if (resetCount > 0) {
+        await universe.setCollectionsInterfaces(
+          Array(resetCount).fill(knownInterfaces.etoTermsConstraints),
+          unavailableAddresses,
+          Array(resetCount).fill(false),
+        );
+      }
     }
   });
 };
