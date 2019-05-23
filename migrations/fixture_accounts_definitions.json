@@ -872,7 +872,9 @@
     "address": "0x9369dFD79049B7C3CF48d54435287b0AFd5227Da",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "morning panther view ahead fashion client shallow sustain tool cost illegal wish alter demise extend trend task glory alert hurdle rail fragile vital about",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -881,13 +883,48 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_2": {
     "address": "0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "winter emerge indoor gather check ketchup fiction rotate actress hammer antenna brown bubble primary fury various put gallery scheme reform harsh inflict agent ball",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -896,13 +933,48 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_3": {
     "address": "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "cricket index proud frame aerobic swear certain decrease vacant quick clock fantasy flock napkin puzzle tackle pony camp test property one garlic voice decline",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -911,13 +983,48 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_4": {
     "address": "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "tourist voice pilot search buyer parrot maid flush pulse silver void liar provide cushion burden mean relax oven plastic vessel grunt black twice vast",
     "derivationPath": "m/44'/60'/0'/0/0",
@@ -926,6 +1033,39 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "NANO_1": {
