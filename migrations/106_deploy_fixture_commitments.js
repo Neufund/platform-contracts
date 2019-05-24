@@ -21,6 +21,193 @@ const Q18 = require("../test/helpers/constants").Q18;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
+function getWhitelistForETO(etoDefinition, fas) {
+  const whitelist = [];
+
+  for (const f of Object.keys(fas)) {
+    if (fas[f].etoParticipations && fas[f].etoParticipations.whitelist) {
+      for (const etoName of Object.keys(fas[f].etoParticipations.whitelist)) {
+        if (etoDefinition.name === etoName) {
+          const discountAmount = fas[f].etoParticipations.whitelist[etoName].discountAmount;
+          const discount = fas[f].etoParticipations.whitelist[etoName].discount;
+
+          console.log(
+            `Investor ${f} whitelisted for ${etoName}
+             with discount ${discount} and amount ${discountAmount}`,
+          );
+
+          whitelist.push({
+            address: fas[f].address,
+            discountAmount,
+            discount,
+          });
+        }
+      }
+    }
+  }
+
+  return whitelist;
+}
+
+async function investInEtoDuringSale(
+  fas,
+  CONFIG,
+  universe,
+  etoCommitment,
+  etoDefinition,
+  minTicketEth,
+  minTicketEurUlps,
+) {
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.sale &&
+      Object.keys(fas[f].etoParticipations.sale).includes(etoDefinition.name)
+    ) {
+      const saleParticipation = fas[f].etoParticipations.sale;
+      for (const currency of Object.keys(saleParticipation[etoDefinition.name])) {
+        const investment = saleParticipation[etoDefinition.name][currency];
+
+        if (investment.wallet && investment.wallet > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
+          await investAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            Q18.mul(investment.wallet),
+            currency,
+          );
+        }
+        if (investment.icbm && investment.icbm > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
+          await investICBMAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            Q18.mul(investment.icbm),
+            currency,
+          );
+        }
+      }
+    }
+  }
+}
+
+async function investInEtoDuringPresale(
+  fas,
+  CONFIG,
+  universe,
+  etoCommitment,
+  etoDefinition,
+  minTicketEth,
+  minTicketEurUlps,
+) {
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.presale &&
+      Object.keys(fas[f].etoParticipations.presale).includes(etoDefinition.name)
+    ) {
+      const presaleParticipation = fas[f].etoParticipations.presale;
+      for (const currency of Object.keys(presaleParticipation[etoDefinition.name])) {
+        const investment = presaleParticipation[etoDefinition.name][currency];
+        if (investment.wallet && investment.wallet > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
+          await investAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            Q18.mul(investment.wallet),
+            currency,
+          );
+        }
+        if (investment.icbm && investment.icbm > 0) {
+          if (currency === "ETH" && Q18.mul(investment.icbm) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.icbm) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps} EUR`,
+            );
+          }
+
+          await investICBMAmount(
+            fas[f].address,
+            CONFIG,
+            universe,
+            etoCommitment,
+            Q18.mul(investment.icbm),
+            currency,
+          );
+        }
+      }
+    }
+  }
+}
+
+function getClaimingAddressesForEto(etoDefinition, fas) {
+  const addresses = [];
+  for (const f of Object.keys(fas)) {
+    if (
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.claim &&
+      fas[f].etoParticipations.claim.includes(etoDefinition.name)
+    ) {
+      addresses.push(fas[f].address);
+      console.log(`Investor ${f} claims tokens from ETO ${etoDefinition.name}`);
+    }
+  }
+
+  return addresses;
+}
+
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
@@ -112,16 +299,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     return etoCommitment;
   }
 
-  const whitelist = [
-    { address: fas.INV_HAS_EUR_HAS_KYC.address, discountAmount: 0, discount: 0 },
-    { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC.address, discountAmount: 500000, discount: 0.5 },
-    { address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP.address, discountAmount: 500000, discount: 0.5 },
-    {
-      address: fas.INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH.address,
-      discountAmount: 500000,
-      discount: 0.5,
-    },
-  ];
+  const whitelist = getWhitelistForETO(etoDefiniton, fas);
   await deployWhitelist(artifacts, CONFIG, etoCommitment.address, whitelist);
   if (final === CommitmentState.Setup) {
     console.log("Setting start date");
@@ -184,22 +362,17 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   console.log("Going into whitelist");
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
-  await investAmount(
-    fas.INV_HAS_EUR_HAS_KYC.address,
+
+  await investInEtoDuringPresale(
+    fas,
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(1.71621)),
-    "ETH",
+    etoDefiniton,
+    minTicketEth,
+    minTicketEurUlps,
   );
-  await investICBMAmount(
-    fas.INV_ICBM_EUR_M_HAS_KYC.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEurUlps.add(Q18.mul(768)),
-    "EUR",
-  );
+
   if (final === CommitmentState.Whitelist) {
     return etoCommitment;
   }
@@ -207,37 +380,14 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC.address,
+  await investInEtoDuringSale(
+    fas,
     CONFIG,
     universe,
     etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
-  );
-  await investICBMAmount(
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    minTicketEth.add(Q18.mul(3.71621)),
-    "ETH",
+    etoDefiniton,
+    minTicketEth,
+    minTicketEurUlps,
   );
   if (final === CommitmentState.Public) {
     return etoCommitment;
@@ -254,6 +404,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
   );
+
+  // TODO: Leave it here. It makes ETO successfull
   await investAmount(
     fas.INV_HAS_EUR_HAS_KYC.address,
     CONFIG,
@@ -288,13 +440,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log("Going to payout");
   // claim tokens
-  await etoCommitment.claimMany([
-    fas.INV_HAS_EUR_HAS_KYC.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_2.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO.address,
-    fas.INV_ICBM_ETH_M_HAS_KYC.address,
-  ]);
+  const claimingEtoTokenAccounts = getClaimingAddressesForEto(etoDefiniton, fas);
+  await etoCommitment.claimMany(claimingEtoTokenAccounts);
   // shift time
   await etoCommitment._mockShiftBackTime(claimD);
   // no need to check state afterwards, payout ensures it

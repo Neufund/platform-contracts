@@ -15,7 +15,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("Distribute ether to fixtures accounts");
     for (const f of Object.keys(fas)) {
-      const valueToSend = web3.toWei(100000, "ether");
+      let initialEthBalance = 1000;
+      if (fas[f].balances && fas[f].balances.initialEth) {
+        initialEthBalance = fas[f].balances.initialEth;
+      }
+
+      const valueToSend = web3.toWei(initialEthBalance, "ether");
 
       await promisify(web3.eth.sendTransaction)({
         from: DEPLOYER,
@@ -24,6 +29,17 @@ module.exports = function deployContracts(deployer, network, accounts) {
         gasPrice: 100,
         gas: 21000,
       });
+
+      const etherBalance = await promisify(web3.eth.getBalance)(fas[f].address);
+      if (
+        fas[f].balances &&
+        fas[f].balances.initialEth &&
+        etherBalance < fas[f].balances.initialEth
+      ) {
+        throw new Error(`Account ${f} has too low initial ETH balance`);
+      }
+
+      console.log(`${f} has initial ${etherBalance.div(CONFIG.Q18)} ETH`);
     }
   });
 };

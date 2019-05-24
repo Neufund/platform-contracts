@@ -23,7 +23,8 @@
     "privateKey": "0x79177f5833b64c8fdcc9862f5a779b8ff0e1853bf6e9e4748898d4b6de7e8c93",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_ETH_ICBM_NO_KYC_2": {
@@ -34,7 +35,8 @@
     "privateKey": "0x26725897cd95531f8f06c963a29424af96ca61684f619316752112702d58e0b0",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC": {
@@ -48,7 +50,8 @@
     "privateKey": "0xb8c9391742bcf13c2efe56aa8d158ff8b50191a11d9fe5021d8b31cd86f96f46",
     "balances": {
       "etherToken": 387.198273981,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_2": {
@@ -62,7 +65,8 @@
     "privateKey": "0x42869be50f95ccdb68c21efe2af9a3a318325b191ea86b92a54bee6c1944efa6",
     "balances": {
       "etherToken": 10,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED": {
@@ -76,7 +80,8 @@
     "privateKey": "0x4d17a67ae5e8eae9b9c86d9bc8386d83fd1c40081fa5bad7dc370d3134849a7f",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EUR_ICBM_HAS_KYC_SEED_2": {
@@ -90,7 +95,8 @@
     "privateKey": "0xf8d1d4e602186bfd0b3363c54ed403d97a8041fe5703c46f8e60df92903259d3",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC": {
@@ -105,11 +111,43 @@
     "privateKey": "0xfd4f06f51658d687910bb3675b5c093d4f93fff1183110101e0101fa88e08e5a",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
       "euroToken": true
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
+      },
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP": {
@@ -124,11 +162,47 @@
     "privateKey": "0x03e568e86b296b69d51c364053f39d7f76b76799654fa6be22b48e902b0c04ec",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
       "euroToken": true
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInClaimState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
+      },
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ETH_EUR_ICBM_M_HAS_KYC_DUP_HAS_NEUR_AND_NO_ETH": {
@@ -143,11 +217,47 @@
     "privateKey": "0x6e6030bc2d1abf8147c6f3617b55c9fdef4814c075f8c4c192695b55cacdbf88",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
       "euroToken": true
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPublicState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInSigningState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInClaimState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInRefundState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        }
+      },
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC": {
@@ -162,10 +272,51 @@
     "privateKey": "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
@@ -180,10 +331,51 @@
     "privateKey": "0xdf6419aea83e2c8fbcba5aafee313ce55ded93b89b1b60853e95af09ca2f792b",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
@@ -198,10 +390,51 @@
     "privateKey": "0x85e93122c429e8d4422016262b5a81437d8257457eb85aa2c393c3b0f5e3ea91",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
@@ -215,11 +448,52 @@
     "privateKey": "0x6935e67ba2870b1f236ce99fc34048b4b80ddb86f981e4c7241cab00a31583b7",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "icbmMigrations": {
       "etherToken": true,
       "euroToken": true
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 3.71621
+          }
+        }
+      }
     }
   },
   "INV_ICBM_EUR_M_HAS_KYC": {
@@ -238,6 +512,46 @@
     },
     "icbmMigrations": {
       "euroToken": true
+    },
+    "etoParticipations": {
+      "presale": {
+        "ETOInWhitelistState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        },
+        "ETOInPublicState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        },
+        "ETOInSigningState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        },
+        "ETOInClaimState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        },
+        "ETOInPayoutState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        },
+        "ETOInRefundState": {
+          "EUR": {
+            "wallet": 0,
+            "icbm": 100000
+          }
+        }
+      }
     }
   },
   "INV_HAS_EUR_HAS_KYC": {
@@ -253,6 +567,79 @@
     "balances": {
       "etherToken": 0,
       "euroToken": 10278127.1988
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPublicState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInSigningState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInClaimState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInRefundState": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 289,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": [
+        "ETOInWhitelistState",
+        "ETOInPublicState",
+        "ETOInSigningState",
+        "ETOInPayoutState",
+        "ETOInRefundState"
+      ]
     }
   },
   "INV_HAS_ETH_T_NO_KYC": {
@@ -263,7 +650,8 @@
     "privateKey": "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef",
     "balances": {
       "etherToken": 1187.198273981,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "INV_EMPTY_HAS_KYC": {
@@ -277,7 +665,8 @@
     "privateKey": "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "NOMINEE_NEUMINI": {
@@ -291,7 +680,8 @@
     "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_SETUP": {
@@ -305,7 +695,8 @@
     "privateKey": "0x941a09e617aeb905e13c58d700d48875d5f05eeec1de1981d3227e3bbc72b689",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_WHITELIST": {
@@ -319,7 +710,8 @@
     "privateKey": "0x9be0993812c14583c58e4456cce1ab50ce9bd8e891eb754518c13cffc27b95c3",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PUBLIC": {
@@ -333,7 +725,8 @@
     "privateKey": "0x718e461177f610488c59a09f15c5a0b80e4ae864c0cb60a44de2de3d0b34830e",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer3"
   },
@@ -348,7 +741,8 @@
     "privateKey": "0x45f9d8f48f127a4804bcd313f26f6e5cc9f1c0f6d2eae1850b935f68af417d15",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_CLAIMS": {
@@ -362,7 +756,8 @@
     "privateKey": "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PAYOUT": {
@@ -376,7 +771,8 @@
     "privateKey": "0xf358d59968b9b281390d47cb99ae606f1260901b83feb32445f007a83a4879fa",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer4"
   },
@@ -391,7 +787,8 @@
     "privateKey": "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_SETUP_NO_ST": {
@@ -405,7 +802,8 @@
     "privateKey": "0x9e16f58b0e2c8d4cb335a113485dc6397be601086a89051625a906f039224ee9",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer2"
   },
@@ -420,7 +818,8 @@
     "privateKey": "0x41db9214402eb72c1a5ddbb2475996205e33ba9c2cd96fd0e07d78927c5d7a74",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notes": "etoissuer1"
   },
@@ -435,7 +834,8 @@
     "privateKey": "0xb5848686d0bc7e90cf0af17d539dc594d8ad5e4676f19a3e5cd7b49f7a4628e9",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_LISTED": {
@@ -449,7 +849,8 @@
     "privateKey": "0x73d36b0a24c4fd181a718672c627fd0caadd8d9ac0df72267f89f8f117d2fd39",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "ISSUER_PROSPECTUS_APPROVED": {
@@ -463,63 +864,208 @@
     "privateKey": "0x2b7dc7e315fdd1192f5c9240f9ddd1032f7696107f0d177599e1a362f1e8e054",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
     }
   },
   "SPARE_1": {
     "address": "0x9369dFD79049B7C3CF48d54435287b0AFd5227Da",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "morning panther view ahead fashion client shallow sustain tool cost illegal wish alter demise extend trend task glory alert hurdle rail fragile vital about",
     "derivationPath": "m/44'/60'/0'/0/0",
     "privateKey": "0xcc5e22b1568ea35e732a0952f6d873fd06190add23bfafe312afbb465f2d98c6",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_2": {
     "address": "0xE52Df6021c75f8DDf20Ab4dfC818Bce84f7cBD5D",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "winter emerge indoor gather check ketchup fiction rotate actress hammer antenna brown bubble primary fury various put gallery scheme reform harsh inflict agent ball",
     "derivationPath": "m/44'/60'/0'/0/0",
     "privateKey": "0x87d63fa9252e2bdc5122559618c3726fe5f4539ab94b5220d1060b7df498f199",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_3": {
     "address": "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "cricket index proud frame aerobic swear certain decrease vacant quick clock fantasy flock napkin puzzle tackle pony camp test property one garlic voice decline",
     "derivationPath": "m/44'/60'/0'/0/0",
     "privateKey": "0xbd3861e2a5999d22a99531f8b028e7ea15e788625a8fd19dd4959479fb93dc6f",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "SPARE_4": {
     "address": "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
     "type": "investor",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
     },
     "seed": "tourist voice pilot search buyer parrot maid flush pulse silver void liar provide cushion burden mean relax oven plastic vessel grunt black twice vast",
     "derivationPath": "m/44'/60'/0'/0/0",
     "privateKey": "0x797a981f658de6799b6dc1b079a6af3f4feaea5f23133f3c2c054ddfeee60ab8",
     "balances": {
       "etherToken": 0,
-      "euroToken": 0
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETO": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "sale": {
+        "ETO": {
+          "ETH": {
+            "wallet": 0,
+            "icbm": 0
+          },
+          "EUR": {
+            "wallet": 0,
+            "icbm": 0
+          }
+        }
+      },
+      "claim": ["ETO"]
     }
   },
   "NANO_1": {
@@ -549,9 +1095,36 @@
     "privateKey": "0x75df984aa49acb2a3306d513489eed2c4320f3a5f3067216baf4a1037f7958f4",
     "address": "0x07D8B4d97F7B21020b332367692e11FDd5036D7b",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discount": 0.5,
+          "discountAmount": 100
+        },
+        "ETOInPublicState": {
+          "discount": 0.5,
+          "discountAmount": 100
+        }
+      },
+      "presale": {},
+      "sale": {
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 28
+          }
+        }
+      },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor1"
   },
   "demoinvestor2": {
@@ -560,9 +1133,24 @@
     "privateKey": "0x9997cadadfd0df21c3261eafb9cbb82e7416b5894b7bbee6d8cc1052f0b8248f",
     "address": "0x62b3f983F037828d76B4925655CC083cfDCd9E13",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor2"
   },
   "demoinvestor3": {
@@ -571,9 +1159,24 @@
     "privateKey": "0xc8d9c1829d7836c7463074e20d26ec8a9ab28a3466c8aff1c3889b7d4f657feb",
     "address": "0x6E577c22f1c5F0021a057CfcE67aC7E630De38F7",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor3"
   },
   "demoinvestor4": {
@@ -582,9 +1185,24 @@
     "privateKey": "0x036b499ec4eb23b9220e6c197e7cb1d408259de13bf923dbfdc4e2cd1be8fbe1",
     "address": "0x2824a394B5a3386b3140Bc426E40e24217f0a42f",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor4"
   },
   "demoinvestor5": {
@@ -593,9 +1211,24 @@
     "privateKey": "0xa0a1069c5773fee34430e0a3e1913fa5d5fb36cd455f793a62375e6664cb50e7",
     "address": "0x8b5eCeCafECc6335FcBa939328898d4A3088f906",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor5"
   },
   "demoinvestor6": {
@@ -604,9 +1237,24 @@
     "privateKey": "0x2a8818f9bc376234175f60f42724005ccab5542419e64c5af54b8e4feac6979b",
     "address": "0x68B4b0274148F062F919C410a8c36078c03398BB",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor6"
   },
   "demoinvestor7": {
@@ -615,9 +1263,24 @@
     "privateKey": "0xb009c7dd2ef4c79cb86c75c80f125862d0a34409a618233006693d70da788815",
     "address": "0x766BD4B833738FEe9Af4d1f330733c489A5f87B7",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor7"
   },
   "demoinvestor8": {
@@ -626,9 +1289,24 @@
     "privateKey": "0xa1f664be37c3c01f54846936ee2990d1ce84a5c506716cde2386c7eab316093e",
     "address": "0x72969Bf8DE31c47380ce21eeBC75BEf26cE31153",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor8"
   },
   "demoinvestor9": {
@@ -637,9 +1315,24 @@
     "privateKey": "0x118d43c8201c0fead3d93341f777674a2f2855f08c579359fc19177fed201e2f",
     "address": "0x0566DEA0412Dc4bcb9ef0c4d884E56dADefcB7F3",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor9"
   },
   "demoinvestor10": {
@@ -648,9 +1341,24 @@
     "privateKey": "0xb364dc614242bcc062a63d1aeb446acc9560a1823af5c8b94c91c25fc1d754bf",
     "address": "0x0D54192b7C8F126DCd946Ffd03E336B24052EdF2",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor10"
   },
   "demoinvestor11": {
@@ -659,9 +1367,24 @@
     "privateKey": "0x0eaca0bc4bd0c600af0d45ca0eefe513ea342ef28153ab0e62aea0213a79cb64",
     "address": "0x353d3030AF583fc0e547Da80700BbD953F330A4b",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor11"
   },
   "demoinvestor12": {
@@ -670,9 +1393,24 @@
     "privateKey": "0x5493cf294af1de506a820e249b5e9e51e4f099a22b6b730091ca03ba786bac77",
     "address": "0x5c104a588E47209b7248F4ea17996E9E69A6ADFc",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor12"
   },
   "demoinvestor13": {
@@ -681,9 +1419,24 @@
     "privateKey": "0x2cfd70c871899cc14501cf46c979b7a0c06e7e679478c5b76d8c3b9652099685",
     "address": "0x9CfE167F8f2b9D6A8A6311A766ffb63648e69c04",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor13"
   },
   "demoinvestor14": {
@@ -692,9 +1445,24 @@
     "privateKey": "0xc7fb10a02bab09874475bf02a2c2eb056e3d4228ffd8b87ec1f6580390f642a1",
     "address": "0x4fD82E066C68DdadFc99f98cb4eb50DE4B855A18",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor14"
   },
   "demoinvestor15": {
@@ -703,9 +1471,24 @@
     "privateKey": "0xa5cac03efc48e3596f8d35712f2d2b257ad193585992f72fd6506c131ff7f479",
     "address": "0x5989e17aDd9568A715E8330ed5Fac1540161C961",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor15"
   },
   "demoinvestor16": {
@@ -714,9 +1497,24 @@
     "privateKey": "0x2e5ca6c7a9aeb4d8a3c6c75fa734704604579dce7924376e3e8bef5d895897b2",
     "address": "0x87447BF7D8E1229122B1B088D6eeF07703457ACe",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor16"
   },
   "demoinvestor17": {
@@ -725,9 +1523,24 @@
     "privateKey": "0xa9ec364e334e3591cc50dc303fd1d9da1ca5a6acc580eca0fe7a3df1bfddb7ee",
     "address": "0xF73F063634E0250C5AFA2F72431e3F4783379c24",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor17"
   },
   "demoinvestor18": {
@@ -736,9 +1549,24 @@
     "privateKey": "0x1e93bae6a6b45d68443c98b0f87335a0fdc3e11b207a478260f77160f62b0105",
     "address": "0xcB9e5e4CD1267653d5787181fec6202c016277a1",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor18"
   },
   "demoinvestor19": {
@@ -747,9 +1575,24 @@
     "privateKey": "0x1dd092f80af2a29540a76c9f0aab31227142bc524e5d6bda9ef18ae0560affc3",
     "address": "0x6d0c98717ce99E830DD0EC449E8c52B4915565aC",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor19"
   },
   "demoinvestor20": {
@@ -758,9 +1601,24 @@
     "privateKey": "0x40c03bd04344287219d058cd136429a4ffce95dba56401946bfa957de0805cc7",
     "address": "0xe33784584Ece52976A0742B50E6D60c2CF76980f",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor20"
   },
   "demoinvestor21": {
@@ -769,9 +1627,24 @@
     "privateKey": "0x71495df0a9a474445a2badfb5c453adfc549b6785b1d6b11369ffef821cab457",
     "address": "0xE8EE4200877Df51A5D871D4e7b6181a7168445D8",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor21"
   },
   "demoinvestor22": {
@@ -780,9 +1653,24 @@
     "privateKey": "0xa8cd2bac908f6c2b27ab98f908bb0885a9c13c4711eede3027444c7db0d279a7",
     "address": "0x73174Ee5B22cF9ba4413bAe663631C5C9C996D3e",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor22"
   },
   "demoinvestor23": {
@@ -791,9 +1679,24 @@
     "privateKey": "0xaed987bcaf116827bbfcdda8ef7e4e6442e596fd12582e49a0a4cb224847bfea",
     "address": "0xC5C10aDbd1A1a835904908FBd734dD729aD6980a",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor23"
   },
   "demoinvestor24": {
@@ -802,9 +1705,24 @@
     "privateKey": "0xb3fcc847f47504e6e42d275ca17fd02a1e354d512c9d16c331ae192050710aac",
     "address": "0x92a0f60DE33f5f0952F8c60336dc6b8133e3DB5d",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor24"
   },
   "demoinvestor25": {
@@ -816,6 +1734,11 @@
       "isVerified": false
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 100
+    },
     "name": "demoinvestor25"
   },
   "demoinvestor26": {
@@ -827,6 +1750,9 @@
       "isVerified": false
     },
     "type": "investor",
+    "balances": {
+      "initialEth": 100
+    },
     "name": "demoinvestor26"
   },
   "demoinvestor27": {
@@ -838,6 +1764,9 @@
       "isVerified": false
     },
     "type": "investor",
+    "balances": {
+      "initialEth": 100
+    },
     "name": "demoinvestor27"
   },
   "demoinvestor28": {
@@ -849,6 +1778,9 @@
       "isVerified": false
     },
     "type": "investor",
+    "balances": {
+      "initialEth": 100
+    },
     "name": "demoinvestor28"
   },
   "demoinvestor29": {
@@ -860,6 +1792,9 @@
       "isVerified": false
     },
     "type": "investor",
+    "balances": {
+      "initialEth": 100
+    },
     "name": "demoinvestor29"
   },
   "demoinvestor30": {
@@ -868,9 +1803,24 @@
     "privateKey": "0x508034a99519bb473217d6011b96b62802b5b1a03319b847997db849bce08888",
     "address": "0x9bB148c453a6aeA6759695C8da0D0918c8F494E9",
     "identityClaims": {
-      "isVerified": true
+      "isVerified": true,
+      "hasBankAccount": true
     },
     "type": "investor",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 745000,
+      "initialEth": 100
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": { "discount": 0.5, "discountAmount": 100 },
+        "ETOInPublicState": { "discount": 0.5, "discountAmount": 100 }
+      },
+      "presale": {},
+      "sale": { "ETOInPublicState": { "ETH": { "wallet": 28 } } },
+      "claim": ["ETOInPayoutState"]
+    },
     "name": "demoinvestor30"
   }
 }
