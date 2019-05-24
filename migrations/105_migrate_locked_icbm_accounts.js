@@ -40,7 +40,6 @@ module.exports = function deployContracts(deployer, network, accounts) {
       if (fas[f].icbmMigrations && fas[f].icbmMigrations.euroToken) {
         await icbmEuroLock.migrate({ from: fas[f].address });
         const lockedEuroBalanceResult = await icbmEtherLock.balanceOf(fas[f].address);
-        console.log(`${lockedEuroBalanceResult}`);
         console.log(
           `Account ${f} has ${lockedEuroBalanceResult[0].div(CONFIG.Q18).toString()} EUR-T locked.`,
         );

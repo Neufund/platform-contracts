@@ -22,15 +22,14 @@ const CommitmentState = require("../test/helpers/commitmentState").CommitmentSta
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
 function getWhitelistForETO(etoDefinition, fas) {
-  console.log(etoDefinition.name);
   const whitelist = [];
 
   for (const f of Object.keys(fas)) {
-    if (fas[f].etoParticipation && fas[f].etoParticipation.whitelist) {
-      for (const etoName of Object.keys(fas[f].etoParticipation.whitelist)) {
+    if (fas[f].etoParticipations && fas[f].etoParticipations.whitelist) {
+      for (const etoName of Object.keys(fas[f].etoParticipations.whitelist)) {
         if (etoDefinition.name === etoName) {
-          const discountAmount = fas[f].etoParticipation.whitelist[etoName].discountAmount;
-          const discount = fas[f].etoParticipation.whitelist[etoName].discount;
+          const discountAmount = fas[f].etoParticipations.whitelist[etoName].discountAmount;
+          const discount = fas[f].etoParticipations.whitelist[etoName].discount;
 
           console.log(
             `Investor ${f} whitelisted for ${etoName}
@@ -61,31 +60,59 @@ async function investInEtoDuringSale(
 ) {
   for (const f of Object.keys(fas)) {
     if (
-      fas[f].etoParticipation &&
-      fas[f].etoParticipation.sale &&
-      Object.keys(fas[f].etoParticipation.sale).includes(etoDefinition.name)
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.sale &&
+      Object.keys(fas[f].etoParticipations.sale).includes(etoDefinition.name)
     ) {
-      const saleParticipation = fas[f].etoParticipation.sale;
+      const saleParticipation = fas[f].etoParticipations.sale;
       for (const currency of Object.keys(saleParticipation[etoDefinition.name])) {
         const investment = saleParticipation[etoDefinition.name][currency];
 
         if (investment.wallet && investment.wallet > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
           await investAmount(
             fas[f].address,
             CONFIG,
             universe,
             etoCommitment,
-            minTicketEth.add(Q18.mul(investment.wallet)),
+            Q18.mul(investment.wallet),
             currency,
           );
         }
         if (investment.icbm && investment.icbm > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
           await investICBMAmount(
             fas[f].address,
             CONFIG,
             universe,
             etoCommitment,
-            minTicketEurUlps.add(Q18.mul(investment.icbm)),
+            Q18.mul(investment.icbm),
             currency,
           );
         }
@@ -105,31 +132,58 @@ async function investInEtoDuringPresale(
 ) {
   for (const f of Object.keys(fas)) {
     if (
-      fas[f].etoParticipation &&
-      fas[f].etoParticipation.presale &&
-      Object.keys(fas[f].etoParticipation.presale).includes(etoDefinition.name)
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.presale &&
+      Object.keys(fas[f].etoParticipations.presale).includes(etoDefinition.name)
     ) {
-      const presaleParticipation = fas[f].etoParticipation.presale;
+      const presaleParticipation = fas[f].etoParticipations.presale;
       for (const currency of Object.keys(presaleParticipation[etoDefinition.name])) {
         const investment = presaleParticipation[etoDefinition.name][currency];
-
         if (investment.wallet && investment.wallet > 0) {
+          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
+            );
+          }
+
           await investAmount(
             fas[f].address,
             CONFIG,
             universe,
             etoCommitment,
-            minTicketEth.add(Q18.mul(investment.wallet)),
+            Q18.mul(investment.wallet),
             currency,
           );
         }
         if (investment.icbm && investment.icbm > 0) {
+          if (currency === "ETH" && Q18.mul(investment.icbm) < minTicketEth) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEth} ETH`,
+            );
+          } else if (currency === "EUR" && Q18.mul(investment.icbm) < minTicketEurUlps) {
+            throw new Error(
+              `Account ${f} has too low investment in ${
+                etoDefinition.name
+              } below minimum ticket: ${minTicketEurUlps} EUR`,
+            );
+          }
+
           await investICBMAmount(
             fas[f].address,
             CONFIG,
             universe,
             etoCommitment,
-            minTicketEurUlps.add(Q18.mul(investment.icbm)),
+            Q18.mul(investment.icbm),
             currency,
           );
         }
@@ -142,9 +196,9 @@ function getClaimingAddressesForEto(etoDefinition, fas) {
   const addresses = [];
   for (const f of Object.keys(fas)) {
     if (
-      fas[f].etoParticipation &&
-      fas[f].etoParticipation.claim &&
-      fas[f].etoParticipation.claim.includes(etoDefinition.name)
+      fas[f].etoParticipations &&
+      fas[f].etoParticipations.claim &&
+      fas[f].etoParticipations.claim.includes(etoDefinition.name)
     ) {
       addresses.push(fas[f].address);
       console.log(`Investor ${f} claims tokens from ETO ${etoDefinition.name}`);
