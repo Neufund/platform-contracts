@@ -69,13 +69,13 @@ async function investInEtoDuringSale(
         const investment = saleParticipation[etoDefinition.name][currency];
 
         if (investment.wallet && investment.wallet > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
               } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
             );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
@@ -93,13 +93,13 @@ async function investInEtoDuringSale(
           );
         }
         if (investment.icbm && investment.icbm > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
               } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
             );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
@@ -140,13 +140,13 @@ async function investInEtoDuringPresale(
       for (const currency of Object.keys(presaleParticipation[etoDefinition.name])) {
         const investment = presaleParticipation[etoDefinition.name][currency];
         if (investment.wallet && investment.wallet > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet) < minTicketEth) {
+          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
               } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
             );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet) < minTicketEurUlps) {
+          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
@@ -164,13 +164,13 @@ async function investInEtoDuringPresale(
           );
         }
         if (investment.icbm && investment.icbm > 0) {
-          if (currency === "ETH" && Q18.mul(investment.icbm) < minTicketEth) {
+          if (currency === "ETH" && Q18.mul(investment.icbm).lt(minTicketEth)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
               } below minimum ticket: ${minTicketEth} ETH`,
             );
-          } else if (currency === "EUR" && Q18.mul(investment.icbm) < minTicketEurUlps) {
+          } else if (currency === "EUR" && Q18.mul(investment.icbm).lt(minTicketEurUlps)) {
             throw new Error(
               `Account ${f} has too low investment in ${
                 etoDefinition.name
@@ -510,7 +510,7 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
     const f = fas[addr];
     if (f.type === "investor" && f.identityClaims !== undefined) {
       const ticket = await etoCommitment.investorTicket(f.address);
-      if (ticket[0] > 0) {
+      if (ticket[0].gt(0)) {
         investors[f.address] = ticket;
       }
     }
