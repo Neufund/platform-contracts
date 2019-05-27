@@ -8,7 +8,7 @@ const accounts = {
       "bread sick proud swift orchard wish model mammal brass ready dinner pave runway can twelve best bundle filter stuff sister paddle kangaroo keep supply",
     derivationPath: null,
     privateKey: "0x2a9f4a59835a4cd455c9dbe463dcdf1b11b937e610d005c6b46300f0fa98d0b1",
-    notes: "",
+    notes: "this has access to all roles in contracts",
   },
   DEPLOYER_UNIVERSE: {
     address: "0x30fD2af22459B61F5bdfdDcaeF9BFaD6AcBF9fDC",
@@ -29,7 +29,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 8372.18218,
     },
   },
   INV_ETH_ICBM_NO_KYC_2: {
@@ -42,7 +42,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 12871.18212,
     },
   },
   INV_EUR_ICBM_HAS_KYC: {
@@ -58,7 +58,7 @@ const accounts = {
     balances: {
       etherToken: 387.198273981,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 8372.388182,
     },
   },
   INV_EUR_ICBM_HAS_KYC_2: {
@@ -74,7 +74,7 @@ const accounts = {
     balances: {
       etherToken: 10,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 6719.2717172,
     },
   },
   INV_EUR_ICBM_HAS_KYC_SEED: {
@@ -90,7 +90,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 7363.2281,
     },
   },
   INV_EUR_ICBM_HAS_KYC_SEED_2: {
@@ -106,7 +106,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 3467.2717,
     },
   },
   INV_ETH_EUR_ICBM_M_HAS_KYC: {
@@ -123,7 +123,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 28737.18182,
     },
     icbmMigrations: {
       etherToken: true,
@@ -168,7 +168,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 8762.7271,
     },
     icbmMigrations: {
       etherToken: true,
@@ -217,7 +217,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 4653.17271,
     },
     icbmMigrations: {
       etherToken: true,
@@ -253,7 +253,7 @@ const accounts = {
     },
   },
   INV_ICBM_ETH_M_HAS_KYC: {
-    address: "0x00b30CC2cc22c9820d47a4E0C9E1A54455bA0883",
+    address: "0x139Fab72691f03eA1589A847b110096c7cD56e35",
     type: "investor",
     identityClaims: {
       isVerified: true,
@@ -261,12 +261,12 @@ const accounts = {
     },
     seed:
       "mimic lumber mother guide coil theory elite fly tiny wink seed issue cupboard limb luggage reflect ladder menu menu still deny basket spring evil",
-    derivationPath: null,
-    privateKey: "0x8bf3960bdf2a93ae0fe95d19582a639453edbb084b7f36be7f91789da8bf0390",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x5898803e5e8d401d1a9b97003ba39cdb9ab2997ccd9555fd5e8191401ad8bb37",
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 21365.289082,
     },
     icbmMigrations: {
       etherToken: true,
@@ -327,7 +327,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 7638.2891,
     },
     icbmMigrations: {
       etherToken: true,
@@ -388,7 +388,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 58732.198212,
     },
     icbmMigrations: {
       etherToken: true,
@@ -448,7 +448,7 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 76125.87981,
     },
     icbmMigrations: {
       etherToken: true,
@@ -497,7 +497,7 @@ const accounts = {
     },
   },
   INV_ICBM_EUR_M_HAS_KYC: {
-    address: "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
+    address: "0x6d65815Fcd587FAAe5dac7D6ce65De5d56BCF5E7",
     type: "investor",
     identityClaims: {
       isVerified: true,
@@ -505,8 +505,8 @@ const accounts = {
     },
     seed:
       "behind cool coyote edit have demise arena glare early embrace potato tray unit repair shine huge duty hybrid relax cage embrace cinnamon please hip",
-    derivationPath: null,
-    privateKey: "0x86894df4dae0eec4d7d13d08c32d92e614161790accdf1820981b45e6a74f07a",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0xd362d7c486ab49a91649dc9ccdff59186a74f1f2ea5d7cf0ed322a53a3849fbd",
     balances: {
       etherToken: 0,
       euroToken: 1271.1988,
@@ -556,19 +556,21 @@ const accounts = {
     },
   },
   INV_HAS_EUR_HAS_KYC: {
-    address: "0x0009C1d95C547d53E3b962059Be11802b5e85BA3",
+    address: "0xfA1Af2E251ee739F83e14d7daCfd77B3d0E930b7",
     type: "investor",
     identityClaims: {
       isVerified: true,
       hasBankAccount: true,
+      initialEth: 16781.9328,
     },
     seed:
       "orange iron recycle unusual cannon theory myth echo dizzy prefer arrange ugly fatigue sell rain burden meadow tiny tone spy glance agent catalog clock",
-    derivationPath: "unkown",
-    privateKey: "0x75130945b6fba959304790f2664a4c1c5333750b63a0dd110f49b5156397f60c",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0xc59be517c85798dfd8c8fefaec316a08dde716e7bb194471c0b9955f23b313cf",
     balances: {
       etherToken: 0,
       euroToken: 10278127.1988,
+      initialEth: 7638.1829,
     },
     etoParticipations: {
       whitelist: {
@@ -639,32 +641,32 @@ const accounts = {
     },
   },
   INV_HAS_ETH_T_NO_KYC: {
-    address: "0x008Cf11F0439C3e85f736B84244dfA04C6382c22",
+    address: "0x6C6f9115BE53c4424016f28d916196B29fF222dF",
     type: "investor",
     seed:
-      "regret neglect aware fold early ribbon hollow require inspire arm never rocket armor buddy traffic lunch provide coil foil knock hospital season annual wing",
-    derivationPath: null,
-    privateKey: "0xd248883d7f437e22291739a5e5e53890e454b626400b9cc0027bf41383b204ef",
+      "jar inform salt amused such world rate theory write drama feed save permit oval flower confirm soda mirror flash canvas casino bar warrior neglect",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x203be4ed7f7664d101c4624886d411b29afc22d688b733fbb5bbd783b860ca8e",
     balances: {
       etherToken: 1187.198273981,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 1188.198273981,
     },
   },
   INV_EMPTY_HAS_KYC: {
-    address: "0x0012f184BA450a1E4e2E90110c57D84b06354770",
+    address: "0x934e2B3d66B5725F17EB271A4ae7a35449Eb5cAf",
     type: "investor",
     identityClaims: {
       isVerified: true,
     },
     seed:
-      "else width refuse blood month clock rib blast adjust surprise gather potato olympic post area creek power student oak inflict memory document when scene",
-    derivationPath: null,
-    privateKey: "0x749244a19e688fe7106b9efdc907df6376edeadc393efd9c31eb53ad025ff096",
+      "urban boat between afraid duty yard title clerk basket glow photo level pottery bracket volume jump accident pistol scheme clever load hill shaft farm",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x5ce0831c27f636592006db7c3e5df45a00d6c29bf276066332bb87131e82a9bf",
     balances: {
       etherToken: 0,
       euroToken: 0,
-      initialEth: 5,
+      initialEth: 0,
     },
   },
   NOMINEE_NEUMINI: {
@@ -675,7 +677,7 @@ const accounts = {
     },
     seed:
       "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
-    derivationPath: null,
+    derivationPath: "m/44'/60'/0'/0",
     privateKey: "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
     balances: {
       etherToken: 0,
@@ -749,15 +751,15 @@ const accounts = {
     },
   },
   ISSUER_CLAIMS: {
-    address: "0x007D45D94368AE57ac8351604dC1cB3236150727",
+    address: "0x6A57FeBaE70BfC83c64835eA58240958fba328ff",
     type: "issuer",
     identityClaims: {
       isVerified: true,
     },
     seed:
       "recall insane member poet resemble mirror royal skull observe hope avoid present broom salt twin document gorilla wage notice page tide idle cram exotic",
-    derivationPath: null,
-    privateKey: "0xa81a2bc577ac9631abae432ee8a10660c5a7c948bfe5695da7b7874e858ad1d6",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x30447bbdbd68e220201e1fb838e79c36f3977f1bc768c8bf8a9a14a6b5522436",
     balances: {
       etherToken: 0,
       euroToken: 0,
@@ -782,15 +784,15 @@ const accounts = {
     notes: "etoissuer4",
   },
   ISSUER_REFUND: {
-    address: "0x0028625dcBc24a821b40864294D66507fEC70B7F",
+    address: "0x51305B1CC683dedF60b39E92AeF52f4e09E9E781",
     type: "issuer",
     identityClaims: {
       isVerified: true,
     },
     seed:
       "volcano eye expire jaguar tail zero shrug trip creek glass receive adult shift anger ceiling man twist census blood bubble resist jelly wine cost",
-    derivationPath: null,
-    privateKey: "0x7a49f4cd3632a725425d233249f757f102d6774868ac4e093871375ae9aae4e1",
+    derivationPath: "m/44'/60'/0'/0/0	",
+    privateKey: "0x6d4f48d431844fbe77f56e34f0813b2193d02ae3e514491b5a98d487931a4a3c",
     balances: {
       etherToken: 0,
       euroToken: 0,
