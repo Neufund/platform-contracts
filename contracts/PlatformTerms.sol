@@ -22,8 +22,6 @@ contract PlatformTerms is Math, IContractId {
     // ICBM investors whitelisted by default
     bool public constant IS_ICBM_INVESTOR_WHITELISTED = true;
 
-    // minimum ticket size Platform accepts in EUR ULPS
-    uint256 public constant MIN_TICKET_EUR_ULPS = 100 * 10**18;
     // maximum ticket size Platform accepts in EUR ULPS
     // no max ticket in general prospectus regulation
     // uint256 public constant MAX_TICKET_EUR_ULPS = 10000000 * 10**18;
