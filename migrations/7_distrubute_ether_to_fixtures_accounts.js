@@ -16,7 +16,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     console.log("Distribute ether to fixtures accounts");
     for (const f of Object.keys(fas)) {
       let initialEthBalance = 1000;
-      if (fas[f].balances && fas[f].balances.initialEth) {
+      if (fas[f].balances && fas[f].balances.initialEth !== undefined) {
         initialEthBalance = fas[f].balances.initialEth;
       }
 
