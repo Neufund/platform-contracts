@@ -215,7 +215,7 @@ const accounts = {
     derivationPath: "m/44'/60'/0'/0/0",
     privateKey: "0x6e6030bc2d1abf8147c6f3617b55c9fdef4814c075f8c4c192695b55cacdbf88",
     balances: {
-      etherToken: 0,
+      etherToken: 1000,
       euroToken: 0,
       initialEth: 4653.17271,
     },
@@ -251,6 +251,7 @@ const accounts = {
         },
       },
     },
+    notes: "name of this fixture should change",
   },
   INV_ICBM_ETH_M_HAS_KYC: {
     address: "0x139Fab72691f03eA1589A847b110096c7cD56e35",
