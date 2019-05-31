@@ -29,7 +29,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
       if (!CONFIG.ISOLATED_UNIVERSE) {
-        console.log("Dropping temporary permissions");
+        console.log("Dropping temporary permissions on DEPLOYER");
         await createAccessPolicy(accessPolicy, [
           { subject: DEPLOYER, role: roles.eurtDepositManager, state: TriState.Unset },
           { subject: DEPLOYER, role: roles.eurtLegalManager, state: TriState.Unset },
