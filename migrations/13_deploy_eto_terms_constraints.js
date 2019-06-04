@@ -1,7 +1,11 @@
 require("babel-register");
 const confirm = require("node-ask").confirm;
 const getConfig = require("./config").getConfig;
+const getDeployerAccount = require("./config").getDeployerAccount;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
+const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
+const { TriState } = require("../test/helpers/triState");
+const roles = require("../test/helpers/roles").default;
 
 const promisify = require("../test/helpers/evmCommands").promisify;
 const stringify = require("../test/helpers/constants").stringify;
@@ -16,7 +20,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const PlatformTerms = artifacts.require(CONFIG.artifacts.PLATFORM_TERMS);
+  const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const ETOTermsConstraints = artifacts.require(CONFIG.artifacts.ETO_TERMS_CONSTRAINTS);
+  const DEPLOYER = getDeployerAccount(network, accounts);
 
   deployer.then(async () => {
     // todo: extract to stub that can be used in future migrations
@@ -43,6 +50,18 @@ module.exports = function deployContracts(deployer, network, accounts) {
     if (global._initialBlockNo === undefined) {
       global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
     }
+
+    console.log("Temporary permission to change universe");
+    const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+    await createAccessPolicy(accessPolicy, [
+      // temporary access to universe, will be dropped in finalize
+      {
+        subject: DEPLOYER,
+        role: roles.universeManager,
+        object: universe.address,
+        state: TriState.Allow,
+      },
+    ]);
 
     const newlyDeployedConstraints = [];
 
@@ -99,6 +118,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
           Array(resetCount).fill(false),
         );
       }
+      console.log("re-deploying PlatformTerms on live network");
+      await deployer.deploy(PlatformTerms);
+      const platformTerms = await PlatformTerms.deployed();
+      await universe.setSingleton(knownInterfaces.platformTerms, platformTerms.address);
     }
   });
 };

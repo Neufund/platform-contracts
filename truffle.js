@@ -162,8 +162,9 @@ module.exports = {
       gasPrice: 8000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0x5b8ce2b715522998053fe2cead3e70f9a2b6ea17",
-        ISOLATED_UNIVERSE: true,
+        ICBM_COMMITMENT_ADDRESS: "0xdd650436d26e2df6b518b1499550a1c18cd7c5b3",
+        UNIVERSE_ADDRESS: "0x506d45521cdebc3f8ea992cd0a6e790c19b9f2d9",
+        // ISOLATED_UNIVERSE: true,
       },
     },
     inprocess_test: {
