@@ -22,174 +22,149 @@ const CommitmentState = require("../test/helpers/commitmentState").CommitmentSta
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
 function getWhitelistForETO(etoDefinition, fas) {
-  const whitelist = [];
+  const whitelist = Object.entries(fas).reduce((list, [fixtureName, fixtureDefinition]) => {
+    const { etoParticipations } = fixtureDefinition || {};
+    const { whitelist: etoWhitelists } = etoParticipations || {};
 
-  for (const f of Object.keys(fas)) {
-    if (fas[f].etoParticipations && fas[f].etoParticipations.whitelist) {
-      for (const etoName of Object.keys(fas[f].etoParticipations.whitelist)) {
-        if (etoDefinition.name === etoName) {
-          const discountAmount = fas[f].etoParticipations.whitelist[etoName].discountAmount;
-          const discount = fas[f].etoParticipations.whitelist[etoName].discount;
-
-          console.log(
-            `Investor ${f} whitelisted for ${etoName}
-             with discount ${discount} and amount ${discountAmount}`,
-          );
-
-          whitelist.push({
-            address: fas[f].address,
-            discountAmount,
-            discount,
-          });
-        }
-      }
+    if (!etoWhitelists) {
+      return list;
     }
-  }
+
+    const fixtureWhitelist = Object.entries(etoWhitelists)
+      .filter(([etoName, _]) => etoName === etoDefinition.name)
+      .map(([_, whitelistInfo]) => ({
+        address: fixtureDefinition.address,
+        discountAmount: whitelistInfo.discountAmount,
+        discount: whitelistInfo.discount,
+        fixtureName,
+      }));
+
+    return list.concat(fixtureWhitelist);
+  }, []);
 
   return whitelist;
 }
 
-async function investInEtoDuringSale(
-  fas,
-  CONFIG,
-  universe,
-  etoCommitment,
-  etoDefinition,
-  minTicketEth,
-  minTicketEurUlps,
-) {
-  for (const f of Object.keys(fas)) {
-    if (
-      fas[f].etoParticipations &&
-      fas[f].etoParticipations.sale &&
-      Object.keys(fas[f].etoParticipations.sale).includes(etoDefinition.name)
-    ) {
-      const saleParticipation = fas[f].etoParticipations.sale;
-      for (const currency of Object.keys(saleParticipation[etoDefinition.name])) {
-        const investment = saleParticipation[etoDefinition.name][currency];
-
-        if (investment.wallet && investment.wallet > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
-            );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
-            );
-          }
-
-          await investAmount(
-            fas[f].address,
-            CONFIG,
-            universe,
-            etoCommitment,
-            Q18.mul(investment.wallet),
-            currency,
-          );
-        }
-        if (investment.icbm && investment.icbm > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
-            );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
-            );
-          }
-
-          await investICBMAmount(
-            fas[f].address,
-            CONFIG,
-            universe,
-            etoCommitment,
-            Q18.mul(investment.icbm),
-            currency,
-          );
-        }
-      }
+function getInvestmentsForEto(fas, etoDefinition, minTicketEth, minTicketEurUlps) {
+  const createInvestmentDetails = (fixtureName, fixtureAddress, amount, currency, minTicket) => {
+    const investmentAmount = Q18.mul(amount);
+    if (investmentAmount.lt(minTicket)) {
+      throw new Error(
+        `Account ${fixtureName} has too low investment ${amount} ${currency} in ${
+          etoDefinition.name
+        } below minimum ticket: ${minTicket.div(Q18)} ${currency}`,
+      );
     }
-  }
-}
 
-async function investInEtoDuringPresale(
-  fas,
-  CONFIG,
-  universe,
-  etoCommitment,
-  etoDefinition,
-  minTicketEth,
-  minTicketEurUlps,
-) {
-  for (const f of Object.keys(fas)) {
-    if (
-      fas[f].etoParticipations &&
-      fas[f].etoParticipations.presale &&
-      Object.keys(fas[f].etoParticipations.presale).includes(etoDefinition.name)
-    ) {
-      const presaleParticipation = fas[f].etoParticipations.presale;
-      for (const currency of Object.keys(presaleParticipation[etoDefinition.name])) {
-        const investment = presaleParticipation[etoDefinition.name][currency];
-        if (investment.wallet && investment.wallet > 0) {
-          if (currency === "ETH" && Q18.mul(investment.wallet).lt(minTicketEth)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEth.div(Q18)} ETH`,
-            );
-          } else if (currency === "EUR" && Q18.mul(investment.wallet).lt(minTicketEurUlps)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEurUlps.div(Q18)} EUR`,
-            );
-          }
+    return {
+      address: fixtureAddress,
+      amount: investmentAmount,
+      currency,
+    };
+  };
 
-          await investAmount(
-            fas[f].address,
-            CONFIG,
-            universe,
-            etoCommitment,
-            Q18.mul(investment.wallet),
-            currency,
+  const etoInvestments = Object.entries(fas).reduce(
+    (acc, [fixtureName, fixtureDefinition]) => {
+      const { etoParticipations } = fixtureDefinition || {};
+      const { sale: publicInvestments, presale: privateInvestments } = etoParticipations || {};
+
+      const publicEtoInvestments = Object.entries(publicInvestments || {}).filter(
+        ([etoName, _]) => etoName === etoDefinition.name,
+      );
+
+      const presaleEtoInvestments = Object.entries(privateInvestments || {}).filter(
+        ([etoName, _]) => etoName === etoDefinition.name,
+      );
+
+      const getIcbmInvestments = (list, [_, investments]) => {
+        const { EUR: euroInvestment } = investments || {};
+        const { ETH: ethInvestment } = investments || {};
+        const { icbm: ethFromIcbmWallet } = ethInvestment || {};
+        const { icbm: eurFromIcbmWallet } = euroInvestment || {};
+
+        if (eurFromIcbmWallet) {
+          const eurInvestmentDetails = createInvestmentDetails(
+            fixtureName,
+            fixtureDefinition.address,
+            eurFromIcbmWallet,
+            "EUR",
+            minTicketEurUlps,
           );
+          list.push(eurInvestmentDetails);
         }
-        if (investment.icbm && investment.icbm > 0) {
-          if (currency === "ETH" && Q18.mul(investment.icbm).lt(minTicketEth)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEth} ETH`,
-            );
-          } else if (currency === "EUR" && Q18.mul(investment.icbm).lt(minTicketEurUlps)) {
-            throw new Error(
-              `Account ${f} has too low investment in ${
-                etoDefinition.name
-              } below minimum ticket: ${minTicketEurUlps} EUR`,
-            );
-          }
-
-          await investICBMAmount(
-            fas[f].address,
-            CONFIG,
-            universe,
-            etoCommitment,
-            Q18.mul(investment.icbm),
-            currency,
+        if (ethFromIcbmWallet) {
+          const ethInvestmentDetails = createInvestmentDetails(
+            fixtureName,
+            fixtureDefinition.address,
+            ethFromIcbmWallet,
+            "ETH",
+            minTicketEth,
           );
+          list.push(ethInvestmentDetails);
         }
-      }
-    }
-  }
+
+        return list;
+      };
+
+      const getWalletInvestments = (list, [_, investments]) => {
+        const { EUR: euroInvestment } = investments || {};
+        const { ETH: ethInvestment } = investments || {};
+        const { wallet: euroFromWallet } = euroInvestment || {};
+        const { wallet: ethFromWallet } = ethInvestment || {};
+
+        if (euroFromWallet) {
+          const euroInvestmentDetails = createInvestmentDetails(
+            fixtureName,
+            fixtureDefinition.address,
+            euroFromWallet,
+            "EUR",
+            minTicketEurUlps,
+          );
+          list.push(euroInvestmentDetails);
+        }
+        if (ethFromWallet) {
+          const ethInvestmentDetails = createInvestmentDetails(
+            fixtureName,
+            fixtureDefinition.address,
+            ethFromWallet,
+            "ETH",
+            minTicketEth,
+          );
+          list.push(ethInvestmentDetails);
+        }
+        return list;
+      };
+
+      const presaleIcbmInvestments = presaleEtoInvestments.reduce(getIcbmInvestments, []);
+      const presaleWalletInvestments = presaleEtoInvestments.reduce(getWalletInvestments, []);
+
+      const icbmInvestments = publicEtoInvestments.reduce(getIcbmInvestments, []);
+      const walletInvestments = publicEtoInvestments.reduce(getWalletInvestments, []);
+
+      return {
+        presale: {
+          investmentsFromIcbm: acc.presale.investmentsFromIcbm.concat(presaleIcbmInvestments),
+          investments: acc.presale.investments.concat(presaleWalletInvestments),
+        },
+        sale: {
+          investmentsFromIcbm: acc.sale.investmentsFromIcbm.concat(icbmInvestments),
+          investments: acc.sale.investments.concat(walletInvestments),
+        },
+      };
+    },
+    {
+      presale: {
+        investmentsFromIcbm: [],
+        investments: [],
+      },
+      sale: {
+        investmentsFromIcbm: [],
+        investments: [],
+      },
+    },
+  );
+
+  return etoInvestments;
 }
 
 function getClaimingAddressesForEto(etoDefinition, fas) {
@@ -363,14 +338,26 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Whitelist);
 
-  await investInEtoDuringPresale(
-    fas,
-    CONFIG,
-    universe,
-    etoCommitment,
-    etoDefiniton,
-    minTicketEth,
-    minTicketEurUlps,
+  const {
+    presale: { investments: presaleInvestments, investmentsFromIcbm: presaleInvestmentsFromIcbm },
+    sale: { investments: publicInvestments, investmentsFromIcbm: publicInvestmentsFromIcbm },
+  } = getInvestmentsForEto(fas, etoDefiniton, minTicketEth, minTicketEurUlps);
+
+  const presaleInvestmentTransactions = []
+    .concat(
+      presaleInvestments.map(({ address, amount, currency }) =>
+        investAmount(address, CONFIG, universe, etoCommitment, amount, currency),
+      ),
+    )
+    .concat(
+      presaleInvestmentsFromIcbm.map(({ address, amount, currency }) =>
+        investICBMAmount(address, CONFIG, universe, etoCommitment, amount, currency),
+      ),
+    );
+
+  await presaleInvestmentTransactions.reduce(
+    (chain, task) => chain.then(results => task.then(result => [...results, result])),
+    Promise.resolve([]),
   );
 
   if (final === CommitmentState.Whitelist) {
@@ -380,15 +367,24 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   await etoCommitment._mockShiftBackTime(whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
-  await investInEtoDuringSale(
-    fas,
-    CONFIG,
-    universe,
-    etoCommitment,
-    etoDefiniton,
-    minTicketEth,
-    minTicketEurUlps,
+
+  const publicInvestmentTransactions = []
+    .concat(
+      publicInvestments.map(({ address, amount, currency }) =>
+        investAmount(address, CONFIG, universe, etoCommitment, amount, currency),
+      ),
+    )
+    .concat(
+      publicInvestmentsFromIcbm.map(({ address, amount, currency }) =>
+        investICBMAmount(address, CONFIG, universe, etoCommitment, amount, currency),
+      ),
+    );
+
+  await publicInvestmentTransactions.reduce(
+    (chain, task) => chain.then(results => task.then(result => [...results, result])),
+    Promise.resolve([]),
   );
+
   if (final === CommitmentState.Public) {
     return etoCommitment;
   }

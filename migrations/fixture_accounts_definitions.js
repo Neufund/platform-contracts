@@ -276,37 +276,31 @@ const accounts = {
       sale: {
         ETOInWhitelistState: {
           ETH: {
-            wallet: 0,
-            icbm: 3.71621,
+            icbm: 277,
           },
         },
         ETOInPublicState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInSigningState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInClaimState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInPayoutState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInRefundState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
@@ -337,37 +331,31 @@ const accounts = {
       sale: {
         ETOInWhitelistState: {
           ETH: {
-            wallet: 0,
-            icbm: 3.71621,
+            icbm: 277,
           },
         },
         ETOInPublicState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInSigningState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInClaimState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInPayoutState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInRefundState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
@@ -398,37 +386,31 @@ const accounts = {
       sale: {
         ETOInWhitelistState: {
           ETH: {
-            wallet: 0,
-            icbm: 3.71621,
+            icbm: 277,
           },
         },
         ETOInPublicState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInSigningState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInClaimState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInPayoutState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInRefundState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
@@ -459,37 +441,31 @@ const accounts = {
       sale: {
         ETOInWhitelistState: {
           ETH: {
-            wallet: 0,
-            icbm: 3.71621,
+            icbm: 277,
           },
         },
         ETOInPublicState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInSigningState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInClaimState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInPayoutState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
         ETOInRefundState: {
           ETH: {
-            wallet: 0,
             icbm: 3.71621,
           },
         },
@@ -519,37 +495,31 @@ const accounts = {
       presale: {
         ETOInWhitelistState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
         ETOInPublicState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
         ETOInSigningState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
         ETOInClaimState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
         ETOInPayoutState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
         ETOInRefundState: {
           EUR: {
-            wallet: 0,
             icbm: 100000,
           },
         },
@@ -604,37 +574,31 @@ const accounts = {
         ETOInWhitelistState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
         ETOInPublicState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
         ETOInSigningState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
         ETOInClaimState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
         ETOInPayoutState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
         ETOInRefundState: {
           ETH: {
             wallet: 289,
-            icbm: 0,
           },
         },
       },
@@ -958,30 +922,6 @@ const accounts = {
         ETO: {
           discountAmount: 0,
           discount: 0,
-        },
-      },
-      presale: {
-        ETO: {
-          ETH: {
-            wallet: 0,
-            icbm: 0,
-          },
-          EUR: {
-            wallet: 0,
-            icbm: 0,
-          },
-        },
-      },
-      sale: {
-        ETO: {
-          ETH: {
-            wallet: 0,
-            icbm: 0,
-          },
-          EUR: {
-            wallet: 0,
-            icbm: 0,
-          },
         },
       },
       claim: ["ETO"],
