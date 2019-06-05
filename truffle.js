@@ -144,7 +144,8 @@ module.exports = {
         "http://eth-node.neuprd.net:8545",
         // "44'/60'/0'/0",
         // "44'/60'/105'/3", // reclaimer
-        "44'/60'/105'/11", //DEPLOYER (admin)
+        "44'/60'/105'/0", // legal rep (M)
+        // "44'/60'/105'/11", //DEPLOYER (admin)
         "nano_live",
       ),
       deploymentConfigOverride: {
