@@ -143,8 +143,9 @@ module.exports = {
       provider: nanoProvider(
         "http://eth-node.neuprd.net:8545",
         // "44'/60'/0'/0",
-        "44'/60'/105'/3", // reclaimer
-        // "44'/60'/105'/11",
+        // "44'/60'/105'/3", // reclaimer
+        "44'/60'/105'/0", // legal rep (M)
+        // "44'/60'/105'/11", //DEPLOYER (admin)
         "nano_live",
       ),
       deploymentConfigOverride: {
@@ -152,7 +153,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 10000000000, // 10 gwei /shannon
+      gasPrice: 6000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",

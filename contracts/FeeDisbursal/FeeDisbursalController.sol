@@ -83,9 +83,9 @@ contract FeeDisbursalController is
     {
         // who can disburse tokens: allowed collections + fee disbursal itself + locked accounts (which we cache to save gas)
         // or disburser has a disburer role (for example platform operator wallet)
-        bool disburserAllowed = (disburser == EURO_LOCK || disburser == ETHER_LOCK || disburser == msg.sender) || ( 
-            disburser == ICBM_EURO_LOCK || disburser == ICBM_ETHER_LOCK) || ( 
-            UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, disburser)) || ( 
+        bool disburserAllowed = (disburser == EURO_LOCK || disburser == ETHER_LOCK || disburser == msg.sender) || (
+            disburser == ICBM_EURO_LOCK || disburser == ICBM_ETHER_LOCK) || (
+            UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, disburser)) || (
             ACCESS_POLICY.allowed(disburser, ROLE_DISBURSER, msg.sender, msg.sig));
         return amount > 0 && isDisbursableToken(token) && disburserAllowed && recycleAfterDuration > 0;
     }
