@@ -31,6 +31,9 @@ const accounts = {
       euroToken: 0,
       initialEth: 8372.18218,
     },
+    icbmCommitment: {
+      ETH: 161.1289798,
+    },
   },
   INV_ETH_ICBM_NO_KYC_2: {
     address: "0xDE185A5c2Bd3913fAC1F64102e3DEFD9E1797C4d",
@@ -43,6 +46,9 @@ const accounts = {
       etherToken: 0,
       euroToken: 0,
       initialEth: 12871.18212,
+    },
+    icbmCommitment: {
+      ETH: 161.1289798,
     },
   },
   INV_EUR_ICBM_HAS_KYC: {
@@ -60,6 +66,9 @@ const accounts = {
       euroToken: 0,
       initialEth: 8372.388182,
     },
+    icbmCommitment: {
+      EUR: 1781267,
+    },
   },
   INV_EUR_ICBM_HAS_KYC_2: {
     address: "0x619f0a73f02b8ac8F58440c21E15A461E69011a5",
@@ -75,6 +84,9 @@ const accounts = {
       etherToken: 10,
       euroToken: 0,
       initialEth: 6719.2717172,
+    },
+    icbmCommitment: {
+      EUR: 1781267,
     },
   },
   INV_EUR_ICBM_HAS_KYC_SEED: {
@@ -125,6 +137,10 @@ const accounts = {
       euroToken: 0,
       initialEth: 28737.18182,
     },
+    icbmCommitment: {
+      ETH: 218.1289798,
+      EUR: 71827,
+    },
     icbmMigrations: {
       etherToken: true,
       euroToken: true,
@@ -169,6 +185,10 @@ const accounts = {
       etherToken: 0,
       euroToken: 0,
       initialEth: 8762.7271,
+    },
+    icbmCommitment: {
+      ETH: 218.1289798,
+      EUR: 71827,
     },
     icbmMigrations: {
       etherToken: true,
@@ -219,6 +239,10 @@ const accounts = {
       euroToken: 0,
       initialEth: 4653.17271,
     },
+    icbmCommitment: {
+      ETH: 218.1289798,
+      EUR: 71827,
+    },
     icbmMigrations: {
       etherToken: true,
       euroToken: true,
@@ -268,6 +292,9 @@ const accounts = {
       etherToken: 0,
       euroToken: 0,
       initialEth: 21365.289082,
+    },
+    icbmCommitment: {
+      ETH: 1211.1289798,
     },
     icbmMigrations: {
       etherToken: true,
@@ -324,6 +351,9 @@ const accounts = {
       euroToken: 0,
       initialEth: 7638.2891,
     },
+    icbmCommitment: {
+      ETH: 1211.1289798,
+    },
     icbmMigrations: {
       etherToken: true,
     },
@@ -379,6 +409,9 @@ const accounts = {
       euroToken: 0,
       initialEth: 58732.198212,
     },
+    icbmCommitment: {
+      ETH: 1211.1289798,
+    },
     icbmMigrations: {
       etherToken: true,
     },
@@ -432,6 +465,9 @@ const accounts = {
       etherToken: 0,
       euroToken: 0,
       initialEth: 76125.87981,
+    },
+    icbmCommitment: {
+      ETH: 1211.1289798,
     },
     icbmMigrations: {
       etherToken: true,
@@ -487,6 +523,9 @@ const accounts = {
     balances: {
       etherToken: 0,
       euroToken: 1271.1988,
+    },
+    icbmCommitment: {
+      EUR: 812988.1988,
     },
     icbmMigrations: {
       euroToken: true,
