@@ -51,6 +51,23 @@ const accounts = {
       ETH: 161.1289798,
     },
   },
+  INV_ETH_ICBM_HAS_KYC: {
+    address: "0x844C5c9cE2Ad620592A5D686Fc8e76866f039c56",
+    type: "investor",
+    identityClaims: {
+      isVerified: true,
+    },
+    seed:
+      "anxiety maze damp stem when finger start much wagon rigid cloth resource educate huge category later december force wrap dinner three loud stage spin",
+    derivationPath: "m/44'/60'/0'/0",
+    privateKey: "0x05c5beda61dfb4ea4c8588d321249cbc4ed5b46227ce9ef4a69f661e59c86103",
+    balances: {
+      initialEth: 102,
+    },
+    icbmCommitment: {
+      ETH: 100,
+    },
+  },
   INV_EUR_ICBM_HAS_KYC: {
     address: "0xE6Ad2CdBA2FB15504232eBFa82f64c06c87F9326",
     type: "investor",
