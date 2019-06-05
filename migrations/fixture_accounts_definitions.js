@@ -61,6 +61,20 @@ const accounts = {
       initialEth: 8372.388182,
     },
   },
+  INV_ETH_ICBM_HAS_KYC: {
+    address: "0x844C5c9cE2Ad620592A5D686Fc8e76866f039c56",
+    type: "investor",
+    identityClaims: {
+      isVerified: true,
+    },
+    seed:
+      "anxiety maze damp stem when finger start much wagon rigid cloth resource educate huge category later december force wrap dinner three loud stage spin",
+    derivationPath: "m/44'/60'/0'/0",
+    privateKey: "0x05c5beda61dfb4ea4c8588d321249cbc4ed5b46227ce9ef4a69f661e59c86103",
+    balances: {
+      etherToken: 100,
+    },
+  },
   INV_EUR_ICBM_HAS_KYC_2: {
     address: "0x619f0a73f02b8ac8F58440c21E15A461E69011a5",
     type: "investor",
@@ -562,7 +576,6 @@ const accounts = {
     identityClaims: {
       isVerified: true,
       hasBankAccount: true,
-      initialEth: 16781.9328,
     },
     seed:
       "orange iron recycle unusual cannon theory myth echo dizzy prefer arrange ugly fatigue sell rain burden meadow tiny tone spy glance agent catalog clock",
