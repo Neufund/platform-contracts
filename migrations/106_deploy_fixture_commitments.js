@@ -437,7 +437,13 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   console.log("Going to payout");
   // claim tokens
   const claimingEtoTokenAccounts = getClaimingAddressesForEto(etoDefiniton, fas);
-  await etoCommitment.claimMany(claimingEtoTokenAccounts);
+  const claimTransactions = claimingEtoTokenAccounts.map(address =>
+    etoCommitment.claim({ from: address }),
+  );
+  await claimTransactions.reduce(
+    (chain, task) => chain.then(results => task.then(result => [...results, result])),
+    Promise.resolve([]),
+  );
   // shift time
   await etoCommitment._mockShiftBackTime(claimD);
   // no need to check state afterwards, payout ensures it

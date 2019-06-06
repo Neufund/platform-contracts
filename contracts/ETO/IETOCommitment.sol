@@ -107,12 +107,8 @@ contract IETOCommitment is
     /// refunds investor if ETO failed
     function refund() external;
 
-    function refundMany(address[] investors) external;
-
     /// claims tokens if ETO is a success
     function claim() external;
-
-    function claimMany(address[] investors) external;
 
     // initiate fees payout
     function payout() external;
