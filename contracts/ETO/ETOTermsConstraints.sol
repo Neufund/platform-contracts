@@ -100,7 +100,7 @@ contract ETOTermsConstraints is IContractId {
         address tokenOfferingOperator
     )
         public
-    {   
+    {
         require(maxTicketSizeEurUlps == 0 || minTicketSizeEurUlps<=maxTicketSizeEurUlps);
         require(maxInvestmentAmountEurUlps == 0 || minInvestmentAmountEurUlps<=maxInvestmentAmountEurUlps);
         require(maxInvestmentAmountEurUlps == 0 || minTicketSizeEurUlps<=maxInvestmentAmountEurUlps);

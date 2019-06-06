@@ -143,8 +143,9 @@ module.exports = {
       provider: nanoProvider(
         "http://eth-node.neuprd.net:8545",
         // "44'/60'/0'/0",
-        "44'/60'/105'/3", // reclaimer
-        // "44'/60'/105'/11",
+        // "44'/60'/105'/3", // reclaimer
+        "44'/60'/105'/0", // legal rep (M)
+        // "44'/60'/105'/11", //DEPLOYER (admin)
         "nano_live",
       ),
       deploymentConfigOverride: {
@@ -152,7 +153,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 10000000000, // 10 gwei /shannon
+      gasPrice: 6000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",
@@ -162,8 +163,9 @@ module.exports = {
       gasPrice: 8000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
-        ICBM_COMMITMENT_ADDRESS: "0x5b8ce2b715522998053fe2cead3e70f9a2b6ea17",
-        ISOLATED_UNIVERSE: true,
+        ICBM_COMMITMENT_ADDRESS: "0xdd650436d26e2df6b518b1499550a1c18cd7c5b3",
+        UNIVERSE_ADDRESS: "0x506d45521cdebc3f8ea992cd0a6e790c19b9f2d9",
+        // ISOLATED_UNIVERSE: true,
       },
     },
     inprocess_test: {
