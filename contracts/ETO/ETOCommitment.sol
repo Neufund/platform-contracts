@@ -528,7 +528,7 @@ contract ETOCommitment is
     // recycle all payment tokens held on this contract as a result of NEU proceeds
     function recycle(address[] tokens)
         public
-        onlyState(ETOState.Payout) 
+        onlyState(ETOState.Payout)
     {
         IFeeDisbursal disbursal = IFeeDisbursal(UNIVERSE.feeDisbursal());
         for (uint256 i = 0; i < tokens.length; i += 1) {
@@ -542,7 +542,7 @@ contract ETOCommitment is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 1);
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 2);
     }
 
     ////////////////////////
