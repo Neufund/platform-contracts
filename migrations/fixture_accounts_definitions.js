@@ -706,6 +706,56 @@ const accounts = {
       initialEth: 5,
     },
   },
+  ISSUER_BLANK_QA: {
+    address: "0xd9f858Ad167506a9D25FD6007BcDb7AE61bc5F87",
+    type: "issuer",
+    seed:
+      "spawn certain blade practice suggest law enable glory exclude random aunt regret print run drink mutual rebel dragon mother butter prosper reopen truck chimney",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0xe217ecf8acfe73b9c7aceb89495685070f7ca24d4ee32da595620b9560a41795",
+    balances: {
+      initialEth: 5,
+    },
+  },
+  ISSUER_BLANK_DEMO: {
+    address: "0x497f87Da9E8dd99865BEC49207d9f04744E5e656",
+    type: "issuer",
+    seed:
+      "side side make moon sponsor glide mom merry expose flip fish main cinnamon charge advance lecture gift museum order alert donor answer practice toward",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x2cc5a091e22b563f8b73266c5099bc462aef997ae950fbe282c97e4ddd8eaa60",
+    balances: {
+      initialEth: 5,
+    },
+  },
+  ISSUER_BLANK_QA_HAS_KYC: {
+    address: "0xA443d169CCF4a1Bb955e8756205d8DB288061731",
+    type: "issuer",
+    identityClaims: {
+      isVerified: true,
+    },
+    seed:
+      "grunt unique filter raise oyster book undo flip anger bomb globe leaf oyster bracket vessel jaguar blade can mail kitchen economy forward have category",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0xdde1bca45176753b2c16e3a28c9186d959b4f209b19fa3e2fe9c702ffa2d2720",
+    balances: {
+      initialEth: 5,
+    },
+  },
+  ISSUER_BLANK_DEMO_HAS_KYC: {
+    address: "0x687fFeCD89f3E150EcF8A8155ef15d794D7F347B",
+    type: "issuer",
+    identityClaims: {
+      isVerified: true,
+    },
+    seed:
+      "hole usual renew nice help pact system draft sphere oil maple sniff token economy list naive couch odor tag quiz jewel water cheese extend",
+    derivationPath: "m/44'/60'/0'/0/0",
+    privateKey: "0x1f12f8aa0463fbce2b7ba6977b1ae86e7d6fc094b9242e844fd40e5ba241e700",
+    balances: {
+      initialEth: 5,
+    },
+  },
   ISSUER_SETUP: {
     address: "0x74180B56DD74BC56a2E9D5720F39247c55F23328",
     type: "issuer",
