@@ -216,6 +216,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectProperETOSetup(etoCommitment.address);
       const cid = await etoCommitment.contractId();
       expect(cid[0]).to.eq(contractId("ETOCommitment"));
+      expect(cid[1]).to.be.bignumber.eq(2);
     });
 
     it("should set start date", async () => {
@@ -1393,6 +1394,25 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectNoICBMPendingCommitments(investors.slice(0, 1));
     }
 
+    async function transitionToPayout() {
+      const currDate = new web3.BigNumber(await latestTimestamp());
+      const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
+      await skipTimeTo(payoutDate);
+      const transitionTx = await etoCommitment.payout();
+      await expectValidPayoutState(transitionTx, contribution, {
+        expectsEther: false,
+        expectsEuro: false,
+      });
+    }
+
+    async function attachFeeDisbursal() {
+      // change to new FeeDisbursal
+      const [feeDisbursal] = await deployFeeDisbursalUniverse(universe, admin);
+      // also let it process nEUR
+      await euroTokenController.applySettings(0, 0, Q18, { from: admin });
+      return feeDisbursal;
+    }
+
     it("should claim in claim", async () => {
       await claimInvestor(investors[0]);
       await claimInvestor(investors[1]);
@@ -1431,12 +1451,143 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       await expectFullClaimInPayout();
     });
 
+    it("should claim partially and recycle NEU proceeds", async () => {
+      // claim part of NEU from contract
+      await etoCommitment.claim({ from: investors[1] });
+      const feeDisbursal = await attachFeeDisbursal();
+      // let contract keep NEU and fire payout event
+      await transitionToPayout();
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // commitment contract has reward due
+      const paymentTokens = [etherToken.address, euroToken.address];
+      const claimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        etoCommitment.address,
+      );
+      // has pending payout
+      expect(claimables[0][0]).to.be.bignumber.gt(0);
+      expect(claimables[1][0]).to.be.bignumber.gt(0);
+      // investor claimables
+      const preRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      // recycle
+      await etoCommitment.recycle(paymentTokens);
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // payout amount for investor increased
+      const postRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      expect(postRecycleClaimables[0][0]).to.be.bignumber.gt(preRecycleClaimables[0][0]);
+      expect(postRecycleClaimables[1][0]).to.be.bignumber.gt(preRecycleClaimables[1][0]);
+    });
+
+    it("should claim all and recycle NEU proceeds", async () => {
+      // claim part of NEU from contract
+      await claimMultipleInvestors([investors[0], investors[1]]);
+      const feeDisbursal = await attachFeeDisbursal();
+      // no NEU in contract - all claimed
+      await transitionToPayout();
+      // skip one day
+      await increaseTime(dayInSeconds);
+      const paymentTokens = [etherToken.address, euroToken.address];
+      const claimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        etoCommitment.address,
+      );
+      // has pending payout
+      expect(claimables[0][0]).to.be.bignumber.eq(0);
+      expect(claimables[1][0]).to.be.bignumber.eq(0);
+      // investor claimables
+      const preRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      // recycle
+      await etoCommitment.recycle(paymentTokens);
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // payout amount still the same
+      const postRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      expect(postRecycleClaimables[0][0]).to.be.bignumber.eq(preRecycleClaimables[0][0]);
+      expect(postRecycleClaimables[1][0]).to.be.bignumber.eq(preRecycleClaimables[1][0]);
+    });
+
+    it("should recycle NEU proceeds selectively", async () => {
+      // claim part of NEU from contract
+      await etoCommitment.claim({ from: investors[1] });
+      const feeDisbursal = await attachFeeDisbursal();
+      // let contract keep NEU and fire payout event
+      await transitionToPayout();
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // investor claimables
+      const paymentTokens = [etherToken.address, euroToken.address];
+      const preRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      // recycle ether
+      await etoCommitment.recycle([etherToken.address]);
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // payout amount for investor in ETH increased
+      const postRecycleClaimables = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[1],
+      );
+      expect(postRecycleClaimables[0][0]).to.be.bignumber.gt(preRecycleClaimables[0][0]);
+      expect(postRecycleClaimables[1][0]).to.be.bignumber.eq(preRecycleClaimables[1][0]);
+      // second investor claims
+      await etoCommitment.claim({ from: investors[0] });
+
+      const preRecycleClaimablesInv2 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      // late to the claiming party - no payouts
+      expect(preRecycleClaimablesInv2[0][0]).to.be.bignumber.eq(0);
+      expect(preRecycleClaimablesInv2[1][0]).to.be.bignumber.eq(0);
+      // recycle euro
+      await etoCommitment.recycle([euroToken.address]);
+      // skip one day
+      await increaseTime(dayInSeconds);
+      // second investors gets some euro payout, eth 0
+      const postRecycleClaimablesInv2 = await feeDisbursal.claimableMutipleByToken(
+        paymentTokens,
+        neumark.address,
+        investors[0],
+      );
+      expect(postRecycleClaimablesInv2[0][0]).to.be.bignumber.eq(0);
+      // there's payout in euro token after ETO recycle
+      expect(postRecycleClaimablesInv2[1][0]).to.be.bignumber.gt(0);
+      // investor 2 claims some recovered eth (this is why we have recycle in commitment)
+      await feeDisbursal.accept(euroToken.address, neumark.address, 1, { from: investors[0] });
+    });
+
+    it("rejects recycle in claim state", async () => {
+      // someone wants to release before payout
+      await expect(etoCommitment.recycle([euroToken.address])).to.be.rejectedWith(EvmError);
+    });
+
     it("should claim many in payout", async () => {
-      const currDate = new web3.BigNumber(await latestTimestamp());
-      const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
-      await skipTimeTo(payoutDate);
-      const transitionTx = await etoCommitment.payout();
-      await expectValidPayoutState(transitionTx, contribution);
+      await transitionToPayout();
       await claimMultipleInvestors([investors[0], investors[1]]);
       await expectValidPayoutStateFullClaim();
       await expectNoICBMPendingCommitments(investors.slice(0, 1));
