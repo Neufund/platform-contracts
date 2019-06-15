@@ -73,7 +73,11 @@ contract FeeDisbursalController is
         constant
         returns (bool allow)
     {
-        return canClaim(claimer);
+        allow = canClaim(claimer);
+        // allow disburser contracts to also recycle their payouts
+        if (!allow) {
+            allow = UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_DISBURSER_INTERFACES, claimer);
+        }
     }
 
     function onDisburse(address token, address disburser, uint256 amount, address /*proRataToken*/, uint256 recycleAfterDuration)

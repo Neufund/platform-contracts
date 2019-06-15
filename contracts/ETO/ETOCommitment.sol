@@ -11,6 +11,7 @@ import "../Agreement.sol";
 import "../Math.sol";
 import "../Serialization.sol";
 import "../KnownInterfaces.sol";
+import "../Standards/IFeeDisbursal.sol";
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -524,12 +525,24 @@ contract ETOCommitment is
         usedLockedAccount = ticket.usedLockedAccount;
     }
 
+    // recycle all payment tokens held on this contract as a result of NEU proceeds
+    function recycle(address[] tokens)
+        public
+        onlyState(ETOState.Payout)
+    {
+        IFeeDisbursal disbursal = IFeeDisbursal(UNIVERSE.feeDisbursal());
+        for (uint256 i = 0; i < tokens.length; i += 1) {
+            address token = tokens[i];
+            disbursal.reject(token, NEUMARK, 256**2-1);
+        }
+    }
+
     //
     // Implements IContractId
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 1);
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 2);
     }
 
     ////////////////////////
@@ -711,12 +724,11 @@ contract ETOCommitment is
         private
     {
         // distribute what's left in balances: company took funds on claim
-        address disbursal = UNIVERSE.feeDisbursal();
+        IFeeDisbursal disbursal = IFeeDisbursal(UNIVERSE.feeDisbursal());
         assert(disbursal != address(0));
         address platformPortfolio = UNIVERSE.platformPortfolio();
         assert(platformPortfolio != address(0));
         bytes memory serializedAddress = abi.encodePacked(address(NEUMARK));
-        // assert(decodeAddress(serializedAddress) == address(NEUMARK));
         if (_platformFeeEth > 0) {
             // disburse via ERC223, where we encode token used to provide pro-rata in `data` parameter
             assert(ETHER_TOKEN.transfer(disbursal, _platformFeeEth, serializedAddress));
@@ -725,6 +737,12 @@ contract ETOCommitment is
             // disburse via ERC223
             assert(EURO_TOKEN.transfer(disbursal, _platformFeeEurUlps, serializedAddress));
         }
+        // if any payouts are pending for this contract, recycle them, there are two reasons to get pending payouts
+        // 1. not all people claimed
+        // 2. during the ETO contract received some payouts from other ETOs that finished
+        // we should leave it to some periodic watched which would reject any substantial amounts
+        // disbursal.reject(EURO_TOKEN, NEUMARK, 256**2-1);
+        // disbursal.reject(ETHER_TOKEN, NEUMARK, 256**2-1);
         // add token participation fee to platfrom portfolio
         EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFeeInt);
 
