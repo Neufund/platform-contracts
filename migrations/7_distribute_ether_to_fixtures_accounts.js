@@ -34,7 +34,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       if (
         fas[f].balances &&
         fas[f].balances.initialEth &&
-        etherBalance < fas[f].balances.initialEth
+        etherBalance.lt(fas[f].balances.initialEth)
       ) {
         throw new Error(`Account ${f} has too low initial ETH balance`);
       }
