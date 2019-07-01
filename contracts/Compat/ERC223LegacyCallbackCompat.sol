@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 
 /// @title makes modern ERC223 contracts compatible with the legacy implementation

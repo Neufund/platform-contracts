@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 
 /// @title token generation and destruction

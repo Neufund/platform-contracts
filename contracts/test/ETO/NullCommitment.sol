@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 import "../../ETO/ICommitment.sol";
 import "../../ICBM/LockedAccount.sol";
