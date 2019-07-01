@@ -42,9 +42,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       await accessPolicy.setUserRole(DEPLOYER, roles.accessController, GLOBAL, TriState.Unset);
       console.log("---------------------------------------------");
       console.log(
-        `New ACCESS_CONTROLLER ${
-          CONFIG.addresses.ACCESS_CONTROLLER
-        } must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
+        // eslint-disable-next-line max-len
+        `New ACCESS_CONTROLLER ${CONFIG.addresses.ACCESS_CONTROLLER} must remove access to deployer ${DEPLOYER} for object ${accessPolicy.address}`,
       );
       console.log("---------------------------------------------");
 

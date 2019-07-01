@@ -11,9 +11,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.isLiveDeployment) {
     console.log("---------------------------------------------");
     console.log(
-      `Must use ${
-        CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE
-      } account to deploy agreements on live network`,
+      // eslint-disable-next-line max-len
+      `Must use ${CONFIG.addresses.PLATFORM_OPERATOR_REPRESENTATIVE} account to deploy agreements on live network`,
     );
     console.log("---------------------------------------------");
     return;

@@ -169,9 +169,8 @@ module.exports = async function inspectETO() {
   );
   const powHasBankAccount = Object.assign(...powDeserializedClaims).hasBankAccount;
   console.log(
-    `Checking if PLATFORM_OPERATOR_WALLET ${
-      config.addresses.PLATFORM_OPERATOR_WALLET
-    } is has bank account`,
+    // eslint-disable-next-line max-len
+    `Checking if PLATFORM_OPERATOR_WALLET ${config.addresses.PLATFORM_OPERATOR_WALLET} is has bank account`,
     ...(powHasBankAccount ? good("YES") : wrong("NO")),
   );
   // check if various agreements are attached
