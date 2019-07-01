@@ -356,7 +356,7 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
       throw new Error(
         `Investor ${
           ticket.address
-        } discount amount value ${parsedDiscountAmount} does not look rights`,
+        } discount amount value ${parsedDiscountAmount} does not look right`,
       );
     }
     const existingTicket = await etoTerms.whitelistTicket(ticket.address);

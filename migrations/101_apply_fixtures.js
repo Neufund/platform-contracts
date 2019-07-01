@@ -70,11 +70,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     if (CONFIG.ISOLATED_UNIVERSE) return;
     // executed only in test deployment
-    await createAccessPolicy(
-      accessPolicy,
-      [{ subject: DEPLOYER, role: roles.eurtDepositManager }],
-      [],
-    );
+    await createAccessPolicy(accessPolicy, [
+      { subject: DEPLOYER, role: roles.eurtDepositManager },
+      { subject: DEPLOYER, role: roles.whitelistAdmin },
+    ]);
 
     console.log("set Euro LockedAccount migration");
     await icbmEuroLock.enableMigration(euroLock.address);
