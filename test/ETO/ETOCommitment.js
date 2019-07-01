@@ -68,7 +68,7 @@ const UNKNOWN_STATE_START_TS = 10000000; // state startOf timeestamps invalid be
 const platformShare = nmk => nmk.div(PLATFORM_SHARE).round(0, 1); // round down
 const investorShare = nmk => nmk.sub(platformShare(nmk));
 
-contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) => {
+contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // basic infrastructure
   let universe;
   let identityRegistry;
@@ -704,7 +704,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("go from whitelist to signing by reaching max cap", async () => {
       // allow to cross max cap from whitelist (fixed-slot)
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(15000000)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -722,7 +722,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should reach max cap in whitelist and stay there until public", async () => {
       // allow to cross max cap from whitelist (fixed-slot)
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -748,7 +748,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should reach max cap in whitelist within min ticket gap and stay there until public", async () => {
       // allow to cross max cap from whitelist (fixed-slot)
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -768,7 +768,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("stay in whitelist if amount below maximum cap because of gap and no fixed slots", async () => {
       // allow to cross max cap from whitelist (fixed-slot)
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -788,7 +788,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [Q18.mul(15000000), Q18.mul(0)],
         [Q18.mul(1), Q18.mul(1)],
         {
-          from: deployer,
+          from: admin,
         },
       );
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS_IN_WHITELIST.mul(
@@ -825,7 +825,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("revert on going above whitelist cap", async () => {
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -853,7 +853,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const slotTranche = slotDp.mul(3873651);
       const wlTranche = dp.mul(1982761);
       await etoTerms.addWhitelisted([investors[0]], [slotTranche], [slotPriceFraction], {
-        from: deployer,
+        from: admin,
       });
       const tranche = slotTranche.add(wlTranche);
 
@@ -873,7 +873,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await etoTerms.addWhitelisted([investors[0]], [tranche1], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       // invest in fix slot that does not count into whitelist cap then cross the cap with whitelist
       await investAmount(investors[0], tranche1, "EUR", tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
@@ -1030,7 +1030,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [slot1Amount, slot2Amount],
         [slotPriceFraction, slotPriceFraction],
         {
-          from: deployer,
+          from: admin,
         },
       );
 
@@ -1114,7 +1114,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(10000000) },
       });
       await etoTerms.addWhitelisted([investors[0], investors[1]], [0, 0], [Q18, Q18], {
-        from: deployer,
+        from: admin,
       });
       await prepareETOForPublic();
 
@@ -1139,7 +1139,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         ovrTokenTerms: { MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0) },
       });
       await etoTerms.addWhitelisted([investors[0]], [0], [Q18], {
-        from: deployer,
+        from: admin,
       });
       await prepareETOForPublic();
       // investing over max cap even with minimum ticket
@@ -1163,7 +1163,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(10000000) },
       });
       await etoTerms.addWhitelisted([investors[1]], [0], [Q18], {
-        from: deployer,
+        from: admin,
       });
       await prepareETOForPublic();
 
@@ -1319,7 +1319,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [0, 0, Q18.mul(10000)],
         [Q18, Q18, Q18.mul(0.3)],
         {
-          from: deployer,
+          from: admin,
         },
       );
       await prepareETOForPublic();
@@ -1696,7 +1696,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [Q18.mul(0), Q18.mul(0)],
         [Q18.mul(1), Q18.mul(1)],
         {
-          from: deployer,
+          from: admin,
         },
       );
 
@@ -1723,7 +1723,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     it("should calculate contribution", async () => {
       // add fixed slots for more tests cases
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(15000000)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       // go to public
       await skipTimeTo(publicStartDate.add(1));
@@ -1757,7 +1757,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("should calculate contribution in whitelist with discounts", async () => {
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -1794,7 +1794,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [fixedAmount, overMaxTicket],
         [Q18.sub(discount), Q18],
         {
-          from: deployer,
+          from: admin,
         },
       );
       const slotPrice = discountedPrice(tokenTermsDict.TOKEN_PRICE_EUR_ULPS, discount);
@@ -1833,7 +1833,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
 
     it("should set max cap flag exceeded in whitelist and public", async () => {
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
-        from: deployer,
+        from: admin,
       });
       const dp = discountedPrice(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -1870,7 +1870,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
         [Q18.mul(15000000), 0],
         [Q18.mul(1), Q18.mul(1)],
         {
-          from: deployer,
+          from: admin,
         },
       );
       // in whitelist
@@ -1925,7 +1925,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const fixedAmount = Q18.mul(20000);
       const overMaxTicket = etoTermsDict.MAX_TICKET_EUR_ULPS.add(10000);
       await etoTerms.addWhitelisted([investors[1]], [overMaxTicket], [Q18], {
-        from: deployer,
+        from: admin,
       });
       const contrib = await etoCommitment.calculateContribution(investors[1], false, fixedAmount);
       expect(contrib[3]).to.be.bignumber.eq(overMaxTicket);
@@ -1935,7 +1935,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
       const fixedAmount = Q18.mul(20000);
       const underMinTicket = etoTermsDict.MIN_TICKET_EUR_ULPS.sub(10000);
       await etoTerms.addWhitelisted([investors[1]], [underMinTicket], [Q18], {
-        from: deployer,
+        from: admin,
       });
       const contrib = await etoCommitment.calculateContribution(investors[1], false, fixedAmount);
       expect(contrib[2]).to.be.bignumber.eq(underMinTicket);
@@ -1974,7 +1974,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
           [0, 0],
           [Q18.mul(1), Q18.mul(1)],
           {
-            from: deployer,
+            from: admin,
           },
         );
         startDate = new web3.BigNumber((await latestTimestamp()) + dayInSeconds);
@@ -2439,7 +2439,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             [Q18.mul(10000), Q18.mul(0), Q18.mul(16000)],
             [Q18.mul(0.4), Q18.mul(1), Q18.mul(0.3)],
             {
-              from: deployer,
+              from: admin,
             },
           );
           const dp = discountedPrice(
@@ -2552,7 +2552,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             [Q18.mul(10000), Q18.mul(0), Q18.mul(16000)],
             [Q18.mul(0.4), Q18.mul(1), Q18.mul(0.3)],
             {
-              from: deployer,
+              from: admin,
             },
           );
           const dp = discountedPrice(
@@ -2623,7 +2623,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             [Q18.mul(10000), Q18.mul(0), Q18.mul(16000)],
             [Q18.mul(0.4), Q18.mul(1), Q18.mul(0.3)],
             {
-              from: deployer,
+              from: admin,
             },
           );
           const dp = discountedPrice(
@@ -2701,7 +2701,7 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
             [Q18.mul(10000), Q18.mul(16000)],
             [Q18.mul(0.4), Q18.mul(0.3)],
             {
-              from: deployer,
+              from: admin,
             },
           );
           const dp = discountedPrice(
@@ -3025,9 +3025,10 @@ contract("ETOCommitment", ([deployer, admin, company, nominee, ...investors]) =>
     // nominee sets legal agreements
     await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
     await etoCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
-    // neu token manager allows ETOCommitment to issue NEU
+    // neu token manager allows ETOCommitment to issue NEU, admin gets whitelist rights
     await createAccessPolicy(accessPolicy, [
       { role: roles.neumarkIssuer, object: neumark.address, subject: etoCommitment.address },
+      { role: roles.whitelistAdmin, object: etoTerms.address, subject: admin },
     ]);
     // nominee is verified
     const oldNomineeClaims = await identityRegistry.getClaims(nominee);
