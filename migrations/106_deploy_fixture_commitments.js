@@ -417,9 +417,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     return etoCommitment;
   }
   console.log(
-    `Going to Claim.. putting signatures ${
-      etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL
-    }`,
+    // eslint-disable-next-line max-len
+    `Going to Claim.. putting signatures ${etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
   );
   await etoCommitment._mockShiftBackTime(signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(

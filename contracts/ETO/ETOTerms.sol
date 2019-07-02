@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 import "./ETODurationTerms.sol";
 import "./ETOTokenTerms.sol";
@@ -9,12 +9,16 @@ import "../Company/ShareholderRights.sol";
 import "../Math.sol";
 import "../Universe.sol";
 import "../KnownInterfaces.sol";
+import "../AccessControl/AccessControlled.sol";
+import "../AccessRoles.sol";
 
 
 /// @title base terms of Equity Token Offering
 /// encapsulates pricing, discounts and whitelisting mechanism
 /// @dev to be split is mixins
 contract ETOTerms is
+    AccessControlled,
+    AccessRoles,
     IdentityRecord,
     Math,
     IContractId,
@@ -78,8 +82,6 @@ contract ETOTerms is
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
 
-    // manages whitelist
-    address public WHITELIST_MANAGER;
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
     Universe public UNIVERSE;
@@ -103,15 +105,6 @@ contract ETOTerms is
 
     // mapping of investors allowed in whitelist
     mapping (address => WhitelistTicket) private _whitelist;
-
-    ////////////////////////
-    // Modifiers
-    ////////////////////////
-
-    modifier onlyWhitelistManager() {
-        require(msg.sender == WHITELIST_MANAGER);
-        _;
-    }
 
     ////////////////////////
     // Events
@@ -145,6 +138,7 @@ contract ETOTerms is
         uint256 publicDiscountFrac,
         ETOTermsConstraints etoTermsConstraints
     )
+        AccessControlled(universe.accessPolicy())
         public
     {
         require(durationTerms != address(0));
@@ -185,7 +179,6 @@ contract ETOTerms is
         SHARE_NOMINAL_VALUE_EUR_ULPS = shareNominalValueEurUlps;
         WHITELIST_DISCOUNT_FRAC = whitelistDiscountFrac;
         PUBLIC_DISCOUNT_FRAC = publicDiscountFrac;
-        WHITELIST_MANAGER = msg.sender;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
 
@@ -252,7 +245,7 @@ contract ETOTerms is
         uint256[] discountsFrac
     )
         external
-        onlyWhitelistManager
+        only(ROLE_WHITELIST_ADMIN)
     {
         require(investors.length == discountAmountsEurUlps.length);
         require(investors.length == discountsFrac.length);

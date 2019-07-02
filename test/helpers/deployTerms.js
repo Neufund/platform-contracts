@@ -85,9 +85,8 @@ export function validateTerms(artifact, terms) {
   for (const input of constructor.inputs) {
     if (!(input.name in camelTerms)) {
       throw new Error(
-        `Input at ${idx} name in constructor "${input.name}" could not be found in terms of ${
-          artifact.contract_name
-        }`,
+        // eslint-disable-next-line max-len
+        `Input at ${idx} name in constructor "${input.name}" could not be found in terms of ${artifact.contract_name}`,
       );
     }
     let typeMatch = false;
@@ -115,9 +114,8 @@ export function validateTerms(artifact, terms) {
     }
     if (!typeMatch) {
       throw new Error(
-        `Type mismatch type ${input.type} name ${input.name} value ${termValue} of ${
-          artifact.contract_name
-        }`,
+        // eslint-disable-next-line max-len
+        `Type mismatch type ${input.type} name ${input.name} value ${termValue} of ${artifact.contract_name}`,
       );
     }
     termsValues.push(termValue);

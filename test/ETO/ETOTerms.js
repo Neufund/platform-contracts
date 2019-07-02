@@ -12,6 +12,8 @@ import {
   deployETOTerms,
 } from "../helpers/deployTerms";
 import { Q18, contractId, web3 } from "../helpers/constants";
+import roles from "../helpers/roles";
+import createAccessPolicy from "../helpers/createAccessPolicy";
 
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
@@ -19,8 +21,9 @@ const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
-contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ...investors]) => {
+contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investors]) => {
   let universe;
+  let accessPolicy;
   let termsConstraints;
   let etoTerms;
   let terms, termsKeys;
@@ -31,7 +34,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   let etoTokenTerms, tokenTerms, tokenTermsKeys;
 
   beforeEach(async () => {
-    [universe] = await deployUniverse(admin, admin);
+    [universe, accessPolicy] = await deployUniverse(admin, admin);
     await deployIdentityRegistry(universe, admin, admin);
 
     [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights(
@@ -67,7 +70,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       constraintsOverride,
     );
 
-    return deployETOTerms(
+    const [deployedTerms, _etoTerms, _termsKeys, termsValues] = await deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
@@ -76,6 +79,11 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       termsConstraints,
       etoTermsOverride,
     );
+    // admin gets whitelist rights
+    await createAccessPolicy(accessPolicy, [
+      { role: roles.whitelistAdmin, object: _etoTerms.address, subject: admin },
+    ]);
+    return [deployedTerms, _etoTerms, _termsKeys, termsValues];
   }
 
   async function verifyTerms(c, keys, dict) {
@@ -462,7 +470,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
   describe("whitelist tests", () => {
     it("add single investor", async () => {
       // no discount
-      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: deployer });
+      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: admin });
       expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, Q18);
       let ticket = await etoTerms.whitelistTicket(investorNoDiscount);
       expect(ticket[0]).to.be.true;
@@ -473,7 +481,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const whitelistedAmount = Q18.mul(500000).add(1);
       const discount = Q18.mul(0.6).sub(1);
       tx = await etoTerms.addWhitelisted([investorDiscount], [whitelistedAmount], [discount], {
-        from: deployer,
+        from: admin,
       });
       expectLogInvestorWhitelisted(tx.logs[0], investorDiscount, whitelistedAmount, discount);
       ticket = await etoTerms.whitelistTicket(investorDiscount);
@@ -488,7 +496,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
         [Q18.mul(0.5), Q18.mul(0.6), Q18.mul(0.7)],
         {
-          from: deployer,
+          from: admin,
         },
       );
       expectLogInvestorWhitelisted(tx.logs[0], investors[0], Q18.mul(500000), Q18.mul(0.5));
@@ -516,14 +524,14 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(ticket[0]).to.be.false;
     });
 
-    it("reverts on add not from deployer", async () => {
+    it("reverts on add to whitelist not from whitelist admin role", async () => {
       await expect(
         etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: investors[3] }),
       ).to.revert;
     });
 
     it("overrides single investor", async () => {
-      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: deployer });
+      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: admin });
       expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, Q18);
       let ticket = await etoTerms.whitelistTicket(investorNoDiscount);
       expect(ticket[0]).to.be.true;
@@ -531,7 +539,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       expect(ticket[2]).to.be.bignumber.eq(Q18);
 
       tx = await etoTerms.addWhitelisted([investorNoDiscount], [Q18.mul(500000)], [Q18.mul(0.6)], {
-        from: deployer,
+        from: admin,
       });
       expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, Q18.mul(500000), Q18.mul(0.6));
       ticket = await etoTerms.whitelistTicket(investorNoDiscount);
@@ -546,7 +554,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
         [Q18.mul(0.5), Q18.mul(0.6), Q18.mul(0.7)],
         {
-          from: deployer,
+          from: admin,
         },
       );
 
@@ -555,7 +563,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
         [Q18.mul(800000), Q18.mul(900000), Q18.mul(1000000)],
         [Q18.mul(0.2), Q18.mul(0.3), Q18.mul(0.4)],
         {
-          from: deployer,
+          from: admin,
         },
       );
 
@@ -577,7 +585,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("fails on setting token price frac to 0", async () => {
       await expect(
-        etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: deployer }),
+        etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: admin }),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
 
       // fail on set many
@@ -587,7 +595,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
           [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
           [0, Q18.mul(0.6), Q18.mul(0.7)],
           {
-            from: deployer,
+            from: admin,
           },
         ),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
@@ -595,7 +603,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("fails on setting token price frac > 1", async () => {
       await expect(
-        etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18.add(1)], { from: deployer }),
+        etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18.add(1)], { from: admin }),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
 
       // fail on set many
@@ -605,7 +613,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
           [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
           [Q18.mul(0.6), Q18.mul(0.7), Q18.add(1)],
           {
-            from: deployer,
+            from: admin,
           },
         ),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
@@ -683,7 +691,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
       const priceFrac = Q18.mul(0.6);
       await etoTerms.addWhitelisted([investorNoDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
 
       await fullAmount(0, Q18.mul(1716.1991), true);
@@ -717,14 +725,14 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("with no amount no discount", async () => {
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
-        from: deployer,
+        from: admin,
       });
       await amountNoFixedSlot(new web3.BigNumber(0), new web3.BigNumber(0));
     });
 
     it("with amount no discount", async () => {
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
-        from: deployer,
+        from: admin,
       });
       await amountNoFixedSlot(0, Q18.mul(8129.1991).add(1));
       // invest again
@@ -733,7 +741,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
 
     it("with amount crossing max ticket no discount", async () => {
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
-        from: deployer,
+        from: admin,
       });
       await amountNoFixedSlot(0, terms.MAX_TICKET_EUR_ULPS.add(1));
     });
@@ -742,7 +750,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2).add(1);
       const priceFrac = Q18.mul(0.6);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, 0, true);
       expect(info[0]).to.be.true;
@@ -760,7 +768,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const priceFrac = Q18.mul(0.6);
       const amount = discountAmount.divToInt(2);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
@@ -776,7 +784,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const priceFrac = Q18.mul(0.6);
       const amount = discountAmount;
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
@@ -792,7 +800,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const priceFrac = Q18.mul(0.6);
       const amount = discountAmount.add(Q18);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
       expect(info[0]).to.be.true;
@@ -811,7 +819,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
       const priceFrac = Q18.mul(0.321).add(1);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
 
       // all amount within discount
@@ -842,7 +850,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.mul(2);
       const priceFrac = Q18.mul(0.6);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(
         investorDiscount,
@@ -863,7 +871,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MIN_TICKET_EUR_ULPS.div(2).round();
       const priceFrac = Q18.mul(0.7);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       const info = await etoTerms.calculateContribution(
         investorDiscount,
@@ -884,7 +892,7 @@ contract("ETOTerms", ([deployer, admin, investorDiscount, investorNoDiscount, ..
       const discountAmount = terms.MIN_TICKET_EUR_ULPS.div(2).round();
       const priceFrac = Q18.mul(0.7);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
-        from: deployer,
+        from: admin,
       });
       let info = await etoTerms.calculateContribution(investorDiscount, 0, 0, discountAmount, true);
       expect(info[2]).to.be.bignumber.eq(discountAmount);

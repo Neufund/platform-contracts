@@ -19,7 +19,7 @@ WORKDIR /usr/src/platform-contracts
 ADD .babelrc package.json yarn.lock ./
 RUN yarn --production
 # all other files
-ADD bin/solc.4.25 /usr/bin/
+ADD bin/solc.4.26 /usr/bin/
 ADD scripts scripts
 RUN ./scripts/solctruffle.sh
 ADD contracts contracts

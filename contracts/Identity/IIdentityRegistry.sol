@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 
 /// @title describes layout of claims in 256bit records stored for identities

@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 import "../Standards/IContractId.sol";
 
@@ -29,6 +29,11 @@ contract ShareholderRights is IContractId {
     ////////////////////////
     // Immutable state
     ////////////////////////
+
+    // todo: split into ShareholderRights and TokenholderRigths where the first one corresponds to rights of real shareholder (nominee, founder)
+    // and the second one corresponds to the list of the token holder (which does not own shares but have identical rights (equity token))
+    // or has a debt token with very different rights
+    // TokenholderRights will be attached to a token via TokenController and will for example say if token participates in dividends or shareholder resolutins
 
     // a right to drag along (or be dragged) on exit
     bool public constant HAS_DRAG_ALONG_RIGHTS = true;

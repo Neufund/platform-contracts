@@ -112,6 +112,20 @@ sudo cp solc4.23 /usr/bin/
 yarn solctruffle
 ```
 
+### Build statically linked solc that runs on alpine
+
+In the cloned repo do the following
+
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE="Release" -DSOLC_LINK_STATIC="ON" -LH
+make -j2
+```
+
+Make sure that `z3lib-dev` is not installed otherwise linker will try to statically link it and
+fail.
+
 ### More tips
 
 you can count current LOC with sloc

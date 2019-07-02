@@ -165,9 +165,8 @@ export async function deployETO(
   console.log(`${nominee} must call amendAgreement on ETOCommitment ${etoCommitment.address}`);
   if (!canControlNeu) {
     console.log(
-      `Must give role ${roles.neumarkIssuer} on neumark ${neumarkAddress} to ETOCommitment ${
-        etoCommitment.address
-      }`,
+      // eslint-disable-next-line max-len
+      `Must give role ${roles.neumarkIssuer} on neumark ${neumarkAddress} to ETOCommitment ${etoCommitment.address}`,
     );
   }
   console.log("-------------------------------------------");
@@ -354,9 +353,8 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
     }
     if (parsedDiscountAmount < 0 || parsedDiscountAmount > 100000000) {
       throw new Error(
-        `Investor ${
-          ticket.address
-        } discount amount value ${parsedDiscountAmount} does not look rights`,
+        // eslint-disable-next-line max-len
+        `Investor ${ticket.address} discount amount value ${parsedDiscountAmount} does not look right`,
       );
     }
     const existingTicket = await etoTerms.whitelistTicket(ticket.address);
@@ -372,9 +370,8 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
     amounts.push(Q18.mul(parsedDiscountAmount));
     priceFracs.push(Q18.mul(parsedPriceFrac));
     console.log(
-      `Will add ${
-        ticket.address
-      } with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
+      // eslint-disable-next-line max-len
+      `Will add ${ticket.address} with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
     );
   }
   console.log(`Adding ${addresses.length}`);

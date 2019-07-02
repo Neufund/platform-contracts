@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.4.26;
 
 
 /// @title standard access roles of the Platform
@@ -15,7 +15,4 @@ contract ICBMRoles {
 
     // may setup LockedAccount, change disbursal mechanism and set migration
     bytes32 internal constant ROLE_LOCKED_ACCOUNT_ADMIN = 0x4675da546d2d92c5b86c4f726a9e61010dce91cccc2491ce6019e78b09d2572e;
-
-    // may setup whitelists and abort whitelisting contract with curve rollback
-    bytes32 internal constant ROLE_WHITELIST_ADMIN = 0xaef456e7c864418e1d2a40d996ca4febf3a7e317fe3af5a7ea4dda59033bbe5c;
 }

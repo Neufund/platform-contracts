@@ -634,6 +634,9 @@
         "ETOInRefundState": {
           "ETH": {
             "wallet": 289
+          },
+          "EUR": {
+            "wallet": 10265
           }
         }
       },
