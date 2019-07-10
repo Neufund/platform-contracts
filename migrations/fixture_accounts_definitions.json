@@ -30,6 +30,49 @@
       "ETH": 161.1289798
     }
   },
+  "INV_ETH_EUR_ICBM_KYC_ICBM_UNLOCK": {
+    "address": "0x7F2BE389E2b13DA09D325332E3cb718CD751B7C6",
+    "type": "investor",
+    "identityClaims": {
+      "isVerified": true
+    },
+    "seed": "timber rely gap brown useful craft level lounge volume vote flush punch vanish casino fold cliff hollow maximum flip coast barrel copy quit globe",
+    "derivationPath": "m/44'/60'/0'/0/0",
+    "privateKey": "0xc8f0b2c1a527e9c69495341ed9eb4ba51943abd1f35bed2e08fa29895ad902e2",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 541.2871
+    },
+    "icbmCommitment": {
+      "ETH": 336.7632,
+      "unlockEther": true,
+      "EUR": 761261,
+      "unlockEuro": true
+    }
+  },
+  "INV_ETH_EUR_ICBM_KYC_UNLOCK": {
+    "address": "0x7F2BE389E2b13DA09D325332E3cb718CD751B7C6",
+    "type": "investor",
+    "seed": "timber rely gap brown useful craft level lounge volume vote flush punch vanish casino fold cliff hollow maximum flip coast barrel copy quit globe",
+    "derivationPath": "m/44'/60'/0'/0/0",
+    "privateKey": "0xc8f0b2c1a527e9c69495341ed9eb4ba51943abd1f35bed2e08fa29895ad902e2",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 541.2871
+    },
+    "icbmCommitment": {
+      "ETH": 336.7632,
+      "EUR": 761261
+    },
+    "icbmMigrations": {
+      "etherToken": true,
+      "euroToken": true,
+      "unlockEther": true,
+      "unlockEuro": true
+    }
+  },
   "INV_ETH_ICBM_NO_KYC_2": {
     "address": "0xDE185A5c2Bd3913fAC1F64102e3DEFD9E1797C4d",
     "type": "investor",

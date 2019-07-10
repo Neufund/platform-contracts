@@ -16,6 +16,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipStep(__filename)) return;
 
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const Commitment = artifacts.require(CONFIG.artifacts.ICBM_COMMITMENT);
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
   const DEPLOYER = getDeployerAccount(network, accounts);
 
@@ -25,6 +26,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
       universe = await Universe.at(CONFIG.UNIVERSE_ADDRESS);
     } else {
       universe = await Universe.deployed();
+    }
+    let commitmentAddress;
+    if (CONFIG.ICBM_COMMITMENT_ADDRESS) {
+      commitmentAddress = CONFIG.ICBM_COMMITMENT_ADDRESS;
+    } else {
+      commitmentAddress = (await Commitment.deployed()).address;
     }
     if (CONFIG.isLiveDeployment) {
       const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
@@ -93,6 +100,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       CONFIG,
       DEPLOYER,
       UNIVERSE_ADDRESS: universe.address,
+      ICBM_COMMITMENT_ADDRESS: commitmentAddress,
       ROLES: roles,
       KNOWN_INTERFACES: knownInterfaces,
       INTERFACE_ARTIFACTS: interfaceArtifacts,
