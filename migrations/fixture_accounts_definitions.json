@@ -686,6 +686,86 @@
       "claim": ["ETOInClaimState"]
     }
   },
+  "INV_HAS_EUR_HAS_KYC_2": {
+    "address": "0xAF45584b7BcD4dc342932A41660193b80D59E35E",
+    "type": "investor",
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
+    "seed": "winter trim glare park arch pact silent reunion steak giraffe birth patrol ladder keen tumble release february fatal seek tribe consider jungle ten abuse",
+    "derivationPath": "m/44'/60'/0'/0/0",
+    "privateKey": "0x02e57a663eb5018fdc764f37d2a3cb447200fc8e41f63ba645fd895b5b82c359",
+    "balances": {
+      "etherToken": 34.53342,
+      "euroToken": 10278127.1988,
+      "initialEth": 7638.1829
+    },
+    "etoParticipations": {
+      "whitelist": {
+        "ETOInWhitelistState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPublicState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInSigningState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInClaimState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInPayoutState": {
+          "discountAmount": 0,
+          "discount": 0
+        },
+        "ETOInRefundState": {
+          "discountAmount": 0,
+          "discount": 0
+        }
+      },
+      "presale": {
+        "ETOInWhitelistState": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
+        "ETOInPublicState": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
+        "ETOInSigningState": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
+        "ETOInClaimState": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
+        "ETOInRefundState": {
+          "ETH": {
+            "wallet": 289
+          },
+          "EUR": {
+            "wallet": 10265
+          }
+        }
+      },
+      "claim": ["ETOInClaimState"]
+    }
+  },
   "INV_HAS_ETH_T_NO_KYC": {
     "address": "0x6C6f9115BE53c4424016f28d916196B29fF222dF",
     "type": "investor",
