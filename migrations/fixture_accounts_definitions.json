@@ -52,19 +52,22 @@
     }
   },
   "INV_ETH_EUR_ICBM_KYC_UNLOCK": {
-    "address": "0x7F2BE389E2b13DA09D325332E3cb718CD751B7C6",
+    "address": "0xBA9807E260E1E162F46a5ACd228153EdFE2604eC",
     "type": "investor",
-    "seed": "timber rely gap brown useful craft level lounge volume vote flush punch vanish casino fold cliff hollow maximum flip coast barrel copy quit globe",
+    "identityClaims": {
+      "isVerified": true
+    },
+    "seed": "cigar swap vacuum venue south exchange lesson finger melody admit bright regular cancel fan clinic door pluck jewel budget lucky brother fine gym access",
     "derivationPath": "m/44'/60'/0'/0/0",
-    "privateKey": "0xc8f0b2c1a527e9c69495341ed9eb4ba51943abd1f35bed2e08fa29895ad902e2",
+    "privateKey": "0xb48109435808dc0640813c46523f7537a5952980a6c1de39d4bb8eb2f543259f",
     "balances": {
       "etherToken": 0,
       "euroToken": 0,
-      "initialEth": 541.2871
+      "initialEth": 871.28982
     },
     "icbmCommitment": {
-      "ETH": 336.7632,
-      "EUR": 761261
+      "ETH": 182.17261,
+      "EUR": 8834.23
     },
     "icbmMigrations": {
       "etherToken": true,
