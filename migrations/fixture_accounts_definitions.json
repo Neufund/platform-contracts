@@ -1493,5 +1493,31 @@
       "hasBankAccount": true
     },
     "name": "demoinvestor30"
+  },
+  "NOMINEE_EMPTY_HAS_KYC": {
+    "seed": "noodle dad faith illness body fiction north lady occur bid human enter example ladder blanket multiply empower blast item royal error session basic letter",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0xdd8ddd4a365fe1d64afc58127994ad2a70b55e607b2f9c348be30b5a57060857",
+    "address": "0xb26D72CF6cfb529Fb71f78dEdBF21F608CFc43FA",
+    "type": "nominee",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 10
+    },
+    "notes": ""
+  },
+  "NOMINEE_EMPTY": {
+    "seed": "fix curve drink believe upon stay obtain twice student rigid cool dust coin update found chair actress opera detect day latin explain mom sign",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x89b9d7cf9bed0e3bf26623322802a7e3bbb5df89b888e44607713e0493a2774a",
+    "address": "0x1aAF365CC3B782D92471f487dE08D5706896a512",
+    "type": "nominee",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 100
+    },
+    "notes": ""
   }
 }

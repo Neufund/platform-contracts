@@ -75,7 +75,7 @@ const validateNumber = text => {
         type: "list",
         name: "type",
         message: "Choose type of the fixture:",
-        choices: ["investor", "issuer"],
+        choices: ["investor", "issuer", "nominee"],
       },
       {
         type: "input",
