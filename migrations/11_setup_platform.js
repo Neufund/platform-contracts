@@ -63,6 +63,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       CONFIG.addresses.GAS_EXCHANGE,
       CONFIG.addresses.TOKEN_RATE_ORACLE,
       CONFIG.addresses.GAS_STIPEND_SERVICE,
+      CONFIG.addresses.INTERNAL_ETO_LISTING_API,
     ];
     const serviceInitialBalance = CONFIG.Q18.mul(CONFIG.isLiveDeployment ? 0.5 : 100);
     for (const service of transactingServices) {
