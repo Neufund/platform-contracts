@@ -197,6 +197,7 @@ module.exports = async function inspectETO() {
     TOKEN_RATE_ORACLE: config.addresses.TOKEN_RATE_ORACLE,
     GAS_EXCHANGE_CONTRACT: await universe.gasExchange(),
     GAS_STIPEND_SERVICE: config.addresses.GAS_STIPEND_SERVICE,
+    INTERNAL_ETO_LISTING_API: config.addresses.INTERNAL_ETO_LISTING_API,
   };
   for (const service of Object.keys(transactingServices)) {
     const serviceBalance = await promisify(web3.eth.getBalance)(transactingServices[service]);
