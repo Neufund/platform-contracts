@@ -231,7 +231,9 @@ contract PlaceholderEquityTokenController is
     function changeTokenController(IControllerGovernance newController)
         public
         onlyStates(GovState.Funded, GovState.Closed)
-        onlyCompany
+        // we allow account with that role to perform controller migrations, initially platform account is used
+        // company may move to separate access policy contract and fully overtake migration control if they wish
+        only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         require(newController != address(this));
         // must be migrated with us as a source
@@ -383,7 +385,7 @@ contract PlaceholderEquityTokenController is
     function migrateTokenController(IControllerGovernance oldController, bool transfersEnables)
         public
         onlyState(GovState.Setup)
-        onlyCompany
+        only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         require(oldController.newTokenController() == address(0), "NF_OLD_CONTROLLED_ALREADY_MIGRATED");
         // migrate cap table
