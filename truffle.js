@@ -141,12 +141,14 @@ module.exports = {
     },
     nano_live: {
       network_id: 1,
-      gas: 6500000,
+      gas: 1500000,
       provider: nanoProvider(
-        "http://eth-node.neuprd.net:8545",
+        "https://nd.neufund.org/",
         // "44'/60'/0'/0",
+        "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
-        "44'/60'/105'/0", // legal rep (M)
+        // "44'/60'/105'/0", // legal rep (M)
+        // "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
         "nano_live",
       ),
