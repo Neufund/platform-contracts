@@ -2977,12 +2977,14 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     // deploy equity token
     if (opts.ovrEquityToken) {
+      // add upgrade admin role to admin account, apply to all contracts
+      await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
       // change token controller
       await equityTokenController.migrateTokenController(oldTokenController.address, false, {
-        from: company,
+        from: admin,
       });
       await oldTokenController.changeTokenController(equityTokenController.address, {
-        from: company,
+        from: admin,
       });
       // anyone can change when allowed by controller
       await equityToken.changeTokenController(equityTokenController.address);

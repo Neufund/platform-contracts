@@ -22,6 +22,8 @@ import {
   erc677TokenTests,
   standardTokenTests,
 } from "../helpers/tokenTestCases";
+import createAccessPolicy from "../helpers/createAccessPolicy";
+import roles from "../helpers/roles";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
@@ -41,7 +43,7 @@ const MockPlaceholderEquityTokenController = artifacts.require(
 contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
   let equityToken;
   let equityTokenController;
-  // let accessPolicy;
+  let accessPolicy;
   let universe;
   let etoTerms;
   let etoTermsDict;
@@ -53,7 +55,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   let termsConstraints;
 
   beforeEach(async () => {
-    [universe] = await deployUniverse(admin, admin);
+    [universe, accessPolicy] = await deployUniverse(admin, admin);
     await deployPlatformTerms(universe, admin);
     [shareholderRights] = await deployShareholderRights(ShareholderRights);
     [durationTerms] = await deployDurationTerms(ETODurationTerms);
@@ -543,20 +545,22 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
         CommitmentState.Claim,
       );
+      // add upgrade admin role to admin account, apply to all contracts
+      await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
     });
 
     it("should migrate token controller", async () => {
-      // deploy new mocked token controller
+      // deploy new mocked token controller for same company
       const newController = await MockPlaceholderEquityTokenController.new(
         universe.address,
         company,
       );
       // migrate data from parent
       await newController.migrateTokenController(equityTokenController.address, false, {
-        from: company,
+        from: admin,
       });
       const tx = await equityTokenController.changeTokenController(newController.address, {
-        from: company,
+        from: admin,
       });
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
       expect(await equityTokenController.newTokenController()).to.eq(newController.address);
@@ -589,14 +593,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const migratedTx = await newController.migrateTokenController(
         equityTokenController.address,
         true,
-        { from: company },
+        { from: admin },
       );
       expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
       expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
 
       // now migrate existing token controller to a new one
       const tx = await equityTokenController.changeTokenController(newController.address, {
-        from: company,
+        from: admin,
       });
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
       expect(await equityTokenController.newTokenController()).to.eq(newController.address);
@@ -628,24 +632,24 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(oldInNewAddress).to.eq(equityTokenController.address);
     });
 
-    it("rejects migrating token controller not by company", async () => {
+    it("rejects migrating token controller not by upgrade admin", async () => {
       // deploy new mocked token controller
       const newController = await PlaceholderEquityTokenController.new(universe.address, company);
       await expect(
         newController.migrateTokenController(equityTokenController.address, true, {
-          from: nominee,
+          from: company,
         }),
       ).to.revert;
       await newController.migrateTokenController(equityTokenController.address, true, {
-        from: company,
+        from: admin,
       });
       await expect(
         equityTokenController.changeTokenController(newController.address, {
-          from: nominee,
+          from: company,
         }),
       ).to.revert;
       await equityTokenController.changeTokenController(newController.address, {
-        from: company,
+        from: admin,
       });
     });
 
@@ -655,14 +659,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         company,
       );
       await newController.migrateTokenController(equityTokenController.address, true, {
-        from: company,
+        from: admin,
       });
       // mockup old controller changing change chain
       await newController._overrideOldController(investors[0]);
       // now there's mismatch between old and new controller chain, so revert
       await expect(
         equityTokenController.changeTokenController(newController.address, {
-          from: company,
+          from: admin,
         }),
       ).to.be.rejectedWith("NF_NOT_MIGRATED_FROM_US");
     });
@@ -671,20 +675,20 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // first migration
       const newController = await PlaceholderEquityTokenController.new(universe.address, company);
       await newController.migrateTokenController(equityTokenController.address, true, {
-        from: company,
+        from: admin,
       });
       await equityTokenController.changeTokenController(newController.address, {
-        from: company,
+        from: admin,
       });
       // second migration
       const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
       const migratedTx = await newController2.migrateTokenController(newController.address, true, {
-        from: company,
+        from: admin,
       });
       expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
       expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
       const tx = await newController.changeTokenController(newController2.address, {
-        from: company,
+        from: admin,
       });
       expect(await newController.state()).to.be.bignumber.eq(GovState.Migrated);
       expect(await newController.newTokenController()).to.eq(newController2.address);
@@ -733,36 +737,36 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(await newController.state()).to.be.bignumber.eq(GovState.Offering);
       await expect(
         newController.migrateTokenController(equityTokenController.address, true, {
-          from: company,
+          from: admin,
         }),
       ).to.be.rejectedWith("NF_INV_STATE");
       // migrate
       await newController._overrideState(GovState.Setup);
       await newController.migrateTokenController(equityTokenController.address, true, {
-        from: company,
+        from: admin,
       });
       await equityTokenController.changeTokenController(newController.address, {
-        from: company,
+        from: admin,
       });
       const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
       // we prevent with migrating data from already migrated controller
       await expect(
         newController2.migrateTokenController(equityTokenController.address, true, {
-          from: company,
+          from: admin,
         }),
       ).to.be.rejectedWith("NF_OLD_CONTROLLED_ALREADY_MIGRATED");
-      await newController2.migrateTokenController(newController.address, true, { from: company });
+      await newController2.migrateTokenController(newController.address, true, { from: admin });
       // cannot migrate when company is closing
       await newController._overrideState(GovState.Closing);
       await expect(
         newController.changeTokenController(newController2.address, {
-          from: company,
+          from: admin,
         }),
       ).to.be.rejectedWith("NF_INV_STATE");
       // can migrate when company is closed
       await newController._overrideState(GovState.Closed);
       await newController.changeTokenController(newController2.address, {
-        from: company,
+        from: admin,
       });
     });
 
