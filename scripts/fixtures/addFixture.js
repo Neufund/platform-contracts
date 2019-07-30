@@ -16,6 +16,7 @@ const validateNumber = text => {
   const accounts = JSON.parse(fs.readFileSync(fixturesDataPath));
 
   const etoList = [
+    "ETOInSetupState",
     "ETOInWhitelistState",
     "ETOInPublicState",
     "ETOInSigningState",
@@ -34,7 +35,7 @@ const validateNumber = text => {
     return;
   }
 
-  const emptyFixture = {
+  const fixtureTemplate = {
     seed: "",
     derivationPath: "m/44'/0'/0'/0/0",
     privateKey: "",
@@ -56,7 +57,7 @@ const validateNumber = text => {
     },
     icbmMigrations: {
       euroToken: false,
-      etherToken: true,
+      etherToken: false,
     },
     etoParticipations: {
       whitelist: {},
@@ -67,11 +68,36 @@ const validateNumber = text => {
     notes: "",
   };
 
+  const cleanUpFixture = fixture => {
+    const cleanProperties = obj => {
+      const isEmptyObjectOrList = input => {
+        if (typeof input === typeof []) {
+          return input.length === 0;
+        }
+
+        return !input || Object.keys(input).length === 0;
+      };
+
+      Object.keys(obj).forEach(
+        // eslint-disable-next-line no-param-reassign
+        key => (!obj[key] || isEmptyObjectOrList(obj[key])) && delete obj[key],
+      );
+    };
+
+    cleanProperties(fixture.balances);
+    cleanProperties(fixture.icbmCommitment);
+    cleanProperties(fixture.icbmMigrations);
+    cleanProperties(fixture.etoParticipations);
+    cleanProperties(fixture);
+
+    return fixture;
+  };
+
   console.info("To generate correct fixture please open websit: http://www.iancoleman.io/bip39/");
 
   const isInvestor = answers => answers.type === "investor";
-  const isNominee = answers => answers.type === "nominee"
-  const isIssuer = answers => answers.type === "issuer"
+  const isNominee = answers => answers.type === "nominee";
+  const isIssuer = answers => answers.type === "issuer";
 
   inquirer
     .prompt([
@@ -97,7 +123,7 @@ const validateNumber = text => {
         type: "input",
         name: "derivationPath",
         message: "Provide derivation path for this account. Default: ",
-        default: emptyFixture.derivationPath,
+        default: fixtureTemplate.derivationPath,
       },
       {
         type: "input",
@@ -144,22 +170,24 @@ const validateNumber = text => {
         type: "input",
         name: "initialEthBalance",
         message: "Set initial ETH balance:",
-        default: emptyFixture.balances.initialEth,
+        default: fixtureTemplate.balances.initialEth,
         validate: validateNumber,
       },
       {
         type: "input",
         name: "etherIcbmCommitment",
         message: "Input ICBM commitment in ETH:",
-        default: emptyFixture.icbmCommitment.ETH,
+        default: fixtureTemplate.icbmCommitment.ETH,
         validate: validateNumber,
+        when: isInvestor,
       },
       {
         type: "input",
         name: "euroIcbmCommitment",
         message: "Input ICBM commitment in EUR:",
-        default: emptyFixture.icbmCommitment.EUR,
+        default: fixtureTemplate.icbmCommitment.EUR,
         validate: validateNumber,
+        when: isInvestor,
       },
       {
         type: "checkbox",
@@ -173,73 +201,72 @@ const validateNumber = text => {
             name: "etherToken",
           },
         ],
-        when: anwsers => {
-          return anwsers.euroIcbmCommitment != 0 || anwsers.etherIcbmCommitment != 0 
-        }
+        when: isInvestor,
       },
       {
         type: "input",
         name: "etherTokenBalace",
         message: "Set initial etherToken balance:",
-        default: emptyFixture.balances.etherToken,
+        default: fixtureTemplate.balances.etherToken,
         validate: validateNumber,
+        when: isInvestor,
       },
       {
         type: "input",
         name: "euroTokenBalace",
         message: "Set initial euroToken balance:",
-        default: emptyFixture.balances.euroToken,
+        default: fixtureTemplate.balances.euroToken,
         validate: validateNumber,
+        when: isInvestor,
       },
       {
         type: "checkbox",
         message: "Select ETO to be whitelisted:",
         name: "etoWhitelisted",
         choices: etoList,
-        when: isInvestor
+        when: isInvestor,
       },
       {
         type: "checkbox",
         message: "Select ETO to participate in Presale:",
         name: "etoPresale",
         choices: etoList,
-        when: isInvestor
+        when: isInvestor,
       },
       {
         type: "checkbox",
         message: "Select ETO to participate in Sale:",
         name: "etoSale",
         choices: etoList,
-        when: isInvestor
+        when: isInvestor,
       },
       {
         type: "checkbox",
         message: "Select ETO to claim token from:",
         name: "etoClaim",
         choices: etoList,
-        when: isInvestor
+        when: isInvestor,
       },
       {
         type: "checkbox",
         message: "Select for which ETO this nominee should operate:",
         name: "notarizes",
         choices: etoList,
-        when: isNominee
+        when: isNominee,
       },
       {
         type: "checkbox",
         message: "",
         name: "deploys",
         choices: etoList,
-        when: isIssuer
+        when: isIssuer,
       },
       {
         type: "input",
         name: "notes",
         message: "Do you want to add any notes?",
-        default: emptyFixture.notes,
+        default: fixtureTemplate.notes,
       },
-
     ])
     .then(answers => {
       const complexProperties = [
@@ -259,49 +286,48 @@ const validateNumber = text => {
       Object.entries(answers)
         .filter(([property, _]) => !complexProperties.includes(property))
         .forEach(([property, anwser]) => {
-          emptyFixture[property] = anwser;
+          fixtureTemplate[property] = anwser;
         });
 
       answers.identityClaims.forEach(claim => {
-        emptyFixture.identityClaims[claim] = true;
+        fixtureTemplate.identityClaims[claim] = true;
       });
+
+      fixtureTemplate.balances.initialEth = Number(answers.initialEthBalance);
 
       if (answers.icbmMigrations) {
         answers.icbmMigrations.forEach(token => {
-          emptyFixture.icbmMigrations[token] = true;
+          fixtureTemplate.icbmMigrations[token] = true;
         });
       }
 
-      if (isInvestor(answers))
-      {
+      if (isInvestor(answers)) {
         answers.etoWhitelisted.forEach(eto => {
-          emptyFixture.etoParticipations.whitelist[eto] = { discount: 0.5, discountAmount: 500000 };
+          fixtureTemplate.etoParticipations.whitelist[eto] = {
+            discount: 0.5,
+            discountAmount: 500000,
+          };
         });
 
         answers.etoPresale.forEach(eto => {
-          emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
+          fixtureTemplate.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
         });
 
         answers.etoSale.forEach(eto => {
-          emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
+          fixtureTemplate.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
         });
 
         answers.etoClaim.forEach(eto => {
-          emptyFixture.etoParticipations.claim.push(eto);
+          fixtureTemplate.etoParticipations.claim.push(eto);
         });
+
+        fixtureTemplate.balances.etherToken = Number(answers.etherTokenBalace);
+        fixtureTemplate.balances.euroToken = Number(answers.euroTokenBalace);
+        fixtureTemplate.icbmCommitment.EUR = Number(answers.euroIcbmCommitment);
+        fixtureTemplate.icbmCommitment.ETH = Number(answers.eetherIcbmCommitment);
       }
 
-      if(isNominee(answers)) {
-
-      }
-
-      emptyFixture.balances.initialEth = Number(answers.initialEthBalance);
-      emptyFixture.balances.etherToken = Number(answers.etherTokenBalace);
-      emptyFixture.balances.euroToken = Number(answers.euroTokenBalace);
-      emptyFixture.icbmCommitment.EUR = Number(answers.euroIcbmCommitment);
-      emptyFixture.icbmCommitment.ETH = Number(answers.eetherIcbmCommitment);
-
-      return emptyFixture;
+      return cleanUpFixture(fixtureTemplate);
     })
     .then(fixture => {
       accounts[newFixtureName] = fixture;

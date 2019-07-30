@@ -810,16 +810,7 @@
       "euroToken": 0,
       "initialEth": 5
     },
-    "notarizes": [
-      "ETOInSetupState",
-      "ETOInWhitelistState",
-      "ETOInPublicState",
-      "ETOInSigningState",
-      "ETOInClaimState",
-      "ETOInPayoutState",
-      "ETOInRefundState",
-      "ETONoStartDate"
-    ]
+    "notarizes": ["ETOInSetupState", "ETONoStartDate"]
   },
   "ISSUER_BLANK_QA": {
     "address": "0xd9f858Ad167506a9D25FD6007BcDb7AE61bc5F87",
@@ -1529,5 +1520,101 @@
       "initialEth": 100
     },
     "notes": ""
+  },
+  "NOMINEE_WHITELIST": {
+    "seed": "wing laptop slender apology craft balcony renew multiply side elder floor accuse success worth globe immense now story nice hurry teach ethics inform wait",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x28dfaba7648d817928ed9034afb1b35a9943a9d67b66b445b7c1440db995327a",
+    "address": "0x3cBF04332fcCD88B1413430e5EA89c9BD4cA0bd0",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInWhitelistState"]
+  },
+  "NOMINEE_PUBLIC": {
+    "seed": "quit brief regret sound wagon tiny aspect forget hunt home believe again reflect skill renew chronic million cake before dentist off income bean recipe",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x5fcc0fc615173cde8bb7a5c3e8d4cf09b3c100abc5e8761ab3ab0dd5e7063fae",
+    "address": "0xAfb3Af3243A95feFA75BE1282D3739ca696fE31d",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInPublicState"]
+  },
+  "NOMINEE_SIGNING": {
+    "seed": "iron armed beauty scale prevent priority kitchen vintage celery accident saddle horror father insane coast give key west job hedgehog guilt spike viable section",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x50cb1bc9543624f48969adebcac279477f5063be67acc5a7dc6b76f36b287fce",
+    "address": "0x20879bbA708b97b795fcD39D15A47CAf83165d1E",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInSigningState"]
+  },
+  "NOMINEE_CLAIMS": {
+    "seed": "key ugly mimic budget abstract husband unlock violin ethics portion moon chapter clinic vague direct yard venue tiger decide private fiber mansion orchard reward",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0xcb4adfcec7171447880405d2c29ee6d9cb8cacf3421b23dc6a626b5855b78343",
+    "address": "0x5Ebe8eF595F45e1e6Dee0D629c899cAe5170B884",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInClaimState"]
+  },
+  "NOMINEE_PAYOUT": {
+    "seed": "doctor good maze ketchup wall peasant retire broccoli myth brick auction journey adapt sick valid nice shoot veteran soul cook school uncle you panel",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x4be5d8a539d8f2e4a8755181ad45abbfbfc07c3b3f9632bfd5af26e3f251c142",
+    "address": "0x5A72Dce8025165C416F77739c157403E978738dE",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInPayoutState"]
+  },
+  "NOMINEE_REFUND": {
+    "seed": "process cherry royal law capable neck depart state gym rib casual swamp recipe pony defy clay boring prevent receive liquid wife census venue trip",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x3de12f4c33c37ee742d2ffeba769df6b8a3cbff00d00438a3607c0c76b74a8b7",
+    "address": "0x9bC06F070f3759Ff9B4C7Dc0e47b67296F7A5e72",
+    "type": "nominee",
+    "balances": {
+      "initialEth": 100
+    },
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "notarizes": ["ETOInRefundState"]
   }
 }
