@@ -69,6 +69,10 @@ const validateNumber = text => {
 
   console.info("To generate correct fixture please open websit: http://www.iancoleman.io/bip39/");
 
+  const isInvestor = answers => answers.type === "investor";
+  const isNominee = answers => answers.type === "nominee"
+  const isIssuer = answers => answers.type === "issuer"
+
   inquirer
     .prompt([
       {
@@ -169,6 +173,9 @@ const validateNumber = text => {
             name: "etherToken",
           },
         ],
+        when: anwsers => {
+          return anwsers.euroIcbmCommitment != 0 || anwsers.etherIcbmCommitment != 0 
+        }
       },
       {
         type: "input",
@@ -189,32 +196,50 @@ const validateNumber = text => {
         message: "Select ETO to be whitelisted:",
         name: "etoWhitelisted",
         choices: etoList,
+        when: isInvestor
       },
       {
         type: "checkbox",
         message: "Select ETO to participate in Presale:",
         name: "etoPresale",
         choices: etoList,
+        when: isInvestor
       },
       {
         type: "checkbox",
         message: "Select ETO to participate in Sale:",
         name: "etoSale",
         choices: etoList,
+        when: isInvestor
       },
       {
         type: "checkbox",
         message: "Select ETO to claim token from:",
         name: "etoClaim",
         choices: etoList,
+        when: isInvestor
       },
-
+      {
+        type: "checkbox",
+        message: "Select for which ETO this nominee should operate:",
+        name: "notarizes",
+        choices: etoList,
+        when: isNominee
+      },
+      {
+        type: "checkbox",
+        message: "",
+        name: "deploys",
+        choices: etoList,
+        when: isIssuer
+      },
       {
         type: "input",
         name: "notes",
         message: "Do you want to add any notes?",
         default: emptyFixture.notes,
       },
+
     ])
     .then(answers => {
       const complexProperties = [
@@ -241,25 +266,34 @@ const validateNumber = text => {
         emptyFixture.identityClaims[claim] = true;
       });
 
-      answers.icbmMigrations.forEach(token => {
-        emptyFixture.icbmMigrations[token] = true;
-      });
+      if (answers.icbmMigrations) {
+        answers.icbmMigrations.forEach(token => {
+          emptyFixture.icbmMigrations[token] = true;
+        });
+      }
 
-      answers.etoWhitelisted.forEach(eto => {
-        emptyFixture.etoParticipations.whitelist[eto] = { discount: 0.5, discountAmount: 500000 };
-      });
+      if (isInvestor(answers))
+      {
+        answers.etoWhitelisted.forEach(eto => {
+          emptyFixture.etoParticipations.whitelist[eto] = { discount: 0.5, discountAmount: 500000 };
+        });
 
-      answers.etoPresale.forEach(eto => {
-        emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
-      });
+        answers.etoPresale.forEach(eto => {
+          emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
+        });
 
-      answers.etoSale.forEach(eto => {
-        emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
-      });
+        answers.etoSale.forEach(eto => {
+          emptyFixture.etoParticipations.presale[eto] = { icbm: 0, wallet: 0 };
+        });
 
-      answers.etoClaim.forEach(eto => {
-        emptyFixture.etoParticipations.claim.push(eto);
-      });
+        answers.etoClaim.forEach(eto => {
+          emptyFixture.etoParticipations.claim.push(eto);
+        });
+      }
+
+      if(isNominee(answers)) {
+
+      }
 
       emptyFixture.balances.initialEth = Number(answers.initialEthBalance);
       emptyFixture.balances.etherToken = Number(answers.etherTokenBalace);

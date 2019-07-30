@@ -809,7 +809,17 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
-    }
+    },
+    "notarizes": [
+      "ETOInSetupState",
+      "ETOInWhitelistState",
+      "ETOInPublicState",
+      "ETOInSigningState",
+      "ETOInClaimState",
+      "ETOInPayoutState",
+      "ETOInRefundState",
+      "ETONoStartDate"
+    ]
   },
   "ISSUER_BLANK_QA": {
     "address": "0xd9f858Ad167506a9D25FD6007BcDb7AE61bc5F87",
