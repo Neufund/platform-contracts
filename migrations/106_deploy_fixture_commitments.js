@@ -183,6 +183,16 @@ function getClaimingAddressesForEto(etoDefinition, fas) {
   return addresses;
 }
 
+function findNomineeForEto(etoName, fas) {
+  for (const f of Object.keys(fas)) {
+    if (fas[f].notarizes && fas[f].notarizes.includes(etoName)) {
+      return fas[f];
+    }
+  }
+
+  throw new Error(`Cannot find Nominee for eto ${etoName}`);
+}
+
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
@@ -216,11 +226,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
         `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
       );
 
+      const nominee = findNomineeForEto(etoVars[0], fas);
+
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
         universe,
-        fas.NOMINEE_NEUMINI,
+        nominee,
         etoVars[1],
         etoTerms,
         fas,
