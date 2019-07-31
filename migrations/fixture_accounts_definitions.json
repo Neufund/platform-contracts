@@ -1502,11 +1502,13 @@
     "address": "0xb26D72CF6cfb529Fb71f78dEdBF21F608CFc43FA",
     "type": "nominee",
     "balances": {
-      "etherToken": 0,
-      "euroToken": 0,
       "initialEth": 10
     },
-    "notes": ""
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    }
   },
   "NOMINEE_EMPTY": {
     "seed": "fix curve drink believe upon stay obtain twice student rigid cool dust coin update found chair actress opera detect day latin explain mom sign",
@@ -1515,11 +1517,8 @@
     "address": "0x1aAF365CC3B782D92471f487dE08D5706896a512",
     "type": "nominee",
     "balances": {
-      "etherToken": 0,
-      "euroToken": 0,
       "initialEth": 100
-    },
-    "notes": ""
+    }
   },
   "NOMINEE_WHITELIST": {
     "seed": "wing laptop slender apology craft balcony renew multiply side elder floor accuse success worth globe immense now story nice hurry teach ethics inform wait",
