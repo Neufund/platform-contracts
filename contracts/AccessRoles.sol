@@ -58,4 +58,6 @@ contract AccessRoles {
     // allows to manage feedisbursal controller keccak("DisbursalManager")
     bytes32 internal constant ROLE_DISBURSAL_MANAGER = 0x677f87f7b7ef7c97e42a7e6c85c295cf020c9f11eea1e49f6bf847d7aeae1475;
 
+    // allows to upgrade company/issuer contracts which are also equity token controllers keccak("CompanyUpgradeAdmin")
+    bytes32 internal constant ROLE_COMPANY_UPGRADE_ADMIN = 0xfef15747c403732d986b29a92a880d8f2fb886b99417c8bbef226f85885ca924;
 }
