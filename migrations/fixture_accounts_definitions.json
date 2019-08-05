@@ -1615,5 +1615,25 @@
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInRefundState"]
+  },
+  "ISSUER_HAS_KYC_AND_FILLED_COMPANY_DATA": {
+    "seed": "nice only emerge chicken profit host cabin usual rally venue ship immune upon pet smile parent opera mirror fabric imitate grid vessel manual yellow",
+    "derivationPath": "m/44'/0'/0'/0/0",
+    "privateKey": "0x75897336c02d771d09d7fde704531fcdd3aa49808f2f1ef3e56fdd2e45e509bc",
+    "address": "0x3DdD82C6B1ad4f4d4567626307f1868CDFEBcbb9",
+    "type": "issuer",
+    "balances": {},
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": false,
+      "isSophisticatedInvestor": false
+    },
+    "icbmCommitment": {},
+    "icbmMigrations": {},
+    "etoParticipations": {
+      "whitelist": {},
+      "presale": {},
+      "sale": {}
+    }
   }
 }
