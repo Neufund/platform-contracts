@@ -1,0 +1,15 @@
+actions:
+  wait:
+    duration: 5days
+  vote:
+    prorata_token: 0x1234
+    quorum: 10%
+    duration: 10days
+  wait:
+    duration: 3days
+  issue:
+    protata_token: 0x1234
+    issued_token: 0x1234
+    amount: 500
+on_failure:
+  close_company:
