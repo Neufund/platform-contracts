@@ -1518,6 +1518,22 @@
       "etherToken": 0,
       "euroToken": 0,
       "initialEth": 5
+    }
+  },
+  "NOMINEE_SETUP_NO_ST": {
+    "address": "0x1ebf9E9FfeD78dA0E2576916cf6F925DEF358020",
+    "type": "nominee",
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
+    "seed": "cargo borrow lawsuit gallery walk purchase muscle churn start hello bring cup easy social husband peanut buddy fold spray doll sustain machine ancient aspect",
+    "derivationPath": "m/44'/60'/0'/0",
+    "privateKey": "0xcebcb0c2593bd382eefcce13463d1db608d5d62739c49808c81af6888989f9c5",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 5
     },
     "notarizes": ["ETONoStartDate"]
   },
