@@ -796,22 +796,6 @@
       "initialEth": 0
     }
   },
-  "NOMINEE_NEUMINI": {
-    "address": "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
-    "type": "nominee",
-    "identityClaims": {
-      "isVerified": true
-    },
-    "seed": "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
-    "derivationPath": "m/44'/60'/0'/0",
-    "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
-    "balances": {
-      "etherToken": 0,
-      "euroToken": 0,
-      "initialEth": 5
-    },
-    "notarizes": ["ETOInSetupState", "ETONoStartDate"]
-  },
   "ISSUER_BLANK_QA": {
     "address": "0xd9f858Ad167506a9D25FD6007BcDb7AE61bc5F87",
     "type": "issuer",
@@ -1520,6 +1504,40 @@
       "initialEth": 100
     }
   },
+  "NOMINEE_NEUMINI": {
+    "address": "0xCB6470fa4b5D56C8f494e7c1CE56B28c548931a6",
+    "type": "nominee",
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
+    "seed": "faint inject car announce few flee sun sibling scheme dance oil garage pretty giggle blood box hybrid swift goose timber vanish good subway coffee",
+    "derivationPath": "m/44'/60'/0'/0",
+    "privateKey": "0x1354699398f5b5f518b9714457a24a872d4746561da0648cbe03d1785b6af649",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "notarizes": ["ETONoStartDate"]
+  },
+  "NOMINEE_SETUP": {
+    "address": "0xeBFb2D6F2CB7C13D82Cb3027AC6BaD07cc416BC8",
+    "type": "nominee",
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
+    "seed": "upgrade ice bone riot young muffin flip cannon priority welcome execute antique food day detect mutual parent opera stage body emerge pizza people giraffe",
+    "derivationPath": "m/44'/60'/0'/0",
+    "privateKey": "0xf95b556a4e5926479d5083d005f92e7b830da36e16b5384f2d27612b1d3ff961",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 5
+    },
+    "notarizes": ["ETOInSetupState"]
+  },
   "NOMINEE_WHITELIST": {
     "seed": "wing laptop slender apology craft balcony renew multiply side elder floor accuse success worth globe immense now story nice hurry teach ethics inform wait",
     "derivationPath": "m/44'/0'/0'/0/0",
@@ -1531,7 +1549,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInWhitelistState"]
@@ -1547,7 +1565,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInPublicState"]
@@ -1563,7 +1581,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInSigningState"]
@@ -1579,7 +1597,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInClaimState"]
@@ -1595,7 +1613,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInPayoutState"]
@@ -1611,7 +1629,7 @@
     },
     "identityClaims": {
       "isVerified": true,
-      "hasBankAccount": false,
+      "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
     "notarizes": ["ETOInRefundState"]
