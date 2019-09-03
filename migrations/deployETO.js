@@ -12,6 +12,7 @@ import {
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
 import { prettyPrintGasCost } from "../test/helpers/gasUtils";
+import { good, wrong, printConstants } from "../scripts/helpers";
 
 const Web3 = require("web3");
 
@@ -173,7 +174,7 @@ export async function deployETO(
   return [etoCommitment, equityToken, equityTokenController, etoTerms];
 }
 
-export async function checkETO(artifacts, config, etoCommitmentAddress) {
+export async function checkETO(artifacts, config, etoCommitmentAddress, dumpConstraints = false) {
   const Universe = artifacts.require(config.artifacts.UNIVERSE);
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
@@ -183,6 +184,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   const PlatformTerms = artifacts.require(config.artifacts.PLATFORM_TERMS);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
   const Neumark = artifacts.require(config.artifacts.NEUMARK);
+  const ETOTermsConstraints = artifacts.require(config.artifacts.ETO_TERMS_CONSTRAINTS);
 
   console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
   const eto = await ETOCommitment.at(etoCommitmentAddress);
@@ -212,6 +214,8 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log(
     `Terms Constraints verified...${termsConstraintsVerified ? good("YES") : wrong("NO")}`,
   );
+  const etoContractId = await eto.contractId();
+  console.log(`Contract id ${etoContractId[0]} version ${etoContractId[1].toNumber()}`);
   // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
   console.log("------------------------------------------------------");
   const state = await eto.state();
@@ -227,6 +231,8 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
     );
     idx += 1;
   }
+  console.log("------------------------------------------------------");
+  console.log("NOMINEE LEGAL SETUP");
   // check agreements
   const raaaCount = await eto.amendmentsCount();
   const raaUrl = raaaCount.eq(0) ? "NOT SET" : (await eto.currentAgreement())[2];
@@ -266,7 +272,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   );
   const termsInUniverse = await universe.isInterfaceCollectionInstance(
     knownInterfaces.termsInterface,
-    await eto.etoTerms(),
+    etoTerms.address,
   );
   console.log(
     "Checking if Offering Terms in Universe",
@@ -304,28 +310,28 @@ export async function checkETO(artifacts, config, etoCommitmentAddress) {
   console.log("Obtained eth to eur rate ", ethRate);
   const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
-  const feeDisbursal = await universe.feeDisbursal();
-  console.log(
-    "Universe has fee disbursal",
-    ...(feeDisbursal === ZERO_ADDRESS ? wrong("NO") : good(feeDisbursal)),
-  );
-  const platformPortfolio = await universe.platformPortfolio();
-  console.log(
-    "Universe has platform portfolio",
-    ...(platformPortfolio === ZERO_ADDRESS ? wrong("NO") : good(platformPortfolio)),
-  );
   const contribution = await eto.calculateContribution(
     "0x0020D330ef4De5C07D4271E0A67e8fD67A21D523",
     false,
     Q18.mul(3),
   );
+  if (etoContractId[1].toNumber() > 0) {
+    console.log("ETO Supports ETO Constraints and configurable Token Offering Operators");
+    if (dumpConstraints) {
+      console.log("------------------------------------------------------");
+      const etoTermsConstraints = await ETOTermsConstraints.at(
+        await etoTerms.ETO_TERMS_CONSTRAINTS(),
+      );
+      await printConstants(etoTermsConstraints);
+    }
+  }
   console.log("------------------------------------------------------");
   console.log(`Example contribution ${contribution}`);
   console.log("------------------------------------------------------");
   console.log("ETO Components");
   console.log(`Equity Token: ${equityToken.address}`);
   console.log(`Token Controller: ${await eto.commitmentObserver()}`);
-  console.log(`ETO Terms: ${await eto.etoTerms()}`);
+  console.log(`ETO Terms: ${etoTerms.address}`);
 }
 
 export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist, dryRun) {
@@ -390,14 +396,6 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
     console.log("skipped due to dry run");
   }
   console.log("DONE");
-}
-
-function wrong(s) {
-  return ["\x1b[31m", s, "\x1b[0m"];
-}
-
-function good(s) {
-  return ["\x1b[32m", s, "\x1b[0m"];
 }
 
 function parseStrToNumStrict(source) {
