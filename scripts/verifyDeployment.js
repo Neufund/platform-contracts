@@ -1,21 +1,12 @@
 /* eslint-disable no-console */
-
 require("babel-register");
+const { good, wrong, printConstants } = require("./helpers");
 const commandLineArgs = require("command-line-args");
 const getConfig = require("../migrations/config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const roles = require("../test/helpers/roles").default;
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
 const promisify = require("../test/helpers/evmCommands").promisify;
-const stringify = require("../test/helpers/constants").stringify;
-
-function wrong(s) {
-  return ["\x1b[31m", s, "\x1b[0m"];
-}
-
-function good(s) {
-  return ["\x1b[32m", s, "\x1b[0m"];
-}
 
 async function checkAgreement(contract, agreementName) {
   // amendment count is new function, does not work with NEU
@@ -29,20 +20,6 @@ async function checkAgreement(contract, agreementName) {
   }
   const url = !hasAgreement ? "NOT SET" : (await contract.currentAgreement())[2];
   console.log(agreementName, ...(!hasAgreement ? wrong(url) : good(url)));
-}
-
-async function printConstants(contract) {
-  for (const func of contract.abi) {
-    if (func.type === "function" && func.constant && func.inputs.length === 0) {
-      try {
-        const output = await contract[func.name]();
-        const display = stringify({ v: output }).v;
-        console.log(`${func.name}:`, ...good(display));
-      } catch (e) {
-        console.log(`${func.name}`, ...wrong("REVERTED"));
-      }
-    }
-  }
 }
 
 module.exports = async function inspectETO() {
@@ -187,8 +164,6 @@ module.exports = async function inspectETO() {
   const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   console.log("---------------------------------------------");
-
-  console.log("---------------------------------------------");
   // check balances of various services
   const transactingServices = {
     EURT_DEPOSIT_MANAGER: config.addresses.EURT_DEPOSIT_MANAGER,
@@ -263,7 +238,7 @@ module.exports = async function inspectETO() {
     knownInterfaces.paymentTokenInterface,
     etherTokenAddress,
   );
-  console.log("EUR-T", ...(isEthtPayment ? good("YES") : wrong("NO")));
+  console.log("ETH-T", ...(isEthtPayment ? good("YES") : wrong("NO")));
   console.log("--------------------");
   const feeDisbursalAddress = await universe.feeDisbursal();
   const pwHasDisburser = await accessPolicy.allowed.call(
