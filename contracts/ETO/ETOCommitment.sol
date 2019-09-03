@@ -13,6 +13,14 @@ import "../Serialization.sol";
 import "../KnownInterfaces.sol";
 import "../Standards/IFeeDisbursal.sol";
 
+// version history as per contractId
+// 0 - initial version used to deploy FF ETO
+// 1 - a refactor that includes (20.05.2019)
+//      - removes PlatformTerms and introduces ETOTermsContraints (aka Product)
+//      - introduces token offering operator instead of PLATFORM_WALLET
+//      - present in singletons() method replacing PLATFORM_WALLET
+// 2 - version with recycle method added and claimMany, refundMany removed (08.06.2019)
+
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
 ///  setup phase requires several parties to provide documents and information

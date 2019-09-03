@@ -129,7 +129,7 @@ contract IETOCommitment is
     function companyLegalRep() public constant returns (address);
 
     /// signed agreement as provided by company and nominee
-    /// @dev available on Claim state transition
+    /// is final in Claim and Payout states, may change at any moment in Signing state
     function signedInvestmentAgreementUrl() public constant returns (string);
 
     /// financial outcome of token offering set on Signing state transition
