@@ -2,7 +2,7 @@
 /* eslint-disable no-continue */
 
 require("babel-register");
-const moment = require("moment");
+const request = require("request-promise-native");
 const commandLineArgs = require("command-line-args");
 const confirm = require("node-ask").confirm;
 const fs = require("fs");
@@ -11,6 +11,7 @@ const deployETO = require("../migrations/deployETO").deployETO;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
+const { explainTerms } = require("./helpers");
 
 module.exports = async function deploy() {
   const optionDefinitions = [
@@ -25,8 +26,9 @@ module.exports = async function deploy() {
     options = commandLineArgs(optionDefinitions);
   } catch (e) {
     console.log(`Invalid command line: ${e}`);
-    console.log(`Expected parameters:`);
+    console.log("Expected parameters:");
     console.log(optionDefinitions);
+    console.log("where definition is a file path or url to eto listing api");
     throw e;
   }
 
@@ -34,36 +36,29 @@ module.exports = async function deploy() {
   const DEPLOYER = getDeployerAccount(options.network, []);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const universe = await Universe.at(options.universe);
-  const Q18 = CONFIG.Q18;
 
-  const path = join(__dirname, "..", options.definition);
-  const contents = fs.readFileSync(path);
-  const parsed = JSON.parse(contents);
-
-  function explainTerms(name, terms) {
-    console.log(`\n${name}:`);
-    for (const k of Object.keys(terms)) {
-      if (typeof terms[k] === "object" && terms[k].constructor.name.includes("BigNumber")) {
-        if (terms[k].gte(Q18.div(1000))) {
-          console.log(
-            `${k}: ${terms[k].toString(10)} == ${terms[k].div(Q18).toString(10)} * 10**18`,
-          );
-        } else if (k.endsWith("_DURATION")) {
-          const duration = moment.duration(terms[k].toNumber() * 1000);
-          console.log(`${k}: ${terms[k].toString(10)} = ${duration.humanize()}`);
-        } else {
-          console.log(`${k}: ${terms[k].toString(10)}`);
-        }
-      } else {
-        console.log(`${k}: ${terms[k]}`);
-      }
+  let parsed;
+  if (options.definition.substr(0, 4) === "http") {
+    console.log(`Getting eto data from ${options.definition}`);
+    const etoData = await request({
+      url: options.definition,
+      json: true,
+    });
+    if (etoData.state !== "prospectus_approved") {
+      throw new Error(`eto must be in prospectus_approved state, not in ${etoData.state}`);
     }
+    parsed = etoData.investment_calculated_values.eto_terms;
+    console.log("Obtained etoTerms structure successfully");
+  } else {
+    const path = join(__dirname, "..", options.definition);
+    const contents = fs.readFileSync(path);
+    parsed = JSON.parse(contents);
   }
 
-  const etoTerms = recoverBigNumbers(parsed.etoTerms);
-  const shareholderTerms = recoverBigNumbers(parsed.shareholderTerms);
-  const durTerms = recoverBigNumbers(parsed.durTerms);
-  const tokenTerms = recoverBigNumbers(parsed.tokenTerms);
+  const etoTerms = recoverBigNumbers(parsed.eto_terms);
+  const shareholderTerms = recoverBigNumbers(parsed.shareholder_rights);
+  const durTerms = recoverBigNumbers(parsed.duration_terms);
+  const tokenTerms = recoverBigNumbers(parsed.token_terms);
 
   explainTerms("etoTerms", etoTerms);
   explainTerms("shareholderTerms", shareholderTerms);
@@ -88,6 +83,7 @@ module.exports = async function deploy() {
       shareholderTerms,
       durTerms,
       tokenTerms,
+      etoTerms.ETO_TERMS_CONSTRAINTS,
     );
   } catch (e) {
     console.log(e);

@@ -23,5 +23,5 @@ module.exports = async function inspectETO() {
   }
 
   const CONFIG = getConfig(web3, options.network, []);
-  await checkETO(artifacts, CONFIG, options.eto);
+  await checkETO(artifacts, CONFIG, options.eto, true);
 };

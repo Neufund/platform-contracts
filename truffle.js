@@ -88,7 +88,7 @@ module.exports = {
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
-      provider: multiWalletProvider("http://dev02.neudev.net:8545", "nf_private_io"),
+      provider: multiWalletProvider("https://platform.neufund.io/nodes/private", "nf_private_io"),
     },
     coverage: {
       network_id: "*",
@@ -99,18 +99,20 @@ module.exports = {
     },
     forked_live: {
       network_id: 72,
-      host: "ethexp-node.neustg.net",
-      port: 8545,
-      gas: 6500000, // close to current mainnet limit
+      gas: 6800000, // close to current mainnet limit
       gasPrice: 5000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
+      provider: multiWalletProvider(
+        "https://platform.neufund.net/nodes/mainnet-fork",
+        "forked_live",
+      ),
     },
     forked_nano_live: {
       network_id: 72,
       gas: 6500000,
       provider: nanoProvider(
-        "http://ethexp-node.neustg.net:8545",
+        "http://ethexp2-node.neustg.net:8545",
         // "44'/60'/0'/1",
         // "44'/60'/105'/2", // eurt legal manager
         "44'/60'/105'/10",
@@ -123,8 +125,6 @@ module.exports = {
     },
     live: {
       network_id: 1, // Ethereum public network
-      host: "eth-node.neuprd.net",
-      port: 8545,
       gas: 6500000, // close to current mainnet limit
       gasPrice: 5000000000, // 21 gwei /shannon
       deploymentConfigOverride: {
@@ -132,6 +132,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
+      provider: multiWalletProvider("https://platform.neufund.org/nodes/mainnet", "live"),
       // optional config values
       // host - defaults to "localhost"
       // port - defaults to 8545
@@ -145,10 +146,10 @@ module.exports = {
       provider: nanoProvider(
         "https://nd.neufund.org/",
         // "44'/60'/0'/0",
-        "44'/60'/105'/7", // identity management (A)
+        // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
         // "44'/60'/105'/0", // legal rep (M)
-        // "44'/60'/105'/2", // eurt legal manager (M)
+        "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
         "nano_live",
       ),

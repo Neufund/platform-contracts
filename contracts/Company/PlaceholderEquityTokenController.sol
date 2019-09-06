@@ -10,6 +10,11 @@ import "./IControllerGovernance.sol";
 import "../ETO/IETOCommitment.sol";
 import "../Standards/IContractId.sol";
 
+// version history as per contract id
+// 0 - initial version
+// 1 - standardizes migration function to require two side commitment
+// 2 - migration management shifted from company to UPGRADE ADMIN
+
 
 /// @title placeholder for on-chain company management
 /// several simplifications apply:
@@ -375,7 +380,7 @@ contract PlaceholderEquityTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 1);
+        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 2);
     }
 
     //

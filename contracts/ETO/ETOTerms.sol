@@ -12,6 +12,11 @@ import "../KnownInterfaces.sol";
 import "../AccessControl/AccessControlled.sol";
 import "../AccessRoles.sol";
 
+// version history as per contract id
+// 0 - initial version
+// 1 - added ETOTermsConstraints to terms initialization
+// 2 - whitelist management shifted from company to WHITELIST ADMIN
+
 
 /// @title base terms of Equity Token Offering
 /// encapsulates pricing, discounts and whitelisting mechanism
@@ -350,7 +355,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 1);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 2);
     }
 
     ////////////////////////
