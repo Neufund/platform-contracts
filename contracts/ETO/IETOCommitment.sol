@@ -59,7 +59,7 @@ contract IETOCommitment is
         address nominee,
         address companyLegalRep,
         uint256 newShares,
-        uint256 capitalIncreaseEurUlps
+        uint256 capitalIncreaseUlps
     );
 
     // logged when company presents signed investment agreement

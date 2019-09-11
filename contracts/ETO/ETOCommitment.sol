@@ -20,6 +20,7 @@ import "../Standards/IFeeDisbursal.sol";
 //      - introduces token offering operator instead of PLATFORM_WALLET
 //      - present in singletons() method replacing PLATFORM_WALLET
 // 2 - version with recycle method added and claimMany, refundMany removed (08.06.2019)
+// 3 - capitalIncrease returned in ISHA currency, ABI and return values backward compatible
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -406,14 +407,14 @@ contract ETOCommitment is
         public
         constant
         returns (
-            uint256 newShares, uint256 capitalIncreaseEurUlps,
+            uint256 newShares, uint256 capitalIncreaseUlps,
             uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
             uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps,
             uint256 sharePriceEurUlps
         )
     {
         return (
-            _newShares, _newShares * EQUITY_TOKEN.shareNominalValueEurUlps(),
+            _newShares, _newShares * ETO_TERMS.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS(),
             _additionalContributionEth, _additionalContributionEurUlps,
             _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps,
             _newShares == 0 ? 0 : divRound(_totalEquivEurUlps, _newShares)
@@ -653,8 +654,9 @@ contract ETOCommitment is
         // get final balances
         uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
         uint256 euroBalance = EURO_TOKEN.balanceOf(this);
+        ETOTokenTerms tokenTerms = ETO_TERMS.TOKEN_TERMS();
         // additional equity tokens are issued and sent to platform operator (temporarily)
-        uint256 tokensPerShare = EQUITY_TOKEN.tokensPerShare();
+        uint256 tokensPerShare = tokenTerms.EQUITY_TOKENS_PER_SHARE();
         uint256 tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokensInt);
         // we must have integer number of shares
         uint256 tokensRemainder = (_totalTokensInt + tokenParticipationFeeInt) % tokensPerShare;
@@ -676,15 +678,17 @@ contract ETOCommitment is
         _additionalContributionEth = uint96(etherBalance) - _platformFeeEth;
         _additionalContributionEurUlps = uint96(euroBalance) - _platformFeeEurUlps;
         // nominee gets nominal share value immediately to be added to cap table
-        uint256 capitalIncreaseEurUlps = EQUITY_TOKEN.shareNominalValueEurUlps() * _newShares;
+
+        uint256 capitalIncreaseEurUlps = tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
         // no overflow as smaller one is uint96
         uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
         _additionalContributionEurUlps -= availableCapitalEurUlps;
-
-        emit LogSigningStarted(NOMINEE, COMPANY_LEGAL_REPRESENTATIVE, _newShares, capitalIncreaseEurUlps);
+        // capital increase in ISHA currency, and report it
+        uint256 capitalIncreaseUlps = tokenTerms.SHARE_NOMINAL_VALUE_ULPS() * _newShares;
+        emit LogSigningStarted(NOMINEE, COMPANY_LEGAL_REPRESENTATIVE, _newShares, capitalIncreaseUlps);
     }
 
     /// called on transition to ETOState.Claim
