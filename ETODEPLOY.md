@@ -22,10 +22,13 @@ transaction to proceed you need to give neu issuer right to ETOCommitment
 
 ## Deploy with endpoint
 
-You need access to `eto_listing` api endpoint and provide url to public `eto_data`. Eto needs to be in `prospectus_approved` state.
+You need access to `eto_listing` api endpoint and provide url to public `eto_data`. Eto needs to be
+in `prospectus_approved` state.
+
 ```
 yarn truffle exec scripts/deployETO.js --network localhost --universe 0x9bad13807cd939c7946008e3772da819bd98fa7b --definition http://localhost:5009/etos/0x4B07fd23BAA7198061caEd44cF470B0F20cE1b7e
-``````
+```
+
 Above we obtain eto data by eto addess (checksummed!). You can also use preview code endpoint.
 
 It will do all the checks and display all contract addresses. Please store the output. It also tells
@@ -42,10 +45,12 @@ Now you can verify deployment
 yarn truffle exec scripts/inspectETO.js --network localhost --eto 0xb0741935a6854b23627cb94cde4dde893a58335f
 ```
 
-Check if all is green. You'll have information that Nomine didn't sign documents yet and that start date is not set. Any other
-red flags mean that there was problem with deployment (that is rather unlikely).
+Check if all is green. You'll have information that Nomine didn't sign documents yet and that start
+date is not set. Any other red flags mean that there was problem with deployment (that is rather
+unlikely).
 
-ETO Terms Contraints (Product) data will be dumple. `DATE_TO_WHITELIST_MIN_DURATION` is worth a note. Please see later.
+ETO Terms Contraints (Product) data will be dumple. `DATE_TO_WHITELIST_MIN_DURATION` is worth a
+note. Please see later.
 
 ## Deploy with file
 
@@ -54,14 +59,12 @@ You also need ETO DEFINITION as json file, example below (it's FF ETO)
 ```
 {
   "etoTerms": {
-    "EXISTING_COMPANY_SHARES": "40859",
+    "SHARE_CAPITAL_CURRENCY_CODE": 
+    "EXISTING_SHARE_CAPITAL": "40859",
     "MIN_TICKET_EUR_ULPS": "100000000000000000000000",
     "MAX_TICKET_EUR_ULPS": "8443672140776818757074944",
     "ALLOW_RETAIL_INVESTORS": false,
     "ENABLE_TRANSFERS_ON_SUCCESS": false,
-    "EQUITY_TOKEN_NAME": "FORCE",
-    "EQUITY_TOKEN_SYMBOL": "FTH",
-    "SHARE_NOMINAL_VALUE_EUR_ULPS": "1000000000000000000",
     "WHITELIST_DISCOUNT_FRAC": "400000000000000000",
     "PUBLIC_DISCOUNT_FRAC": "400000000000000000",
     "INVESTOR_OFFERING_DOCUMENT_URL": "ipfs:QmaKLCs63roGs2ecg5wv9umtb832RMwRQbVoqwMbGEXPT8"
@@ -74,7 +77,7 @@ You also need ETO DEFINITION as json file, example below (it's FF ETO)
     "GENERAL_VOTING_DURATION": "864000",
     "RESTRICTED_ACT_VOTING_DURATION": "1209600",
     "VOTING_FINALIZATION_DURATION": "604800",
-    "TOKENHOLDERS_QUORUM_FRAC": "500000000000000000",
+    "SHAREHOLDERS_VOTING_QUORUM_FRAC": "500000000000000000",
     "VOTING_MAJORITY_FRAC": "500000000000000000",
     "INVESTMENT_AGREEMENT_TEMPLATE_URL": "ipfs:QmaGGjSbjUng7f1JRusAG75DRnpqJeS9y2zFpowW4Zh3Rn"
   },
@@ -85,10 +88,14 @@ You also need ETO DEFINITION as json file, example below (it's FF ETO)
     "CLAIM_DURATION": "864000"
   },
   "tokenTerms": {
+    "EQUITY_TOKEN_NAME": "FORCE",
+    "EQUITY_TOKEN_SYMBOL": "FTH",
     "MIN_NUMBER_OF_TOKENS": "10000000",
     "MAX_NUMBER_OF_TOKENS": "46000000",
     "TOKEN_PRICE_EUR_ULPS": "305930150028145600",
-    "MAX_NUMBER_OF_TOKENS_IN_WHITELIST": "7000000"
+    "MAX_NUMBER_OF_TOKENS_IN_WHITELIST": "7000000",
+    "SHARE_NOMINAL_VALUE_ULPS": "1000000000000000000",
+    "SHARE_NOMINAL_VALUE_EUR_ULPS": "1000000000000000000"
   },
   "nominee": "0x6C4b76dB2b38a6CAe6BAD649a547f5616b7A718B",
   "company": "0x304206eb582705Ea82195B7D12A21A8d98F212f7"
