@@ -4,6 +4,7 @@ import { contractId, ZERO_ADDRESS, toBytes32, Q18 } from "../helpers/constants";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { GovState, GovAction } from "../helpers/govState";
 import { CommitmentState } from "../helpers/commitmentState";
+import { divRound } from "../helpers/unitConverter";
 import {
   deployDurationTerms,
   deployETOTerms,
@@ -180,8 +181,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Setup,
         CommitmentState.Whitelist,
       );
-      const sharesAmount = 2761;
-      const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
+      const sharesAmount = new web3.BigNumber("2761");
+      const amount = sharesAmount.mul(await equityToken.tokensPerShare());
       await testCommitment._generateTokens(amount);
       let tx = await testCommitment._triggerStateTransition(
         CommitmentState.Whitelist,
@@ -220,15 +221,21 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         equityToken.address,
         etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS,
       );
-      const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(sharesAmount);
-      const expectedValuation = newTotalShares
-        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
-        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+      const capitalIncreaseEurUlps = sharesAmount.mul(tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS);
+      const increasedShareCapitalUlps = etoTermsDict.EXISTING_SHARE_CAPITAL.add(
+        capitalIncreaseEurUlps,
+      );
+      const expectedValuation = divRound(
+        increasedShareCapitalUlps
+          .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
+          .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
+        tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+      );
       expectLogISHAAmended(
         tx,
         toBytes32("0x0"),
         await testCommitment.signedInvestmentAgreementUrl(),
-        newTotalShares,
+        increasedShareCapitalUlps,
         expectedValuation,
         shareholderRights.address,
       );
@@ -264,14 +271,19 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         PlaceholderEquityTokenController.abi,
       );
       tx.logs.push(...etcLogs);
+      // this valuation computation with 0 shares increase is basically meaningless
+      // as apparently price of a share was too high and pre money valuation was not really real...
+      // so we checks math here
+      const expectedValuation = divRound(
+        etoTermsDict.EXISTING_SHARE_CAPITAL.mul(await tokenTerms.SHARE_PRICE_EUR_ULPS()),
+        tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+      );
       expectLogISHAAmended(
         tx,
         toBytes32("0x0"),
         await testCommitment.signedInvestmentAgreementUrl(),
-        etoTermsDict.EXISTING_COMPANY_SHARES,
-        etoTermsDict.EXISTING_COMPANY_SHARES.mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE).mul(
-          tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-        ),
+        etoTermsDict.EXISTING_SHARE_CAPITAL,
+        expectedValuation,
         shareholderRights.address,
       );
     });
@@ -925,7 +937,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     equityToken = await EquityToken.new(
       universe.address,
       equityTokenController.address,
-      etoTerms.address,
+      tokenTerms.address,
       nominee,
       company,
     );
@@ -1020,7 +1032,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     tx,
     resolutionId,
     ishaUrl,
-    newTotalShares,
+    newShareCapital,
     newValuation,
     newShareholderRights,
   ) {
@@ -1028,7 +1040,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.ISHAUrl).to.eq(ishaUrl);
-    expect(event.args.totalShares).to.be.bignumber.eq(newTotalShares);
+    expect(event.args.shareCapital).to.be.bignumber.eq(newShareCapital);
     expect(event.args.companyValuationEurUlps).to.be.bignumber.eq(newValuation);
     expect(event.args.newShareholderRights).eq(newShareholderRights);
   }

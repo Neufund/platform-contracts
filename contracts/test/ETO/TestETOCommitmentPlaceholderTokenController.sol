@@ -86,14 +86,17 @@ contract TestETOCommitmentPlaceholderTokenController is
         public
         constant
         returns (
-            uint256 newShares, uint256,
+            uint256 newShares, uint256 capitalIncreaseUlps,
             uint256, uint256,
             uint256, uint256, uint256,
             uint256
         )
     {
-        // only newShares are needed by Placeholder token controller
+        // compute new shares directly from number of tokens
         newShares = EQUITY_TOKEN.balanceOf(address(this)) / ETO_TERMS.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE();
+        // compute capital increase from token terms
+        capitalIncreaseUlps = newShares * ETO_TERMS.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS();
+        // no more is needed
     }
 
     //
