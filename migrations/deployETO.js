@@ -127,7 +127,7 @@ export async function deployETO(
   const equityToken = await EquityToken.new(
     universe.address,
     equityTokenController.address,
-    etoTerms.address,
+    tokenTerms.address,
     nominee,
     company,
   );

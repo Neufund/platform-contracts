@@ -1,5 +1,6 @@
 pragma solidity 0.4.26;
 
+import "../Math.sol";
 import "../Universe.sol";
 import "../Agreement.sol";
 import "../Reclaimable.sol";
@@ -14,6 +15,7 @@ import "../Standards/IContractId.sol";
 // 0 - initial version
 // 1 - standardizes migration function to require two side commitment
 // 2 - migration management shifted from company to UPGRADE ADMIN
+// 3 - company shares replaced by share capital
 
 
 /// @title placeholder for on-chain company management
@@ -28,7 +30,8 @@ contract PlaceholderEquityTokenController is
     IControllerGovernance,
     IContractId,
     Agreement,
-    KnownInterfaces
+    KnownInterfaces,
+    Math
 {
     ////////////////////////
     // Immutable state
@@ -50,8 +53,8 @@ contract PlaceholderEquityTokenController is
     // controller lifecycle state
     GovState private _state;
 
-    // total number of shares owned by Company
-    uint256 private _totalCompanyShares;
+    // share capital of Company in currency defined in ISHA
+    uint256 private _shareCapital;
 
     // valuation of the company
     uint256 private _companyValuationEurUlps;
@@ -140,13 +143,13 @@ contract PlaceholderEquityTokenController is
         public
         constant
         returns (
-            uint256 totalCompanyShares,
+            uint256 shareCapital,
             uint256 companyValuationEurUlps,
             ShareholderRights shareholderRights
         )
     {
         return (
-            _totalCompanyShares,
+            _shareCapital,
             _companyValuationEurUlps,
             _shareholderRights
         );
@@ -380,7 +383,7 @@ contract PlaceholderEquityTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 2);
+        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 3);
     }
 
     //
@@ -399,7 +402,7 @@ contract PlaceholderEquityTokenController is
         // migrate ISHA
         (,,string memory ISHAUrl,) = oldController.currentAgreement();
         (
-            _totalCompanyShares,
+            _shareCapital,
             _companyValuationEurUlps,
             _shareholderRights
         ) = oldController.shareholderInformation();
@@ -429,7 +432,7 @@ contract PlaceholderEquityTokenController is
 
     function amendISHA(
         string memory ISHAUrl,
-        uint256 totalShares,
+        uint256 shareCapital,
         uint256 companyValuationEurUlps,
         ShareholderRights newShareholderRights
     )
@@ -437,14 +440,14 @@ contract PlaceholderEquityTokenController is
     {
         // set ISHA. use this.<> to call externally so msg.sender is correct in mCanAmend
         this.amendAgreement(ISHAUrl);
-        // set new number of shares
-        _totalCompanyShares = totalShares;
+        // set new share capital
+        _shareCapital = shareCapital;
         // set new valuation
         _companyValuationEurUlps = companyValuationEurUlps;
         // set shareholder rights corresponding to SHA part of ISHA
         _shareholderRights = newShareholderRights;
         emit LogResolutionExecuted(0, Action.AmendISHA);
-        emit LogISHAAmended(0, ISHAUrl, totalShares, companyValuationEurUlps, newShareholderRights);
+        emit LogISHAAmended(0, ISHAUrl, shareCapital, companyValuationEurUlps, newShareholderRights);
     }
 
     function enableTransfers(bool transfersEnabled)
@@ -503,15 +506,21 @@ contract PlaceholderEquityTokenController is
         private
     {
         // execute pending resolutions on completed ETO
-        (uint256 newShares,,,,,,,) = tokenOffering.contributionSummary();
-        uint256 totalShares = tokenOffering.etoTerms().EXISTING_COMPANY_SHARES() + newShares;
-        uint256 marginalTokenPrice = tokenOffering.etoTerms().TOKEN_TERMS().TOKEN_PRICE_EUR_ULPS();
+        (uint256 newShares, uint256 capitalIncreaseUlps,,,,,,) = tokenOffering.contributionSummary();
+        // compute increased share capital (in ISHA currency!)
+        uint256 increasedShareCapital = tokenOffering.etoTerms().EXISTING_SHARE_CAPITAL() + capitalIncreaseUlps;
+        // use full price of a share as a marginal price from which to compute valuation
+        uint256 marginalSharePrice = tokenOffering.etoTerms().TOKEN_TERMS().SHARE_PRICE_EUR_ULPS();
+        // compute new valuation by having market price for a single unit of ISHA currency
+        // (share_price_eur / share_nominal_value_curr) * increased_share_capital_curr
+        uint256 shareNominalValueUlps = tokenOffering.etoTerms().TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS();
+        uint256 increasedValuationEurUlps = proportion(marginalSharePrice, increasedShareCapital, shareNominalValueUlps);
         string memory ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
-        // set new ISHA, increase number of shares, company valuations and establish shareholder rights matrix
+        // set new ISHA, increase share capital and company valuations, establish shareholder rights matrix
         amendISHA(
             ISHAUrl,
-            totalShares,
-            totalShares * marginalTokenPrice * tokenOffering.etoTerms().TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE(),
+            increasedShareCapital,  // share capital increased
+            increasedValuationEurUlps, // new valuation set based on increased share capital
             tokenOffering.etoTerms().SHAREHOLDER_RIGHTS()
         );
         // enable/disable transfers per ETO Terms
@@ -527,7 +536,7 @@ contract PlaceholderEquityTokenController is
         // we failed. may try again
         _equityToken = IEquityToken(0);
         _commitment = IETOCommitment(0);
-        _totalCompanyShares = 0;
+        _shareCapital = 0;
         _companyValuationEurUlps = 0;
         transitionTo(GovState.Setup);
         emit LogOfferingFailed(tokenOffering, tokenOffering.equityToken());

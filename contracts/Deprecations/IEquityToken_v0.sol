@@ -4,11 +4,11 @@ import "../Standards/IAgreement.sol";
 import "../Standards/IERC677Token.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IClonedTokenParent.sol";
-import "./IEquityTokenController.sol";
+import "../Company/IEquityTokenController.sol";
 import "../Standards/ITokenControllerHook.sol";
 
-
-contract IEquityToken is
+/// @title deprecated version of IEquityToken, deprecations usage tbd.
+contract IEquityToken_v0 is
     IAgreement,
     IClonedTokenParent,
     IERC223Token,
@@ -21,8 +21,8 @@ contract IEquityToken is
     // number of shares represented by tokens. we round to the closest value.
     function sharesTotalSupply() public constant returns (uint256);
 
-    /// nominal value of a share in decimal(18) precision in currency as per token controller ISHA
-    function shareNominalValueUlps() public constant returns (uint256);
+    /// nominal value of a share in EUR decimal(18) precision
+    function shareNominalValueEurUlps() public constant returns (uint256);
 
     // returns company legal representative account that never changes
     function companyLegalRepresentative() public constant returns (address);

@@ -64,7 +64,7 @@ contract IControllerGovernance is
     event LogISHAAmended(
         bytes32 resolutionId,
         string ISHAUrl,
-        uint256 totalShares,
+        uint256 shareCapital,
         uint256 companyValuationEurUlps,
         address newShareholderRights
     );
@@ -122,7 +122,7 @@ contract IControllerGovernance is
         public
         constant
         returns (
-            uint256 totalCompanyShares,
+            uint256 shareCapital,
             uint256 companyValuationEurUlps,
             ShareholderRights shareholderRights
         );

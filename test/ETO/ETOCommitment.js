@@ -941,7 +941,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const refundTx = await etoCommitment.handleStateTransitions();
       await expectValidRefundState(refundTx, investors.slice(4, 5));
       // nominee must return euro for refund to be successful, transfer without fallback must be used
-      await euroToken.transfer(etoCommitment.address, contribution[1], { from: nominee });
+      const refundValueEurUlps = contribution[0].mul(tokenTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS);
+      await euroToken.transfer(etoCommitment.address, refundValueEurUlps, { from: nominee });
       expect(await euroToken.balanceOf(nominee)).to.be.bignumber.eq(0);
       await refundInvestor(investors[4]);
       await expectFullyRefundedState();
@@ -1353,12 +1354,14 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await expectValidPayoutState(transitionTx, contribution);
       await expectValidPayoutStateFullClaim();
       // check valuation of company in token controller
-      const expectedShares = contribution[0].add(etoTermsDict.EXISTING_COMPANY_SHARES);
-      const expectedValuation = expectedShares
-        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
-        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
+      const increasedShareCapitalUlps = contribution[1].add(etoTermsDict.EXISTING_SHARE_CAPITAL);
+      const sharePriceEurUlps = await tokenTerms.SHARE_PRICE_EUR_ULPS();
+      const expectedValuation = divRound(
+        increasedShareCapitalUlps.mul(sharePriceEurUlps),
+        tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+      );
       const shareholderInfo = await equityTokenController.shareholderInformation();
-      expect(shareholderInfo[0]).to.be.bignumber.eq(expectedShares);
+      expect(shareholderInfo[0]).to.be.bignumber.eq(increasedShareCapitalUlps);
       expect(shareholderInfo[1]).to.be.bignumber.eq(expectedValuation);
     });
   });
@@ -2963,6 +2966,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       etoTermsConstraints,
       opts.ovrETOTerms,
     );
+
     // deploy equity token controller which is company management contract
     const oldTokenController = equityTokenController;
     if (oldTokenController) {
@@ -2974,7 +2978,6 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     } else {
       equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
     }
-
     // deploy equity token
     if (opts.ovrEquityToken) {
       // add upgrade admin role to admin account, apply to all contracts
@@ -2996,7 +2999,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       equityToken = await EquityToken.new(
         universe.address,
         equityTokenController.address,
-        etoTerms.address,
+        tokenTerms.address,
         nominee,
         company,
       );
@@ -3349,10 +3352,13 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     const expectedNewShares = expectedTokenSupply.div(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
     const contribution = await etoCommitment.contributionSummary();
     expect(contribution[0]).to.be.bignumber.eq(expectedNewShares);
-    // capital contribution is nominal value of the shares
-    const nominalValueEur = expectedNewShares.mul(etoTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS);
-    expect(contribution[1]).to.be.bignumber.eq(nominalValueEur);
-    // same amount went to nominee
+    // capital increase is nominal value of the shares (ISHA currency) multipled by new shares generated
+    const expectedCapitalIncreaseUlps = contribution[0].mul(
+      tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+    );
+    expect(contribution[1]).to.be.bignumber.eq(expectedCapitalIncreaseUlps);
+    // euro equivalent went to nominee
+    const nominalValueEur = expectedNewShares.mul(tokenTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS);
     const eurFee = divRound(expectedAmountEur.mul(platformTermsDict.PLATFORM_FEE_FRACTION), Q18);
     // nomine should get nominal amount but if there is not enough EUR he will get all EUR - fee
     const expectedNomineBalance = expectedAmountEur.sub(eurFee).lt(nominalValueEur)
@@ -3422,12 +3428,16 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     expect(await etoCommitment.finalized()).to.be.true;
     expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Funded);
     const generalInformation = await equityTokenController.shareholderInformation();
-    const newTotalShares = etoTermsDict.EXISTING_COMPANY_SHARES.add(contribution[0]);
-    expect(generalInformation[0]).to.be.bignumber.eq(newTotalShares);
+    const increasedShareCapitalUlps = etoTermsDict.EXISTING_SHARE_CAPITAL.add(contribution[1]);
+    expect(generalInformation[0]).to.be.bignumber.eq(increasedShareCapitalUlps);
+    // compute expected capital increase as (new share capital loc curr * share_price_eur)/(new share nom value)
     expect(generalInformation[1]).to.be.bignumber.eq(
-      newTotalShares
-        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS)
-        .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+      divRound(
+        increasedShareCapitalUlps
+          .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS)
+          .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+        tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+      ),
     );
     expect(generalInformation[2]).to.eq(shareholderRights.address);
     const capTable = await equityTokenController.capTable();
@@ -3684,13 +3694,13 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     }
   }
 
-  function expectLogSigningStarted(tx, nomineeAddr, companyAddr, newShares, nominalValue) {
+  function expectLogSigningStarted(tx, nomineeAddr, companyAddr, newShares, capitalIncreaseUlps) {
     const event = eventValue(tx, "LogSigningStarted");
     expect(event).to.exist;
     expect(event.args.nominee).to.eq(nomineeAddr);
     expect(event.args.companyLegalRep).to.eq(companyAddr);
     expect(event.args.newShares).to.be.bignumber.eq(newShares);
-    expect(event.args.capitalIncreaseEurUlps).to.be.bignumber.eq(nominalValue);
+    expect(event.args.capitalIncreaseUlps).to.be.bignumber.eq(capitalIncreaseUlps);
   }
 
   function expectLogCompanySignedAgreement(tx, companyAddr, nomineeAddr, investmentAgreementUrl) {

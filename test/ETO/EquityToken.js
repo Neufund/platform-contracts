@@ -46,8 +46,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let equityTokenController;
   let accessPolicy;
   let universe;
-  let etoTerms, etoTermsDict;
-  let tokenTerms;
+  let tokenTerms, tokenTermsDict;
   let termsConstraints;
 
   beforeEach(async () => {
@@ -56,7 +55,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     await deployPlatformTerms(universe, admin);
     const [shareholderRights] = await deployShareholderRights(ShareholderRights);
     const [durationTerms] = await deployDurationTerms(ETODurationTerms);
-    [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
+    [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms);
 
     [termsConstraints] = await deployETOTermsConstraintsUniverse(
       admin,
@@ -64,7 +63,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       ETOTermsConstraints,
     );
 
-    [etoTerms, etoTermsDict] = await deployETOTerms(
+    await deployETOTerms(
       universe,
       ETOTerms,
       durationTerms,
@@ -77,7 +76,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     equityToken = await EquityToken.new(
       universe.address,
       equityTokenController.address,
-      etoTerms.address,
+      tokenTerms.address,
       nominee,
       company,
     );
@@ -91,8 +90,8 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(
         constTokenTerms.EQUITY_TOKENS_PER_SHARE,
       );
-      expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
-        etoTermsDict.SHARE_NOMINAL_VALUE_EUR_ULPS,
+      expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(
+        tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       );
       expect(await equityToken.tokenController()).to.be.bignumber.eq(equityTokenController.address);
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
@@ -129,16 +128,14 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.totalSupply()).to.be.bignumber.eq(initialBalance);
     });
 
-    // cases for successful destroy, rejected due to controller, not enough balance etc.
-    it("should destroy tokens");
-
     // should be a set of tests with different rounding, we should be able to run it on platform as well
     it("should convert equity token amount to shares");
 
     it("should set token symbol and other metadata from eto terms correctly", async () => {
-      const equityTokenName = await etoTerms.EQUITY_TOKEN_NAME();
-      const equityTokenSymbol = await etoTerms.EQUITY_TOKEN_SYMBOL();
-      const equityTokenShareNominalValue = await etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
+      const equityTokenName = await tokenTerms.EQUITY_TOKEN_NAME();
+      const equityTokenSymbol = await tokenTerms.EQUITY_TOKEN_SYMBOL();
+      const equityTokenShareNominalValue = await tokenTerms.SHARE_NOMINAL_VALUE_ULPS();
+      const equityTokenShareNominalEurValue = await tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
       const equityTokenPrecision = await tokenTerms.EQUITY_TOKENS_PRECISION();
       const equityTokensPerShare = await tokenTerms.EQUITY_TOKENS_PER_SHARE();
 
@@ -146,8 +143,12 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.symbol()).to.have.string(equityTokenSymbol);
       expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenPrecision);
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(equityTokensPerShare);
-      expect(await equityToken.shareNominalValueEurUlps()).to.be.bignumber.eq(
+      expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(
         equityTokenShareNominalValue,
+      );
+      // and is NOT EQ to nominal value expressed as euro (for our test data)
+      expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.not.eq(
+        equityTokenShareNominalEurValue,
       );
     });
   });

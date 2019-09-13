@@ -55,8 +55,8 @@ contract ShareholderRights is IContractId {
     uint256 public RESTRICTED_ACT_VOTING_DURATION;
     // offchain time to finalize and execute voting;
     uint256 public VOTING_FINALIZATION_DURATION;
-    // quorum of tokenholders for the vote to count as decimal fraction
-    uint256 public TOKENHOLDERS_QUORUM_FRAC = 10**17; // 10%
+    // quorum of shareholders for the vote to count as decimal fraction
+    uint256 public SHAREHOLDERS_VOTING_QUORUM_FRAC;
     // number of tokens voting / total supply must be more than this to count the vote
     uint256 public VOTING_MAJORITY_FRAC = 10**17; // 10%
     // url (typically IPFS hash) to investment agreement between nominee and company
@@ -74,7 +74,7 @@ contract ShareholderRights is IContractId {
         uint256 generalVotingDuration,
         uint256 restrictedActVotingDuration,
         uint256 votingFinalizationDuration,
-        uint256 tokenholdersQuorumFrac,
+        uint256 shareholdersVotingQuorumFrac,
         uint256 votingMajorityFrac,
         string investmentAgreementTemplateUrl
     )
@@ -84,7 +84,7 @@ contract ShareholderRights is IContractId {
         require(uint(generalVotingRule) < 4);
         require(uint(tagAlongVotingRule) < 4);
         // quorum < 100%
-        require(tokenholdersQuorumFrac < 10**18);
+        require(shareholdersVotingQuorumFrac <= 10**18);
         require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
 
         GENERAL_VOTING_RULE = generalVotingRule;
@@ -94,7 +94,7 @@ contract ShareholderRights is IContractId {
         GENERAL_VOTING_DURATION = generalVotingDuration;
         RESTRICTED_ACT_VOTING_DURATION = restrictedActVotingDuration;
         VOTING_FINALIZATION_DURATION = votingFinalizationDuration;
-        TOKENHOLDERS_QUORUM_FRAC = tokenholdersQuorumFrac;
+        SHAREHOLDERS_VOTING_QUORUM_FRAC = shareholdersVotingQuorumFrac;
         VOTING_MAJORITY_FRAC = votingMajorityFrac;
         INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
     }

@@ -16,6 +16,8 @@ import "../AccessRoles.sol";
 // 0 - initial version
 // 1 - added ETOTermsConstraints to terms initialization
 // 2 - whitelist management shifted from company to WHITELIST ADMIN
+// 3 - SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL moved to ETOTokenTerms
+//     replaces EXISTING_COMPANY_SHARS with EXISTING_SHARE_CAPITAL, adds CURRENCY CODE
 
 
 /// @title base terms of Equity Token Offering
@@ -56,10 +58,10 @@ contract ETOTerms is
     ETODurationTerms public DURATION_TERMS;
     // reference to token terms
     ETOTokenTerms public TOKEN_TERMS;
-    // total number of shares in the company (incl. Authorized Shares) at moment of sale
-    uint256 public EXISTING_COMPANY_SHARES;
-    // sets nominal value of a share
-    uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
+    // currency code in which share capital is provided
+    string public SHARE_CAPITAL_CURRENCY_CODE;
+    // shares capital in ISHA currency at the beginning of the sale, excl. Authorized Capital
+    uint256 public EXISTING_SHARE_CAPITAL;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
@@ -82,10 +84,6 @@ contract ETOTerms is
     string public INVESTOR_OFFERING_DOCUMENT_URL;
     // settings for shareholder rights
     ShareholderRights public SHAREHOLDER_RIGHTS;
-
-    // equity token setup
-    string public EQUITY_TOKEN_NAME;
-    string public EQUITY_TOKEN_SYMBOL;
 
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
@@ -130,15 +128,13 @@ contract ETOTerms is
         Universe universe,
         ETODurationTerms durationTerms,
         ETOTokenTerms tokenTerms,
-        uint256 existingCompanyShares,
+        string shareCapitalCurrencyCode,
+        uint256 existingShareCapital,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
         string investorOfferingDocumentUrl,
         ShareholderRights shareholderRights,
-        string equityTokenName,
-        string equityTokenSymbol,
-        uint256 shareNominalValueEurUlps,
         uint256 whitelistDiscountFrac,
         uint256 publicDiscountFrac,
         ETOTermsConstraints etoTermsConstraints
@@ -148,14 +144,12 @@ contract ETOTerms is
     {
         require(durationTerms != address(0));
         require(tokenTerms != address(0));
-        require(existingCompanyShares > 0);
+        require(existingShareCapital > 0);
         require(keccak256(abi.encodePacked(investorOfferingDocumentUrl)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(equityTokenName)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
+        require(keccak256(abi.encodePacked(shareCapitalCurrencyCode)) != EMPTY_STRING_HASH);
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
-        require(shareNominalValueEurUlps > 0);
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16);
         require(minTicketEurUlps<=maxTicketEurUlps);
@@ -173,15 +167,13 @@ contract ETOTerms is
 
         DURATION_TERMS = durationTerms;
         TOKEN_TERMS = tokenTerms;
-        EXISTING_COMPANY_SHARES = existingCompanyShares;
+        SHARE_CAPITAL_CURRENCY_CODE = shareCapitalCurrencyCode;
+        EXISTING_SHARE_CAPITAL = existingShareCapital;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         INVESTOR_OFFERING_DOCUMENT_URL = investorOfferingDocumentUrl;
         SHAREHOLDER_RIGHTS = shareholderRights;
-        EQUITY_TOKEN_NAME = equityTokenName;
-        EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
-        SHARE_NOMINAL_VALUE_EUR_ULPS = shareNominalValueEurUlps;
         WHITELIST_DISCOUNT_FRAC = whitelistDiscountFrac;
         PUBLIC_DISCOUNT_FRAC = publicDiscountFrac;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
@@ -355,7 +347,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 2);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 3);
     }
 
     ////////////////////////

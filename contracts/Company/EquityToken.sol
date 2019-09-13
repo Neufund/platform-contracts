@@ -3,7 +3,7 @@ pragma solidity 0.4.26;
 
 import "./IEquityToken.sol";
 import "../PlatformTerms.sol";
-import "../ETO/ETOTerms.sol";
+import "../ETO/ETOTokenTerms.sol";
 import "../Agreement.sol";
 import "../Universe.sol";
 import "../Reclaimable.sol";
@@ -15,6 +15,10 @@ import "../Standards/IERC223Callback.sol";
 import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../Math.sol";
+
+// version history as per contract id
+// 0 - inital version
+// 1 - shareNominalValueUlps added and shareNominalValueEurUlps removed in IEquityToken
 
 
 contract EquityToken is
@@ -35,8 +39,8 @@ contract EquityToken is
     uint256 private TOKENS_PER_SHARE;
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
-    // sets nominal value of a share
-    uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
+    // sets nominal value of a share in share capital currency per ISHA
+    uint256 private SHARE_NOMINAL_VALUE_ULPS;
 
     ////////////////////////
     // Mutable state
@@ -97,7 +101,7 @@ contract EquityToken is
     constructor(
         Universe universe,
         IEquityTokenController controller,
-        ETOTerms etoTerms,
+        ETOTokenTerms etoTokenTerms,
         address nominee,
         address companyLegalRep
     )
@@ -107,17 +111,17 @@ contract EquityToken is
             0
         )
         TokenMetadata(
-            etoTerms.EQUITY_TOKEN_NAME(),
-            etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION(),
-            etoTerms.EQUITY_TOKEN_SYMBOL(),
+            etoTokenTerms.EQUITY_TOKEN_NAME(),
+            etoTokenTerms.EQUITY_TOKENS_PRECISION(),
+            etoTokenTerms.EQUITY_TOKEN_SYMBOL(),
             "1.0"
         )
         Daily(0)
         public
     {
-        TOKENS_PER_SHARE = etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PER_SHARE();
+        TOKENS_PER_SHARE = etoTokenTerms.EQUITY_TOKENS_PER_SHARE();
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
-        SHARE_NOMINAL_VALUE_EUR_ULPS = etoTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
+        SHARE_NOMINAL_VALUE_ULPS = etoTokenTerms.SHARE_NOMINAL_VALUE_ULPS();
 
         _nominee = nominee;
         _tokenController = controller;
@@ -176,8 +180,8 @@ contract EquityToken is
         return tokensToShares(totalSupply());
     }
 
-    function shareNominalValueEurUlps() public constant returns (uint256) {
-        return SHARE_NOMINAL_VALUE_EUR_ULPS;
+    function shareNominalValueUlps() public constant returns (uint256) {
+        return SHARE_NOMINAL_VALUE_ULPS;
     }
 
     function nominee() public constant returns (address) {
@@ -228,7 +232,7 @@ contract EquityToken is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x45a709aff6d5ae42cb70f87551d8d7dbec5235cf2baa71a009ed0a9795258d8f, 0);
+        return (0x45a709aff6d5ae42cb70f87551d8d7dbec5235cf2baa71a009ed0a9795258d8f, 1);
     }
 
     ////////////////////////
