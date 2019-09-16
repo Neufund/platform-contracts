@@ -391,6 +391,8 @@ contract ETOTerms is
                 if (discountedAmount > 0) {
                     // always round down when calculating tokens
                     fixedSlotEquityTokenInt = discountedAmount / calculatePriceFraction(wlTicket.fullTokenPriceFrac);
+                    // todo: compute effective amount spent without the rounding
+                    // discountAmount = fixedSlotEquityTokenInt *  calculatePriceFraction(wlTicket.fullTokenPriceFrac);
                 }
             }
         }
@@ -400,14 +402,18 @@ contract ETOTerms is
             if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
                 // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor, also round down
                 equityTokenInt = remainingAmount / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
+                // todo: compute effective amount spent without the rounding
+                // remainingAmount = equityTokenInt * calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
             } else {
                 // use pricing along the curve
                 equityTokenInt = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
+                // todo: remove function above and calculate directly
+                // remainingAmount = equityTokenInt * fullPrice;
             }
         }
         // should have all issued tokens
         equityTokenInt += fixedSlotEquityTokenInt;
-
+        // todo: return remainingAmount as effective amount spent for the least gas used
     }
 
     function addWhitelistInvestorPrivate(

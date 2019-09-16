@@ -21,6 +21,7 @@ import "../Standards/IFeeDisbursal.sol";
 //      - present in singletons() method replacing PLATFORM_WALLET
 // 2 - version with recycle method added and claimMany, refundMany removed (08.06.2019)
 // 3 - capitalIncrease returned in ISHA currency, ABI and return values backward compatible
+//     calculateContribution returns actually spent amount at index 7
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
@@ -475,12 +476,11 @@ contract ETOCommitment is
             uint256 maxTicketEurUlps,
             uint256 equityTokenInt,
             uint256 neuRewardUlps,
-            bool maxCapExceeded
+            bool maxCapExceeded,
+            uint256 spentAmountEurUlps
             )
     {
         InvestmentTicket storage ticket = _tickets[investor];
-        // we use state() here because time was forwarded by withStateTransition
-        bool applyDiscounts = state() == ETOState.Whitelist;
         uint256 fixedSlotsEquityTokenInt;
         (
             isWhitelisted,
@@ -494,14 +494,17 @@ contract ETOCommitment is
             _totalEquivEurUlps,
             ticket.equivEurUlps,
             newInvestorContributionEurUlps,
-            applyDiscounts
+            // we use state() here because time was forwarded by withStateTransition
+            state() == ETOState.Whitelist
         );
         isWhitelisted = isWhitelisted || fromIcbmWallet;
         if (!fromIcbmWallet) {
             (,neuRewardUlps) = calculateNeumarkDistribution(NEUMARK.incremental(newInvestorContributionEurUlps));
         }
         // crossing max cap can always happen
-        maxCapExceeded = isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotsEquityTokenInt, newInvestorContributionEurUlps);
+        maxCapExceeded = isCapExceeded(state() == ETOState.Whitelist, equityTokenInt, fixedSlotsEquityTokenInt, newInvestorContributionEurUlps);
+        // todo: take it from ETO_TERMS.calculateContribution
+        spentAmountEurUlps = newInvestorContributionEurUlps;
     }
 
     function investorTicket(address investor)
