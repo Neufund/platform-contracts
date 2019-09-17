@@ -1745,17 +1745,21 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const neuAmount = investorShare(await neumark.incremental(amount));
       expect(contrib[5]).to.be.bignumber.eq(neuAmount);
       expect(contrib[6]).to.be.false;
+      // todo: now just returns 'amount' write set of tests when there's actual implementation
+      expect(contrib[7]).to.be.bignumber.eq(amount);
       // invest
       await investAmount(investors[0], amount, "EUR");
       // next contrib
       const contrib2 = await etoCommitment.calculateContribution(investors[0], false, amount);
       expect(contrib2[4]).to.be.bignumber.eq(contrib[4]);
+      expect(contrib[7]).to.be.bignumber.eq(amount);
       // NEU reward drops
       expect(contrib2[5]).to.be.bignumber.lt(contrib[5]);
       // icbm contrib
       const contrib3 = await etoCommitment.calculateContribution(investors[0], true, amount);
       expect(contrib3[4]).to.be.bignumber.eq(contrib[4]);
       expect(contrib3[5]).to.be.bignumber.eq(0);
+      expect(contrib[7]).to.be.bignumber.eq(amount);
     });
 
     it("should calculate contribution in whitelist with discounts", async () => {
