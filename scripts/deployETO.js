@@ -54,7 +54,7 @@ module.exports = async function deploy() {
     const contents = fs.readFileSync(path);
     parsed = JSON.parse(contents);
   }
-
+  // parsed.eto_terms["ETO_TERMS_CONSTRAINTS"] = "0x5a7523368646E116288848074eA2f1bD5DeF0c21";
   const etoTerms = recoverBigNumbers(parsed.eto_terms);
   const shareholderTerms = recoverBigNumbers(parsed.shareholder_rights);
   const durTerms = recoverBigNumbers(parsed.duration_terms);

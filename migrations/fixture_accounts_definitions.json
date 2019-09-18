@@ -1094,13 +1094,8 @@
       "initialEth": 5
     },
     "etoParticipations": {
-      "whitelist": {
-        "ETO": {
-          "discountAmount": 0,
-          "discount": 0
-        }
-      },
-      "claim": ["ETO"]
+      "whitelist": {},
+      "claim": []
     }
   },
   "NANO_1": {
