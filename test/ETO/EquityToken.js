@@ -88,10 +88,13 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       await prettyPrintGasCost("EquityToken deploy", equityToken);
       // check properties of equity token
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(
-        constTokenTerms.EQUITY_TOKENS_PER_SHARE,
+        tokenTermsDict.EQUITY_TOKENS_PER_SHARE,
       );
       expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
+      );
+      expect(await equityToken.decimals()).to.be.bignumber.eq(
+        constTokenTerms.EQUITY_TOKENS_PRECISION,
       );
       expect(await equityToken.tokenController()).to.be.bignumber.eq(equityTokenController.address);
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);

@@ -10,7 +10,6 @@ import {
   deployETOTerms,
   deployShareholderRights,
   deployTokenTerms,
-  constTokenTerms,
   deployETOTermsConstraintsUniverse,
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
@@ -227,7 +226,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       const expectedValuation = divRound(
         increasedShareCapitalUlps
-          .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE)
+          .mul(tokenTermsDict.EQUITY_TOKENS_PER_SHARE)
           .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       );
@@ -390,7 +389,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
       // eto failed - must destroy before state transition
-      await testCommitment._destroyTokens(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
+      await testCommitment._destroyTokens(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
       // fail eto
       await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
       // deploy new terms but use same controller

@@ -18,8 +18,8 @@ import {
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
-  constTokenTerms,
   deployETOTermsConstraints,
+  defTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
 import { GovState } from "../helpers/govState";
@@ -61,7 +61,6 @@ const PLATFORM_SHARE = web3.toBigNumber("2");
 const minDepositAmountEurUlps = Q18.mul(50);
 const minWithdrawAmountEurUlps = Q18.mul(20);
 const maxSimpleExchangeAllowanceEurUlps = Q18.mul(50);
-const Q14 = new web3.BigNumber(10).pow(14);
 const platformWallet = "0x00447f37bde6c89ad47c1d1e16025e707d3d363a";
 const defEthPrice = web3.toBigNumber("657.39278932");
 const UNKNOWN_STATE_START_TS = 10000000; // state startOf timeestamps invalid below this
@@ -371,7 +370,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   });
 
   describe("special investment cases", () => {
-    const maxTicket = Q18.mul(15000000);
+    const maxTicket = Q18.mul(25000000);
 
     async function deployEtoWithTicket(termsOverride) {
       // with large maximum ticket
@@ -930,6 +929,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     });
 
     it("refund nominee returns nominal value", async () => {
+      await deployEtoWithTicket({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxTicket.mul(10000) } });
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -965,7 +965,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       );
       await expectValidClaimState(claimTx, contribution);
       // deploy new ETO using old token
-      const newTokenPrice = Q18.mul(0.5);
+      const newTokenPrice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul("1.35");
       await deployETO({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(125000000) },
         ovrTokenTerms: { TOKEN_PRICE_EUR_ULPS: newTokenPrice },
@@ -1067,6 +1067,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await expect(investAmount(investors[0], two.pow(64), "EUR")).to.be.revert;
     });
 
+    it("allows investment with more than 2**32 equity tokens");
+
     it("reverts on euro token overflow > 2**96", async () => {
       // investor ticket stores eurt equivalend in 96bit, this attempts to overflow it (without overflowing equity tokens)
       const two = new web3.BigNumber(2);
@@ -1102,10 +1104,10 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should skip public in ETO with 0 public period", async () => {
       // whitelist max cap is max cap
-      const maxTokens = new web3.BigNumber(4000 * 10000);
+      const maxTokens = defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(4000);
       // we will not be able to sell 1000 * 10000 tokens as wl cap < max cap and public duration==0
       // but this is ok for this test - forces timed transition, not due to logic
-      const maxTokensWhitelist = new web3.BigNumber(3000 * 10000);
+      const maxTokensWhitelist = defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(3000);
       await deployETO({
         ovrDurations: { PUBLIC_DURATION: new web3.BigNumber(0) },
         ovrTokenTerms: {
@@ -1154,7 +1156,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should skip public for ETO with max cap whitelist == max cap but with public period > 0", async () => {
       // whitelist max cap is max cap
-      const maxTokens = new web3.BigNumber(4000 * 10000);
+      const maxTokens = defTokenTerms.MAX_NUMBER_OF_TOKENS;
       // this settings will force skipping public due to logic transition - max cap reached
       await deployETO({
         ovrTokenTerms: {
@@ -1182,7 +1184,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     });
 
     it("should allow single share commitment", async () => {
-      const oneShare = new web3.BigNumber(10000);
+      const oneShare = defTokenTerms.EQUITY_TOKENS_PER_SHARE;
       const tokenPrice = Q18;
       await deployETO({
         ovrTokenTerms: {
@@ -1855,7 +1857,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         wlMaxCap.add(dp),
       );
       expect(wlContrib2[6]).to.be.true;
-      const discountedTokens = 10000;
+      const discountedTokens = tokenTermsDict.EQUITY_TOKENS_PER_SHARE;
       await investAmount(investors[0], dp.mul(discountedTokens), "EUR");
       await skipTimeTo(publicStartDate.add(1));
       const maxCap = tokenTermsDict.MAX_NUMBER_OF_TOKENS.sub(discountedTokens).mul(
@@ -2628,7 +2630,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           await etoTerms.addWhitelisted(
             [icbmInvestors[0], icbmInvestors[1], regularInvestors[0]],
             [Q18.mul(10000), Q18.mul(0), Q18.mul(16000)],
-            [Q18.mul(0.4), Q18.mul(1), Q18.mul(0.3)],
+            [Q18.mul("0.4"), Q18.mul(1), Q18.mul("0.3")],
             {
               from: admin,
             },
@@ -2657,17 +2659,17 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           // whitelist and icbm
           const regularInvestor0Dp = discountedPrice(
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-            Q18.sub(Q18.mul(0.3)),
+            Q18.sub(Q18.mul("0.3")),
           );
           const expectedPrice = calculateMixedTranchePrice(
-            Q18.mul(78197.121).add(1),
+            Q18.mul("78197.121").add(1),
             Q18.mul(16000),
             regularInvestor0Dp,
             dp,
           );
           await investAmount(
             regularInvestors[0],
-            eurToEth(Q18.mul(78197.121).add(1)),
+            eurToEth(Q18.mul("78197.121").add(1)),
             "ETH",
             expectedPrice,
           );
@@ -2676,19 +2678,19 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           // same amounts in public
           await investAmount(
             regularInvestors[0],
-            Q18.mul(872.182).add(1),
+            Q18.mul("872.182").add(1),
             "ETH",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
           await investAmount(
             icbmInvestors[0],
-            Q18.mul(212.21982),
+            Q18.mul("212.21982"),
             "ETH",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
           await investAmount(
             regularInvestors[1],
-            Q18.mul(121).sub(1),
+            Q18.mul("1210").sub(1),
             "ETH",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
@@ -2705,8 +2707,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           // allow to cross max cap from whitelist (fixed-slot)
           await etoTerms.addWhitelisted(
             [icbmInvestors[0], regularInvestors[0]],
-            [Q18.mul(10000), Q18.mul(16000)],
-            [Q18.mul(0.4), Q18.mul(0.3)],
+            [Q18.mul("10000"), Q18.mul("16000")],
+            [Q18.mul("0.4"), Q18.mul("0.3")],
             {
               from: admin,
             },
@@ -2717,10 +2719,10 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           );
           const icbmInvestor0Dp = discountedPrice(
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-            Q18.sub(Q18.mul(0.4)),
+            Q18.sub(Q18.mul("0.4")),
           );
           // first icbm so we can measure euro
-          await investICBMAmount(icbmInvestors[0], Q18.mul(7611).add(1), "EUR", icbmInvestor0Dp);
+          await investICBMAmount(icbmInvestors[0], Q18.mul("7611").add(1), "EUR", icbmInvestor0Dp);
           const icbmEurEquiv = (await etoCommitment.totalInvestment())[0];
           const inv02Balance = (await etoCommitment.investorTicket(icbmInvestors[0]))[0];
           await investAmount(
@@ -2733,33 +2735,38 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           // whitelist and icbm
           const regularInvestor0Dp = discountedPrice(
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-            Q18.sub(Q18.mul(0.3)),
+            Q18.sub(Q18.mul("0.3")),
           );
           const expectedPrice = calculateMixedTranchePrice(
-            Q18.mul(58200.121).add(1),
-            Q18.mul(16000),
+            Q18.mul("58200.121").add(1),
+            Q18.mul("16000"),
             regularInvestor0Dp,
             dp,
           );
-          await investAmount(regularInvestors[0], Q18.mul(58200.121).add(1), "EUR", expectedPrice);
+          await investAmount(
+            regularInvestors[0],
+            Q18.mul("58200.121").add(1),
+            "EUR",
+            expectedPrice,
+          );
           //
           await skipTimeTo(publicStartDate.add(1));
           // same amounts in public
           await investAmount(
             regularInvestors[0],
-            Q18.mul(872.182).add(1),
+            Q18.mul("872.182").add(1),
             "EUR",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
           await investAmount(
             icbmInvestors[1],
-            Q18.mul(1212.21982),
+            Q18.mul("1212.21982"),
             "EUR",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
           await investAmount(
             regularInvestors[1],
-            Q18.mul(1211).sub(1),
+            Q18.mul("1211").sub(1),
             "EUR",
             tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
           );
@@ -2772,7 +2779,11 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   });
 
   function eurToEth(amount) {
-    return divRound(amount, defEthPrice);
+    // compute inverse rate
+    const invRateQ18 = Q18.div(defEthPrice).round(0, 4);
+    // use inv rate to convert eur to eth, when feed to smart contract which uses
+    // eth to eur conversion and normal rate, rounding should match
+    return divRound(amount.mul(invRateQ18), Q18);
   }
 
   // helper functions here
@@ -3164,6 +3175,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expectedNeu = expectedNeu.sub(1);
     }
     // use overloaded erc223 to transfer to contract with callback
+    // console.log(`investor ${investor} INVESTING`);
     const tx = await token.transfer["address,uint256,bytes"](etoCommitment.address, amount, "", {
       from: investor,
     });
@@ -3191,8 +3203,12 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expectedEquity = ticket[2].sub(oldTicket[2]);
     }
     expect(ticket[2].sub(oldTicket[2])).to.be.bignumber.eq(expectedEquity);
+    // computes tokens per share decimal count
+    const QT = Q18.div(
+      new web3.BigNumber(10).pow(Math.log10(tokenTermsDict.EQUITY_TOKENS_PER_SHARE.toNumber())),
+    );
     // this assumes equity token precision is 0
-    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(Q14));
+    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(QT));
     if (currency === "ETH") {
       expect(ticket[6]).to.be.bignumber.eq(amount.add(oldTicket[6]));
     }
@@ -3267,8 +3283,12 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expectedEquity = ticket[2].sub(oldTicket[2]);
     }
     expect(ticket[2].sub(oldTicket[2])).to.be.bignumber.eq(expectedEquity);
+    // computes tokens per share decimal count
+    const QT = Q18.div(
+      new web3.BigNumber(10).pow(Math.log10(tokenTermsDict.EQUITY_TOKENS_PER_SHARE.toNumber())),
+    );
     // this assumes equity token precision is 0
-    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(Q14));
+    expect(ticket[3].sub(oldTicket[3])).to.be.bignumber.eq(expectedEquity.mul(QT));
     if (currency === "ETH") {
       expect(ticket[6]).to.be.bignumber.eq(amount.add(oldTicket[6]));
     }
@@ -3342,10 +3362,10 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       divRound(expectedTokens.mul(platformTermsDict.TOKEN_PARTICIPATION_FEE_FRACTION), Q18),
     );
     // to have equal number of shares add the remainder
-    const tokenSharesRemainder = expectedTokenSupply.mod(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
+    const tokenSharesRemainder = expectedTokenSupply.mod(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
     if (!tokenSharesRemainder.eq(0)) {
       expectedTokenSupply = expectedTokenSupply.add(
-        constTokenTerms.EQUITY_TOKENS_PER_SHARE.sub(tokenSharesRemainder),
+        tokenTermsDict.EQUITY_TOKENS_PER_SHARE.sub(tokenSharesRemainder),
       );
     }
     // still the equity token does not have the participation fee issued, this happens in claim
@@ -3353,7 +3373,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     expect(await equityToken.totalSupply()).to.be.bignumber.eq(
       expectedTokens.add(options.initialEquityTokens),
     );
-    const expectedNewShares = expectedTokenSupply.div(constTokenTerms.EQUITY_TOKENS_PER_SHARE);
+    const expectedNewShares = expectedTokenSupply.div(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
     const contribution = await etoCommitment.contributionSummary();
     expect(contribution[0]).to.be.bignumber.eq(expectedNewShares);
     // capital increase is nominal value of the shares (ISHA currency) multipled by new shares generated
@@ -3425,7 +3445,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     );
     // equity token balance is increased by a fee (new_shares * tok per share)
     expect(await equityToken.totalSupply()).to.be.bignumber.eq(
-      contribution[0].mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+      contribution[0].mul(tokenTermsDict.EQUITY_TOKENS_PER_SHARE),
     );
     // eto is successful
     expect(await etoCommitment.success()).to.be.true;
@@ -3439,7 +3459,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       divRound(
         increasedShareCapitalUlps
           .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS)
-          .mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+          .mul(tokenTermsDict.EQUITY_TOKENS_PER_SHARE),
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       ),
     );
@@ -3454,7 +3474,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(contribution[0]);
     // all tokens still belong to eto smart contract
     expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
-      contribution[0].mul(constTokenTerms.EQUITY_TOKENS_PER_SHARE),
+      contribution[0].mul(tokenTermsDict.EQUITY_TOKENS_PER_SHARE),
     );
     // just fees left in the contract
     expect(await etherToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(contribution[5]);
@@ -3681,10 +3701,24 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
   function calculateMixedTranchePrice(totalAmount, tranche1Amount, tranche1Price, tranche2Price) {
     const tranche2Amount = totalAmount.sub(tranche1Amount);
+    // to approximate real mixed price we must also take into account that tokens are quantized so
+    // we lose some funds on the edge between two tranches as in each tranche tokens are acquired
+    // independently and some funds are lost due to rounding
+    const tranche1QuantizedAmount = tranche1Amount
+      .div(tranche1Price)
+      .floor()
+      .mul(tranche1Price);
+    const tranche2QuantizedAmount = tranche2Amount
+      .div(tranche2Price)
+      .floor()
+      .mul(tranche2Price);
+    // still total amount was spent so effective price was higher for a tranche
     return totalAmount
       .mul(tranche1Price)
       .mul(tranche2Price)
-      .div(tranche1Price.mul(tranche2Amount).add(tranche2Price.mul(tranche1Amount)))
+      .div(
+        tranche1Price.mul(tranche2QuantizedAmount).add(tranche2Price.mul(tranche1QuantizedAmount)),
+      )
       .floor();
   }
 

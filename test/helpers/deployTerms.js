@@ -1,9 +1,6 @@
 import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 
-const two = new web3.BigNumber(2);
-const intMax = two.pow(128);
-
 export const defaultShareholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(1),
   TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
@@ -26,18 +23,20 @@ export const defDurTerms = {
 
 export const constTokenTerms = {
   EQUITY_TOKENS_PRECISION: new web3.BigNumber(0),
-  EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(10000),
 };
+
+const defaultTokensPerShare = new web3.BigNumber("1000000");
 
 export const defTokenTerms = {
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
-  MIN_NUMBER_OF_TOKENS: new web3.BigNumber(2000 * 10000),
-  MAX_NUMBER_OF_TOKENS: new web3.BigNumber(10000 * 10000),
-  TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189"),
-  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(4000 * 10000),
+  MIN_NUMBER_OF_TOKENS: defaultTokensPerShare.mul(20),
+  MAX_NUMBER_OF_TOKENS: defaultTokensPerShare.mul(100),
+  TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189651788"),
+  MAX_NUMBER_OF_TOKENS_IN_WHITELIST: defaultTokensPerShare.mul(40),
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   SHARE_NOMINAL_VALUE_ULPS: Q18.mul("4.24566"),
+  EQUITY_TOKENS_PER_SHARE: defaultTokensPerShare,
 };
 
 export const defEtoTerms = {
@@ -58,9 +57,11 @@ export const defTermsConstraints = {
   CAN_SET_TRANSFERABILITY: true,
   HAS_NOMINEE: true,
   MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
-  MAX_TICKET_SIZE_EUR_ULPS: intMax,
+  // unlimited
+  MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
   MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
-  MAX_INVESTMENT_AMOUNT_EUR_ULPS: intMax,
+  // unlimited
+  MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
   NAME: "Some Constraints",
   OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
   OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
