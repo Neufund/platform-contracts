@@ -150,8 +150,8 @@ contract ETOTerms is
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
-        require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16);
-        require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16);
+        require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
+        require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(minTicketEurUlps<=maxTicketEurUlps);
         require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
@@ -309,7 +309,9 @@ contract ETOTerms is
         require(MIN_TICKET_EUR_ULPS >= TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS(), "NF_MIN_TICKET_LT_TOKEN_PRICE");
         // it must be possible to collect more funds than max number of tokens
         require(ESTIMATED_MAX_CAP_EUR_ULPS() >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
-
+        // min cap must be less than MAX_CAP product limit, otherwise ETO always refunds
+        uint256 constraintsMaxInvestment = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
+        require(constraintsMaxInvestment == 0 || ESTIMATED_MIN_CAP_EUR_ULPS() <= constraintsMaxInvestment, "NF_MIN_CAP_GT_PROD_MAX_CAP");
         // ticket size checks
         require(MIN_TICKET_EUR_ULPS >= ETO_TERMS_CONSTRAINTS.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
         uint256 constraintsMaxTicket = ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS();
