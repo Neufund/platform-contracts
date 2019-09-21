@@ -817,7 +817,7 @@ contract ETOCommitment is
         // issue equity token
         EQUITY_TOKEN.issueTokens(equityTokenInt256);
         // update investment state
-        // total number of tokens must fit into uint256, uints are coerced to biggest size
+        // total number of tokens must fit into uint56, uints are coerced to biggest size
         assert(_totalTokensInt + equityTokenInt256 < 2**56);
         _totalTokensInt += uint56(equityTokenInt256);
         // as fixedSlotEquityTokenInt256 always lte equityTokenInt256 no chances to overflow
@@ -837,7 +837,7 @@ contract ETOCommitment is
         ticket.equityTokenInt += uint96(equityTokenInt256);
 
         // practically impossible: would require price of ETH smaller than 1 EUR and > 2**96 amount of ether
-        assert(uint256(ticket.amountEth) + amount < 2**96);
+        assert(ticket.amountEth + amount < 2**96);
         if (isEuroInvestment) {
             ticket.amountEurUlps += uint96(amount);
         } else {

@@ -52,7 +52,7 @@ const MockPlaceholderEquityTokenController = artifacts.require(
 const ETOCommitment = artifacts.require("ETOCommitment");
 const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
-const ETOTokenTerms = artifacts.require("ETOTokenTerms");
+const ETOTokenTerms = artifacts.require("MockUncheckedETOTokenTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
@@ -66,6 +66,7 @@ const defEthPrice = web3.toBigNumber("657.39278932");
 const UNKNOWN_STATE_START_TS = 10000000; // state startOf timeestamps invalid below this
 const platformShare = nmk => nmk.div(PLATFORM_SHARE).round(0, 1); // round down
 const investorShare = nmk => nmk.sub(platformShare(nmk));
+const manyTokens = new web3.BigNumber(2).pow(32).sub(1);
 
 contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // basic infrastructure
@@ -602,7 +603,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployEtoWithTicket({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
       await investAmount(investors[4], maxInvestAmount, "EUR");
@@ -631,7 +632,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployEtoWithTicket({
         ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
       await investAmount(investors[4], maxInvestAmount.sub(minTicket).add(1), "EUR");
@@ -658,7 +659,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployEtoWithTicket({
         ovrETOTerms: { MIN_TICKET_EUR_ULPS: minTicket, MAX_TICKET_EUR_ULPS: maxInvestAmount },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
       await investAmount(investors[4], maxInvestAmount.sub(minTicket), "EUR");
@@ -681,7 +682,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployEtoWithTicket({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxInvestAmount.mul(2) },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: maxInvestAmount }, // max invest is 5mio
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
       await expect(investAmount(investors[4], maxInvestAmount.add(1), "EUR")).to.be.rejectedWith(
@@ -694,7 +695,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployEtoWithTicket({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: investmentAmount },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0) }, // max invest is unlimited
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await skipTimeTo(publicStartDate.add(1));
       await investAmount(investors[4], investmentAmount, "EUR");
@@ -1050,24 +1051,23 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   });
 
   describe("special ETO configurations", () => {
-    it("reverts overflow on internal equity token 32 bit", async () => {
-      // equity tokens in investor ticket are stored in 32bit uint, test below tries to overflow it
+    it("reverts overflow on internal equity token 56 bit", async () => {
+      // totals of equity tokens are stored in 56 bits number
       const two = new web3.BigNumber(2);
+      const one = new web3.BigNumber(1);
       await deployETO({
-        ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(128) },
-        ovrTokenTerms: { TOKEN_PRICE_EUR_ULPS: two.pow(64), MAX_NUMBER_OF_TOKENS: two.pow(128) },
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(96), MIN_TICKET_EUR_ULPS: one },
+        ovrTokenTerms: { TOKEN_PRICE_EUR_ULPS: one, MAX_NUMBER_OF_TOKENS: two.pow(128) },
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
       await etoCommitment.handleStateTransitions();
-      // will generate exactly 2^32 - 2 tokens
-      await investAmount(investors[0], two.pow(96).sub(two.pow(64).mul(2)), "EUR");
+      // will generate exactly 2^56 - 2 tokens
+      await investAmount(investors[0], two.pow(56).sub(two), "EUR");
       // will generate 1 token
-      await investAmount(investors[0], two.pow(64), "EUR");
-      await expect(investAmount(investors[0], two.pow(64), "EUR")).to.be.revert;
+      await investAmount(investors[0], one, "EUR");
+      await expect(investAmount(investors[0], one, "EUR")).to.be.revert;
     });
-
-    it("allows investment with more than 2**32 equity tokens");
 
     it("reverts on euro token overflow > 2**96", async () => {
       // investor ticket stores eurt equivalend in 96bit, this attempts to overflow it (without overflowing equity tokens)
@@ -1661,7 +1661,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployETO({
         ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: Q18 }, // we allow many tokens, so there is no max cap triggered there
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS: manyTokens }, // we allow many tokens, so there is no max cap triggered there
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate.add(1));
@@ -1691,8 +1691,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         ovrETOTerms: { MIN_TICKET_EUR_ULPS: Q18, MAX_TICKET_EUR_ULPS },
         ovrETOTermsConstraints: { MAX_INVESTMENT_AMOUNT_EUR_ULPS }, // max invest is 5mio
         ovrTokenTerms: {
-          MAX_NUMBER_OF_TOKENS: Q18.mul(1000),
-          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: Q18.mul(1000),
+          MAX_NUMBER_OF_TOKENS: manyTokens,
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: manyTokens,
         }, // we allow many tokens, so there is no max cap triggered there
       });
       await prepareETOForPublic();
