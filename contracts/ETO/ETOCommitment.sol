@@ -783,14 +783,13 @@ contract ETOCommitment is
         (
             bool isWhitelisted,
             bool isEligible,
-            uint minTicketEurUlps,
+            uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
             uint256 equityTokenInt256,
             uint256 fixedSlotEquityTokenInt256
         ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
         // kick out on KYC
         require(isEligible, "NF_ETO_INV_NOT_VER");
-        assert(equityTokenInt256 < 2 ** 32 && fixedSlotEquityTokenInt256 < 2 ** 32);
         // kick on minimum ticket and you must buy at least one token!
         require(equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps && equityTokenInt256 > 0, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
@@ -816,28 +815,35 @@ contract ETOCommitment is
             }
         }
         // issue equity token
-        assert(equityTokenInt256 + ticket.equityTokenInt < 2**32);
+        EQUITY_TOKEN.issueTokens(equityTokenInt256);
+        // update investment state
+        // total number of tokens must fit into uint56, uints are coerced to biggest size
+        assert(_totalTokensInt + equityTokenInt256 < 2**56);
+        _totalTokensInt += uint56(equityTokenInt256);
+        // as fixedSlotEquityTokenInt256 always lte equityTokenInt256 no chances to overflow
+        _totalFixedSlotsTokensInt += uint56(fixedSlotEquityTokenInt256);
+        assert(_totalEquivEurUlps + equivEurUlps < 2**112);
+        _totalEquivEurUlps += uint112(equivEurUlps);
+
+        _totalInvestors += ticket.equivEurUlps == 0 ? 1 : 0;
+
+        // write new ticket values
         // this will also check ticket.amountEurUlps + uint96(amount) as ticket.equivEurUlps is always >= ticket.amountEurUlps
         assert(equivEurUlps + ticket.equivEurUlps < 2**96);
-        assert(amount < 2**96);
-        // practically impossible: would require price of ETH smaller than 1 EUR and > 2**96 amount of ether
-        assert(uint256(ticket.amountEth) + amount < 2**96);
-        EQUITY_TOKEN.issueTokens(uint32(equityTokenInt256));
-        // update total investment
-        _totalEquivEurUlps += uint96(equivEurUlps);
-        _totalTokensInt += uint32(equityTokenInt256);
-        _totalFixedSlotsTokensInt += uint32(fixedSlotEquityTokenInt256);
-        _totalInvestors += ticket.equivEurUlps == 0 ? 1 : 0;
-        // write new ticket values
         ticket.equivEurUlps += uint96(equivEurUlps);
         // uint96 is much more than 1.5 bln of NEU so no overflow
         ticket.rewardNmkUlps += uint96(investorNmk);
-        ticket.equityTokenInt += uint32(equityTokenInt256);
+        // if total number of tokens fits into uint256, particular investor tokens will fit into 96
+        ticket.equityTokenInt += uint96(equityTokenInt256);
+
+        // practically impossible: would require price of ETH smaller than 1 EUR and > 2**96 amount of ether
+        assert(ticket.amountEth + amount < 2**96);
         if (isEuroInvestment) {
             ticket.amountEurUlps += uint96(amount);
         } else {
             ticket.amountEth += uint96(amount);
         }
+
         ticket.usedLockedAccount = ticket.usedLockedAccount || wallet != investor;
         // log successful commitment
         emit LogFundsCommitted(

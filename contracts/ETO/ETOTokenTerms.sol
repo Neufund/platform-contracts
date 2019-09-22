@@ -16,8 +16,6 @@ contract ETOTokenTerms is Math, IContractId {
     ////////////////////////
 
     bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-    // equity tokens per share
-    uint256 public constant EQUITY_TOKENS_PER_SHARE = 10000;
     // equity tokens decimals (precision)
     uint8 public constant EQUITY_TOKENS_PRECISION = 0; // indivisible
 
@@ -42,6 +40,8 @@ contract ETOTokenTerms is Math, IContractId {
     uint256 public SHARE_NOMINAL_VALUE_ULPS;
     // sets nominal value of newly issued shares in euro, used to withdraw share capital to Nominee
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
+    // equity tokens per share
+    uint256 public EQUITY_TOKENS_PER_SHARE;
 
 
     ////////////////////////
@@ -56,18 +56,23 @@ contract ETOTokenTerms is Math, IContractId {
         uint256 tokenPriceEurUlps,
         uint256 maxNumberOfTokensInWhitelist,
         uint256 shareNominalValueUlps,
-        uint256 shareNominalValueEurUlps
+        uint256 shareNominalValueEurUlps,
+        uint256 equityTokensPerShare
     )
         public
     {
-        require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens);
-        require(maxNumberOfTokens >= minNumberOfTokens);
+        require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens, "NF_WL_TOKENS_GT_MAX_TOKENS");
+        require(maxNumberOfTokens >= minNumberOfTokens, "NF_MIN_TOKENS_GT_MAX_TOKENS");
         // min cap must be > single share
-        require(minNumberOfTokens >= EQUITY_TOKENS_PER_SHARE, "NF_ETO_TERMS_ONE_SHARE");
+        require(minNumberOfTokens >= equityTokensPerShare, "NF_ETO_TERMS_ONE_SHARE");
         require(shareNominalValueUlps > 0);
         require(shareNominalValueEurUlps > 0);
+        require(equityTokensPerShare > 0);
         require(keccak256(abi.encodePacked(equityTokenName)) != EMPTY_STRING_HASH);
         require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
+        // overflows cannot be possible
+        require(maxNumberOfTokens < 2**56, "NF_TOO_MANY_TOKENS");
+        require(mul(tokenPriceEurUlps, maxNumberOfTokens) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
 
         MIN_NUMBER_OF_TOKENS = minNumberOfTokens;
         MAX_NUMBER_OF_TOKENS = maxNumberOfTokens;
@@ -77,6 +82,7 @@ contract ETOTokenTerms is Math, IContractId {
         SHARE_NOMINAL_VALUE_ULPS = shareNominalValueUlps;
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
+        EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
     }
 
     ////////////////////////
