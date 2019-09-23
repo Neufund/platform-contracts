@@ -1,14 +1,7 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { deployUniverse, deployPlatformTerms } from "../helpers/deployContracts";
-import {
-  deployShareholderRights,
-  deployDurationTerms,
-  deployETOTerms,
-  deployTokenTerms,
-  constTokenTerms,
-  deployETOTermsConstraintsUniverse,
-} from "../helpers/deployTerms";
+import { deployTokenTerms, constTokenTerms, defTokenTerms } from "../helpers/deployTerms";
 import {
   basicTokenTests,
   standardTokenTests,
@@ -31,15 +24,10 @@ import { increaseTime } from "../helpers/evmCommands";
 import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 import EvmError from "../helpers/EVMThrow";
 
-const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
-
 const EquityToken = artifacts.require("EquityToken");
 const TestMockableEquityTokenController = artifacts.require("TestMockableEquityTokenController");
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
-const ETOTerms = artifacts.require("ETOTerms");
-const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
 
 contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let equityToken;
@@ -47,30 +35,13 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
   let accessPolicy;
   let universe;
   let tokenTerms, tokenTermsDict;
-  let termsConstraints;
 
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.reclaimer }]);
     await deployPlatformTerms(universe, admin);
-    const [shareholderRights] = await deployShareholderRights(ShareholderRights);
-    const [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms);
 
-    [termsConstraints] = await deployETOTermsConstraintsUniverse(
-      admin,
-      universe,
-      ETOTermsConstraints,
-    );
-
-    await deployETOTerms(
-      universe,
-      ETOTerms,
-      durationTerms,
-      tokenTerms,
-      shareholderRights,
-      termsConstraints,
-    );
     equityTokenController = await TestMockableEquityTokenController.new(universe.address);
 
     equityToken = await EquityToken.new(
@@ -132,7 +103,27 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     });
 
     // should be a set of tests with different rounding, we should be able to run it on platform as well
-    it("should convert equity token amount to shares");
+    it("should convert equity token amount to shares", async () => {
+      // generate one share
+      await equityToken.issueTokens(defTokenTerms.EQUITY_TOKENS_PER_SHARE, { from: holders[0] });
+      expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(1);
+      // add one token
+      await equityToken.issueTokens("1", { from: holders[0] });
+      expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(1);
+      // one token above half
+      await equityToken.issueTokens(defTokenTerms.EQUITY_TOKENS_PER_SHARE.div(2).floor(), {
+        from: holders[0],
+      });
+      expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(1);
+      // two shares
+      await equityToken.issueTokens(
+        defTokenTerms.EQUITY_TOKENS_PER_SHARE.div(2)
+          .floor()
+          .add(1),
+        { from: holders[0] },
+      );
+      expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(2);
+    });
 
     it("should set token symbol and other metadata from eto terms correctly", async () => {
       const equityTokenName = await tokenTerms.EQUITY_TOKEN_NAME();
