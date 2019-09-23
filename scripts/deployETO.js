@@ -48,7 +48,14 @@ module.exports = async function deploy() {
       throw new Error(`eto must be in prospectus_approved state, not in ${etoData.state}`);
     }
     parsed = etoData.investment_calculated_values.eto_terms;
-    console.log("Obtained etoTerms structure successfully");
+    const path = join(
+      __dirname,
+      "..",
+      `terms_${etoData.eto_id}-${etoData.equity_token_symbol}.json`,
+    );
+    const contents = JSON.stringify(parsed);
+    fs.writeFileSync(path, contents);
+    console.log(`Obtained etoTerms structure successfully, wrote to ${path}`);
   } else {
     const path = join(__dirname, "..", options.definition);
     const contents = fs.readFileSync(path);
