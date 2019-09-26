@@ -35,7 +35,7 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   it("should calculate platform fee correctly", async () => {
-    const amount = Q18.mul(1928.818172);
+    const amount = Q18.mul("1928.818172");
     const feeAmount = await platformTerms.calculatePlatformFee(amount);
     const fee = defaultTerms.PLATFORM_FEE_FRACTION;
     expect(feeAmount).to.be.bignumber.eq(divRound(amount.mul(fee), Q18));
@@ -57,6 +57,7 @@ contract("PlatformTerms", ([_, admin]) => {
     expect(shares).to.be.bignumber.eq(0);
     expect(platformShares).to.be.bignumber.eq(0);
   });
+
   it("should calculate neumark share when reward is 1 wei", async () => {
     const reward = 1;
     const [platformShares, shares] = await platformTerms.calculateNeumarkDistribution(1);
@@ -84,6 +85,28 @@ contract("PlatformTerms", ([_, admin]) => {
       .to.be.bignumber.eq(etherToWei(0.5).plus(1))
       .gt(platformShares);
     expect(platformShares).to.be.bignumber.eq(etherToWei(0.5));
+  });
+
+  //
+  const tokenAmountTestCases = [
+    Q18,
+    Q18.sub(1),
+    Q18.add(1),
+    new web3.BigNumber("7128918927"),
+    ...[...Array(52).keys()].map(k => new web3.BigNumber(k)),
+  ];
+  tokenAmountTestCases.forEach(tokenAmount => {
+    it(`should compute amounts before token fee from ${tokenAmount.toString(
+      10,
+    )} tokens`, async () => {
+      const beforeFee = await platformTerms.calculateAmountWithoutFee(tokenAmount);
+      expect(beforeFee).to.be.bignumber.eq(tokenAmount.div("1.02").round(0, 4));
+      const fee = await platformTerms.calculatePlatformTokenFee(beforeFee);
+      expect(fee).to.be.bignumber.eq(beforeFee.mul("0.02").round(0, 4));
+      // this is a correction terms for rounding discrepancy
+      const rc = tokenAmount.mod(51).eq(25) ? 1 : 0;
+      expect(beforeFee.add(fee)).to.be.bignumber.eq(tokenAmount.add(rc));
+    });
   });
 
   const upTo40DecimalPlacesList = [...Array(41).keys()];
