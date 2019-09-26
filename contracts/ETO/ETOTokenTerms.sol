@@ -61,10 +61,12 @@ contract ETOTokenTerms is Math, IContractId {
     )
         public
     {
-        require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens, "NF_WL_TOKENS_GT_MAX_TOKENS");
+        require(maxNumberOfTokens >= maxNumberOfTokensInWhitelist, "NF_WL_TOKENS_GT_MAX_TOKENS");
         require(maxNumberOfTokens >= minNumberOfTokens, "NF_MIN_TOKENS_GT_MAX_TOKENS");
         // min cap must be > single share
         require(minNumberOfTokens >= equityTokensPerShare, "NF_ETO_TERMS_ONE_SHARE");
+        // maximum number of tokens are full shares
+        require(maxNumberOfTokens % equityTokensPerShare == 0, "NF_MAX_TOKENS_FULL_SHARES");
         require(shareNominalValueUlps > 0);
         require(shareNominalValueEurUlps > 0);
         require(equityTokensPerShare > 0);

@@ -1,7 +1,11 @@
 import { expect } from "chai";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { divRound } from "../helpers/unitConverter";
-import { deployUniverse, deployIdentityRegistry } from "../helpers/deployContracts";
+import {
+  deployUniverse,
+  deployIdentityRegistry,
+  deployPlatformTerms,
+} from "../helpers/deployContracts";
 import {
   deployShareholderRights,
   deployDurationTerms,
@@ -37,6 +41,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await deployIdentityRegistry(universe, admin, admin);
+    await deployPlatformTerms(universe, admin);
 
     [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights(
       ShareholderRights,
@@ -120,6 +125,14 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
   it("should verify terms in ETOTerms", async () => {
     await verifyTerms(etoTerms, termsKeys, terms);
+    // verify available tokens
+    expect(await etoTerms.MAX_AVAILABLE_TOKENS()).to.be.bignumber.eq(
+      defTokenTerms.MAX_NUMBER_OF_TOKENS.div("1.02").round(0, 4),
+    );
+    // MAX_AVAILABLE_TOKENS_IN_WHITELIST not crossing over MAX_AVAILABLE_TOKENS
+    expect(await etoTerms.MAX_AVAILABLE_TOKENS_IN_WHITELIST()).to.be.bignumber.eq(
+      defTokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST,
+    );
   });
 
   it("ETOTerms: also verify constant parameters that are not set but part of interface");
@@ -138,7 +151,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
   it("ShareholderRights todo: also verify constant parameters");
 
-  it("should verify default eto terms against platform terms", async () => {
+  it("should verify default eto terms", async () => {
     await etoTerms.requireValidTerms();
   });
 
@@ -225,7 +238,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       const modMinTicket = Q18.mul(100000);
       [etoTokenTerms, tokenTerms] = await deployTokenTerms(ETOTokenTerms, {
         MIN_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE,
-        MAX_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE,
+        MAX_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2),
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: tokenTerms.EQUITY_TOKENS_PER_SHARE.div(100),
       });
       // set public discount so it's impossible to successfully complete ETO becaue min ticket > cap
@@ -253,7 +266,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
           WHITELIST_DISCOUNT_FRAC: maxDiscount.add(1),
         }),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
-      redeployTerms({
+      await redeployTerms({
         PUBLIC_DISCOUNT_FRAC: maxDiscount,
       });
     });
@@ -280,7 +293,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         ),
       ).to.be.rejectedWith("NF_MIN_CAP_GT_PROD_MAX_CAP");
       // public discount lowers it and let's pass
-      redeployTerms(
+      await redeployTerms(
         {
           PUBLIC_DISCOUNT_FRAC: Q18.mul("0.00001"),
         },
@@ -290,15 +303,18 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
     it("rejects if max tokens not fit in 2**56", async () => {
       const b2 = new web3.BigNumber("2");
-      // should pass
-      deployTokenTerms(ETOTokenTerms, {
-        MAX_NUMBER_OF_TOKENS: b2.pow(56).sub(1),
-        TOKEN_PRICE_EUR_ULPS: new web3.BigNumber("1"),
+      const b1 = new web3.BigNumber("1");
+      // should pass - just one share below 2**256
+      await deployTokenTerms(ETOTokenTerms, {
+        EQUITY_TOKENS_PER_SHARE: b1,
+        MAX_NUMBER_OF_TOKENS: b2.pow(56).sub(b1),
+        TOKEN_PRICE_EUR_ULPS: b1,
       });
       // won't fit
       await expect(
         deployTokenTerms(ETOTokenTerms, {
-          TOKEN_PRICE_EUR_ULPS: new web3.BigNumber("1"),
+          EQUITY_TOKENS_PER_SHARE: b1,
+          TOKEN_PRICE_EUR_ULPS: b1,
           MAX_NUMBER_OF_TOKENS: b2.pow(56),
         }),
       ).to.be.rejectedWith("NF_TOO_MANY_TOKENS");
@@ -311,7 +327,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         .div(tokenTerms.MAX_NUMBER_OF_TOKENS)
         .floor();
       // should pass
-      deployTokenTerms(ETOTokenTerms, {
+      await deployTokenTerms(ETOTokenTerms, {
         TOKEN_PRICE_EUR_ULPS: maxTokenPrice,
       });
       // won't fit
@@ -521,13 +537,6 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       return amount.mul(tokenPrice());
     }
 
-    it("should compute estimated max cap and min cap in eur", async () => {
-      const maxCap = await etoTerms.ESTIMATED_MAX_CAP_EUR_ULPS();
-      expect(maxCap).to.be.bignumber.eq(eurAmount(tokenTerms.MAX_NUMBER_OF_TOKENS));
-      const minCap = await etoTerms.ESTIMATED_MIN_CAP_EUR_ULPS();
-      expect(minCap).to.be.bignumber.eq(eurAmount(tokenTerms.MIN_NUMBER_OF_TOKENS));
-    });
-
     it("should calculate price fraction", async () => {
       expect(await etoTerms.calculatePriceFraction(priceFraction)).to.be.bignumber.eq(tokenPrice());
     });
@@ -569,9 +578,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(ticket[1]).to.be.bignumber.eq(0);
       expect(ticket[2]).to.be.bignumber.eq(Q18);
 
-      // with discount of 60% with ticket 500000
+      // with discount of 40% with ticket 500000
       const whitelistedAmount = Q18.mul(500000).add(1);
-      const discount = Q18.mul(0.6).sub(1);
+      const discount = Q18.mul("0.6").sub(1);
       tx = await etoTerms.addWhitelisted([investorDiscount], [whitelistedAmount], [discount], {
         from: admin,
       });

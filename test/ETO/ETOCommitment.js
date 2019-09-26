@@ -12,6 +12,7 @@ import {
   deployEtherTokenMigration,
   deployEuroTokenMigration,
   deployFeeDisbursalUniverse,
+  defaultPlatformTerms,
 } from "../helpers/deployContracts";
 import {
   deployShareholderRights,
@@ -67,6 +68,7 @@ const UNKNOWN_STATE_START_TS = 10000000; // state startOf timeestamps invalid be
 const platformShare = nmk => nmk.div(PLATFORM_SHARE).round(0, 1); // round down
 const investorShare = nmk => nmk.sub(platformShare(nmk));
 const manyTokens = new web3.BigNumber(2).pow(32).sub(1);
+const inverseTokenFeeDec = defaultPlatformTerms.TOKEN_PARTICIPATION_FEE_FRACTION.div(Q18).add("1");
 
 contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // basic infrastructure
@@ -580,12 +582,14 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("go from public to signing by reaching max cap exactly (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[4], missingAmount, "EUR");
       // we should be signing NOW
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      // exactly max number of tokens sold
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       const contribution = await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
       const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
       await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
@@ -614,7 +618,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("go from public to signing by reaching max cap within minimum ticket (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       // MIN_TICKET is not exactly divisible by price (typically), there is a remainder which produces gap as below
@@ -623,6 +627,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await investAmount(investors[4], missingAmount.sub(gap), "EUR");
       // we should be signing NOW
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
     });
 
@@ -643,7 +648,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("stay in public by not reaching max cap because less than gap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       const gap = minTicketTokenGapAmount();
@@ -669,7 +674,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("reverts on crossing max cap (max tokens)", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await expect(
@@ -706,7 +711,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await etoTerms.addWhitelisted([investors[0]], [Q18.mul(15000000)], [Q18.mul(1)], {
         from: admin,
       });
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       const tx = await investAmount(investors[0], missingAmount, "EUR");
@@ -717,6 +722,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // we should be signing NOW
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
       await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
     });
 
     it("should reach max cap in whitelist and stay there until public", async () => {
@@ -893,7 +899,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should refund if company signs too late", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[4], missingAmount, "EUR");
@@ -910,7 +916,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should refund if nominee signs too late", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[4], missingAmount, "EUR");
@@ -932,7 +938,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     it("refund nominee returns nominal value", async () => {
       await deployEtoWithTicket({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxTicket.mul(10000) } });
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[4], missingAmount, "EUR");
@@ -951,11 +957,12 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should allow to fundraise again on the same token", async () => {
       await skipTimeTo(publicStartDate.add(1));
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[4], missingAmount, "EUR");
       const contribution = await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
       await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
         from: company,
@@ -978,7 +985,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const oldNomineeBalance = await euroToken.balanceOf(nominee);
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate.add(1));
-      const newMissingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(newTokenPrice);
+      const missingTokens = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
+      const newMissingAmount = missingTokens.mul(newTokenPrice);
       await investAmount(investors[1], newMissingAmount, "EUR", newTokenPrice);
       expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Signing);
       await expectValidSigningState(investors, {
@@ -987,8 +995,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         initialEquityTokens: oldEquitySupply,
         initialNomineeBalance: oldNomineeBalance,
       });
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       expect(await equityToken.totalSupply()).to.be.bignumber.eq(
-        oldEquitySupply.add(tokenTermsDict.MAX_NUMBER_OF_TOKENS),
+        oldEquitySupply.add(missingTokens),
       );
     });
 
@@ -1174,7 +1183,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
         etoTermsDict.WHITELIST_DISCOUNT_FRAC,
       );
-      const missingAmount = maxTokens.mul(dp);
+      const missingAmount = getMaxAvailableTokens(maxTokens).mul(dp);
       // we immediately should go to signing, skipping public due to max cap
       const tx = await investAmount(investors[1], missingAmount, "EUR", dp);
       expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore", 0);
@@ -1188,7 +1197,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const tokenPrice = Q18;
       await deployETO({
         ovrTokenTerms: {
-          MAX_NUMBER_OF_TOKENS: oneShare,
+          MAX_NUMBER_OF_TOKENS: oneShare.mul(2),
           MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
           MIN_NUMBER_OF_TOKENS: oneShare,
           TOKEN_PRICE_EUR_ULPS: tokenPrice,
@@ -1196,12 +1205,51 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      const missingAmount = oneShare.mul(tokenPrice);
-      const tx = await investAmount(investors[1], missingAmount, "EUR", tokenPrice);
+      // minimum investment is one share, that should also shift eto to signing, because this is also max investment
+      const minimumAmount = oneShare.mul(tokenPrice);
+      let tx = await investAmount(investors[1], minimumAmount, "EUR", tokenPrice);
+      expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore", 0);
+      expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 1);
+      const signingStartOf = publicStartDate.add(durTable[CommitmentState.Public]);
+      await skipTimeTo(signingStartOf.add(1));
+      tx = await etoCommitment.handleStateTransitions();
+      expectLogStateTransition(tx, CommitmentState.Public, CommitmentState.Signing, "ignore");
+      const contribution = await expectValidSigningState([investors[1]]);
+      await moveETOToClaim(1, new web3.BigNumber(0));
+      // expect one share sold
+      const totalInvestment = await etoCommitment.totalInvestment();
+      expect(totalInvestment[1]).to.be.bignumber.eq(oneShare);
+      // expect two shares generated
+      expect(totalInvestment[1].add(contribution[4])).to.be.bignumber.eq(oneShare.mul(2));
+    });
+
+    it("should allow min cap == max available tokens commitment", async () => {
+      // min investment is max investment
+      const oneShare = defTokenTerms.EQUITY_TOKENS_PER_SHARE;
+      const maxTokens = oneShare.mul(2);
+      // make min tokens == AVAILABLE TOKENS
+      const minTokens = getMaxAvailableTokens(maxTokens);
+      const tokenPrice = Q18;
+      await deployETO({
+        ovrTokenTerms: {
+          MAX_NUMBER_OF_TOKENS: maxTokens,
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          MIN_NUMBER_OF_TOKENS: minTokens,
+          TOKEN_PRICE_EUR_ULPS: tokenPrice,
+        },
+        ovrETOTerms: {
+          MAX_TICKET_EUR_ULPS: maxTokens.mul(tokenPrice),
+        },
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      // minimum investment is one share, that should also shift eto to signing, because this is also max investment
+      const minimumAmount = minTokens.mul(tokenPrice);
+      const tx = await investAmount(investors[1], minimumAmount, "EUR", tokenPrice);
       expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore", 0);
       expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 1);
       expectLogStateTransition(tx, CommitmentState.Public, CommitmentState.Signing, "ignore", 2);
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
     });
 
     it("should enable transfer on equity token on success", async () => {
@@ -1214,7 +1262,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[1], missingAmount, "EUR");
@@ -1230,7 +1278,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[1], missingAmount, "EUR");
@@ -1251,7 +1299,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployETO({ ovrETOTerms: { MAX_TICKET_EUR_ULPS: Q18.mul(15000000) } });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.mul(
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS).mul(
         tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
       );
       await investAmount(investors[1], missingAmount, "EUR");
@@ -1339,9 +1387,12 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await investAmount(investors[3], Q18.mul(121.12), "ETH", publicPrice);
 
       const tokensSold = (await etoCommitment.totalInvestment())[1];
-      const missingAmount = tokenTermsDict.MAX_NUMBER_OF_TOKENS.sub(tokensSold).mul(publicPrice);
+      const missingAmount = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS)
+        .sub(tokensSold)
+        .mul(publicPrice);
       await investAmount(investors[1], missingAmount, "EUR", publicPrice);
       const contribution = await moveETOToClaim(4, new web3.BigNumber(0));
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       await claimInvestor(investors[1]);
       await claimInvestor(investors[0]);
       await claimInvestor(investors[2]);
@@ -1387,25 +1438,23 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // make full cap in one go
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      // make full cap by investing all possible shares by share price of 200 EUR (0.02 * 10000)
-      const invTx = await investAmount(
-        investors[0],
-        Q18.mul("200").mul("10000"),
-        "EUR",
-        Q18.mul("0.02"),
-      );
+      // make full cap by investing all possible shares by share price of 200 EUR (0.02 * 10000) / 1.02 - token fee
+      const maxInvestmentAmount = Q18.mul("1960784.313725490196078431");
+      const invTx = await investAmount(investors[0], maxInvestmentAmount, "EUR", Q18.mul("0.02"));
       await expectValidSigningState([investors[0]]);
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       // inv txt should contain signing event where nominee capital is equal to number of generated shares
-      let totalNewShares = new web3.BigNumber("10000");
-      totalNewShares = totalNewShares.add(totalNewShares.mul("0.02").floor());
+      // we do not generate any shares above the max number of token, fee is taken within this limit
+      const totalNewShares = new web3.BigNumber("10000");
       expectLogSigningStarted(invTx, nominee, company, totalNewShares, Q18.mul(totalNewShares));
       // this will also check claims state
       const contribution = await moveETOToClaim(1, new web3.BigNumber(0));
       expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
       expect(contribution[1]).to.be.bignumber.eq(Q18.mul(totalNewShares));
       // this is effective price that will generate issued number of shares for collected funds
-      const effectiveSharePrice = Q18.mul("200")
-        .mul(50)
+      // full share price * ratio of tokens sold to all tokens
+      // 200*(10000*10000/(102/100))/(10000*10000) == 10000/51
+      const effectiveSharePrice = Q18.mul("10000")
         .div(51)
         .round(0, 4);
       expect(contribution[7]).to.be.bignumber.eq(effectiveSharePrice);
@@ -1463,20 +1512,25 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // make full cap in one go
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
-      // make full cap by investing all possible shares by share price of 200 EUR (0.02 * 10000)
+      // make full cap by investing all possible shares by share price * 30 / 1.02
+      // AccountingForm[161870.503597122*30/(102/100), {76, 25}]
+      // FYI: mathematica will solve this symbolically and then convert to N
+      // this avoids many roundings and the value here is really: 4760897.164621235
+      // no time to investigate though, using regular calculator I get same values as in contract
+      const maxInvestmentAmount = Q18.mul("4760897.164621235294117647");
       const invTx = await investAmount(
         investors[0],
-        sharePrice.mul("30"),
+        maxInvestmentAmount,
         "EUR",
         Q18.mul("16.1870503597122"),
       );
+      expect(await etoCommitment.timedState.call()).to.be.bignumber.eq(CommitmentState.Signing);
       await expectValidSigningState([investors[0]]);
+      await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       // inv txt should contain signing event where nominee capital is equal to number of generated shares
-      let totalNewShares = new web3.BigNumber("30");
-      // round up to next share
-      totalNewShares = totalNewShares.add(totalNewShares.mul("0.02").round(0, 2));
-      // there are 31 new shares so one more share was created just to cover 0.02 tokens as fee
-      expect(totalNewShares).to.be.bignumber.eq(31);
+      // which is a max cap as fee is taken from max tokens
+      const totalNewShares = new web3.BigNumber("30");
+      expect(totalNewShares).to.be.bignumber.eq(30);
       expectLogSigningStarted(
         invTx,
         nominee,
@@ -1489,11 +1543,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
       expect(contribution[1]).to.be.bignumber.eq(shareNominalValue.mul(totalNewShares));
       // this is effective price that will generate issued number of shares for collected funds
-      // we generated whole additional share to cover for 0.02%, but price decrease was around 0.37% (30/31)
-      const effectiveSharePrice = sharePrice
-        .mul(30)
-        .div(31)
-        .round(0, 4);
+      // AccountingForm[161870.503597122*(30*10000/(102/100))/(30*10000), {76,19}]
+      // also here Mathematica produces nice "rounder" number, value below was obtained using calculator
+      const effectiveSharePrice = Q18.mul("158696.572154041176470588").round(0, 4);
       expect(contribution[7]).to.be.bignumber.eq(effectiveSharePrice);
       const totalSharesCapitalPost = Q18.mul("27800").add(totalNewShares.mul(shareNominalValue));
       const shareholderInfo = await equityTokenController.shareholderInformation();
@@ -1997,9 +2049,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const discountedTokens = tokenTermsDict.EQUITY_TOKENS_PER_SHARE;
       await investAmount(investors[0], dp.mul(discountedTokens), "EUR");
       await skipTimeTo(publicStartDate.add(1));
-      const maxCap = tokenTermsDict.MAX_NUMBER_OF_TOKENS.sub(discountedTokens).mul(
-        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
-      );
+      const maxCap = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS)
+        .sub(discountedTokens)
+        .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS);
       const contrib = await etoCommitment.calculateContribution(investors[0], false, maxCap);
       expect(contrib[6]).to.be.false;
       const contrib2 = await etoCommitment.calculateContribution(
@@ -2008,6 +2060,34 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         maxCap.add(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
       );
       expect(contrib2[6]).to.be.true;
+    });
+
+    it("should set max cap flag exceeded in whitelist max cap over max available tokens", async () => {
+      // set WL max cap slightly more than available tokens
+      const maxAvailableTokens = getMaxAvailableTokens(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
+      const feeTokens = tokenTermsDict.MAX_NUMBER_OF_TOKENS.sub(maxAvailableTokens);
+      await deployETO({
+        ovrTokenTerms: {
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: maxAvailableTokens.add(feeTokens.div(2).floor()),
+        },
+      });
+      await prepareETOForPublic();
+      await etoTerms.addWhitelisted([investors[0]], [Q18.mul(0)], [Q18.mul(1)], {
+        from: admin,
+      });
+      const dp = discountedPrice(
+        tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
+        etoTermsDict.WHITELIST_DISCOUNT_FRAC,
+      );
+      const wlMaxCap = maxAvailableTokens.mul(dp);
+      const wlContrib = await etoCommitment.calculateContribution(investors[0], false, wlMaxCap);
+      expect(wlContrib[6]).to.be.false;
+      const wlContrib2 = await etoCommitment.calculateContribution(
+        investors[0],
+        false,
+        wlMaxCap.add(dp),
+      );
+      expect(wlContrib2[6]).to.be.true;
     });
 
     it("max cap flag exceeded should be not be set if within fixed slot", async () => {
@@ -3857,6 +3937,17 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         tranche1Price.mul(tranche2QuantizedAmount).add(tranche2Price.mul(tranche1QuantizedAmount)),
       )
       .floor();
+  }
+
+  function getMaxAvailableTokens(maxNumberOfTokens) {
+    return maxNumberOfTokens.div(inverseTokenFeeDec).round(0, 4);
+  }
+
+  async function expectExactlyMaxCap(maxNumberOfTokens) {
+    const totalInvestment = await etoCommitment.totalInvestment();
+    const contribution = await etoCommitment.contributionSummary();
+    // we stop ETO exactly when sold tokens + token fee == max tokens
+    expect(totalInvestment[1].add(contribution[4])).to.be.bignumber.eq(maxNumberOfTokens);
   }
 
   function expectLogStateTransition(tx, oldState, newState, ts, logIdx = 0) {
