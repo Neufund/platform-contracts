@@ -1240,9 +1240,6 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await expect(equityToken.transfer(investors[0], 1, { from: investors[1] })).to.be.revert;
     });
 
-    // large tickets only
-    it("should invest in non-retail commitment");
-
     it("sign to claim with feeDisbursal as simple address", async () => {
       // set simple address as fee disbursal
       const simpleAccountDisbursal = investors[3];
@@ -1365,6 +1362,146 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const shareholderInfo = await equityTokenController.shareholderInformation();
       expect(shareholderInfo[0]).to.be.bignumber.eq(increasedShareCapitalUlps);
       expect(shareholderInfo[1]).to.be.bignumber.eq(expectedValuation);
+    });
+
+    it("should allow simple price and valuation formulas for simple shareholding struct", async () => {
+      // we can use various simplified formula for ETOs where all shares are identical and have 1 EUR value
+      // so number of shares = share capital
+      const tokensPerShare = new web3.BigNumber("10000");
+      await deployETO({
+        ovrTokenTerms: {
+          SHARE_NOMINAL_VALUE_ULPS: Q18,
+          SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
+          EQUITY_TOKENS_PER_SHARE: tokensPerShare,
+          TOKEN_PRICE_EUR_ULPS: Q18.mul("0.02"),
+          MIN_NUMBER_OF_TOKENS: tokensPerShare.mul(5),
+          MAX_NUMBER_OF_TOKENS: tokensPerShare.mul(10000),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: tokensPerShare.mul(5),
+        },
+        ovrETOTerms: {
+          MAX_TICKET_EUR_ULPS: Q18.mul("5000000"),
+          SHARE_CAPITAL_CURRENCY_CODE: "EUR",
+          EXISTING_SHARE_CAPITAL: Q18.mul("25000"),
+        },
+      });
+      // make full cap in one go
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      // make full cap by investing all possible shares by share price of 200 EUR (0.02 * 10000)
+      const invTx = await investAmount(
+        investors[0],
+        Q18.mul("200").mul("10000"),
+        "EUR",
+        Q18.mul("0.02"),
+      );
+      await expectValidSigningState([investors[0]]);
+      // inv txt should contain signing event where nominee capital is equal to number of generated shares
+      let totalNewShares = new web3.BigNumber("10000");
+      totalNewShares = totalNewShares.add(totalNewShares.mul("0.02").floor());
+      expectLogSigningStarted(invTx, nominee, company, totalNewShares, Q18.mul(totalNewShares));
+      // this will also check claims state
+      const contribution = await moveETOToClaim(1, new web3.BigNumber(0));
+      expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
+      expect(contribution[1]).to.be.bignumber.eq(Q18.mul(totalNewShares));
+      // this is effective price that will generate issued number of shares for collected funds
+      const effectiveSharePrice = Q18.mul("200")
+        .mul(50)
+        .div(51)
+        .round(0, 4);
+      expect(contribution[7]).to.be.bignumber.eq(effectiveSharePrice);
+      // check if nominee balance == share capital increase
+      expect(await euroToken.balanceOf(nominee)).to.be.bignumber.eq(Q18.mul(totalNewShares));
+      const shareholderInfo = await equityTokenController.shareholderInformation();
+      // which is number of shares but in Q18 units
+      const totalSharesCapitalPost = Q18.mul("25000").add(totalNewShares.mul(Q18));
+      expect(shareholderInfo[0]).to.be.bignumber.eq(totalSharesCapitalPost);
+      // check new company valuation in token controller
+      // now we count in all the shares created by price of last share sold but 2% of shares is not removed
+      // and this needs to be discussed
+      expect(shareholderInfo[1]).to.be.bignumber.eq(totalSharesCapitalPost.mul("200"));
+    });
+
+    async function deployLargeSharePriceOvr() {
+      const tokensPerShare = new web3.BigNumber("10000");
+      const sharePrice = Q18.mul("161870.503597122");
+      const tokenPrice = sharePrice.div(tokensPerShare).floor();
+      const shareNominalValue = Q18.mul(100);
+      await deployETO({
+        ovrTokenTerms: {
+          SHARE_NOMINAL_VALUE_ULPS: shareNominalValue,
+          SHARE_NOMINAL_VALUE_EUR_ULPS: Q18.mul("13.5"),
+          EQUITY_TOKENS_PER_SHARE: tokensPerShare,
+          TOKEN_PRICE_EUR_ULPS: tokenPrice,
+          MIN_NUMBER_OF_TOKENS: tokensPerShare.mul(6),
+          MAX_NUMBER_OF_TOKENS: tokensPerShare.mul(30),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: tokensPerShare.mul(30),
+        },
+        ovrETOTerms: {
+          MAX_TICKET_EUR_ULPS: Q18.mul("5000000"),
+          MIN_TICKET_EUR_ULPS: Q18.mul("20"),
+          SHARE_CAPITAL_CURRENCY_CODE: "PLN",
+          EXISTING_SHARE_CAPITAL: Q18.mul("27800"),
+        },
+      });
+      return [sharePrice, shareNominalValue];
+    }
+
+    it("should lose significant amount when buying non round number of tokens", async () => {
+      // we buy for 160 EUR which is almost 10 tokens, but almost makes a big difference
+      await deployLargeSharePriceOvr();
+      // make full cap in one go
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      await investAmount(investors[0], Q18.mul("160"), "EUR", Q18.mul("16.1870503597122"));
+      const ticket = await etoCommitment.investorTicket(investors[0]);
+      expect(ticket[2]).to.be.bignumber.eq(9);
+    });
+
+    it("should have correct valuation for very high share price", async () => {
+      // we'll create additional share to cover for 2% token fee
+      const [sharePrice, shareNominalValue] = await deployLargeSharePriceOvr();
+      // make full cap in one go
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      // make full cap by investing all possible shares by share price of 200 EUR (0.02 * 10000)
+      const invTx = await investAmount(
+        investors[0],
+        sharePrice.mul("30"),
+        "EUR",
+        Q18.mul("16.1870503597122"),
+      );
+      await expectValidSigningState([investors[0]]);
+      // inv txt should contain signing event where nominee capital is equal to number of generated shares
+      let totalNewShares = new web3.BigNumber("30");
+      // round up to next share
+      totalNewShares = totalNewShares.add(totalNewShares.mul("0.02").round(0, 2));
+      // there are 31 new shares so one more share was created just to cover 0.02 tokens as fee
+      expect(totalNewShares).to.be.bignumber.eq(31);
+      expectLogSigningStarted(
+        invTx,
+        nominee,
+        company,
+        totalNewShares,
+        shareNominalValue.mul(totalNewShares),
+      );
+      // this will also check claims state
+      const contribution = await moveETOToClaim(1, new web3.BigNumber(0));
+      expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
+      expect(contribution[1]).to.be.bignumber.eq(shareNominalValue.mul(totalNewShares));
+      // this is effective price that will generate issued number of shares for collected funds
+      // we generated whole additional share to cover for 0.02%, but price decrease was around 0.37% (30/31)
+      const effectiveSharePrice = sharePrice
+        .mul(30)
+        .div(31)
+        .round(0, 4);
+      expect(contribution[7]).to.be.bignumber.eq(effectiveSharePrice);
+      const totalSharesCapitalPost = Q18.mul("27800").add(totalNewShares.mul(shareNominalValue));
+      const shareholderInfo = await equityTokenController.shareholderInformation();
+      expect(shareholderInfo[0]).to.be.bignumber.eq(totalSharesCapitalPost);
+      // now company valuation takes into account this new share
+      expect(shareholderInfo[1]).to.be.bignumber.eq(
+        totalSharesCapitalPost.mul(sharePrice).div(shareNominalValue),
+      );
     });
   });
 

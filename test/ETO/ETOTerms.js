@@ -10,6 +10,7 @@ import {
   deployETOTermsConstraints,
   constTokenTerms,
   deployETOTerms,
+  defTokenTerms,
 } from "../helpers/deployTerms";
 import { Q18, contractId, web3 } from "../helpers/constants";
 import roles from "../helpers/roles";
@@ -139,6 +140,12 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
   it("should verify default eto terms against platform terms", async () => {
     await etoTerms.requireValidTerms();
+  });
+
+  it("should calculate share price in token terms", async () => {
+    expect(await etoTokenTerms.SHARE_PRICE_EUR_ULPS()).to.be.bignumber.eq(
+      defTokenTerms.TOKEN_PRICE_EUR_ULPS.mul(defTokenTerms.EQUITY_TOKENS_PER_SHARE),
+    );
   });
 
   it("should convert equity token amount to shares", async () => {

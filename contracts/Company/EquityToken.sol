@@ -295,6 +295,6 @@ contract EquityToken is
         constant
         returns (uint256)
     {
-        return divRound(amount, TOKENS_PER_SHARE);
+        return amount / TOKENS_PER_SHARE;
     }
 }
