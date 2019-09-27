@@ -684,16 +684,33 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(ticket[2]).to.be.bignumber.eq(Q18.mul(0.4));
     });
 
+    it("should delete ticket", async () => {
+      let tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], { from: admin });
+      expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, Q18);
+      let ticket = await etoTerms.whitelistTicket(investorNoDiscount);
+      expect(ticket[0]).to.be.true;
+      expect(ticket[1]).to.be.bignumber.eq(0);
+      expect(ticket[2]).to.be.bignumber.eq(Q18);
+
+      tx = await etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: admin });
+      expectLogInvestorWhitelisted(tx.logs[0], investorNoDiscount, 0, 0);
+      ticket = await etoTerms.whitelistTicket(investorNoDiscount);
+      expect(ticket[0]).to.be.false;
+      expect(ticket[1]).to.be.bignumber.eq(0);
+      expect(ticket[2]).to.be.bignumber.eq(0);
+    });
+
     it("fails on setting token price frac to 0", async () => {
+      // only cominations of 0 fraction and non zero discount amount is not allowed
       await expect(
-        etoTerms.addWhitelisted([investorNoDiscount], [0], [0], { from: admin }),
+        etoTerms.addWhitelisted([investorNoDiscount], [1], [0], { from: admin }),
       ).to.be.rejectedWith("NF_DISCOUNT_RANGE");
 
       // fail on set many
       await expect(
         etoTerms.addWhitelisted(
           [investors[0], investors[1], investors[2]],
-          [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
+          [Q18.mul(500000), Q18.mul(0), Q18.mul(700000)],
           [0, Q18.mul(0.6), Q18.mul(0.7)],
           {
             from: admin,

@@ -424,9 +424,9 @@ contract ETOTerms is
     )
         private
     {
-        // Validate
         require(investor != address(0));
-        require(fullTokenPriceFrac >= 0 && fullTokenPriceFrac <= 10**18, "NF_DISCOUNT_RANGE");
+        // allow full token price and discount amount to be both 0 to allow deletions
+        require((fullTokenPriceFrac > 0 || discountAmountEurUlps == 0) && fullTokenPriceFrac <= 10**18, "NF_DISCOUNT_RANGE");
         require(discountAmountEurUlps < 2**128);
 
 
