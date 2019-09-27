@@ -202,8 +202,8 @@ export async function deploySimpleExchangeUniverse(
 }
 
 export const defaultPlatformTerms = {
-  PLATFORM_FEE_FRACTION: Q18.mul(0.03),
-  TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul(0.02),
+  PLATFORM_FEE_FRACTION: Q18.mul("0.03"),
+  TOKEN_PARTICIPATION_FEE_FRACTION: Q18.mul("0.02"),
   PLATFORM_NEUMARK_SHARE: new web3.BigNumber(2),
   IS_ICBM_INVESTOR_WHITELISTED: true,
   TOKEN_RATE_EXPIRES_AFTER: hoursToSeconds(4),

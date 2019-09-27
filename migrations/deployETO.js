@@ -207,13 +207,12 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   );
   let termsConstraintsVerified = true;
   try {
-    termsConstraintsVerified = await etoTerms.requireValidTerms.call();
+    await etoTerms.requireValidTerms.call();
   } catch (e) {
+    console.log(`ETO Terms verification revert ${wrong(e)}`);
     termsConstraintsVerified = false;
   }
-  console.log(
-    `Terms Constraints verified...${termsConstraintsVerified ? good("YES") : wrong("NO")}`,
-  );
+  console.log(`ETO Terms verified...${termsConstraintsVerified ? good("YES") : wrong("NO")}`);
   const etoContractId = await eto.contractId();
   console.log(`Contract id ${etoContractId[0]} version ${etoContractId[1].toNumber()}`);
   // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)

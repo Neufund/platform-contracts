@@ -86,10 +86,10 @@ contract ETOCommitment is
 
     // max cap taken from ETOTerms for low gas costs
     uint256 private MIN_NUMBER_OF_TOKENS;
-    // min cap taken from ETOTerms for low gas costs
-    uint256 private MAX_NUMBER_OF_TOKENS;
+    // maximum tokens we can sell in this ETO, value after token fee was subtracted from MAX TOK CAP
+    uint256 private MAX_AVAILABLE_TOKENS;
     // max cap of tokens in whitelist (without fixed slots)
-    uint256 private MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+    uint256 private MAX_AVAILABLE_TOKENS_IN_WHITELIST;
     // minimum ticket in tokens with base price
     uint256 private MIN_TICKET_TOKENS;
     // platform operator share for low gas costs
@@ -247,8 +247,8 @@ contract ETOCommitment is
         EQUITY_TOKEN = equityToken;
 
         MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
-        MAX_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS();
-        MAX_NUMBER_OF_TOKENS_IN_WHITELIST = etoTerms.TOKEN_TERMS().MAX_NUMBER_OF_TOKENS_IN_WHITELIST();
+        MAX_AVAILABLE_TOKENS = etoTerms.MAX_AVAILABLE_TOKENS();
+        MAX_AVAILABLE_TOKENS_IN_WHITELIST = etoTerms.MAX_AVAILABLE_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, MIN_TICKET_EUR_ULPS);
 
@@ -594,7 +594,7 @@ contract ETOCommitment is
         returns (ETOState)
     {
         // force refund if floor criteria are not met
-        // todo: allow for super edge case when MIN_NUMBER_OF_TOKENS is very close to MAX_NUMBER_OF_TOKENS and we are within minimum ticket
+        // todo: allow for super edge case when MIN_NUMBER_OF_TOKENS is very close to MAX_AVAILABLE_TOKENS and we are within minimum ticket
         if (newState == ETOState.Signing && _totalTokensInt < MIN_NUMBER_OF_TOKENS) {
             return ETOState.Refund;
         }
@@ -660,18 +660,36 @@ contract ETOCommitment is
         ETOTokenTerms tokenTerms = ETO_TERMS.TOKEN_TERMS();
         // additional equity tokens are issued and sent to platform operator (temporarily)
         uint256 tokensPerShare = tokenTerms.EQUITY_TOKENS_PER_SHARE();
-        uint256 tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokensInt);
-        // we must have integer number of shares
-        uint256 tokensRemainder = (_totalTokensInt + tokenParticipationFeeInt) % tokensPerShare;
-        if (tokensRemainder > 0) {
-            // round up to whole share
-            tokenParticipationFeeInt += tokensPerShare - tokensRemainder;
+        // calculatePlatformTokenFee and calculateAmountWithoutFee are not exactly reversible so
+        // there's a rounding discrepancy with period of 51 when those methods are called. see PlatformTerm.js for a test
+        // so if we sold MAX_AVAILABLE_TOKENS that were computed via calculateAmountWithoutFee from MAXIMUM_NUMBER_OF_TOKENS
+        // the reverse operation, that is MAX_AVAILABLE_TOKENS + calculatePlatformTokenFee will not always be MAXIMUM_NUMBER_OF_TOKENS
+        // while it's probably possible to detect it we put this check here
+        uint256 tokenParticipationFeeInt;
+        uint256 maxTokens = tokenTerms.MAX_NUMBER_OF_TOKENS();
+        if (_totalTokensInt == MAX_AVAILABLE_TOKENS) {
+            // rest up until MAX NUMBER OF TOKENS is our fee
+            // we also assume that MAX_NUMBER_OF_TOKENS amount to full shares, which token terms contract checks
+            tokenParticipationFeeInt = maxTokens - MAX_AVAILABLE_TOKENS;
+        } else {
+            tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokensInt);
+            // we must have integer number of shares
+            uint256 tokensRemainder = (_totalTokensInt + tokenParticipationFeeInt) % tokensPerShare;
+            if (tokensRemainder > 0) {
+                // round up to whole share
+                tokenParticipationFeeInt += tokensPerShare - tokensRemainder;
+            }
         }
-        // assert 96bit values 2**96 / 10**18 ~ 78 bln
-        assert(_totalTokensInt + tokenParticipationFeeInt < 2 ** 96);
+        // must not cross max number of tokens
+        uint256 totalIssuedTokens = _totalTokensInt + tokenParticipationFeeInt;
+        // round number of shares
+        // require(totalIssuedTokens % tokensPerShare == 0, "NF_MUST_ISSUE_WHOLE_SHARES");
+        // we could not cross maximum number of tokens
+        // require(totalIssuedTokens <= maxTokens, "NF_FEE_CROSSING_CAP");
+        // assert 96bit values 2**96 / 10**18 ~ 78 bln, and is less than 2**56 which is checked in token terms
         assert(etherBalance < 2 ** 96 && euroBalance < 2 ** 96);
         // we save 30k gas on 96 bit resolution, we can live with 98 bln euro max investment amount
-        _newShares = uint96((_totalTokensInt + tokenParticipationFeeInt) / tokensPerShare);
+        _newShares = uint96(totalIssuedTokens / tokensPerShare);
         // preserve platform token participation fee to be send out on claim transition
         _tokenParticipationFeeInt = uint96(tokenParticipationFeeInt);
         // compute fees to be sent on payout transition
@@ -681,7 +699,6 @@ contract ETOCommitment is
         _additionalContributionEth = uint96(etherBalance) - _platformFeeEth;
         _additionalContributionEurUlps = uint96(euroBalance) - _platformFeeEurUlps;
         // nominee gets nominal share value immediately to be added to cap table
-
         uint256 capitalIncreaseEurUlps = tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
         // no overflow as smaller one is uint96
@@ -864,9 +881,9 @@ contract ETOCommitment is
         returns (bool maxCapExceeded)
     {
         // check for exceeding tokens
-        maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_NUMBER_OF_TOKENS;
+        maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_AVAILABLE_TOKENS;
         if (applyDiscounts && !maxCapExceeded) {
-            maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_NUMBER_OF_TOKENS_IN_WHITELIST;
+            maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_AVAILABLE_TOKENS_IN_WHITELIST;
         }
         // check for exceeding max investment amount as defined by the constraints, MAX_INVESTMENT_AMOUNT_EUR_ULPS is always > 0
         if ( !maxCapExceeded && (equivEurUlps + _totalEquivEurUlps > MAX_INVESTMENT_AMOUNT_EUR_ULPS )) {

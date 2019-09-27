@@ -18,6 +18,9 @@ import "../AccessRoles.sol";
 // 2 - whitelist management shifted from company to WHITELIST ADMIN
 // 3 - SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL moved to ETOTokenTerms
 //     replaces EXISTING_COMPANY_SHARS with EXISTING_SHARE_CAPITAL, adds CURRENCY CODE
+// 4 - introduces
+//     MAX_AVAILABLE_TOKENS with the actual amount of tokens for sale
+//     MAX_AVAILABLE_TOKENS_IN_WHITELIST with the actual amount of tokens for sale in whitelist
 
 
 /// @title base terms of Equity Token Offering
@@ -90,12 +93,11 @@ contract ETOTerms is
     Universe public UNIVERSE;
     // terms constraints (a.k.a. "Product")
     ETOTermsConstraints public ETO_TERMS_CONSTRAINTS;
+    // number of tokens that can be sold, + 2% = MAX_NUMBER_OF_TOKENS
+    uint256 public MAX_AVAILABLE_TOKENS;
+    // number of tokens that can be sold in whitelist
+    uint256 public MAX_AVAILABLE_TOKENS_IN_WHITELIST;
 
-    // variables from token terms for local use
-    // minimum number of tokens being offered. will set min cap
-    uint256 private MIN_NUMBER_OF_TOKENS;
-    // maximum number of tokens being offered. will set max cap
-    uint256 private MAX_NUMBER_OF_TOKENS;
     // base token price in EUR-T, without any discount scheme
     uint256 private TOKEN_PRICE_EUR_ULPS;
     // equity tokens per share
@@ -160,8 +162,6 @@ contract ETOTerms is
         ETO_TERMS_CONSTRAINTS = etoTermsConstraints;
 
         // copy token terms variables
-        MIN_NUMBER_OF_TOKENS = tokenTerms.MIN_NUMBER_OF_TOKENS();
-        MAX_NUMBER_OF_TOKENS = tokenTerms.MAX_NUMBER_OF_TOKENS();
         TOKEN_PRICE_EUR_ULPS = tokenTerms.TOKEN_PRICE_EUR_ULPS();
         EQUITY_TOKENS_PER_SHARE = tokenTerms.EQUITY_TOKENS_PER_SHARE();
 
@@ -179,8 +179,12 @@ contract ETOTerms is
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
 
+        // compute max available tokens to be sold in ETO
+        MAX_AVAILABLE_TOKENS = calculateAvailableTokens(tokenTerms.MAX_NUMBER_OF_TOKENS());
+        MAX_AVAILABLE_TOKENS_IN_WHITELIST = min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
+
         // validate all settings
-        require(requireValidTerms());
+        requireValidTerms();
     }
 
     ////////////////////////
@@ -207,16 +211,6 @@ contract ETOTerms is
     {
         // we may disregard totalTokensInt as curve is flat
         return mul(tokenAmountInt, calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC));
-    }
-
-    // get mincap in EUR
-    function ESTIMATED_MIN_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, MIN_NUMBER_OF_TOKENS);
-    }
-
-    // get max cap in EUR
-    function ESTIMATED_MAX_CAP_EUR_ULPS() public constant returns(uint256) {
-        return calculateEurUlpsAmount(0, MAX_NUMBER_OF_TOKENS);
     }
 
     function calculatePriceFraction(uint256 priceFrac) public constant returns(uint256) {
@@ -305,13 +299,18 @@ contract ETOTerms is
         constant
         returns (bool)
     {
+        // available tokens >= MIN AVAIABLE TOKENS
+        uint256 minTokens = TOKEN_TERMS.MIN_NUMBER_OF_TOKENS();
+        require(MAX_AVAILABLE_TOKENS >= minTokens, "NF_AVAILABLE_TOKEN_LT_MIN_TOKENS");
         // min ticket must be > token price
         require(MIN_TICKET_EUR_ULPS >= TOKEN_TERMS.TOKEN_PRICE_EUR_ULPS(), "NF_MIN_TICKET_LT_TOKEN_PRICE");
         // it must be possible to collect more funds than max number of tokens
-        require(ESTIMATED_MAX_CAP_EUR_ULPS() >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
+        uint256 estimatedMaxCap = calculateEurUlpsAmount(0, MAX_AVAILABLE_TOKENS);
+        require(estimatedMaxCap >= MIN_TICKET_EUR_ULPS, "NF_MAX_FUNDS_LT_MIN_TICKET");
         // min cap must be less than MAX_CAP product limit, otherwise ETO always refunds
         uint256 constraintsMaxInvestment = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
-        require(constraintsMaxInvestment == 0 || ESTIMATED_MIN_CAP_EUR_ULPS() <= constraintsMaxInvestment, "NF_MIN_CAP_GT_PROD_MAX_CAP");
+        uint256 estimatedMinCap = calculateEurUlpsAmount(0, minTokens);
+        require(constraintsMaxInvestment == 0 || estimatedMinCap <= constraintsMaxInvestment, "NF_MIN_CAP_GT_PROD_MAX_CAP");
         // ticket size checks
         require(MIN_TICKET_EUR_ULPS >= ETO_TERMS_CONSTRAINTS.MIN_TICKET_SIZE_EUR_ULPS(), "NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
         uint256 constraintsMaxTicket = ETO_TERMS_CONSTRAINTS.MAX_TICKET_SIZE_EUR_ULPS();
@@ -425,9 +424,9 @@ contract ETOTerms is
     )
         private
     {
-        // Validate
         require(investor != address(0));
-        require(fullTokenPriceFrac > 0 && fullTokenPriceFrac <= 10**18, "NF_DISCOUNT_RANGE");
+        // allow full token price and discount amount to be both 0 to allow deletions
+        require((fullTokenPriceFrac > 0 || discountAmountEurUlps == 0) && fullTokenPriceFrac <= 10**18, "NF_DISCOUNT_RANGE");
         require(discountAmountEurUlps < 2**128);
 
 
@@ -439,4 +438,11 @@ contract ETOTerms is
         emit LogInvestorWhitelisted(investor, discountAmountEurUlps, fullTokenPriceFrac);
     }
 
+    function calculateAvailableTokens(uint256 amountWithFee)
+        private
+        constant
+        returns (uint256)
+    {
+        return PlatformTerms(UNIVERSE.platformTerms()).calculateAmountWithoutFee(amountWithFee);
+    }
 }
