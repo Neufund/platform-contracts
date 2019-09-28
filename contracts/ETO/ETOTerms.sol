@@ -81,6 +81,8 @@ contract ETOTerms is
     // represents the discount % for public participants, using values > 0 will result
     // in automatic downround shareholder resolution
     uint256 public PUBLIC_DISCOUNT_FRAC;
+    // tells is RegD US investors are allowed to participate
+    uint256 public ALLOWS_REGD_INVESTORS;
 
     // paperwork
     // prospectus / investment memorandum / crowdfunding pamphlet etc.
@@ -290,7 +292,8 @@ contract ETOTerms is
             applyWhitelistDiscounts);
         // check if is eligible for investment
         IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
-        isEligible = claims.isVerified && !claims.accountFrozen;
+        // use simple formula to disallow us accredited investors
+        isEligible = claims.isVerified && !claims.accountFrozen && !claims.requiresRegDAccreditation;
     }
 
     /// @notice checks terms against terms constraints, reverts on invalid

@@ -139,18 +139,18 @@ contract ETOCommitment is
     bytes32 private _nomineeSignedInvestmentAgreementUrlHash;
 
     // successful ETO bookeeping
-    // amount of new shares generated
-    uint96 private _newShares;
+    // amount of new shares generated never exceeds number of tokens (uint56)
+    uint64 private _newShares;
     // how many equity tokens goes to platform portfolio as a fee
-    uint96 private _tokenParticipationFeeInt;
+    uint64 private _tokenParticipationFeeInt;
     // platform fee in eth
-    uint96 private _platformFeeEth;
+    uint112 private _platformFeeEth;
     // platform fee in eur
-    uint96 private _platformFeeEurUlps;
+    uint112 private _platformFeeEurUlps;
     // additonal contribution (investment amount) eth
-    uint96 private _additionalContributionEth;
+    uint112 private _additionalContributionEth;
     // additonal contribution (investment amount) eur
-    uint96 private _additionalContributionEurUlps;
+    uint112 private _additionalContributionEurUlps;
 
     // signed investment agreement url
     string private _signedInvestmentAgreementUrl;
@@ -654,9 +654,10 @@ contract ETOCommitment is
     function onSigningTransition()
         private
     {
-        // get final balances
-        uint256 etherBalance = ETHER_TOKEN.balanceOf(this);
-        uint256 euroBalance = EURO_TOKEN.balanceOf(this);
+        // get final balances, cap at 2**112
+        // someone could send some ETH/EUR directly to the token to overflow us
+        uint112 etherBalance = uint112(min(ETHER_TOKEN.balanceOf(this), 2**112-1));
+        uint112 euroBalance = uint112(min(EURO_TOKEN.balanceOf(this), 2**112-1));
         ETOTokenTerms tokenTerms = ETO_TERMS.TOKEN_TERMS();
         // additional equity tokens are issued and sent to platform operator (temporarily)
         uint256 tokensPerShare = tokenTerms.EQUITY_TOKENS_PER_SHARE();
@@ -680,29 +681,28 @@ contract ETOCommitment is
                 tokenParticipationFeeInt += tokensPerShare - tokensRemainder;
             }
         }
-        // must not cross max number of tokens
+        // will not cross max number of tokens thats in 2**56 range
         uint256 totalIssuedTokens = _totalTokensInt + tokenParticipationFeeInt;
         // round number of shares
         // require(totalIssuedTokens % tokensPerShare == 0, "NF_MUST_ISSUE_WHOLE_SHARES");
         // we could not cross maximum number of tokens
         // require(totalIssuedTokens <= maxTokens, "NF_FEE_CROSSING_CAP");
-        // assert 96bit values 2**96 / 10**18 ~ 78 bln, and is less than 2**56 which is checked in token terms
-        assert(etherBalance < 2 ** 96 && euroBalance < 2 ** 96);
-        // we save 30k gas on 96 bit resolution, we can live with 98 bln euro max investment amount
-        _newShares = uint96(totalIssuedTokens / tokensPerShare);
+        _newShares = uint64(totalIssuedTokens / tokensPerShare);
         // preserve platform token participation fee to be send out on claim transition
-        _tokenParticipationFeeInt = uint96(tokenParticipationFeeInt);
+        _tokenParticipationFeeInt = uint64(tokenParticipationFeeInt);
+        // 112bit values 2**112 / 10**18 which is 5 quadrillion 192 trillion 296 billion 858 million 534 thousand 827 nEUR max
+        // also we capped balances already when taking from tokens
         // compute fees to be sent on payout transition
-        _platformFeeEth = uint96(PLATFORM_TERMS.calculatePlatformFee(etherBalance));
-        _platformFeeEurUlps = uint96(PLATFORM_TERMS.calculatePlatformFee(euroBalance));
+        _platformFeeEth = uint112(PLATFORM_TERMS.calculatePlatformFee(etherBalance));
+        _platformFeeEurUlps = uint112(PLATFORM_TERMS.calculatePlatformFee(euroBalance));
         // compute additional contributions to be sent on claim transition
-        _additionalContributionEth = uint96(etherBalance) - _platformFeeEth;
-        _additionalContributionEurUlps = uint96(euroBalance) - _platformFeeEurUlps;
+        _additionalContributionEth = etherBalance - _platformFeeEth;
+        _additionalContributionEurUlps = euroBalance - _platformFeeEurUlps;
         // nominee gets nominal share value immediately to be added to cap table
         uint256 capitalIncreaseEurUlps = tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
-        // no overflow as smaller one is uint96
-        uint96 availableCapitalEurUlps = uint96(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
+        // no overflow as smaller one is uint112
+        uint112 availableCapitalEurUlps = uint112(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
         _additionalContributionEurUlps -= availableCapitalEurUlps;
@@ -806,7 +806,7 @@ contract ETOCommitment is
             uint256 fixedSlotEquityTokenInt256
         ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
         // kick out on KYC
-        require(isEligible, "NF_ETO_INV_NOT_VER");
+        require(isEligible, "NF_ETO_INV_NOT_ELIGIBLE");
         // kick on minimum ticket and you must buy at least one token!
         require(equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps && equityTokenInt256 > 0, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
@@ -846,7 +846,7 @@ contract ETOCommitment is
 
         // write new ticket values
         // this will also check ticket.amountEurUlps + uint96(amount) as ticket.equivEurUlps is always >= ticket.amountEurUlps
-        assert(equivEurUlps + ticket.equivEurUlps < 2**96);
+        require(equivEurUlps + ticket.equivEurUlps < 2**96, "NF_TICKET_EXCEEDS_MAX_EUR");
         ticket.equivEurUlps += uint96(equivEurUlps);
         // uint96 is much more than 1.5 bln of NEU so no overflow
         ticket.rewardNmkUlps += uint96(investorNmk);

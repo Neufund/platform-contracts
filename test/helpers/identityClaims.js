@@ -9,6 +9,8 @@ export const identityClaims = {
   isSophisticatedInvestor: 2,
   hasBankAccount: 4,
   isAccountFrozen: 8,
+  requiresRegDAccreditation: 16,
+  hasValidRegDAccreditation: 32,
 };
 
 export function serializeClaims(
@@ -16,12 +18,16 @@ export function serializeClaims(
   isSophisticatedInvestor,
   hasBankAccount,
   isAccountFrozen,
+  requiresRegDAccreditation = false,
+  hasValidRegDAccreditation = false,
 ) {
   const claims =
     (isVerified ? identityClaims.isVerified : 0) +
     (isSophisticatedInvestor ? identityClaims.isSophisticatedInvestor : 0) +
     (hasBankAccount ? identityClaims.hasBankAccount : 0) +
-    (isAccountFrozen ? identityClaims.isAccountFrozen : 0);
+    (isAccountFrozen ? identityClaims.isAccountFrozen : 0) +
+    (requiresRegDAccreditation ? identityClaims.requiresRegDAccreditation : 0) +
+    (hasValidRegDAccreditation ? identityClaims.hasValidRegDAccreditation : 0);
 
   return toBytes32(claims);
 }
@@ -42,6 +48,14 @@ export function deserializeClaims(claims) {
       .dividedToIntegerBy(8)
       .mod(2)
       .eq(1),
+    claimsN
+      .dividedToIntegerBy(16)
+      .mod(2)
+      .eq(1),
+    claimsN
+      .dividedToIntegerBy(32)
+      .mod(2)
+      .eq(1),
   );
 }
 
@@ -50,6 +64,15 @@ export function referenceClaims(
   isSophisticatedInvestor,
   hasBankAccount,
   accountFrozen,
+  requiresRegDAccreditation = false,
+  hasValidRegDAccreditation = false,
 ) {
-  return [{ isVerified }, { isSophisticatedInvestor }, { hasBankAccount }, { accountFrozen }];
+  return [
+    { isVerified },
+    { isSophisticatedInvestor },
+    { hasBankAccount },
+    { accountFrozen },
+    { requiresRegDAccreditation },
+    { hasValidRegDAccreditation },
+  ];
 }

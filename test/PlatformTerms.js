@@ -92,6 +92,7 @@ contract("PlatformTerms", ([_, admin]) => {
     Q18,
     Q18.sub(1),
     Q18.add(1),
+    new web3.BigNumber("1764783"),
     new web3.BigNumber("7128918927"),
     ...[...Array(52).keys()].map(k => new web3.BigNumber(k)),
   ];

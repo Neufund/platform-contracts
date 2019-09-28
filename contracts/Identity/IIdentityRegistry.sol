@@ -17,7 +17,9 @@ contract IdentityRecord {
         bool isSophisticatedInvestor; // 1 bit
         bool hasBankAccount; // 1 bit
         bool accountFrozen; // 1 bit
-        // uint252 reserved
+        bool requiresRegDAccreditation; // 1 bit
+        bool hasValidRegDAccreditation; // 1 bit
+        // uint250 reserved
     }
 
     ////////////////////////
@@ -27,11 +29,14 @@ contract IdentityRecord {
     /// translates uint256 to struct
     function deserializeClaims(bytes32 data) internal pure returns (IdentityClaims memory claims) {
         // for memory layout of struct, each field below word length occupies whole word
+        // todo: shift to SHR instruction
         assembly {
             mstore(claims, and(data, 0x1))
             mstore(add(claims, 0x20), div(and(data, 0x2), 0x2))
             mstore(add(claims, 0x40), div(and(data, 0x4), 0x4))
             mstore(add(claims, 0x60), div(and(data, 0x8), 0x8))
+            mstore(add(claims, 0x80), div(and(data, 0x10), 0x10))
+            mstore(add(claims, 0xA0), div(and(data, 0x20), 0x20))
         }
     }
 }
