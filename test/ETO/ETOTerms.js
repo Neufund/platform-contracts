@@ -178,6 +178,28 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     );
   });
 
+  it("should correctly calculate available tokens", async () => {
+    const maxNumberOfTokens = new web3.BigNumber("32039029039");
+    const availableTokens = maxNumberOfTokens.div("1.02").round(0, 4);
+    const testCases = [
+      [maxNumberOfTokens, availableTokens],
+      [availableTokens.add(1), availableTokens],
+      [availableTokens, availableTokens],
+      [availableTokens.sub(1), availableTokens.sub(1)],
+    ];
+    for (const wlTokensMap of testCases) {
+      [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
+        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST: wlTokensMap[0],
+      });
+      const [deployedTerms] = await redeployTerms();
+      expect(await deployedTerms.MAX_AVAILABLE_TOKENS_IN_WHITELIST()).to.be.bignumber.eq(
+        wlTokensMap[1],
+      );
+    }
+  });
+
   describe("terms validation", () => {
     it("rejects on platform terms with minimum ticket too small", async () => {
       // change to sub(0) for this test to fail
@@ -213,7 +235,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     });
     */
 
-    it("reverts on retail eto with transfers enabled", async () => {
+    it("reverts on transferable token for non transferable eto constraints", async () => {
       await expect(
         redeployTerms({ ENABLE_TRANSFERS_ON_SUCCESS: true }, { CAN_SET_TRANSFERABILITY: false }),
       ).to.be.rejectedWith("NF_ETO_TERMS_ENABLE_TRANSFERS_ON_SUCCESS");
@@ -241,15 +263,22 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         MAX_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2),
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: tokenTerms.EQUITY_TOKENS_PER_SHARE.div(100),
       });
+      // that works on available tokens that are counted into max investment value
+      const availableTokens = tokenTerms.MAX_NUMBER_OF_TOKENS.div("1.02").round(0, 4);
       // set public discount so it's impossible to successfully complete ETO becaue min ticket > cap
       const pubPriceFraction = Q18.mul(modMinTicket).div(
-        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(tokenTerms.MAX_NUMBER_OF_TOKENS),
+        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(availableTokens),
       );
+      // that must pass
+      await redeployTerms({
+        MIN_TICKET_EUR_ULPS: modMinTicket,
+        PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction),
+      });
       // use a little bit smaller fraction to cross into < max cap (smaller fraction -> bigger discount)
       await expect(
         redeployTerms({
           MIN_TICKET_EUR_ULPS: modMinTicket,
-          PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction).add(10),
+          PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction).add(1),
         }),
       ).to.be.rejectedWith("NF_MAX_FUNDS_LT_MIN_TICKET");
     });
@@ -338,17 +367,97 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       ).to.be.rejectedWith("NF_TOO_MUCH_FUNDS_COLLECTED");
     });
 
-    it("should reject TOKEN TERMS on min cap less than one share", async () => {
-      // lower number of tokens required
+    it("reject token terms on min tokens less than max available tokens", async () => {
+      const maxNumberOfTokens = new web3.BigNumber("1764783");
+      const availableTokens = maxNumberOfTokens.div("1.02").round(0, 4);
+      // all good
+      [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
+        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+        MIN_NUMBER_OF_TOKENS: availableTokens,
+      });
+      const [deployedTerms] = await redeployTerms();
+      expect(await deployedTerms.MAX_AVAILABLE_TOKENS()).to.be.bignumber.eq(availableTokens);
+      // should revert
+      [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
+        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+        MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
+        MIN_NUMBER_OF_TOKENS: availableTokens.add(1),
+      });
+      await expect(redeployTerms({}, {})).to.be.rejectedWith("NF_AVAILABLE_TOKEN_LT_MIN_TOKENS");
+    });
+
+    it("should reject TOKEN TERMS on max tokens less than whitelist tokens", async () => {
+      // whitelist tokens must be < max tokens
       await expect(
         deployTokenTerms(ETOTokenTerms, {
-          MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1),
-          MAX_NUMBER_OF_TOKENS: new web3.BigNumber(1),
-          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1),
+          MIN_NUMBER_OF_TOKENS: defTokenTerms.EQUITY_TOKENS_PER_SHARE,
+          MAX_NUMBER_OF_TOKENS: defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2).add(1),
+        }),
+      ).to.be.rejectedWith("NF_WL_TOKENS_GT_MAX_TOKENS");
+    });
+
+    it("rejects on max tokens not representing full shares", async () => {
+      await expect(
+        deployTokenTerms(ETOTokenTerms, {
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          MIN_NUMBER_OF_TOKENS: defTokenTerms.EQUITY_TOKENS_PER_SHARE,
+          MAX_NUMBER_OF_TOKENS: defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2).sub(1),
+        }),
+      ).to.be.rejectedWith("NF_MAX_TOKENS_FULL_SHARES");
+    });
+
+    it("should reject on platform terms with minimum number of tokens less than one share", async () => {
+      await expect(
+        deployTokenTerms(ETOTokenTerms, {
+          MIN_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
         }),
       ).to.be.rejectedWith("NF_ETO_TERMS_ONE_SHARE");
     });
 
+    it("should reject on minimum ticket too small", async () => {
+      await expect(
+        redeployTerms(
+          {
+            MIN_TICKET_EUR_ULPS: Q18.mul(200).sub(1),
+          },
+          {
+            MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
+          },
+        ),
+      ).to.be.rejectedWith("NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+    });
+
+    it("should reject on maximum ticket too high", async () => {
+      await expect(
+        redeployTerms(
+          {
+            MIN_TICKET_EUR_ULPS: Q18.mul(5000).add(1),
+          },
+          {
+            MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(5000),
+          },
+        ),
+      ).to.be.rejectedWith("NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
+    });
+
+    it("should interpret MAX_TICKET_SIZE_EUR_ULPS == 0 as unlimited", async () => {
+      await redeployTerms(
+        {
+          MIN_TICKET_EUR_ULPS: Q18.mul(5000),
+          MAX_TICKET_EUR_ULPS: Q18.mul(10000),
+        },
+        {
+          MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
+        },
+      );
+    });
+  });
+
+  describe("duration validations", () => {
     it("should accept new duration terms", async () => {
       // change to sub(0) for this test to fail
       [durationTerms] = await deployDurationTerms(ETODurationTerms, {
@@ -458,53 +567,6 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       } else {
         this.skip();
       }
-    });
-
-    it("should reject on platform terms with minimum number of tokens too small", async () => {
-      // change to sub(0) for this test to fail
-      await expect(
-        deployTokenTerms(ETOTokenTerms, {
-          MIN_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE.sub(1),
-        }),
-      ).to.be.rejectedWith("NF_ETO_TERMS_ONE_SHARE");
-    });
-
-    it("should reject on minimum ticket too small", async () => {
-      await expect(
-        redeployTerms(
-          {
-            MIN_TICKET_EUR_ULPS: Q18.mul(200).sub(1),
-          },
-          {
-            MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200),
-          },
-        ),
-      ).to.be.rejectedWith("NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
-    });
-
-    it("should reject on maximum ticket too high", async () => {
-      await expect(
-        redeployTerms(
-          {
-            MIN_TICKET_EUR_ULPS: Q18.mul(5000).add(1),
-          },
-          {
-            MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(5000),
-          },
-        ),
-      ).to.be.rejectedWith("NF_ETO_TERMS_MAX_TICKET_EUR_ULPS");
-    });
-
-    it("should interpret MAX_TICKET_SIZE_EUR_ULPS == 0 as unlimited", async () => {
-      await redeployTerms(
-        {
-          MIN_TICKET_EUR_ULPS: Q18.mul(5000),
-          MAX_TICKET_EUR_ULPS: Q18.mul(10000),
-        },
-        {
-          MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
-        },
-      );
     });
   });
 
