@@ -431,7 +431,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         etherToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_ELIGIBLE");
       const ticket = Q18.mul(107.61721).add(1);
       await identityRegistry.setClaims(investors[1], toBytes32("0x0"), toBytes32("0x1"), {
         from: admin,
@@ -447,7 +447,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         euroLockedAccount.transfer["address,uint256,bytes"](etoCommitment.address, ticket, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_ELIGIBLE");
     });
 
     it("frozen investor cannot invest", async () => {
@@ -463,7 +463,24 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         etherToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
           from: investors[1],
         }),
-      ).to.be.rejectedWith("NF_ETO_INV_NOT_VER");
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_ELIGIBLE");
+    });
+
+    it("reg d investor cannot invest", async () => {
+      await skipTimeTo(publicStartDate.add(1));
+      const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
+      const ticket = Q18.mul(107.61721).add(1);
+      await investAmount(investors[1], ticket, "ETH", tokenprice);
+      // 0x31 is regd with valid accreditation
+      await identityRegistry.setClaims(investors[1], toBytes32("0x1"), toBytes32("0x31"), {
+        from: admin,
+      });
+      await etherToken.deposit({ from: investors[1], value: Q18 });
+      await expect(
+        etherToken.transfer["address,uint256,bytes"](etoCommitment.address, Q18, "", {
+          from: investors[1],
+        }),
+      ).to.be.rejectedWith("NF_ETO_INV_NOT_ELIGIBLE");
     });
 
     it("rejects on investment below min ticket", async () => {
@@ -1093,7 +1110,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // will generate 1 token
       await investAmount(investors[0], two.pow(90), "EUR");
       expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(63);
-      await expect(investAmount(investors[0], two.pow(90), "EUR")).to.be.revert;
+      await expect(investAmount(investors[0], two.pow(90), "EUR")).to.be.rejectedWith("");
     });
 
     it("should skip whitelist in ETO with 0 whitelist period", async () => {
@@ -1250,6 +1267,36 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 1);
       expectLogStateTransition(tx, CommitmentState.Public, CommitmentState.Signing, "ignore", 2);
       await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
+    });
+
+    it("should use available tokens with rounding discrepancy", async () => {
+      const maxTokens = new web3.BigNumber("99843987622");
+      const availableTokens = getMaxAvailableTokens(maxTokens);
+      const fee = await platformTerms.calculatePlatformTokenFee(availableTokens);
+      // so after reverse operation: adding available tokens to fee, we would exceed max cap in eto commitment
+      expect(availableTokens.add(fee).sub(1)).to.be.bignumber.eq(maxTokens);
+
+      const tokenPrice = Q18.div(100000);
+      await deployETO({
+        ovrTokenTerms: {
+          MAX_NUMBER_OF_TOKENS: maxTokens,
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          TOKEN_PRICE_EUR_ULPS: tokenPrice,
+          EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        },
+        ovrETOTerms: {
+          MAX_TICKET_EUR_ULPS: maxTokens.mul(tokenPrice),
+        },
+      });
+      await prepareETOForPublic();
+      await skipTimeTo(publicStartDate);
+      // minimum investment is one share, that should also shift eto to signing, because this is also max investment
+      const maximumAmount = availableTokens.mul(tokenPrice);
+      const tx = await investAmount(investors[1], maximumAmount, "EUR", tokenPrice);
+      expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore", 0);
+      expectLogStateTransition(tx, CommitmentState.Whitelist, CommitmentState.Public, "ignore", 1);
+      expectLogStateTransition(tx, CommitmentState.Public, CommitmentState.Signing, "ignore", 2);
+      await expectExactlyMaxCap(maxTokens);
     });
 
     it("should enable transfer on equity token on success", async () => {
@@ -2168,7 +2215,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await identityRegistry.setClaims(investors[1], "0x0", toBytes32("0x1"), { from: admin });
     });
 
-    it("should return non eligible on non-kyc or frozen investor", async () => {
+    it("should return non eligible on non-kyc, frozen, reg-d investor", async () => {
       let contrib = await etoCommitment.calculateContribution(investors[1], false, Q18);
       expect(contrib[1]).to.be.false;
 
@@ -2182,6 +2229,29 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         from: admin,
       });
       contrib = await etoCommitment.calculateContribution(investors[1], false, Q18);
+      expect(contrib[1]).to.be.false;
+
+      // next account
+      contrib = await etoCommitment.calculateContribution(investors[2], false, Q18);
+      expect(contrib[1]).to.be.false;
+
+      // verify account
+      await identityRegistry.setClaims(investors[2], "0x0", toBytes32("0x1"), { from: admin });
+      contrib = await etoCommitment.calculateContribution(investors[2], false, Q18);
+      expect(contrib[1]).to.be.true;
+
+      // add under reg-d
+      await identityRegistry.setClaims(investors[2], toBytes32("0x1"), toBytes32("0x11"), {
+        from: admin,
+      });
+      contrib = await etoCommitment.calculateContribution(investors[2], false, Q18);
+      expect(contrib[1]).to.be.false;
+
+      // add valid certificate
+      await identityRegistry.setClaims(investors[2], toBytes32("0x11"), toBytes32("0x31"), {
+        from: admin,
+      });
+      contrib = await etoCommitment.calculateContribution(investors[2], false, Q18);
       expect(contrib[1]).to.be.false;
     });
 
