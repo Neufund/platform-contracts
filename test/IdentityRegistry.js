@@ -54,6 +54,14 @@ contract(
           .dividedToIntegerBy(16)
           .mod(2)
           .eq(1),
+        claimsN
+          .dividedToIntegerBy(32)
+          .mod(2)
+          .eq(1),
+        claimsN
+          .dividedToIntegerBy(64)
+          .mod(2)
+          .eq(1),
       );
     }
 
@@ -62,6 +70,8 @@ contract(
       isSophisticatedInvestor,
       hasBankAccount,
       accountFrozen,
+      requiresRegDAccreditation,
+      hasValidRegDAccreditation,
       newProperty,
     ) {
       return [
@@ -69,6 +79,8 @@ contract(
         { isSophisticatedInvestor },
         { hasBankAccount },
         { accountFrozen },
+        { requiresRegDAccreditation },
+        { hasValidRegDAccreditation },
         { newProperty },
       ];
     }
@@ -274,36 +286,27 @@ contract(
       expect(await identityRegistry.getClaims(identity)).to.be.bytes32("0x0");
     });
 
-    for (let ii = 0; ii <= 16; ii += 1) {
+    for (let ii = 0; ii <= 64; ii += 1) {
       const claims = toBytes32(web3.toHex(ii));
       /* eslint-disable no-loop-func */
       it(`should deserialize claims - ${claims}`, async () => {
         const structMap = await testIdentityRecord.getIdentityRecord(claims);
-        expect(deserializeClaims(claims)).to.deep.eq(
-          referenceClaims(structMap[0], structMap[1], structMap[2], structMap[3]),
-        );
+        expect(deserializeClaims(claims)).to.deep.eq(referenceClaims(...structMap));
       });
     }
 
     // test IdentityRecord with added fields should be used to deserialize new and old claim set
-    for (let ii = 0; ii <= 32; ii += 1) {
+    // make sure to range where new claim bit is set
+    for (let ii = 64 - 16; ii <= 64 + 16; ii += 1) {
       const claims = toBytes32(web3.toHex(ii));
       /* eslint-disable no-loop-func */
       it(`should deserialize upgraded claims - ${claims}`, async () => {
         const structMap = await testIdentityRecord.getIdentityRecord(claims);
-        expect(deserializeClaims(claims)).to.deep.eq(
-          referenceClaims(structMap[0], structMap[1], structMap[2], structMap[3]),
-        );
+        expect(deserializeClaims(claims)).to.deep.eq(referenceClaims(...structMap));
         // test the same claim entry, but with an updated identify record
         const updatedStructMap = await testUpdatedIdentityRecord.getIdentityRecord(claims);
         expect(deserializeUpgradedClaims(claims)).to.deep.eq(
-          updatedReferenceClaims(
-            updatedStructMap[0],
-            updatedStructMap[1],
-            updatedStructMap[2],
-            updatedStructMap[3],
-            updatedStructMap[4],
-          ),
+          updatedReferenceClaims(...updatedStructMap),
         );
       });
     }
