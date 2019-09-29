@@ -11,7 +11,7 @@ const deployETO = require("../migrations/deployETO").deployETO;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
-const { explainTerms } = require("./helpers");
+const { explainTerms, printConstants } = require("./helpers");
 
 module.exports = async function deploy() {
   const optionDefinitions = [
@@ -35,6 +35,7 @@ module.exports = async function deploy() {
   const CONFIG = getConfig(web3, options.network, []);
   const DEPLOYER = getDeployerAccount(options.network, []);
   const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const ETOTermsConstraints = artifacts.require(CONFIG.artifacts.ETO_TERMS_CONSTRAINTS);
   const universe = await Universe.at(options.universe);
 
   let parsed;
@@ -71,6 +72,9 @@ module.exports = async function deploy() {
   explainTerms("shareholderTerms", shareholderTerms);
   explainTerms("durTerms", durTerms);
   explainTerms("tokenTerms", tokenTerms);
+  console.log("\nETO Terms Constaints:");
+  const constraints = await ETOTermsConstraints.at(etoTerms.ETO_TERMS_CONSTRAINTS);
+  await printConstants(constraints);
   console.log(`\ncompany: ${parsed.company}`);
   console.log(`nominee: ${parsed.nominee}`);
   console.log(`DEPLOYER is ${DEPLOYER}`);
