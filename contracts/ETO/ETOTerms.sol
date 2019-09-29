@@ -21,6 +21,7 @@ import "../AccessRoles.sol";
 // 4 - introduces
 //     MAX_AVAILABLE_TOKENS with the actual amount of tokens for sale
 //     MAX_AVAILABLE_TOKENS_IN_WHITELIST with the actual amount of tokens for sale in whitelist
+//     ALLOWS_REGD_INVESTORS are US investors on reg-d allowed to participate in this ETO
 
 
 /// @title base terms of Equity Token Offering
