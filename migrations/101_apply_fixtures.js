@@ -110,5 +110,15 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("DEPLOYER can create snapshots");
     await accessPolicy.setUserRole(DEPLOYER, roles.snapshotCreator, "0x0", TriState.Allow);
+
+    console.log(
+      `INTERNAL_ETO_LISTING_API ${CONFIG.addresses.INTERNAL_ETO_LISTING_API} can modify whitelist`,
+    );
+    await accessPolicy.setUserRole(
+      CONFIG.addresses.INTERNAL_ETO_LISTING_API,
+      roles.whitelistAdmin,
+      "0x0",
+      TriState.Allow,
+    );
   });
 };
