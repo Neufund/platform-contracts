@@ -22,11 +22,11 @@ const devNetworkDeploymentConfigOverride = {
     TOKEN_RATE_ORACLE: "0xB3E69d2637076D265bFb056bF5F35d9155535CD6",
     GAS_STIPEND_SERVICE: "0x29c57b5F27b249Ab3c11Badf6efc4B2308bc75Dd",
     INTERNAL_ETO_LISTING_API: "0xa71387d25c21a1e1F2381D7026a67492F4871BE5",
+    // for now this is the same as SPARE_3
+    TOKEN_OFFERING_OPERATOR_DE: "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
+    // for now this is the same as SPARE_4
+    TOKEN_OFFERING_OPERATOR_LI: "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
   },
-  // for now this is the same as SPARE_3
-  TOKEN_OFFERING_OPERATOR_DE: "0x798fD195575d195B9Bb9619ffb905E434f044f1D",
-  // for now this is the same as SPARE_4
-  TOKEN_OFFERING_OPERATOR_LI: "0xC35ef5DA2607C70D812cA2F317E9958910450dF1",
 };
 // forked mainnet override
 const forkedLiveNetworkDeploymentConfigOverride = {
@@ -52,6 +52,11 @@ const nanoProvider = (providerUrl, nanoPath, network) =>
 const multiWalletProvider = (providerUrl, network) =>
   process.argv.some(arg => arg === network)
     ? require("./multiWalletProvider").multiWalletProvider(providerUrl)
+    : undefined;
+
+const consolePKProvider = (providerUrl, network) =>
+  process.argv.some(arg => arg === network)
+    ? require("./consolePKProvider").consolePKProvider(providerUrl)
     : undefined;
 
 module.exports = {
@@ -140,6 +145,17 @@ module.exports = {
       // gasPrice
       // from - default address to use for any transaction Truffle makes during migrations
     },
+    console_pk_live: {
+      network_id: 1, // Ethereum public network
+      gas: 6800000, // close to current mainnet limit
+      gasPrice: 6000000000, // 21 gwei /shannon
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+        UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
+        ISOLATED_UNIVERSE: false,
+      },
+      provider: consolePKProvider("https://platform.neufund.org/nodes/mainnet", "console_pk_live"),
+    },
     nano_live: {
       network_id: 1,
       gas: 1500000,
@@ -149,8 +165,9 @@ module.exports = {
         // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
         // "44'/60'/105'/0", // legal rep (M)
-        "44'/60'/105'/2", // eurt legal manager (M)
+        // "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
+        "44'/60'/106'/16",
         "nano_live",
       ),
       deploymentConfigOverride: {
@@ -158,7 +175,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 6000000000, // 10 gwei /shannon
+      gasPrice: 60000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",
