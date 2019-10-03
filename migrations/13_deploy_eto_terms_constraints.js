@@ -70,7 +70,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       console.log(`Deploying EtoTermsConstraints: ${constraint.NAME}`);
       const updatedConstraint = {
         ...constraint,
-        TOKEN_OFFERING_OPERATOR: CONFIG[constraint.TOKEN_OFFERING_OPERATOR],
+        TOKEN_OFFERING_OPERATOR: CONFIG.addresses[constraint.TOKEN_OFFERING_OPERATOR],
       };
       await deployer.deploy(
         ETOTermsConstraints,

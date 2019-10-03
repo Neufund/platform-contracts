@@ -54,7 +54,7 @@ module.exports = async function deploy() {
 
   const updatedConstraints = recoverBigNumbers({
     ...constraints,
-    TOKEN_OFFERING_OPERATOR: CONFIG[constraints.TOKEN_OFFERING_OPERATOR],
+    TOKEN_OFFERING_OPERATOR: CONFIG.addresses[constraints.TOKEN_OFFERING_OPERATOR],
   });
   console.log(`using artifact: ${etoTermsContraintsArtifactName}`);
   explainTerms("etoTermsConstraints", updatedConstraints);

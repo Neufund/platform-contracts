@@ -62,10 +62,11 @@ export function getConfig(web3, network, accounts) {
       TOKEN_RATE_ORACLE: "0x7C725f972D1ebDEF5Bbfd8996d3Cbe307b23cd42",
       GAS_STIPEND_SERVICE: "0xABa4430574f2353C0A22Ca4CF2d4a122f0031245",
       INTERNAL_ETO_LISTING_API: "0x498142b50D1e54282113E1452e7b466D465c181e",
+      // operators
+      TOKEN_OFFERING_OPERATOR_DE: "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4",
+      TOKEN_OFFERING_OPERATOR_LI: "0x0084C8f023D51896807a32d6f3e1AAc307eD891D",
     },
-    // operators
-    TOKEN_OFFERING_OPERATOR_DE: "0xA826813D0eb5D629E959c02b8f7a3d0f53066Ce4",
-    TOKEN_OFFERING_OPERATOR_LI: "0x0084C8f023D51896807a32d6f3e1AAc307eD891D",
+
     // set it to Commitment contract address to continue deployment over it
     ICBM_COMMITMENT_ADDRESS: null,
     // set it to deployed Universe to continue deployment over it
