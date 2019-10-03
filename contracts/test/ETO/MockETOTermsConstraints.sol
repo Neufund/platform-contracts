@@ -9,10 +9,10 @@ contract MockETOTermsConstraints is ETOTermsConstraints {
     ////////////////////////
 
     // you can start your ETO in 5 minutes on dev
-    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 1 days;
+    uint256 public constant DATE_TO_WHITELIST_MIN_DURATION = 8 hours;
 
     // claim duration is 1 day minimum
-    uint256 public constant MIN_CLAIM_DURATION = 1 days;
+    uint256 public constant MIN_CLAIM_DURATION = 8 hours;
 
     ////////////////////////
     // Constructor
