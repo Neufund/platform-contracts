@@ -54,6 +54,7 @@ module.exports = async function inspectETO() {
   const IdentityRegistry = artifacts.require(config.artifacts.IDENTITY_REGISTRY);
   const ITokenExchangeRateOracle = artifacts.require(config.artifacts.TOKEN_EXCHANGE_RATE_ORACLE);
   const PlatformTerms = artifacts.require(config.artifacts.PLATFORM_TERMS);
+  const IContractId = artifacts.require("IContractId");
 
   // find universe
   const universe = await Universe.at(options.universe);
@@ -134,22 +135,6 @@ module.exports = async function inspectETO() {
     "Euro Lock can transfer TO ICBM Euro Token",
     ...((await icbmEuroToken.allowedTransferTo(euroLock.address)) ? good("YES") : wrong("NO")),
   );
-  // check if PLATFORM_OPERATOR_WALLET is Verified
-  const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
-  console.log(`Platform Operator wallet is ${config.addresses.PLATFORM_OPERATOR_WALLET}`);
-  const powClaims = await identityRegistry.getClaims(config.addresses.PLATFORM_OPERATOR_WALLET);
-  const powDeserializedClaims = deserializeClaims(powClaims);
-  const powIsVerified = Object.assign(...powDeserializedClaims).isVerified;
-  console.log(
-    `Checking if PLATFORM_OPERATOR_WALLET ${config.addresses.PLATFORM_OPERATOR_WALLET} is verified`,
-    ...(powIsVerified ? good("YES") : wrong("NO")),
-  );
-  const powHasBankAccount = Object.assign(...powDeserializedClaims).hasBankAccount;
-  console.log(
-    // eslint-disable-next-line max-len
-    `Checking if PLATFORM_OPERATOR_WALLET ${config.addresses.PLATFORM_OPERATOR_WALLET} is has bank account`,
-    ...(powHasBankAccount ? good("YES") : wrong("NO")),
-  );
   // check if various agreements are attached
   await checkAgreement(euroToken, "EuroToken Agreement");
   await checkAgreement(euroLock, "EuroLock Agreement");
@@ -164,6 +149,37 @@ module.exports = async function inspectETO() {
   const isRateExpired = ethRate[1].lte(now.sub(rateExpirationDelta));
   console.log("Checking if rate not expired", ...(!isRateExpired ? good("YES") : wrong("NO")));
   console.log("---------------------------------------------");
+  console.log("Info on operators");
+  // check if PLATFORM_OPERATOR_WALLET is Verified
+  const identityRegistry = await IdentityRegistry.at(await universe.identityRegistry());
+
+  async function dumpClaims(name, address) {
+    const powClaims = await identityRegistry.getClaims(address);
+    const powDeserializedClaims = deserializeClaims(powClaims);
+    const powIsVerified = Object.assign(...powDeserializedClaims).isVerified;
+    console.log(
+      `Checking if ${name} ${address} is verified`,
+      ...(powIsVerified ? good("YES") : wrong("NO")),
+    );
+    const powHasBankAccount = Object.assign(...powDeserializedClaims).hasBankAccount;
+    console.log(
+      // eslint-disable-next-line max-len
+      `Checking if ${name} ${address} has bank account`,
+      ...(powHasBankAccount ? good("YES") : wrong("NO")),
+    );
+  }
+
+  for (const key of Object.keys(config.addresses)) {
+    if (key.indexOf("OPERATOR") >= 0) {
+      console.log(`${key} - ${config.addresses[key]}`);
+      await dumpClaims(key, config.addresses[key]);
+    }
+  }
+
+  console.log(`Platform Operator wallet is ${config.addresses.PLATFORM_OPERATOR_WALLET}`);
+
+  console.log("---------------------------------------------");
+  console.log("Balances of known services");
   // check balances of various services
   const transactingServices = {
     EURT_DEPOSIT_MANAGER: config.addresses.EURT_DEPOSIT_MANAGER,
@@ -196,6 +212,31 @@ module.exports = async function inspectETO() {
   console.log("Dump Universe:");
   await printConstants(universe);
   console.log("---------------------------------------------");
+  console.log("Known contracts versions:");
+  for (const func of universe.abi) {
+    if (
+      func.type === "function" &&
+      func.constant &&
+      func.inputs.length === 0 &&
+      func.outputs.length === 1 &&
+      func.outputs[0].type === "address"
+    ) {
+      try {
+        const address = await universe[func.name]();
+        const code = await promisify(web3.eth.getCode)(address);
+        if (code === "0x") {
+          console.log(`${func.name} contract is not set`);
+        } else {
+          const contractIdI = await IContractId.at(address);
+          const contractId = await contractIdI.contractId();
+          console.log(`${func.name} version is`, ...good(contractId[1].toString(10)));
+        }
+      } catch (e) {
+        console.log(`${func.name} version is`, ...wrong("Not Implemented"));
+      }
+    }
+  }
+  console.log("---------------------------------------------");
   console.log("Dump Platform Terms:");
   await printConstants(platformTerms);
   console.log("---------------------------------------------");
@@ -207,6 +248,7 @@ module.exports = async function inspectETO() {
     const allowed = await tokenController.allowedTransferTo(addr);
     console.log(`Allows transfer TO ${c} (${addr})`, ...(allowed ? good("YES") : wrong("NO")));
   }
+
   await allowsTransferTo("feeDisbursal");
   await allowsTransferTo("euroLock");
   await allowsTransferTo("gasExchange");
