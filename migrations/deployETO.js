@@ -77,10 +77,10 @@ export async function deployETO(
     ...(canManageUniverse ? good("YES") : wrong("NO")),
   );
   const deployerBalance = await promisify(ETOCommitment.web3.eth.getBalance)(deployer);
-  const deployerHasBalance = deployerBalance.gte(config.Q18.mul(0.5));
+  const deployerHasBalance = deployerBalance.gte(config.Q18.mul(0.4));
   const deployerBalanceEth = deployerBalance.div(Q18).round(4, 4);
   console.log(
-    `Checking if DEPLOYER ${deployer} has 0.5 ETH`,
+    `Checking if DEPLOYER ${deployer} has 0.4 ETH`,
     ...(deployerHasBalance
       ? good(deployerBalanceEth.toNumber())
       : wrong(deployerBalanceEth.toNumber())),
@@ -333,7 +333,14 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   console.log(`ETO Terms: ${etoTerms.address}`);
 }
 
-export async function deployWhitelist(artifacts, config, etoCommitmentAddress, whitelist, dryRun) {
+export async function deployWhitelist(
+  artifacts,
+  config,
+  etoCommitmentAddress,
+  whitelist,
+  dryRun,
+  checkExisting,
+) {
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   console.log(`looking for eto commitment at ${etoCommitmentAddress}`);
@@ -362,14 +369,16 @@ export async function deployWhitelist(artifacts, config, etoCommitmentAddress, w
         `Investor ${ticket.address} discount amount value ${parsedDiscountAmount} does not look right`,
       );
     }
-    const existingTicket = await etoTerms.whitelistTicket(ticket.address);
-    if (existingTicket[0]) {
-      console.log(
-        `Investor ${ticket.address} already on whitelist with fixed slot ${existingTicket[1]
-          .div(Q18)
-          .toNumber()} and price fraction ${existingTicket[2].div(Q18).toNumber()}`,
-      );
-      // throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
+    if (checkExisting) {
+      const existingTicket = await etoTerms.whitelistTicket(ticket.address);
+      if (existingTicket[0]) {
+        console.log(
+          `Investor ${ticket.address} already on whitelist with fixed slot ${existingTicket[1]
+            .div(Q18)
+            .toNumber()} and price fraction ${existingTicket[2].div(Q18).toNumber()}`,
+        );
+        // throw new Error(`Investor ${ticket.address} already on whitelist. Use overwrite option.`);
+      }
     }
     addresses.push(ticket.address);
     amounts.push(Q18.mul(parsedDiscountAmount));

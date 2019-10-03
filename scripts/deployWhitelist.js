@@ -13,6 +13,7 @@ module.exports = async function inspectETO() {
     { name: "eto", type: String },
     { name: "whitelist", type: String },
     { name: "dry-run", type: Boolean },
+    { name: "check-existing", type: Boolean },
     { name: "verbose-rpc", type: Boolean },
     { name: "exec", type: String, multiple: true, defaultOption: true },
   ];
@@ -44,5 +45,12 @@ module.exports = async function inspectETO() {
     discount: entry.discount,
   }));
   console.log(options);
-  await deployWhitelist(artifacts, CONFIG, options.eto, whitelist, options["dry-run"]);
+  await deployWhitelist(
+    artifacts,
+    CONFIG,
+    options.eto,
+    whitelist,
+    options["dry-run"],
+    options["check-existing"],
+  );
 };
