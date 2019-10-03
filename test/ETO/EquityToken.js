@@ -20,7 +20,8 @@ import { eventValue } from "../helpers/events";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
-import { increaseTime } from "../helpers/evmCommands";
+import { mineBlock } from "../helpers/evmCommands";
+import increaseTime from "../helpers/increaseTime";
 import { contractId, ZERO_ADDRESS } from "../helpers/constants";
 import EvmError from "../helpers/EVMThrow";
 
@@ -322,8 +323,12 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
     const advanceSnapshotId = async snapshotable => {
       // EquityToken is Daily so forward time to create snapshot
-      await increaseTime(24 * 60 * 60);
-      return snapshotable.currentSnapshotId.call();
+      const prevSnapshotId = await snapshotable.currentSnapshotId.call();
+      await increaseTime(24 * 60 * 60 + 1);
+      await mineBlock();
+      const nextSnapshotId = await snapshotable.currentSnapshotId.call();
+      expect(prevSnapshotId).to.be.bignumber.not.eq(nextSnapshotId);
+      return nextSnapshotId;
     };
 
     const createClone = async (parentToken, parentSnapshotId) =>
