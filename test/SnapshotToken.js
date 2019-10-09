@@ -71,7 +71,7 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
       });
       const getVotingContract = () => votingContract;
 
-      testVotingWithSnapshots(getToken, getVotingContract, owner, owner2);
+      testVotingWithSnapshots(getToken, getVotingContract, owner, owner2, accounts[0]);
     });
 
     it("should call currentSnapshotId without transaction", async () => {

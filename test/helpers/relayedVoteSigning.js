@@ -23,8 +23,8 @@ export async function createSignedVote(proposalIndex, inFavor, voter, votingCont
   const msg = web3Utils.soliditySha3(
     { type: "bytes1", value: "0x0" },
     { type: "address", value: votingContract },
-    { type: "uint256", value: 0 },
-    { type: "bool", value: true },
+    { type: "uint256", value: proposalIndex },
+    { type: "bool", value: inFavor },
   );
   const sig = await evmSign(voter, msg);
   return {
