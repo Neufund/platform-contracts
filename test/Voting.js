@@ -6,7 +6,7 @@ import { ZERO_ADDRESS } from "./helpers/constants";
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
 const SimpleVote = artifacts.require("SimpleVote");
 
-contract("VotingWithSnaphotTokenn", ([owner, owner2]) => {
+contract("VotingWithSnaphotToken", ([owner, owner2, ...accounts]) => {
   let testSnapshotToken;
   let votingContract;
 
@@ -18,5 +18,5 @@ contract("VotingWithSnaphotTokenn", ([owner, owner2]) => {
   const getToken = () => testSnapshotToken;
   const getVotingContract = () => votingContract;
 
-  testVotingWithSnapshots(getToken, getVotingContract, owner, owner2);
+  testVotingWithSnapshots(getToken, getVotingContract, owner, owner2, accounts[0]);
 });
