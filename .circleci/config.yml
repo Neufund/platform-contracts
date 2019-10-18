@@ -14,15 +14,15 @@ jobs:
       - run: ./.circleci/install-yarn.sh
       - restore_cache:
           keys:
-          - v2-deps-{{ checksum "package.json" }}
-          - v2-deps-
+          - v3-deps-{{ checksum "package.json" }}
+          - v3-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
       - run: source /opt/circleci/.nvm/nvm.sh && yarn lint
       - run: source /opt/circleci/.nvm/nvm.sh && yarn build
       - save_cache:
           paths:
             - node_modules
-          key: v2-deps-{{ checksum "package.json" }}
+          key: v3-deps-{{ checksum "package.json" }}
 
   test-container:
     machine:
@@ -49,14 +49,14 @@ jobs:
       - run: ./.circleci/install-yarn.sh
       - restore_cache:
           keys:
-          - v2-deps-{{ checksum "package.json" }}
-          - v2-deps-
+          - v3-deps-{{ checksum "package.json" }}
+          - v3-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
       - run: source /opt/circleci/.nvm/nvm.sh && yarn test
       - save_cache:
           paths:
             - node_modules
-          key: v2-deps-{{ checksum "package.json" }}
+          key: v3-deps-{{ checksum "package.json" }}
 
 workflows:
   version: 2
