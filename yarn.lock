@@ -5602,6 +5602,11 @@ readdirp@^2.0.0:
     micromatch "^3.1.10"
     readable-stream "^2.0.2"
 
+readline-sync@^1.4.10:
+  version "1.4.10"
+  resolved "https://registry.yarnpkg.com/readline-sync/-/readline-sync-1.4.10.tgz#41df7fbb4b6312d673011594145705bf56d8873b"
+  integrity sha512-gNva8/6UAe8QYepIQH/jQ2qn91Qj0B9sYjMBBs3QOB8F2CXcKgLxQaJRP76sWVRQt+QU+8fAkCbCvjjMFu7Ycw==
+
 readline2@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/readline2/-/readline2-1.0.1.tgz#41059608ffc154757b715d9989d199ffbf372e35"
@@ -6850,9 +6855,9 @@ truffle-resolver@^4.0.1:
     truffle-expect "^0.0.4"
     truffle-provisioner "^0.1.1"
 
-truffle@Neufund/truffle#7481774d9e02077817b8937741f6b2a92bba4322:
+truffle@Neufund/truffle#56a8fb7a45a17b0c4b4610f7cc8b0e9d4aad5525:
   version "3.4.9"
-  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/7481774d9e02077817b8937741f6b2a92bba4322"
+  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/56a8fb7a45a17b0c4b4610f7cc8b0e9d4aad5525"
   dependencies:
     mocha "^3.4.2"
     original-require "^1.0.1"

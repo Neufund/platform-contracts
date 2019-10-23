@@ -231,7 +231,7 @@ contract(
 
     it("should revert on set exchange rate not from tokenOracleManager", async () => {
       // this should work
-      gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
+      await gasExchange.setExchangeRate(etherToken.address, euroToken.address, Q18.mul(100), {
         from: tokenOracleManager,
       });
       const rate = await rateOracle.getExchangeRate(etherToken.address, euroToken.address);
