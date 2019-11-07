@@ -59,11 +59,16 @@ const consolePKProvider = (providerUrl, network) =>
     ? require("./consolePKProvider").consolePKProvider(providerUrl)
     : undefined;
 
+// If you change this, also change argument  in './scripts/testrpc.sh'
+// and the configuration of the parity-node
+const gasLimitForDev = 8000000;
+const gasLimitForLive = 6800000;
+
 module.exports = {
   networks: {
     localhost: {
       network_id: "*",
-      gas: 6800000,
+      gas: gasLimitForDev,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
@@ -72,13 +77,13 @@ module.exports = {
     inprocess: {
       network_id: "*",
       provider: Ganache.provider({
-        gasLimit: 6800000,
+        gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
     },
     nf_private: {
       network_id: "17",
-      gas: 6800000,
+      gas: gasLimitForDev,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
@@ -89,7 +94,7 @@ module.exports = {
     },
     nf_private_io: {
       network_id: "17",
-      gas: 6800000,
+      gas: gasLimitForDev,
       gasPrice: 21000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
@@ -104,7 +109,7 @@ module.exports = {
     },
     forked_live: {
       network_id: 72,
-      gas: 6800000, // close to current mainnet limit
+      gas: gasLimitForLive,
       gasPrice: 5000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
@@ -115,7 +120,7 @@ module.exports = {
     },
     forked_nano_live: {
       network_id: 72,
-      gas: 6800000,
+      gas: gasLimitForLive,
       provider: nanoProvider(
         "http://ethexp2-node.neustg.net:8545",
         // "44'/60'/0'/1",
@@ -130,7 +135,7 @@ module.exports = {
     },
     live: {
       network_id: 1, // Ethereum public network
-      gas: 6800000, // close to current mainnet limit
+      gas: gasLimitForLive,
       gasPrice: 5000000000, // 21 gwei /shannon
       deploymentConfigOverride: {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
@@ -147,7 +152,7 @@ module.exports = {
     },
     console_pk_live: {
       network_id: 1, // Ethereum public network
-      gas: 6800000, // close to current mainnet limit
+      gas: gasLimitForLive,
       gasPrice: 6000000000, // 21 gwei /shannon
       deploymentConfigOverride: {
         ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
@@ -181,7 +186,7 @@ module.exports = {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 6800000,
+      gas: gasLimitForLive,
       gasPrice: 8000000000,
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: {
@@ -193,16 +198,16 @@ module.exports = {
     inprocess_test: {
       network_id: "*",
       provider: Ganache.provider({
-        gasLimit: 6800000,
+        gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
       }),
-      gas: 6800000,
+      gas: gasLimitForDev,
     },
     localhost_test: {
       network_id: "*",
       host: "localhost",
       port: 8545,
-      gas: 6800000,
+      gas: gasLimitForDev,
     },
     inprocess_massive_test: {
       network_id: "*",

@@ -33,7 +33,7 @@ contract MockETOCommitment is
     // Mocked functions
     ////////////////////////
 
-    // moves all timestamps so
+    // moves all timestamps towards the past
     function _mockShiftBackTime(uint256 delta) public {
         for(uint256 ii = 0; ii<_pastStateTransitionTimes.length; ii += 1) {
             if(_pastStateTransitionTimes[ii] > 0) {
@@ -41,6 +41,15 @@ contract MockETOCommitment is
                 _pastStateTransitionTimes[ii] -= uint32(delta);
             }
         }
+    }
+
+    // convenience function for moving all timestampts towards the past
+    // such that the next state transition will occur in delta seconds
+    function _shiftToBeforeNextState(uint8 delta) public {
+        require(delta < 1800, "NF_MOCK_INVALID_DELTA");
+        uint256 nextTransition = startOfInternal(ETOState(uint(state()) + 1));
+        require(nextTransition != 0 && nextTransition > now + delta, "NF_MOCK_INVALID_TRANSITION_TIME");
+        _mockShiftBackTime(nextTransition - now - delta);
     }
 
     function _mockPastTime(uint256 idx, uint256 timestamp) public {
