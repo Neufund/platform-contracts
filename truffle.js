@@ -79,6 +79,7 @@ module.exports = {
       provider: Ganache.provider({
         gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
+        hardfork: "istanbul",
       }),
     },
     nf_private: {
@@ -200,6 +201,7 @@ module.exports = {
       provider: Ganache.provider({
         gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
+        hardfork: "istanbul",
       }),
       gas: gasLimitForDev,
     },
@@ -216,6 +218,7 @@ module.exports = {
         deterministic: true,
         gasLimit: 0xffffffff,
         accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
+        hardfork: "istanbul",
       }),
     },
   },
