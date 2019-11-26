@@ -5,6 +5,7 @@ const toBytes32 = require("../test/helpers/constants").toBytes32;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const roles = require("../test/helpers/roles").default;
 const { TriState } = require("../test/helpers/triState");
+const TestReceiving = artifacts.require("TestReceiving");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -57,6 +58,10 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
     console.log("send ether to simple exchange");
     await simpleExchange.send(CONFIG.Q18.mul(10), { from: DEPLOYER });
+
+    console.log("deploy Mock-Receiver contract for test token fallbacks");
+    await deployer.deploy(TestReceiving, true);
+    const receiver = await TestReceiving.deployed();
 
     console.log(
       `amending agreement for EuroToken ${euroToken.address} and Universe ${universe.address}`,

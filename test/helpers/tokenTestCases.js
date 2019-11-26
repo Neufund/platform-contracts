@@ -6,6 +6,7 @@ import { ZERO_ADDRESS } from "./constants";
 const TestERC677Callback = artifacts.require("TestERC677Callback");
 const TestERC223Callback = artifacts.require("TestERC223Callback");
 const TestERC223LegacyCallback = artifacts.require("TestERC223LegacyCallback");
+const TestReceiving = artifacts.require("TestReceiving");
 
 export function expectTransferEvent(tx, from, to, amount) {
   const event = eventValue(tx, "Transfer");
@@ -44,6 +45,10 @@ export async function deployTestErc677Callback() {
 
 export async function deployTestErc223Callback(useTokenFallback = true) {
   return useTokenFallback ? TestERC223Callback.new() : TestERC223LegacyCallback.new();
+}
+
+export async function deployTestReceiving(acceptERC223 = true) {
+  return TestReceiving.new(acceptERC223);
 }
 
 export function basicTokenTests(token, fromAddr, toAddr, initialBalance) {
