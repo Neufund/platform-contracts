@@ -9,7 +9,7 @@ import "../Standards/IERC223LegacyCallback.sol";
  - ERC223 tokens
  - tokens with legacy ERC223 tokenFallback (e.g. Neumark.sol)
 */
-contract TestReceiving is IERC223Callback, IERC223LegacyCallback {
+contract TestReceiver is IERC223Callback, IERC223LegacyCallback {
 
     ////////////////////////
     // Mutable state
@@ -34,12 +34,6 @@ contract TestReceiving is IERC223Callback, IERC223LegacyCallback {
     ////////////////////////
     function setERC223Acceptance(bool acceptERC223) public {
         _acceptERC223 = acceptERC223;
-    }
-
-
-    // convenience function to check the balance of this contract
-    function returnBalance() public view returns(uint) {
-        return address(this).balance;
     }
 
     // fallback function to receive ether
