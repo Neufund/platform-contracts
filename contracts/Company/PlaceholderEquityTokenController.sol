@@ -38,7 +38,7 @@ contract PlaceholderEquityTokenController is
     ////////////////////////
 
     // a root of trust contract
-    Universe private UNIVERSE;
+    Universe internal UNIVERSE;
 
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
@@ -278,7 +278,12 @@ contract PlaceholderEquityTokenController is
         constant
         returns (bool allow)
     {
-        return _transfersEnabled || (from == _commitment && broker == from);
+        // allow for initial token distribution by ETOCommitment contract (token claim)
+        if (from == _commitment && broker == from) {
+            allow = true;
+        } else {
+            allow = _transfersEnabled;
+        }
     }
 
     /// always approve

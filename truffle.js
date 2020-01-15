@@ -13,6 +13,7 @@ const devNetworkDeploymentConfigOverride = {
     ICBM_COMMITMENT: "MockICBMCommitment",
     STANDARD_ETO_COMMITMENT: "MockETOCommitment",
     ETO_TERMS_CONSTRAINTS: "MockETOTermsConstraints",
+    PLACEHOLDER_EQUITY_TOKEN_CONTROLLER: "GranularTransferController",
   },
   // other addresses set to DEPLOYER
   addresses: {
@@ -166,14 +167,14 @@ module.exports = {
       network_id: 1,
       gas: 1500000,
       provider: nanoProvider(
-        "https://nd.neufund.org/",
+        "https://ndfull.neufund.org/",
         // "44'/60'/0'/0",
         // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
-        // "44'/60'/105'/0", // legal rep (M)
+        "44'/60'/105'/0", // legal rep (M)
         // "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
-        "44'/60'/106'/16",
+        // "44'/60'/106'/16",
         "nano_live",
       ),
       deploymentConfigOverride: {
@@ -181,7 +182,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 60000000000, // 10 gwei /shannon
+      gasPrice: 10000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",
