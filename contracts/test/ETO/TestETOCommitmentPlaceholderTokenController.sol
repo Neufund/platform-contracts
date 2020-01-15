@@ -26,6 +26,16 @@ contract TestETOCommitmentPlaceholderTokenController is
     IETOCommitmentObserver private COMMITMENT_OBSERVER;
 
     ////////////////////////
+    // Immutable State
+    ////////////////////////
+
+    // keeps current ETO state
+    ETOState private _state;
+
+    // keeps state transitions timestamps
+    uint256[8] private _stateTransitions;
+
+    ////////////////////////
     // Constructor
     ////////////////////////
 
@@ -100,12 +110,29 @@ contract TestETOCommitmentPlaceholderTokenController is
     }
 
     //
+    // partial implementation of
+    //
+    // to provide basic state information
+    //
+
+    function state() public constant returns (ETOState) {
+        return _state;
+    }
+
+    // returns start of given state
+    function startOf(ETOState s) public constant returns (uint256) {
+        return _stateTransitions[uint256(s)];
+    }
+
+    //
     // Methods to poke controller in various ways
     //
 
     function _triggerStateTransition(ETOState prevState, ETOState newState)
         public
     {
+        _state = newState;
+        _stateTransitions[uint256(_state)] = block.timestamp;
         COMMITMENT_OBSERVER.onStateTransition(prevState, newState);
     }
 
