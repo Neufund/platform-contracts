@@ -18,7 +18,7 @@ import "../AccessRoles.sol";
 // 2 - whitelist management shifted from company to WHITELIST ADMIN
 // 3 - SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL moved to ETOTokenTerms
 //     replaces EXISTING_COMPANY_SHARS with EXISTING_SHARE_CAPITAL, adds CURRENCY CODE
-// 4 - introduces
+//
 //     MAX_AVAILABLE_TOKENS with the actual amount of tokens for sale
 //     MAX_AVAILABLE_TOKENS_IN_WHITELIST with the actual amount of tokens for sale in whitelist
 //     ALLOWS_REGD_INVESTORS are US investors on reg-d allowed to participate in this ETO

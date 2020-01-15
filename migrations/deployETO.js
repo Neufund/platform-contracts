@@ -215,7 +215,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   console.log(`ETO Terms verified...${termsConstraintsVerified ? good("YES") : wrong("NO")}`);
   const etoContractId = await eto.contractId();
   console.log(`Contract id ${etoContractId[0]} version ${etoContractId[1].toNumber()}`);
-  // todo: show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
+  // show all ETO properties (state, tokens, dates, ETO terms, contribution, totals etc.)
   console.log("------------------------------------------------------");
   const state = await eto.state();
   console.log("In state: ", ...good(CommitmentStateRev[state]));
