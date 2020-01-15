@@ -74,8 +74,6 @@ contract GranularTransferController is
         constant
         returns (bool allow)
     {
-        // ask base controller if transfers are enables
-        allow = PlaceholderEquityTokenController.onTransfer(broker, from, to, amount);
         GovState s = state();
         // allow forced transfer only by the token controller itself
         if ((s == GovState.Funded || s == GovState.Closing) && broker == address(this)) {
@@ -86,14 +84,14 @@ contract GranularTransferController is
                 //  (1) the broker is the company
                 //  (2) there's forced transfer defined for from address
                 //  (3) there's a match for to and amount
-                allow = t.amount == amount && t.to == to;
-            }
-            if (allow) {
+
                 // we return immediately as we'll not check frozen accounts in that case
                 // often it may happend that from address is already frozen
-                return allow;
+                return t.amount == amount && t.to == to;
             }
         }
+        // ask base controller if transfers are enabled
+        allow = PlaceholderEquityTokenController.onTransfer(broker, from, to, amount);
         // prevent transfer if account is frozen
         if (allow && s == GovState.Funded) {
             allow = !(_frozenAddresses[from] || _frozenAddresses[to] || _frozenAddresses[broker]);
@@ -109,7 +107,6 @@ contract GranularTransferController is
         // if no override was set by base class check frozen transfer override
         // the spender must be token controller - this contract
         if (overrideAmount == 0 && spender == address(this)) {
-            // require(_forcedTransfers[owner].amount > 0, "ON_ALLOWANCE3");
             // return amount that can be force-transferred
             return _forcedTransfers[owner].amount;
         }
@@ -119,6 +116,7 @@ contract GranularTransferController is
     // Overrides IContract
     //
 
+    // return same contractId as base class, but mark version as special
     function contractId() public pure returns (bytes32 id, uint256 version) {
         return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 0xFF);
     }

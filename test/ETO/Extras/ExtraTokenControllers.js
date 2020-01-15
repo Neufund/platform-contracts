@@ -252,7 +252,7 @@ contract(
         await makeInvestment(totalShares, inv1DistAmount);
         // investor 2 is a regular investor with transfer rights
         await testCommitment._distributeTokens(investor2, "1");
-        // should not be able to send
+        // investor 1 should not be able to send
         let canTransfer = await equityTokenController.onTransfer(
           investor1,
           investor1,
@@ -260,7 +260,7 @@ contract(
           "1",
         );
         expect(canTransfer).to.be.false;
-        // should be able to receive
+        // investor 1 should be able to receive
         canTransfer = await equityTokenController.onTransfer(investor2, investor2, investor1, "1");
         expect(canTransfer).to.be.true;
         // investor 2 is able to send
