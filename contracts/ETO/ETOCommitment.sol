@@ -985,6 +985,7 @@ contract ETOCommitment is
         if (ticket.equivEurUlps == 0) {
             return;
         }
+        // modify state before sending
         ticket.claimOrRefundSettled = true;
 
         if (ticket.rewardNmkUlps > 0) {
@@ -1010,6 +1011,7 @@ contract ETOCommitment is
         if (ticket.equivEurUlps == 0) {
             return;
         }
+        //modify state before sending
         ticket.claimOrRefundSettled = true;
         refundSingleToken(investor, ticket.amountEth, ticket.usedLockedAccount, ETHER_LOCK, ETHER_TOKEN);
         refundSingleToken(investor, ticket.amountEurUlps, ticket.usedLockedAccount, EURO_LOCK, EURO_TOKEN);
@@ -1042,7 +1044,9 @@ contract ETOCommitment is
             }
         }
         if (a > 0) {
-            assert(token.transfer(investor, a, ""));
+            // use regular transfer, do not assume that if wallet contract was used
+            // it will implement ERC223
+            assert(token.transfer(investor, a));
         }
     }
 }
