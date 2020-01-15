@@ -142,7 +142,6 @@ contract GranularTransferController is
     /// note: forced transfer direct initiator is always this contract instance, this allows a full control over
     ///       forced transfer execution in atomic transaction
     /// dev: method is public. once right to forced transfer is established anyone can execute it. cool isn't it?
-    event LogA(address a, address b, address c, uint256 d);
     function executeForcedTransfer(address from)
         public
     {
@@ -156,7 +155,6 @@ contract GranularTransferController is
         // obtain equity token address
         (address[] memory equityTokens, ) = capTable();
         IEquityToken token = IEquityToken(equityTokens[0]);
-        emit LogA(address(token), from, t.to, t.amount);
         // execute forced transfer with this smart contract as a broker
         // this will trigger onAllowance and onTranfer controller method before completing
         require(token.transferFrom(from, t.to, t.amount));
@@ -180,7 +178,7 @@ contract GranularTransferController is
         public
         onlyCompany
     {
-        _frozenAddresses[owner] = true;
+        _frozenAddresses[owner] = false;
         emit LogTokenHolderAccountUnfrozen(owner);
 
     }
