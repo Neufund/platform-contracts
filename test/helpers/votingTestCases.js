@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { increaseTime } from "../helpers/evmCommands";
 import { createSignedVote } from "../helpers/relayedVoteSigning";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { hasEvent } from "../helpers/events";
 
 export function testVotingWithSnapshots(getToken, getVotingContract, owner, owner2, relayer) {
   let token;
@@ -19,8 +20,8 @@ export function testVotingWithSnapshots(getToken, getVotingContract, owner, owne
     });
 
     it("should reject opening of more than one proposal per address", async () => {
-      const addProposalLog = await votingContract.addProposal();
-      await expect(addProposalLog.logs.find(log => log.event === "LogNewProposal")).to.not.be.empty;
+      const tx = await votingContract.addProposal();
+      expect(hasEvent(tx, "LogNewProposal")).to.be.true;
       await expect(votingContract.addProposal()).to.be.rejectedWith(
         "Only one active proposal per address",
       );
@@ -132,15 +133,45 @@ export function testVotingWithSnapshots(getToken, getVotingContract, owner, owne
       ).to.be.rejectedWith("Incorrect order signature");
     });
 
-    it("should reject attempts to end the voting", async () => {});
+    it("should reject attempts to end the voting", async () => {
+      await token.deposit(1000);
+      await votingContract.addProposal();
+      await votingContract.vote(0, true, { from: owner });
+      await expect(votingContract.getResult(0, { from: owner2 })).to.be.rejectedWith(
+        "Voting period is not over",
+      );
+    });
   });
 
   describe("When the voting period is over...", async () => {
-    it("should allow to end proposals", async () => {});
+    it("should allow to end proposals", async () => {
+      await token.deposit(1000);
+      await votingContract.addProposal();
+      await votingContract.vote(0, true, { from: owner });
+      await increaseTime(24 * 60 * 60 * 4);
+      const tx = await votingContract.getResult(0, { from: owner2 });
+      expect(hasEvent(tx, "LogProposalResult")).to.be.true;
+    });
 
-    it("should reject attempts to vote on them", async () => {});
+    it("should reject attempts to vote on them", async () => {
+      await token.deposit(1000);
+      await votingContract.addProposal();
+      await votingContract.vote(0, true, { from: owner });
+      await increaseTime(24 * 60 * 60 * 4);
+      await votingContract.getResult(0, { from: owner2 });
+      await expect(votingContract.vote(0, true, { from: owner2 })).to.be.rejectedWith(
+        "Voting period is over",
+      );
+    });
 
-    it("should allow the owner of the proposal to open up a new proposal", async () => {});
+    it("should allow the owner of the proposal to open up a new proposal", async () => {
+      await token.deposit(1000);
+      await votingContract.addProposal();
+      await increaseTime(24 * 60 * 60 * 4);
+      await votingContract.getResult(0, { from: owner2 });
+      const tx = await votingContract.addProposal();
+      expect(hasEvent(tx, "LogNewProposal")).to.be.true;
+    });
 
     it("reports a proposal as passed if the quorum was reached AND a majority voted in favor", async () => {
       await token.deposit(1000);
@@ -155,7 +186,7 @@ export function testVotingWithSnapshots(getToken, getVotingContract, owner, owne
 
     it("reports a proposal as failed if the quorum was reached but the majority rejected it", async () => {});
 
-    // Always good to pay extra attention to the boundary conditions:
+    // boundary condition:
     it("reports a proposal as failed if the quorum reached and there was a draw", async () => {
       await token.deposit(100);
       await token.transfer(owner2, 50, { from: owner });
