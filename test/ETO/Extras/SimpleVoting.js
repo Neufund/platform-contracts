@@ -1,7 +1,5 @@
-import { testVotingWithSnapshots } from "./helpers/votingTestCases";
-import { ZERO_ADDRESS } from "./helpers/constants";
-
-// this is just a convenience testfile so I dont have always have to run the entire SnapshotTokentestsuite
+import { testVotingWithSnapshots } from "../../helpers/votingTestCases";
+import { ZERO_ADDRESS } from "../../helpers/constants";
 
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
 const SimpleVote = artifacts.require("SimpleVote");

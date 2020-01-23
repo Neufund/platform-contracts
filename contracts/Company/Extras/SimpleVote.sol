@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "./ISnapshotableToken.sol";
+import "../../SnapshotToken/Extensions/ISnapshotableToken.sol";
 /* import "../../Math.sol"; */
 
 /// Contract to allow weighted voting based on a snapshotable token (with relayed, batched voting)
@@ -23,7 +23,7 @@ contract SimpleVote {
     ////////////////////////
     ISnapshotableToken public TOKEN;
     // % of tokens to participate in a voting to make it valid
-    uint256 public QUORUM = 40;
+    uint256 public constant QUORUM = 40;
     uint256 public VOTING_PERIOD;
 
     /////////////////////////
@@ -51,6 +51,7 @@ contract SimpleVote {
     )
         public
     {
+        require(votingPeriodInDays > 0 && token != address(0), "Invalid proposal parameters");
         VOTING_PERIOD = votingPeriodInDays * 1 days;
         TOKEN = token;
     }
@@ -155,7 +156,7 @@ contract SimpleVote {
         require(p.owner != address(0), "Proposal was already deleted");
         require(p.endTime < now, "Voting period is not over");
 
-        uint256 minParticipation = TOKEN.totalSupplyAt(p.snapshotId) * 40 / 100;
+        uint256 minParticipation = TOKEN.totalSupplyAt(p.snapshotId) * QUORUM / 100;
         bool passedQuorum = p.inFavor + p.against > minParticipation;
         bool hasPassed = passedQuorum && p.inFavor > p.against;
         _hasActiveProposal[_proposals[proposalId].owner] = false;

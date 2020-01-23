@@ -1,7 +1,6 @@
 import { expect } from "chai";
 import { erc223TokenTests, deployTestErc223Callback } from "./helpers/tokenTestCases";
 import { snapshotTokenTests } from "./helpers/snapshotTokenTestCases";
-import { testVotingWithSnapshots } from "./helpers/votingTestCases";
 import { ZERO_ADDRESS } from "./helpers/constants";
 import { testTokenController } from "./helpers/tokenControllerTestCases";
 
@@ -9,7 +8,6 @@ const BigNumber = web3.BigNumber;
 const TKN_DECIMALS = new BigNumber(10).toPower(18);
 
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
-const SimpleVote = artifacts.require("SimpleVote");
 
 contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
   let testSnapshotToken;
@@ -62,16 +60,6 @@ contract("TestSnapshotToken", ([owner, owner2, broker, ...accounts]) => {
         generate,
         destroy,
       );
-    });
-
-    describe("Voting With SnapshotToken", () => {
-      let votingContract;
-      beforeEach(async () => {
-        votingContract = await SimpleVote.new(testSnapshotToken.address, 3);
-      });
-      const getVotingContract = () => votingContract;
-
-      testVotingWithSnapshots(getToken, getVotingContract, owner, owner2, accounts[0]);
     });
 
     it("should call currentSnapshotId without transaction", async () => {
