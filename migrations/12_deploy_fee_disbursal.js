@@ -1,19 +1,17 @@
 require("babel-register");
-const confirm = require("node-ask").confirm;
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
+const initializeMigrationStep = require("./helpers").initializeMigrationStep;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const { TriState } = require("../test/helpers/triState");
 const roles = require("../test/helpers/roles").default;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
-const promisify = require("../test/helpers/evmCommands").promisify;
 const Q18 = require("../test/helpers/constants").Q18;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
   if (CONFIG.shouldSkipStep(__filename)) return;
 
-  const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
   const PlatformTerms = artifacts.require(CONFIG.artifacts.PLATFORM_TERMS);
   const EuroToken = artifacts.require(CONFIG.artifacts.EURO_TOKEN);
   const ICBMLockedAccount = artifacts.require(CONFIG.artifacts.ICBM_LOCKED_ACCOUNT);
@@ -24,30 +22,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
 
   deployer.then(async () => {
-    // todo: extract to stub that can be used in future migrations
-    // recover universe
-    if (CONFIG.isLiveDeployment && !CONFIG.UNIVERSE_ADDRESS) {
-      throw Error("On live deployment UNIVERSE_ADDRESS must be set");
-    }
-    if (CONFIG.isLiveDeployment) {
-      console.log("LIVE DEPLOYMENT");
-      console.log("Deployment parameters:");
-      console.log(`Recovered UNIVERSE: ${CONFIG.UNIVERSE_ADDRESS}`);
-      console.log(CONFIG);
-      if (!(await confirm("Are you sure you want to deploy? [y/n]"))) {
-        throw new Error("Aborting!");
-      }
-    }
-    let universe;
-    if (CONFIG.UNIVERSE_ADDRESS) {
-      universe = await Universe.at(CONFIG.UNIVERSE_ADDRESS);
-    } else {
-      universe = await Universe.deployed();
-    }
-    // set initial block
-    if (global._initialBlockNo === undefined) {
-      global._initialBlockNo = await promisify(web3.eth.getBlockNumber)();
-    }
+    const universe = await initializeMigrationStep(CONFIG, artifacts, web3);
     // deploy fee disbursal and controller
     console.log("Deploying FeeDisbursalController");
     await deployer.deploy(FeeDisbursalController, universe.address);
