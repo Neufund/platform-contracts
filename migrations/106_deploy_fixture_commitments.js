@@ -15,6 +15,7 @@ const {
   miniEtoLiTerms,
   miniEtoLiNominalValueTerms,
   hnwiEtoLiSecurityTerms,
+  retailSMEEtoLi,
 } = require("./configETOFixtures");
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
@@ -214,7 +215,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         hnwiEtoDeSecurityTerms,
       ],
       [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
-      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, defEtoTerms],
+      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, retailSMEEtoLi],
       [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, miniEtoLiNominalValueTerms],
       [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
       [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
