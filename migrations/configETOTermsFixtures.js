@@ -95,10 +95,10 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(OfferingDocumentType.Prospectus),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(OfferingDocumentSubType.Regular),
-    JURISDICTION: "DE",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(AssetType.Security),
     TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
-    _deploymentMetadata: { step: 1, available: true },
+    _deploymentMetadata: { step: 2, available: true },
   },
   {
     NAME: "retail eto li vma",
