@@ -70,24 +70,21 @@ export const constraints = [
     TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
     _deploymentMetadata: { step: 1, available: true },
   },
-  // do not create products based on lean prospectus yet, we do not know real parameters
-  /*
   {
-    NAME: "eu-sme eto li",
+    NAME: "retail EU-SME eto li security",
     CAN_SET_TRANSFERABILITY: true,
     HAS_NOMINEE: true,
     MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(10),
     MAX_TICKET_SIZE_EUR_ULPS: Q18.mul(0),
     MIN_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
-    MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(20000000),
+    MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul("20000000"),
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(OfferingDocumentType.Prospectus),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(OfferingDocumentSubType.Lean),
     JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(AssetType.Security),
     TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
-    _deploymentMetadata: { step: 2, available: true},
+    _deploymentMetadata: { step: 2, available: true },
   },
-  */
   {
     NAME: "retail eto li security",
     CAN_SET_TRANSFERABILITY: true,
@@ -98,10 +95,10 @@ export const constraints = [
     MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
     OFFERING_DOCUMENT_TYPE: new web3.BigNumber(OfferingDocumentType.Prospectus),
     OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(OfferingDocumentSubType.Regular),
-    JURISDICTION: "DE",
+    JURISDICTION: "LI",
     ASSET_TYPE: new web3.BigNumber(AssetType.Security),
     TOKEN_OFFERING_OPERATOR: "TOKEN_OFFERING_OPERATOR_LI",
-    _deploymentMetadata: { step: 1, available: true },
+    _deploymentMetadata: { step: 2, available: true },
   },
   {
     NAME: "retail eto li vma",
@@ -150,8 +147,8 @@ export const constraints = [
   },
 ];
 
-// this will be populated in migration step 13 and then can be used when deploying mock ETOs
-export const deployedAddresses = [];
+// this will be populated in migration step 13 (and further) and then can be used when deploying mock ETOs
+export const deployedAddresses = {};
 export const describedConstraints = {};
 
 export const getFixtureAndAddressByName = name => {
@@ -159,7 +156,7 @@ export const getFixtureAndAddressByName = name => {
     if (constraints[i].NAME === name)
       return {
         constraintFixture: constraints[i],
-        constraintAddress: deployedAddresses[i],
+        constraintAddress: deployedAddresses[name],
       };
   throw new Error(`Constraint with name ${name} not found`);
 };

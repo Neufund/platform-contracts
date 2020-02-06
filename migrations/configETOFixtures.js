@@ -237,7 +237,6 @@ export const miniEtoLiNominalValueTerms = {
 
 export const hnwiEtoLiSecurityTerms = {
   etoTerms: {
-    ETO_TERMS_CONSTRAINTS: "0x85bEa76f2ec57147F9942f68D896e10d6BCAcf03",
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul("10050"),
     MIN_TICKET_EUR_ULPS: "100000000000000000000000",
@@ -277,6 +276,51 @@ export const hnwiEtoLiSecurityTerms = {
     EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
   },
   etoTermsConstraints: "hnwi eto li security",
+  reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
+  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+};
+
+export const retailSMEEtoLi = {
+  etoTerms: {
+    SHARE_CAPITAL_CURRENCY_CODE: "EUR",
+    EXISTING_SHARE_CAPITAL: Q18.mul("10050"),
+    MIN_TICKET_EUR_ULPS: Q18.mul("10"),
+    MAX_TICKET_EUR_ULPS: Q18.mul("20000000"),
+    ENABLE_TRANSFERS_ON_SUCCESS: true,
+    WHITELIST_DISCOUNT_FRAC: "300000000000000000",
+    PUBLIC_DISCOUNT_FRAC: "0",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+  },
+  shareholderTerms: {
+    GENERAL_VOTING_RULE: "1",
+    TAG_ALONG_VOTING_RULE: "2",
+    LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
+    HAS_FOUNDERS_VESTING: true,
+    GENERAL_VOTING_DURATION: "864000",
+    RESTRICTED_ACT_VOTING_DURATION: "1209600",
+    VOTING_FINALIZATION_DURATION: "604800",
+    SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
+    VOTING_MAJORITY_FRAC: "500000000000000000",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
+  },
+  durTerms: {
+    WHITELIST_DURATION: "1209600",
+    PUBLIC_DURATION: "1209600",
+    SIGNING_DURATION: "5184000",
+    CLAIM_DURATION: "864000",
+  },
+  tokenTerms: {
+    EQUITY_TOKEN_NAME: "Quintessence",
+    EQUITY_TOKEN_SYMBOL: "QTT",
+    MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
+    MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
+    TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1534 * 10000),
+    SHARE_NOMINAL_VALUE_ULPS: Q18,
+    SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
+    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+  },
+  etoTermsConstraints: "retail EU-SME eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
   companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
 };
