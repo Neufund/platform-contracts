@@ -20,7 +20,8 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
         uint256 maxNumberOfTokensInWhitelist,
         uint256 shareNominalValueUlps,
         uint256 shareNominalValueEurUlps,
-        uint256 equityTokensPerShare
+        uint256 equityTokensPerShare,
+        uint8 equityTokensPrecision
     )
         public
         // do not pass max, min ticket etc. to disable overflow checks
@@ -33,7 +34,8 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
             equityTokensPerShare,
             shareNominalValueUlps,
             shareNominalValueEurUlps,
-            equityTokensPerShare
+            equityTokensPerShare,
+            equityTokensPrecision
         )
     {
         require(maxNumberOfTokensInWhitelist <= maxNumberOfTokens, "NF_WL_TOKENS_GT_MAX_TOKENS");
@@ -46,5 +48,6 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
         TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
         EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
+
     }
 }
