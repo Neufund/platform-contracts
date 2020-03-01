@@ -72,4 +72,14 @@ contract MockETOCommitment is
         emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
         emit LogETOStartDateSet(msg.sender, startAt, logStartDate);
     }
+
+    //
+    // Override IAgreement internal interface to allow mocking up agreements for fixtures
+    //
+    function mCanAmend(address /*legalRepresentative*/)
+        internal
+        returns (bool)
+    {
+        return true;
+    }
 }
