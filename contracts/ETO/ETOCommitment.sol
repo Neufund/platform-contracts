@@ -48,11 +48,12 @@ contract ETOCommitment is
     struct InvestmentTicket {
         // euro equivalent of both currencies.
         //  for ether equivalent is generated per ETH/EUR spot price provided by ITokenExchangeRateOracle
+        // 128bit values 2**128 / 10**18 which is 340 quintillion 282 quadrillion 366 trillion 920 billion 938 million 463 thousand 463 nEUR max
         uint96 equivEurUlps;
         // NEU reward issued
         uint96 rewardNmkUlps;
         // Equity Tokens issued, no precision
-        uint96 equityTokenInt;
+        uint96 equityTokenAmount;
         // total Ether invested
         uint96 amountEth;
         // total Euro invested
@@ -100,6 +101,8 @@ contract ETOCommitment is
     uint256 private MAX_INVESTMENT_AMOUNT_EUR_ULPS;
     // min ticket size, taken from eto terms
     uint256 private MIN_TICKET_EUR_ULPS;
+    // equity token power (10^precision)
+    uint256 private EQUITY_TOKEN_POWER;
 
     // company representative address
     address private COMPANY_LEGAL_REPRESENTATIVE;
@@ -122,35 +125,35 @@ contract ETOCommitment is
     // investment tickets
     mapping (address => InvestmentTicket) private _tickets;
 
-    // data below start at 32 bytes boundary and pack into 32 bytes word
+    // data below start at 32 bytes boundary and pack into two 32 bytes words
     // total investment in euro equivalent (ETH converted on spot prices)
-    uint112 private _totalEquivEurUlps;
+    uint128 private _totalEquivEurUlps;
     // total equity tokens acquired
-    uint56 private _totalTokensInt;
+    uint128 private _totalTokenAmount;
     // total equity tokens acquired in fixed slots
-    uint56 private _totalFixedSlotsTokensInt;
+    uint128 private _totalFixedSlotsTokenAmount;
     // total investors that participated
-    uint32 private _totalInvestors;
+    uint128 private _totalInvestors;
 
     // nominee investment agreement url confirmation hash
     bytes32 private _nomineeSignedInvestmentAgreementUrlHash;
 
     // additonal contribution / investment amount eth
     // it holds investment eth amount until end of public phase, then additional contribution
-    uint112 private _additionalContributionEth;
+    uint128 private _additionalContributionEth;
     // additonal contribution / investment amount eur
     // it holds investment eur amount until end of public phase, then additional contribution
-    uint112 private _additionalContributionEurUlps;
+    uint128 private _additionalContributionEurUlps;
 
     // successful ETO bookeeping
-    // amount of new shares generated never exceeds number of tokens (uint56)
-    uint64 private _newShares;
-    // how many equity tokens goes to platform portfolio as a fee
-    uint64 private _tokenParticipationFeeInt;
+    // amount of new shares generated never exceeds number of tokens (uint128)
+    uint128 private _newShares;
     // platform fee in eth
-    uint112 private _platformFeeEth;
+    uint128 private _platformFeeEth;
     // platform fee in eur
-    uint112 private _platformFeeEurUlps;
+    uint128 private _platformFeeEurUlps;
+    // how many equity tokens goes to platform portfolio as a fee
+    uint128 private _tokenParticipationFee;
 
     // signed investment agreement url
     string private _signedInvestmentAgreementUrl;
@@ -251,6 +254,7 @@ contract ETOCommitment is
         MAX_AVAILABLE_TOKENS_IN_WHITELIST = etoTerms.MAX_AVAILABLE_TOKENS_IN_WHITELIST();
         MIN_NUMBER_OF_TOKENS = etoTerms.TOKEN_TERMS().MIN_NUMBER_OF_TOKENS();
         MIN_TICKET_TOKENS = etoTerms.calculateTokenAmount(0, MIN_TICKET_EUR_ULPS);
+        EQUITY_TOKEN_POWER = etoTerms.EQUITY_TOKEN_POWER();
 
         MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
         // set it to max(unit256) to reduce number of operations later
@@ -347,8 +351,8 @@ contract ETOCommitment is
         acceptAgreementInternal(investor);
         // check eligibilty, terms and issue NEU + ET
         (,,,,
-            uint256 equityTokenInt,
-            uint256 fixedSlotEquityTokenInt,
+            uint256 equityTokenAmount,
+            uint256 fixedSlotEquityTokenAmount,
             uint256 investorNmk) = issueTokens(investor, wallet, equivEurUlps);
 
         // update investor ticket
@@ -357,14 +361,14 @@ contract ETOCommitment is
             wallet,
             equivEurUlps,
             investorNmk,
-            equityTokenInt,
+            equityTokenAmount,
             amount
         );
 
         // update investment state
         updateTotalInvestment(
-            equityTokenInt,
-            fixedSlotEquityTokenInt,
+            equityTokenAmount,
+            fixedSlotEquityTokenAmount,
             equivEurUlps,
             amount,
             firstTimeInvestment
@@ -377,7 +381,7 @@ contract ETOCommitment is
             msg.sender,
             amount,
             equivEurUlps,
-            equityTokenInt,
+            equityTokenAmount,
             EQUITY_TOKEN,
             investorNmk
         );
@@ -435,14 +439,14 @@ contract ETOCommitment is
         returns (
             uint256 newShares, uint256 capitalIncreaseUlps,
             uint256 additionalContributionEth, uint256 additionalContributionEurUlps,
-            uint256 tokenParticipationFeeInt, uint256 platformFeeEth, uint256 platformFeeEurUlps,
+            uint256 tokenParticipationFee, uint256 platformFeeEth, uint256 platformFeeEurUlps,
             uint256 sharePriceEurUlps
         )
     {
         return (
             _newShares, _newShares * ETO_TERMS.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS(),
             _additionalContributionEth, _additionalContributionEurUlps,
-            _tokenParticipationFeeInt, _platformFeeEth, _platformFeeEurUlps,
+            _tokenParticipationFee, _platformFeeEth, _platformFeeEurUlps,
             _newShares == 0 ? 0 : divRound(_totalEquivEurUlps, _newShares)
         );
     }
@@ -482,11 +486,11 @@ contract ETOCommitment is
         constant
         returns (
             uint256 totalEquivEurUlps,
-            uint256 totalTokensInt,
+            uint256 totalTokenAmount,
             uint256 totalInvestors
             )
     {
-        return (_totalEquivEurUlps, _totalTokensInt, _totalInvestors);
+        return (_totalEquivEurUlps, _totalTokenAmount, _totalInvestors);
     }
 
     function calculateContribution(address investor, bool fromIcbmWallet, uint256 newInvestorContributionEurUlps)
@@ -499,21 +503,20 @@ contract ETOCommitment is
             bool isEligible,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt,
+            uint256 equityTokenAmount,
             uint256 neuRewardUlps,
-            bool maxCapExceeded,
-            uint256 spentAmountEurUlps
+            bool maxCapExceeded
             )
     {
         InvestmentTicket storage ticket = _tickets[investor];
-        uint256 fixedSlotsEquityTokenInt;
+        uint256 fixedSlotsEquityTokenAmount;
         (
             isWhitelisted,
             isEligible,
             minTicketEurUlps,
             maxTicketEurUlps,
-            equityTokenInt,
-            fixedSlotsEquityTokenInt
+            equityTokenAmount,
+            fixedSlotsEquityTokenAmount
         ) = ETO_TERMS.calculateContribution(
             investor,
             _totalEquivEurUlps,
@@ -527,9 +530,12 @@ contract ETOCommitment is
             (,neuRewardUlps) = calculateNeumarkDistribution(NEUMARK.incremental(newInvestorContributionEurUlps));
         }
         // crossing max cap can always happen
-        maxCapExceeded = isCapExceeded(state() == ETOState.Whitelist, equityTokenInt, fixedSlotsEquityTokenInt, newInvestorContributionEurUlps);
-        // todo: take it from ETO_TERMS.calculateContribution
-        spentAmountEurUlps = newInvestorContributionEurUlps;
+        maxCapExceeded = isCapExceeded(
+            state() == ETOState.Whitelist,
+            equityTokenAmount,
+            fixedSlotsEquityTokenAmount,
+            newInvestorContributionEurUlps
+        );
     }
 
     function investorTicket(address investor)
@@ -538,7 +544,7 @@ contract ETOCommitment is
         returns (
             uint256 equivEurUlps,
             uint256 rewardNmkUlps,
-            uint256 equityTokenInt,
+            uint256 equityTokenAmount,
             uint256 sharesFrac,
             uint256 tokenPrice,
             uint256 neuRate,
@@ -552,9 +558,9 @@ contract ETOCommitment is
         // here we assume that equity token precisions is 0
         equivEurUlps = ticket.equivEurUlps;
         rewardNmkUlps = ticket.rewardNmkUlps;
-        equityTokenInt = ticket.equityTokenInt;
-        sharesFrac = ETO_TERMS.equityTokensToShares(ticket.equityTokenInt);
-        tokenPrice = equityTokenInt > 0 ? equivEurUlps / equityTokenInt : 0;
+        equityTokenAmount = ticket.equityTokenAmount;
+        sharesFrac = ETO_TERMS.equityTokensToSharesFrac(ticket.equityTokenAmount);
+        tokenPrice = equityTokenAmount > 0 ? ETO_TERMS.calculateTokenEurPrice(equivEurUlps, equityTokenAmount) : 0;
         neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
         amountEth = ticket.amountEth;
         amountEurUlps = ticket.amountEurUlps;
@@ -623,7 +629,7 @@ contract ETOCommitment is
     {
         // force refund if floor criteria are not met
         // todo: allow for super edge case when MIN_NUMBER_OF_TOKENS is very close to MAX_AVAILABLE_TOKENS and we are within minimum ticket
-        if (newState == ETOState.Signing && _totalTokensInt < MIN_NUMBER_OF_TOKENS) {
+        if (newState == ETOState.Signing && _totalTokenAmount < MIN_NUMBER_OF_TOKENS) {
             return ETOState.Refund;
         }
         // go to refund if attempt to go to Claim without nominee agreement confirmation
@@ -690,44 +696,46 @@ contract ETOCommitment is
         // so if we sold MAX_AVAILABLE_TOKENS that were computed via calculateAmountWithoutFee from MAXIMUM_NUMBER_OF_TOKENS
         // the reverse operation, that is MAX_AVAILABLE_TOKENS + calculatePlatformTokenFee will not always be MAXIMUM_NUMBER_OF_TOKENS
         // while it's probably possible to detect it we put this check here
-        uint256 tokenParticipationFeeInt;
-        if (_totalTokensInt == MAX_AVAILABLE_TOKENS) {
-            uint256 maxTokens = tokenTerms.MAX_NUMBER_OF_TOKENS();
+        uint256 tokenParticipationFee;
+        uint256 maxTokens = tokenTerms.MAX_NUMBER_OF_TOKENS();
+        if (_totalTokenAmount == MAX_AVAILABLE_TOKENS) {
             // rest up until MAX NUMBER OF TOKENS is our fee
             // we also assume that MAX_NUMBER_OF_TOKENS amount to full shares, which token terms contract checks
-            tokenParticipationFeeInt = maxTokens - MAX_AVAILABLE_TOKENS;
+            tokenParticipationFee = maxTokens - MAX_AVAILABLE_TOKENS;
         } else {
-            tokenParticipationFeeInt = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokensInt);
+            tokenParticipationFee = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokenAmount);
             // we must have integer number of shares
-            uint256 tokensRemainder = (_totalTokensInt + tokenParticipationFeeInt) % tokensPerShare;
+            uint256 tokensRemainder = (_totalTokenAmount + tokenParticipationFee) % tokensPerShare;
             if (tokensRemainder > 0) {
                 // round up to whole share
-                tokenParticipationFeeInt += tokensPerShare - tokensRemainder;
+                tokenParticipationFee += tokensPerShare - tokensRemainder;
             }
         }
-        // will not cross max number of tokens thats in 2**56 range
-        uint256 totalIssuedTokens = _totalTokensInt + tokenParticipationFeeInt;
+        uint256 totalIssuedTokens = _totalTokenAmount + tokenParticipationFee;
         // round number of shares
-        // require(totalIssuedTokens % tokensPerShare == 0, "NF_MUST_ISSUE_WHOLE_SHARES");
+        require(totalIssuedTokens % tokensPerShare == 0, "NF_MUST_ISSUE_WHOLE_SHARES");
         // we could not cross maximum number of tokens
         // require(totalIssuedTokens <= maxTokens, "NF_FEE_CROSSING_CAP");
-        // todo: optimizer will not handle code below, correction needs to separate storage reads and writes
-        _newShares = uint64(totalIssuedTokens / tokensPerShare);
-        // preserve platform token participation fee to be send out on claim transition
-        _tokenParticipationFeeInt = uint64(tokenParticipationFeeInt);
         // compute fees to be sent on payout transition
-        // 112bit values 2**112 / 10**18 which is 5 quadrillion 192 trillion 296 billion 858 million 534 thousand 827 nEUR max
-        // also we capped balances already when taking from tokens
-        _platformFeeEth = uint112(PLATFORM_TERMS.calculatePlatformFee(_additionalContributionEth));
-        _platformFeeEurUlps = uint112(PLATFORM_TERMS.calculatePlatformFee(_additionalContributionEurUlps));
+        // fees are smaller than total tokens and total nEUR/ETH so diregard overflows
+        uint128 newShares = uint128(totalIssuedTokens / tokensPerShare);
+        uint128 platformFeeEth = uint128(PLATFORM_TERMS.calculatePlatformFee(_additionalContributionEth));
+        uint128 platformFeeEurUlps = uint128(PLATFORM_TERMS.calculatePlatformFee(_additionalContributionEurUlps));
+        // write to storage in one go
+        _newShares = newShares;
+        _platformFeeEth = platformFeeEth;
+        _platformFeeEurUlps = platformFeeEurUlps;
+        // preserve platform token participation fee to be send out on claim transition
+        _tokenParticipationFee = uint128(tokenParticipationFee);
+        // todo: optimizer will not handle code below, correction needs to separate storage reads and writes
         // compute additional contributions to be sent on claim transition
         _additionalContributionEth -= _platformFeeEth;
         _additionalContributionEurUlps -= _platformFeeEurUlps;
         // nominee gets nominal share value immediately to be added to cap table
         uint256 capitalIncreaseEurUlps = tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
-        // no overflow as smaller one is uint112
-        uint112 availableCapitalEurUlps = uint112(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
+        // no overflow as smaller one is uint128
+        uint128 availableCapitalEurUlps = uint128(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
         _additionalContributionEurUlps -= availableCapitalEurUlps;
@@ -754,7 +762,7 @@ contract ETOCommitment is
             assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEurUlps, ""));
         }
         // issue missing tokens
-        EQUITY_TOKEN.issueTokens(_tokenParticipationFeeInt);
+        EQUITY_TOKEN.issueTokens(_tokenParticipationFee);
         emit LogPlatformNeuReward(TOKEN_OFFERING_OPERATOR, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
@@ -766,15 +774,15 @@ contract ETOCommitment is
     {
         // burn all neumark generated in this ETO (will also burn NEU sent via erroneous/malicious transfers)
         uint256 balanceNmk = NEUMARK.balanceOf(this);
-        uint256 balanceTokenInt = EQUITY_TOKEN.balanceOf(this);
+        uint256 balanceToken = EQUITY_TOKEN.balanceOf(this);
         if (balanceNmk > 0) {
             NEUMARK.burn(balanceNmk);
         }
         // destroy all tokens generated in ETO
-        if (balanceTokenInt > 0) {
-            EQUITY_TOKEN.destroyTokens(balanceTokenInt);
+        if (balanceToken > 0) {
+            EQUITY_TOKEN.destroyTokens(balanceToken);
         }
-        emit LogRefundStarted(EQUITY_TOKEN, balanceTokenInt, balanceNmk);
+        emit LogRefundStarted(EQUITY_TOKEN, balanceToken, balanceNmk);
     }
 
     /// called on transition to ETOState.Payout
@@ -802,11 +810,11 @@ contract ETOCommitment is
         // disbursal.reject(EURO_TOKEN, NEUMARK, 256**2-1);
         // disbursal.reject(ETHER_TOKEN, NEUMARK, 256**2-1);
         // add token participation fee to platfrom portfolio
-        EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFeeInt);
+        EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFee);
 
         emit LogPlatformFeePayout(ETHER_TOKEN, disbursal, _platformFeeEth);
         emit LogPlatformFeePayout(EURO_TOKEN, disbursal, _platformFeeEurUlps);
-        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFeeInt);
+        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFee);
     }
 
     function issueTokens(
@@ -820,8 +828,8 @@ contract ETOCommitment is
             bool isEligible,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt,
-            uint256 fixedSlotEquityTokenInt,
+            uint256 equityTokenAmount,
+            uint256 fixedSlotEquityTokenAmount,
             uint256 investorNmk
         )
     {
@@ -835,17 +843,20 @@ contract ETOCommitment is
             isEligible,
             minTicketEurUlps,
             maxTicketEurUlps,
-            equityTokenInt,
-            fixedSlotEquityTokenInt
+            equityTokenAmount,
+            fixedSlotEquityTokenAmount
         ) = ETO_TERMS.calculateContribution(investor, _totalEquivEurUlps, ticket.equivEurUlps, equivEurUlps, applyDiscounts);
         // kick out on KYC
         require(isEligible, "NF_ETO_INV_NOT_ELIGIBLE");
         // kick on minimum ticket and you must buy at least one token!
-        require(equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps && equityTokenInt > 0, "NF_ETO_MIN_TICKET");
+        require(
+            equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps &&
+            equityTokenAmount >= EQUITY_TOKEN_POWER &&
+            equityTokenAmount > 0, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
-        require(!isCapExceeded(applyDiscounts, equityTokenInt, fixedSlotEquityTokenInt, equivEurUlps), "NF_ETO_MAX_TOK_CAP");
+        require(!isCapExceeded(applyDiscounts, equityTokenAmount, fixedSlotEquityTokenAmount, equivEurUlps), "NF_ETO_MAX_TOK_CAP");
         // when that sent money is not the same as investor it must be icbm locked wallet
         // bool isLockedAccount = wallet != investor;
         // kick out not whitelist or not LockedAccount
@@ -865,7 +876,7 @@ contract ETOCommitment is
             }
         }
         // issue equity token
-        EQUITY_TOKEN.issueTokens(equityTokenInt);
+        EQUITY_TOKEN.issueTokens(equityTokenAmount);
     }
 
     function convertToEurEquiv(uint256 amountEth)
@@ -885,7 +896,7 @@ contract ETOCommitment is
         address wallet,
         uint256 equivEurUlps,
         uint256 investorNmk,
-        uint256 equityTokenInt,
+        uint256 equityTokenAmount,
         uint256 amount
     )
         private
@@ -895,17 +906,18 @@ contract ETOCommitment is
         firstTimeInvestor = ticket.equivEurUlps == 0;
         // write new ticket values
         // this will also check ticket.amountEurUlps + uint96(amount) as ticket.equivEurUlps is always >= ticket.amountEurUlps
-        uint256 newEquivEurUlps = ticket.equivEurUlps + equivEurUlps;
+        uint256 newEquivEurUlps = equivEurUlps + ticket.equivEurUlps;
         require(newEquivEurUlps < 2**96, "NF_TICKET_EXCEEDS_MAX_EUR");
         // uint96 is much more than 1.5 bln of NEU so no overflow
         uint96 newRewardNmkUlps = ticket.rewardNmkUlps + uint96(investorNmk);
-        // if total number of tokens fits into uint56, particular investor tokens will fit into 96
-        uint96 newEquityTokenInt = ticket.equityTokenInt + uint96(equityTokenInt);
+        require(equityTokenAmount + ticket.equityTokenAmount < 2**96, "NF_TICKET_EXCEEDS_MAX_TOK");
+        uint96 newEquityTokenAmount = uint96(equityTokenAmount + ticket.equityTokenAmount);
         // practically impossible: would require price of ETH smaller than 1 EUR and > 2**96 amount of ether
         // assert(ticket.amountEth + amount < 2**96);
         uint96 newAmountEth = ticket.amountEth;
         uint96 newAmountEurUlps = ticket.amountEurUlps;
         if (msg.sender == address(EURO_TOKEN)) {
+            // is smaller than newEquivEurUlps so it will overflow and reject first
             newAmountEurUlps += uint96(amount);
         } else {
             newAmountEth += uint96(amount);
@@ -916,58 +928,57 @@ contract ETOCommitment is
         // write in single pack, hopefully storage will be optimized...
         ticket.equivEurUlps = uint96(newEquivEurUlps);
         ticket.rewardNmkUlps = newRewardNmkUlps;
-        ticket.equityTokenInt = newEquityTokenInt;
+        ticket.equityTokenAmount = newEquityTokenAmount;
         ticket.amountEth = newAmountEth;
         ticket.amountEurUlps = newAmountEurUlps;
         ticket.usedLockedAccount = usedLockedAccount;
     }
 
     function updateTotalInvestment(
-        uint256 equityTokenInt,
-        uint256 fixedSlotEquityTokenInt,
+        uint256 equityTokenAmount,
+        uint256 fixedSlotEquityTokenAmount,
         uint256 equivEurUlps,
         uint256 amount,
         bool firstTimeInvestment
     )
         private
     {
-        // total number of tokens must fit into uint56, uints are coerced to biggest size
-        uint256 newTotalTokensInt = _totalTokensInt + equityTokenInt;
-        assert(newTotalTokensInt < 2**56);
-        // as fixedSlotEquityTokenInt256 always lte equityTokenInt no chances to overflow
-        uint56 newTotalFixedSlotsTokensInt = _totalFixedSlotsTokensInt + uint56(fixedSlotEquityTokenInt);
+        // total number of tokens must fit into uint128, uints are coerced to biggest size
+        // as ticket token storage is 2**96, we need 2**32 tickets of max size to overflow so disregard
+        uint128 newTotalTokenAmount = uint128(_totalTokenAmount + equityTokenAmount);
+        // as fixedSlotEquityTokenAmount always lte equityTokenAmount no chances to overflow
+        uint128 newTotalFixedSlotsTokenAmount = _totalFixedSlotsTokenAmount + uint128(fixedSlotEquityTokenAmount);
         // add new investor
-        uint32 newTotalInvestors = _totalInvestors + (firstTimeInvestment ? 1 : 0);
-        // new total eur equivalent invested
-        uint256 newTotalEquivEurUlps = _totalEquivEurUlps + equivEurUlps;
-        assert(newTotalEquivEurUlps < 2**112);
-        // resue eth/neur contribution slots for native currency bookkeeping
-        uint112 newTotalEth = _additionalContributionEth;
-        uint112 newTotalEurUlps = _additionalContributionEurUlps;
+        uint128 newTotalInvestors = _totalInvestors + (firstTimeInvestment ? 1 : 0);
+        // new total eur equivalent invested, disregard overflow for the same reason as with tokens
+        uint128 newTotalEquivEurUlps = uint128(_totalEquivEurUlps + equivEurUlps);
+        // resue eth/neur contribution slots for native currency bookkeeping, no overflow if above does not overflows
+        uint128 newTotalEth = _additionalContributionEth;
+        uint128 newTotalEurUlps = _additionalContributionEurUlps;
         if (msg.sender == address(EURO_TOKEN)) {
-            newTotalEurUlps += uint112(amount);
+            newTotalEurUlps += uint128(amount);
         } else {
-            newTotalEth += uint112(amount);
+            newTotalEth += uint128(amount);
         }
 
         // write to storage in one go so maybe optimizer will work
-        _totalTokensInt = uint56(newTotalTokensInt);
-        _totalFixedSlotsTokensInt = newTotalFixedSlotsTokensInt;
+        _totalTokenAmount = newTotalTokenAmount;
+        _totalFixedSlotsTokenAmount = newTotalFixedSlotsTokenAmount;
         _totalInvestors = newTotalInvestors;
-        _totalEquivEurUlps = uint112(newTotalEquivEurUlps);
+        _totalEquivEurUlps = newTotalEquivEurUlps;
         _additionalContributionEth = newTotalEth;
         _additionalContributionEurUlps = newTotalEurUlps;
     }
 
-    function isCapExceeded(bool applyDiscounts, uint256 equityTokenInt, uint256 fixedSlotsEquityTokenInt, uint256 equivEurUlps)
+    function isCapExceeded(bool applyDiscounts, uint256 equityTokenAmount, uint256 fixedSlotsEquityTokenAmount, uint256 equivEurUlps)
         private
         constant
         returns (bool maxCapExceeded)
     {
         // check for exceeding tokens
-        maxCapExceeded = _totalTokensInt + equityTokenInt > MAX_AVAILABLE_TOKENS;
+        maxCapExceeded = _totalTokenAmount + equityTokenAmount > MAX_AVAILABLE_TOKENS;
         if (applyDiscounts && !maxCapExceeded) {
-            maxCapExceeded = _totalTokensInt + equityTokenInt - _totalFixedSlotsTokensInt - fixedSlotsEquityTokenInt > MAX_AVAILABLE_TOKENS_IN_WHITELIST;
+            maxCapExceeded = _totalTokenAmount + equityTokenAmount - _totalFixedSlotsTokenAmount - fixedSlotsEquityTokenAmount > MAX_AVAILABLE_TOKENS_IN_WHITELIST;
         }
         // check for exceeding max investment amount as defined by the constraints, MAX_INVESTMENT_AMOUNT_EUR_ULPS is always > 0
         if ( !maxCapExceeded && (equivEurUlps + _totalEquivEurUlps > MAX_INVESTMENT_AMOUNT_EUR_ULPS )) {
@@ -991,14 +1002,14 @@ contract ETOCommitment is
         if (ticket.rewardNmkUlps > 0) {
             NEUMARK.distribute(investor, ticket.rewardNmkUlps);
         }
-        if (ticket.equityTokenInt > 0) {
-            EQUITY_TOKEN.distributeTokens(investor, ticket.equityTokenInt);
+        if (ticket.equityTokenAmount > 0) {
+            EQUITY_TOKEN.distributeTokens(investor, ticket.equityTokenAmount);
         }
         if (ticket.usedLockedAccount) {
             ETHER_LOCK.claimed(investor);
             EURO_LOCK.claimed(investor);
         }
-        emit LogTokensClaimed(investor, EQUITY_TOKEN, ticket.equityTokenInt, ticket.rewardNmkUlps);
+        emit LogTokensClaimed(investor, EQUITY_TOKEN, ticket.equityTokenAmount, ticket.rewardNmkUlps);
     }
 
     function refundTokensPrivate(address investor)
