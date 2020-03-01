@@ -100,11 +100,15 @@ contract ETOTerms is
     uint256 public MAX_AVAILABLE_TOKENS;
     // number of tokens that can be sold in whitelist
     uint256 public MAX_AVAILABLE_TOKENS_IN_WHITELIST;
+    // equity token scale power (10^precision)
+    uint256 public EQUITY_TOKEN_POWER;
 
     // base token price in EUR-T, without any discount scheme
     uint256 private TOKEN_PRICE_EUR_ULPS;
     // equity tokens per share
     uint256 private EQUITY_TOKENS_PER_SHARE;
+    // full price fraction
+    uint256 private FULL_PRICE_FRACTION;
 
 
     ////////////////////////
@@ -158,7 +162,6 @@ contract ETOTerms is
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(minTicketEurUlps<=maxTicketEurUlps);
-        require(tokenTerms.EQUITY_TOKENS_PRECISION() == 0);
 
         require(universe.isInterfaceCollectionInstance(KNOWN_INTERFACE_ETO_TERMS_CONSTRAINTS, etoTermsConstraints), "NF_TERMS_NOT_IN_UNIVERSE");
         // save reference to constraints
@@ -183,8 +186,11 @@ contract ETOTerms is
         UNIVERSE = universe;
 
         // compute max available tokens to be sold in ETO
+        EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKENS_PRECISION());
+        require(EQUITY_TOKEN_POWER <= 10 ** 18);
         MAX_AVAILABLE_TOKENS = calculateAvailableTokens(tokenTerms.MAX_NUMBER_OF_TOKENS());
         MAX_AVAILABLE_TOKENS_IN_WHITELIST = min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
+        FULL_PRICE_FRACTION = calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
 
         // validate all settings
         requireValidTerms();
@@ -199,21 +205,21 @@ contract ETOTerms is
     function calculateTokenAmount(uint256 /*totalEurUlps*/, uint256 committedEurUlps)
         public
         constant
-        returns (uint256 tokenAmountInt)
+        returns (uint256 tokenAmount)
     {
         // we may disregard totalEurUlps as curve is flat, round down when calculating tokens
-        return committedEurUlps / calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
+        return mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_PRICE_FRACTION;
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
     // we require that equity token precision is 0
-    function calculateEurUlpsAmount(uint256 /*totalTokensInt*/, uint256 tokenAmountInt)
+    function calculateEurUlpsAmount(uint256 /*totalTokenAmount*/, uint256 tokenAmount)
         public
         constant
         returns (uint256 committedEurUlps)
     {
-        // we may disregard totalTokensInt as curve is flat
-        return mul(tokenAmountInt, calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC));
+        // we may disregard totalTokenAmount as curve is flat
+        return proportion(tokenAmount, FULL_PRICE_FRACTION, EQUITY_TOKEN_POWER);
     }
 
     function calculatePriceFraction(uint256 priceFrac) public constant returns(uint256) {
@@ -224,8 +230,13 @@ contract ETOTerms is
         }
     }
 
+    // calculate effective price of the token based on actual amounts
+    function calculateTokenEurPrice(uint256 amountEurUlps, uint256 equityTokenAmount) public constant returns(uint256) {
+        return proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
+    }
+
     /// @notice returns number of shares as a decimal fraction
-    function equityTokensToShares(uint256 amount)
+    function equityTokensToSharesFrac(uint256 amount)
         public
         constant
         returns (uint256)
@@ -275,16 +286,16 @@ contract ETOTerms is
             bool isEligible,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt,
-            uint256 fixedSlotEquityTokenInt
+            uint256 equityTokenAmount,
+            uint256 fixedSlotEquityTokenAmount
             )
     {
         (
             isWhitelisted,
             minTicketEurUlps,
             maxTicketEurUlps,
-            equityTokenInt,
-            fixedSlotEquityTokenInt
+            equityTokenAmount,
+            fixedSlotEquityTokenAmount
         ) = calculateContributionPrivate(
             investor,
             totalContributedEurUlps,
@@ -372,8 +383,8 @@ contract ETOTerms is
             bool isWhitelisted,
             uint256 minTicketEurUlps,
             uint256 maxTicketEurUlps,
-            uint256 equityTokenInt,
-            uint256 fixedSlotEquityTokenInt
+            uint256 equityTokenAmount,
+            uint256 fixedSlotEquityTokenAmount
         )
     {
         uint256 discountedAmount;
@@ -395,9 +406,12 @@ contract ETOTerms is
                 // discount is fixed so use base token price
                 if (discountedAmount > 0) {
                     // always round down when calculating tokens
-                    fixedSlotEquityTokenInt = discountedAmount / calculatePriceFraction(wlTicket.fullTokenPriceFrac);
-                    // todo: compute effective amount spent without the rounding
-                    // discountAmount = fixedSlotEquityTokenInt *  calculatePriceFraction(wlTicket.fullTokenPriceFrac);
+                    uint256 fixedSlotPrice = calculatePriceFraction(wlTicket.fullTokenPriceFrac);
+                    fixedSlotEquityTokenAmount = mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
+                    // calculate the really spent part to cover for rounding errors in next tranche (remainingAmount)
+                    // commented out as with 18 digit precision we have 1 wei difference max and we'll not deploy any other
+                    // precisions anymore
+                    // discountedAmount = fixedSlotEquityTokenAmount * fixedSlotPrice / EQUITY_TOKEN_POWER;
                 }
             }
         }
@@ -406,19 +420,14 @@ contract ETOTerms is
         if (remainingAmount > 0) {
             if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
                 // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor, also round down
-                equityTokenInt = remainingAmount / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
-                // todo: compute effective amount spent without the rounding
-                // remainingAmount = equityTokenInt * calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
+                equityTokenAmount = mul(remainingAmount, EQUITY_TOKEN_POWER) / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
             } else {
                 // use pricing along the curve
-                equityTokenInt = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
-                // todo: remove function above and calculate directly
-                // remainingAmount = equityTokenInt * fullPrice;
+                equityTokenAmount = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);
             }
         }
         // should have all issued tokens
-        equityTokenInt += fixedSlotEquityTokenInt;
-        // todo: return remainingAmount as effective amount spent for the least gas used
+        equityTokenAmount += fixedSlotEquityTokenAmount;
     }
 
     function addWhitelistInvestorPrivate(
