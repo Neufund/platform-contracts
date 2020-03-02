@@ -48,7 +48,6 @@ contract ETOCommitment is
     struct InvestmentTicket {
         // euro equivalent of both currencies.
         //  for ether equivalent is generated per ETH/EUR spot price provided by ITokenExchangeRateOracle
-        // 128bit values 2**128 / 10**18 which is 340 quintillion 282 quadrillion 366 trillion 920 billion 938 million 463 thousand 463 nEUR max
         uint96 equivEurUlps;
         // NEU reward issued
         uint96 rewardNmkUlps;
@@ -127,6 +126,7 @@ contract ETOCommitment is
 
     // data below start at 32 bytes boundary and pack into two 32 bytes words
     // total investment in euro equivalent (ETH converted on spot prices)
+    // 128bit values 2**128 / 10**18 which is 340 quintillion 282 quadrillion 366 trillion 920 billion 938 million 463 thousand 463 nEUR max
     uint128 private _totalEquivEurUlps;
     // total equity tokens acquired
     uint128 private _totalTokenAmount;
@@ -134,16 +134,15 @@ contract ETOCommitment is
     uint128 private _totalFixedSlotsTokenAmount;
     // total investors that participated
     uint128 private _totalInvestors;
-
-    // nominee investment agreement url confirmation hash
-    bytes32 private _nomineeSignedInvestmentAgreementUrlHash;
-
     // additonal contribution / investment amount eth
     // it holds investment eth amount until end of public phase, then additional contribution
     uint128 private _additionalContributionEth;
     // additonal contribution / investment amount eur
     // it holds investment eur amount until end of public phase, then additional contribution
     uint128 private _additionalContributionEurUlps;
+
+    // nominee investment agreement url confirmation hash
+    bytes32 private _nomineeSignedInvestmentAgreementUrlHash;
 
     // successful ETO bookeeping
     // amount of new shares generated never exceeds number of tokens (uint128)
