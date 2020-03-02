@@ -444,7 +444,20 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // token price increased twice
       const i1ticket = await etoCommitment.investorTicket(investors[1]);
       const i2ticket = await etoCommitment.investorTicket(investors[2]);
-      expect(i1ticket[2].mul(2)).to.be.bignumber.eq(i2ticket[2]);
+      // but it does not mean that previous ticket amount is doubled due to rounding once, not twice
+      // i1ticket[2].mul(2) != i2ticket[2]
+      expect(
+        i1ticket[2]
+          .mul(2)
+          .sub(i2ticket[2])
+          .abs(),
+      ).to.be.bignumber.lt(2);
+      // this works because we set 1 eth == 2 eur
+      const tokensI2 = ticket
+        .mul(2)
+        .mul(getTokenPower())
+        .divToInt(tokenprice);
+      expect(i2ticket[2]).to.be.bignumber.eq(tokensI2);
     });
 
     it("reject if ETH price feed outdated", async () => {
