@@ -20,8 +20,75 @@ const {
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/constants").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
+const decimalBase = require("../test/helpers/constants").decimalBase;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
+
+module.exports = function deployContracts(deployer, network, accounts) {
+  const CONFIG = getConfig(web3, network, accounts);
+  if (CONFIG.shouldSkipStep(__filename)) return;
+  if (CONFIG.isLiveDeployment) return;
+
+  const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
+  const fas = getFixtureAccounts(accounts);
+  const DEPLOYER = getDeployerAccount(network, accounts);
+
+  deployer.then(async () => {
+    const universe = await Universe.deployed();
+    const etoFixtures = {
+      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST, hnwiEtoLiSecurityTerms],
+      [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP, defEtoTerms],
+      [CommitmentState.Whitelist]: [
+        "ETOInWhitelistState",
+        fas.ISSUER_WHITELIST,
+        hnwiEtoDeSecurityTerms,
+      ],
+      [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
+      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, retailSMEEtoLi],
+      [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, miniEtoLiNominalValueTerms],
+      [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
+      [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
+    };
+    const describedETOs = {};
+    for (const state of Object.keys(etoFixtures)) {
+      const etoVars = etoFixtures[state];
+      const etoTerms = prepareEtoTerms(etoVars[0], etoVars[2]);
+      console.log(
+        `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
+      );
+
+      const nominee = findNomineeForEto(etoVars[0], fas);
+
+      const etoCommitment = await simulateETO(
+        DEPLOYER,
+        CONFIG,
+        universe,
+        nominee,
+        etoVars[1],
+        etoTerms,
+        fas,
+        parseInt(state, 10),
+      );
+      await checkETO(artifacts, CONFIG, etoCommitment.address);
+
+      // write eto fixtures description
+      const desc = await describeETO(
+        CONFIG,
+        fas,
+        etoCommitment,
+        etoTerms,
+        await etoCommitment.state(),
+      );
+      describedETOs[toChecksumAddress(etoCommitment.address)] = stringify(desc);
+    }
+
+    const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
+    fs.writeFile(etoFixturesPath, JSON.stringify(describedETOs, null, 2), err => {
+      if (err) throw new Error(err);
+    });
+    console.log(`ETOs described in ${etoFixturesPath}`);
+  });
+};
 
 function getWhitelistForETO(etoDefinition, fas) {
   const whitelist = Object.entries(fas).reduce((list, [fixtureName, fixtureDefinition]) => {
@@ -195,72 +262,6 @@ function findNomineeForEto(etoName, fas) {
   throw new Error(`Cannot find Nominee for eto ${etoName}`);
 }
 
-module.exports = function deployContracts(deployer, network, accounts) {
-  const CONFIG = getConfig(web3, network, accounts);
-  if (CONFIG.shouldSkipStep(__filename)) return;
-  if (CONFIG.isLiveDeployment) return;
-
-  const Universe = artifacts.require(CONFIG.artifacts.UNIVERSE);
-  const fas = getFixtureAccounts(accounts);
-  const DEPLOYER = getDeployerAccount(network, accounts);
-
-  deployer.then(async () => {
-    const universe = await Universe.deployed();
-    const etoFixtures = {
-      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST, hnwiEtoLiSecurityTerms],
-      [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP, defEtoTerms],
-      [CommitmentState.Whitelist]: [
-        "ETOInWhitelistState",
-        fas.ISSUER_WHITELIST,
-        hnwiEtoDeSecurityTerms,
-      ],
-      [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
-      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, retailSMEEtoLi],
-      [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, miniEtoLiNominalValueTerms],
-      [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
-      [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
-    };
-    const describedETOs = {};
-    for (const state of Object.keys(etoFixtures)) {
-      const etoVars = etoFixtures[state];
-      const etoTerms = prepareEtoTerms(etoVars[0], etoVars[2]);
-      console.log(
-        `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
-      );
-
-      const nominee = findNomineeForEto(etoVars[0], fas);
-
-      const etoCommitment = await simulateETO(
-        DEPLOYER,
-        CONFIG,
-        universe,
-        nominee,
-        etoVars[1],
-        etoTerms,
-        fas,
-        parseInt(state, 10),
-      );
-      await checkETO(artifacts, CONFIG, etoCommitment.address);
-
-      // write eto fixtures description
-      const desc = await describeETO(
-        CONFIG,
-        fas,
-        etoCommitment,
-        etoTerms,
-        await etoCommitment.state(),
-      );
-      describedETOs[toChecksumAddress(etoCommitment.address)] = stringify(desc);
-    }
-
-    const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
-    fs.writeFile(etoFixturesPath, JSON.stringify(describedETOs, null, 2), err => {
-      if (err) throw new Error(err);
-    });
-    console.log(`ETOs described in ${etoFixturesPath}`);
-  });
-};
-
 async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
@@ -411,9 +412,10 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log("Going to signing");
   // we must invest minimum value
+  const tokenPower = decimalBase.pow(etoDefiniton.tokenTerms.EQUITY_TOKENS_PRECISION);
   const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
-  );
+  ).divToInt(tokenPower);
 
   // TODO: Leave it here. It makes ETO successfull
   await investAmount(
