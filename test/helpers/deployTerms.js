@@ -1,4 +1,12 @@
-import { daysToSeconds, Q18, web3, findConstructor, camelCase } from "./constants";
+import {
+  daysToSeconds,
+  Q18,
+  web3,
+  findConstructor,
+  camelCase,
+  defaultTokensPerShare,
+  defEquityTokenPrecision,
+} from "./constants";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 
 export const defaultShareholderTerms = {
@@ -21,12 +29,6 @@ export const defDurTerms = {
   CLAIM_DURATION: new web3.BigNumber(daysToSeconds(10)),
 };
 
-export const constTokenTerms = {
-  EQUITY_TOKENS_PRECISION: new web3.BigNumber(0),
-};
-
-const defaultTokensPerShare = new web3.BigNumber("1000000");
-
 export const defTokenTerms = {
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
@@ -37,6 +39,7 @@ export const defTokenTerms = {
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   SHARE_NOMINAL_VALUE_ULPS: Q18.mul("4.24566"),
   EQUITY_TOKENS_PER_SHARE: defaultTokensPerShare,
+  EQUITY_TOKENS_PRECISION: defEquityTokenPrecision,
 };
 
 export const defEtoTerms = {
@@ -49,7 +52,7 @@ export const defEtoTerms = {
   ENABLE_TRANSFERS_ON_SUCCESS: false,
   INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
   SHAREHOLDER_RIGHTS: null,
-  WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
+  WHITELIST_DISCOUNT_FRAC: Q18.mul("0.3"),
   PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
 };
 
