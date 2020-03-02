@@ -21,6 +21,13 @@ test-container: container
 	$(MAKE) deploy
 	$(MAKE) down
 
+tests:
+	# default 18 decimal precision test
+	yarn test
+	# run eto tests with two precisions
+	EQUITY_TOKEN_PRECISION=0 yarn truffle test test/ETO/* test/setup.js --network inprocess_test
+	EQUITY_TOKEN_PRECISION=10 yarn truffle test test/ETO/* test/setup.js --network inprocess_test
+
 down:
 ifneq ($(shell docker ps -q -f NAME=^/platform-contracts$),)
 	-docker stop platform-contracts
