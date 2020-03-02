@@ -1,7 +1,21 @@
-import { web3, Q18, daysToSeconds, recoverBigNumbers } from "../test/helpers/constants";
+import {
+  web3,
+  decimalBase,
+  Q18,
+  daysToSeconds,
+  recoverBigNumbers,
+} from "../test/helpers/constants";
 
 const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
   .getFixtureAndAddressByName;
+
+// standard 18 decimals precision
+export const stdEquityTokenPrecision = new web3.BigNumber("0");
+export const stdEquityTokenPower = decimalBase.pow(stdEquityTokenPrecision);
+
+// legacy (indivisible) token precision and power
+const indivisibleEquityTokenPrecision = new web3.BigNumber("0");
+const indivisibleEquityTokenPower = decimalBase.pow(indivisibleEquityTokenPrecision);
 
 export const defEtoTerms = {
   shareholderTerms: {
@@ -25,13 +39,14 @@ export const defEtoTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
-    MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
-    MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
+    MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
+    MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1534 * 10000),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: stdEquityTokenPower.mul(1534 * 10000),
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
   },
   etoTerms: {
     DURATION_TERMS: null,
@@ -73,13 +88,14 @@ export const hnwiEtoDeSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Rich",
     EQUITY_TOKEN_SYMBOL: "RCH",
-    MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
-    MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
+    MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(1000 * 10000),
+    MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.42376189"),
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1534 * 10000),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: indivisibleEquityTokenPower.mul(1534 * 10000),
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: indivisibleEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: indivisibleEquityTokenPrecision,
   },
   etoTerms: {
     ETO_TERMS_CONSTRAINTS: null,
@@ -132,13 +148,14 @@ export const retailEtoDeVmaTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "NOMERA",
     EQUITY_TOKEN_SYMBOL: "NOM",
-    MIN_NUMBER_OF_TOKENS: "10000000",
-    MAX_NUMBER_OF_TOKENS: "15000000",
+    MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
+    MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("15000000"),
     TOKEN_PRICE_EUR_ULPS: "666666666666666667",
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "15000000",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: stdEquityTokenPower.mul("15000000"),
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
   },
   etoTermsConstraints: "retail eto de vma",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -177,13 +194,14 @@ export const miniEtoLiTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Blok",
     EQUITY_TOKEN_SYMBOL: "BLKK",
-    MIN_NUMBER_OF_TOKENS: "5000000",
-    MAX_NUMBER_OF_TOKENS: "6000000",
+    MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("5000000"),
+    MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("6000000"),
     TOKEN_PRICE_EUR_ULPS: "600000000000000000",
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "5500000",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: stdEquityTokenPower.mul("5500000"),
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -222,13 +240,14 @@ export const miniEtoLiNominalValueTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "6-SHARES",
     EQUITY_TOKEN_SYMBOL: "SSH",
-    MIN_NUMBER_OF_TOKENS: "6000000",
-    MAX_NUMBER_OF_TOKENS: "30000000",
+    MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("6000000"),
+    MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("30000000"),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.161870503597122302"),
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "30000000",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: indivisibleEquityTokenPower.mul("30000000"),
     SHARE_NOMINAL_VALUE_ULPS: Q18.mul("100"),
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18.mul("13.5"),
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("1000000"),
+    EQUITY_TOKENS_PER_SHARE: indivisibleEquityTokenPower.mul("1000000"),
+    EQUITY_TOKENS_PRECISION: indivisibleEquityTokenPrecision,
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -267,13 +286,14 @@ export const hnwiEtoLiSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Bionic",
     EQUITY_TOKEN_SYMBOL: "BNIC",
-    MIN_NUMBER_OF_TOKENS: "10000000",
-    MAX_NUMBER_OF_TOKENS: "20000000",
+    MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
+    MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("20000000"),
     TOKEN_PRICE_EUR_ULPS: "796019900497512438",
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: "20000000",
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: stdEquityTokenPower.mul("20000000"),
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
   },
   etoTermsConstraints: "hnwi eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -312,13 +332,14 @@ export const retailSMEEtoLi = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
-    MIN_NUMBER_OF_TOKENS: new web3.BigNumber(1000 * 10000),
-    MAX_NUMBER_OF_TOKENS: new web3.BigNumber(3452 * 10000),
+    MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
+    MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
-    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(1534 * 10000),
+    MAX_NUMBER_OF_TOKENS_IN_WHITELIST: stdEquityTokenPower.mul(1534 * 10000),
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-    EQUITY_TOKENS_PER_SHARE: new web3.BigNumber("10000"),
+    EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
+    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
   },
   etoTermsConstraints: "retail EU-SME eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
