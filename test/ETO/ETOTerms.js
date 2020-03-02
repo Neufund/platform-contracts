@@ -12,11 +12,10 @@ import {
   deployTokenTerms,
   deployETOTermsConstraintsUniverse,
   deployETOTermsConstraints,
-  constTokenTerms,
   deployETOTerms,
   defTokenTerms,
 } from "../helpers/deployTerms";
-import { Q18, contractId, web3 } from "../helpers/constants";
+import { Q18, contractId, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 
@@ -63,9 +62,6 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     expect((await durationTerms.contractId())[0]).to.eq(contractId("ETODurationTerms"));
     expect((await etoTerms.contractId())[0]).to.eq(contractId("ETOTerms"));
     expect((await etoTokenTerms.contractId())[0]).to.eq(contractId("ETOTokenTerms"));
-    for (const k of Object.keys(constTokenTerms)) {
-      expect(await etoTokenTerms[k]()).to.be.bignumber.eq(constTokenTerms[k]);
-    }
   });
 
   async function redeployTerms(etoTermsOverride, constraintsOverride) {
@@ -157,39 +153,60 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
   it("should calculate share price in token terms", async () => {
     expect(await etoTokenTerms.SHARE_PRICE_EUR_ULPS()).to.be.bignumber.eq(
-      defTokenTerms.TOKEN_PRICE_EUR_ULPS.mul(defTokenTerms.EQUITY_TOKENS_PER_SHARE),
+      divRound(
+        defTokenTerms.TOKEN_PRICE_EUR_ULPS.mul(defTokenTerms.EQUITY_TOKENS_PER_SHARE),
+        getTokenPower(defTokenTerms),
+      ),
     );
   });
 
   it("should convert equity token amount to shares", async () => {
-    const amounts = [1, tokenTerms.EQUITY_TOKENS_PER_SHARE, 599, Q18, 71627621].map(
-      a => new web3.BigNumber(a),
-    );
+    const amounts = [
+      "1",
+      tokenTerms.EQUITY_TOKENS_PER_SHARE,
+      "599",
+      Q18,
+      "71627621",
+      tokenTerms.EQUITY_TOKENS_PER_SHARE.mul("762651"),
+    ].map(a => new web3.BigNumber(a));
     for (const amount of amounts) {
-      expect(await etoTerms.equityTokensToShares(amount)).to.be.bignumber.eq(
-        amount.mul(Q18).div(tokenTerms.EQUITY_TOKENS_PER_SHARE),
+      expect(await etoTerms.equityTokensToSharesFrac(amount)).to.be.bignumber.eq(
+        divRound(amount.mul(Q18), tokenTerms.EQUITY_TOKENS_PER_SHARE),
       );
     }
     // make precomputed test
-    expect(await etoTerms.equityTokensToShares(1261)).to.be.bignumber.eq(
-      new web3.BigNumber(10)
+    const wholeTokens = getTokenPower(tokenTerms).mul(1161);
+    expect(await etoTerms.equityTokensToSharesFrac(wholeTokens)).to.be.bignumber.eq(
+      decimalBase
         .pow(18 - Math.log10(tokenTerms.EQUITY_TOKENS_PER_SHARE.toNumber()))
-        .mul(1261),
+        .mul(wholeTokens),
+    );
+  });
+
+  it("should calculate actual equity token price", async () => {
+    const amountEurUlps = Q18.mul("12712").add("17621728");
+    const amountTokens = defEquityTokenPower.mul("7362").add("162");
+    // reproduce contract rounding (HALF_UP)
+    expect(await etoTerms.calculateTokenEurPrice(amountEurUlps, amountTokens)).to.be.bignumber.eq(
+      divRound(amountEurUlps.mul(defEquityTokenPower), amountTokens),
     );
   });
 
   it("should correctly calculate available tokens", async () => {
-    const maxNumberOfTokens = new web3.BigNumber("32039029039");
+    const maxNumberOfTokens = getTokenPower(tokenTerms).mul(new web3.BigNumber("32039029039"));
     const availableTokens = maxNumberOfTokens.div("1.02").round(0, 4);
+    const tokenPower = getTokenPower(defTokenTerms);
     const testCases = [
       [maxNumberOfTokens, availableTokens],
       [availableTokens.add(1), availableTokens],
+      [availableTokens.add(tokenPower), availableTokens],
       [availableTokens, availableTokens],
       [availableTokens.sub(1), availableTokens.sub(1)],
+      [availableTokens.sub(tokenPower), availableTokens.sub(tokenPower)],
     ];
     for (const wlTokensMap of testCases) {
       [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        EQUITY_TOKENS_PER_SHARE: tokenPower,
         MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: wlTokensMap[0],
       });
@@ -201,7 +218,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   });
 
   describe("terms validation", () => {
-    it("rejects on platform terms with minimum ticket too small", async () => {
+    it("rejects on token terms with minimum ticket too small", async () => {
       // change to sub(0) for this test to fail
       await expect(
         redeployTerms(
@@ -209,6 +226,18 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
           { MIN_TICKET_SIZE_EUR_ULPS: Q18.mul(200) },
         ),
       ).to.be.rejectedWith("NF_ETO_TERMS_MIN_TICKET_EUR_ULPS");
+    });
+
+    it("rejects on tokens per share not in whole tokens", async () => {
+      // tokens per share must be in whole tokens, so set tokens per share 1/10 of the whole tokens
+      // so other "whole tokens" checks work but this particular don't
+      const precision = new web3.BigNumber("1");
+      await expect(
+        deployTokenTerms(ETOTokenTerms, {
+          EQUITY_TOKENS_PRECISION: precision, // one decimal place
+          EQUITY_TOKENS_PER_SHARE: decimalBase.div(10), // scale is ten but set scale / 10
+        }),
+      ).to.be.rejectedWith("NF_SHARES_NOT_WHOLE_TOKENS");
     });
 
     /*
@@ -263,12 +292,13 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         MAX_NUMBER_OF_TOKENS: tokenTerms.EQUITY_TOKENS_PER_SHARE.mul(2),
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: tokenTerms.EQUITY_TOKENS_PER_SHARE.div(100),
       });
+      const power = getTokenPower(tokenTerms);
       // that works on available tokens that are counted into max investment value
       const availableTokens = tokenTerms.MAX_NUMBER_OF_TOKENS.div("1.02").round(0, 4);
       // set public discount so it's impossible to successfully complete ETO becaue min ticket > cap
-      const pubPriceFraction = Q18.mul(modMinTicket).div(
-        tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(availableTokens),
-      );
+      const pubPriceFraction = Q18.mul(modMinTicket)
+        .mul(power)
+        .divToInt(tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(availableTokens));
       // that must pass
       await redeployTerms({
         MIN_TICKET_EUR_ULPS: modMinTicket,
@@ -278,7 +308,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       await expect(
         redeployTerms({
           MIN_TICKET_EUR_ULPS: modMinTicket,
-          PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction).add(1),
+          PUBLIC_DISCOUNT_FRAC: Q18.sub(pubPriceFraction.sub(10)),
         }),
       ).to.be.rejectedWith("NF_MAX_FUNDS_LT_MIN_TICKET");
     });
@@ -304,9 +334,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       // current constrains have limit 5*10^6 EUR
       const maxInvestmentConstraintEur = new web3.BigNumber("5000000");
       [etoTokenTerms, tokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-        MIN_NUMBER_OF_TOKENS: maxInvestmentConstraintEur,
-        MAX_NUMBER_OF_TOKENS: maxInvestmentConstraintEur.mul(2),
-        MAX_NUMBER_OF_TOKENS_IN_WHITELIST: maxInvestmentConstraintEur,
+        MIN_NUMBER_OF_TOKENS: defEquityTokenPower.mul(maxInvestmentConstraintEur),
+        MAX_NUMBER_OF_TOKENS: defEquityTokenPower.mul(maxInvestmentConstraintEur.mul(2)),
+        MAX_NUMBER_OF_TOKENS_IN_WHITELIST: defEquityTokenPower.mul(maxInvestmentConstraintEur),
         TOKEN_PRICE_EUR_ULPS: Q18,
       });
       // exactly at the limit
@@ -330,21 +360,25 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       );
     });
 
-    it("rejects if max tokens not fit in 2**56", async () => {
+    it("rejects if max tokens not fit in 2**128", async () => {
+      // force token precision of 0 (indivisible), to operate on 32bytes word range
       const b2 = new web3.BigNumber("2");
       const b1 = new web3.BigNumber("1");
       // should pass - just one share below 2**256
-      await deployTokenTerms(ETOTokenTerms, {
-        EQUITY_TOKENS_PER_SHARE: b1,
-        MAX_NUMBER_OF_TOKENS: b2.pow(56).sub(b1),
-        TOKEN_PRICE_EUR_ULPS: b1,
-      });
+      await expect(
+        deployTokenTerms(ETOTokenTerms, {
+          EQUITY_TOKENS_PRECISION: new web3.BigNumber("0"),
+          EQUITY_TOKENS_PER_SHARE: b1,
+          MAX_NUMBER_OF_TOKENS: b2.pow(128).sub(b1),
+          TOKEN_PRICE_EUR_ULPS: b1,
+        }),
+      ).to.be.rejectedWith("NF_TOO_MUCH_FUNDS_COLLECTED");
       // won't fit
       await expect(
         deployTokenTerms(ETOTokenTerms, {
           EQUITY_TOKENS_PER_SHARE: b1,
           TOKEN_PRICE_EUR_ULPS: b1,
-          MAX_NUMBER_OF_TOKENS: b2.pow(56),
+          MAX_NUMBER_OF_TOKENS: b2.pow(128),
         }),
       ).to.be.rejectedWith("NF_TOO_MANY_TOKENS");
     });
@@ -354,8 +388,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       const maxTokenPrice = b2
         .pow("112")
         .div(tokenTerms.MAX_NUMBER_OF_TOKENS)
+        .mul(getTokenPower(tokenTerms))
         .floor();
-      // should pass
+      // should
       await deployTokenTerms(ETOTokenTerms, {
         TOKEN_PRICE_EUR_ULPS: maxTokenPrice,
       });
@@ -368,11 +403,12 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     });
 
     it("reject token terms on min tokens less than max available tokens", async () => {
-      const maxNumberOfTokens = new web3.BigNumber("1764783");
+      const tps = tokenTerms.EQUITY_TOKENS_PER_SHARE;
+      const maxNumberOfTokens = tps.mul("1764783");
       const availableTokens = maxNumberOfTokens.div("1.02").round(0, 4);
       // all good
       [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        EQUITY_TOKENS_PER_SHARE: tps,
         MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
         MIN_NUMBER_OF_TOKENS: availableTokens,
@@ -381,7 +417,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(await deployedTerms.MAX_AVAILABLE_TOKENS()).to.be.bignumber.eq(availableTokens);
       // should revert
       [etoTokenTerms] = await deployTokenTerms(ETOTokenTerms, {
-        EQUITY_TOKENS_PER_SHARE: new web3.BigNumber(1),
+        EQUITY_TOKENS_PER_SHARE: tps,
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
         MAX_NUMBER_OF_TOKENS: maxNumberOfTokens,
         MIN_NUMBER_OF_TOKENS: availableTokens.add(1),
@@ -579,7 +615,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       beforeEach(async () => {
         [etoTerms, terms, termsKeys] = await redeployTerms({
           WHITELIST_DISCOUNT_FRAC: Q18.mul(0),
-          PUBLIC_DISCOUNT_FRAC: Q18.mul(0.7651),
+          PUBLIC_DISCOUNT_FRAC: Q18.mul("0.7651"),
         });
       });
 
@@ -590,13 +626,14 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   function generalCalculationTests(priceFraction) {
     const tokenPrice = () => divRound(tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(priceFraction), Q18);
 
-    function tokenAmount(amount) {
-      // here we need to reproduce exact rounding as in smart contract
-      return amount.div(tokenPrice()).floor();
+    function tokenAmount(amount, power) {
+      // here we need to reproduce exact rounding as in smart contract (FLOOR)
+      return amount.mul(power).divToInt(tokenPrice());
     }
 
-    function eurAmount(amount) {
-      return amount.mul(tokenPrice());
+    function eurAmount(amount, power) {
+      // here we need to reproduce exact rounding as in smart contract (HALF_UP)
+      return divRound(amount.mul(tokenPrice()), power);
     }
 
     it("should calculate price fraction", async () => {
@@ -604,28 +641,32 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     });
 
     it("should compute tokens from eur", async () => {
-      expect(await etoTerms.calculateTokenAmount(0, tokenPrice())).to.be.bignumber.eq(1);
+      const tokenPower = getTokenPower(tokenTerms);
+      expect(await etoTerms.calculateTokenAmount(0, tokenPrice())).to.be.bignumber.eq(
+        tokenPower.mul(1),
+      );
       expect(await etoTerms.calculateTokenAmount(0, 0)).to.be.bignumber.eq(0);
       const ticket = Q18.mul(717271).add(1);
       expect(await etoTerms.calculateTokenAmount(0, ticket)).to.be.bignumber.eq(
-        tokenAmount(ticket),
+        tokenAmount(ticket, tokenPower),
       );
       const ticket2 = Q18.mul(7162.129821);
       expect(await etoTerms.calculateTokenAmount(0, ticket2)).to.be.bignumber.eq(
-        tokenAmount(ticket2),
+        tokenAmount(ticket2, tokenPower),
       );
     });
 
     it("should compute eurs from tokens", async () => {
-      expect(await etoTerms.calculateEurUlpsAmount(0, 1)).to.be.bignumber.eq(tokenPrice());
+      const tokenPower = getTokenPower(tokenTerms);
+      expect(await etoTerms.calculateEurUlpsAmount(0, tokenPower)).to.be.bignumber.eq(tokenPrice());
       expect(await etoTerms.calculateEurUlpsAmount(0, 0)).to.be.bignumber.eq(0);
-      const tokens1 = new web3.BigNumber(9812791);
+      const tokens1 = tokenPower.mul(new web3.BigNumber(9812791));
       expect(await etoTerms.calculateEurUlpsAmount(0, tokens1)).to.be.bignumber.eq(
-        eurAmount(tokens1),
+        eurAmount(tokens1, tokenPower),
       );
-      const tokens2 = new web3.BigNumber(9812791);
+      const tokens2 = tokenPower.mul(new web3.BigNumber(9812791));
       expect(await etoTerms.calculateEurUlpsAmount(0, tokens2)).to.be.bignumber.eq(
-        eurAmount(tokens2),
+        eurAmount(tokens2, tokenPower),
       );
     });
   }
@@ -790,8 +831,8 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       await expect(
         etoTerms.addWhitelisted(
           [investors[0], investors[1], investors[2]],
-          [Q18.mul(500000), Q18.mul(600000), Q18.mul(700000)],
-          [Q18.mul(0.6), Q18.mul(0.7), Q18.add(1)],
+          [Q18.mul("500000"), Q18.mul("600000"), Q18.mul("700000")],
+          [Q18.mul("0.6"), Q18.mul("0.7"), Q18.add(1)],
           {
             from: admin,
           },
@@ -813,36 +854,36 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   describe("contribution calculation with fixed slots and 99% whitelist discount", () => {
     beforeEach(async () => {
       [etoTerms, terms, termsKeys] = await redeployTerms({
-        WHITELIST_DISCOUNT_FRAC: Q18.mul(0.99),
+        WHITELIST_DISCOUNT_FRAC: Q18.mul("0.99"),
         PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
       });
     });
-    discountTests(Q18.mul(0.01), Q18);
+    discountTests(Q18.mul("0.01"), Q18);
   });
 
   describe("contribution calculation with fixed slots and 50.3761% whitelist discount", () => {
     beforeEach(async () => {
       [etoTerms, terms, termsKeys] = await redeployTerms({
-        WHITELIST_DISCOUNT_FRAC: Q18.mul(0.503761),
+        WHITELIST_DISCOUNT_FRAC: Q18.mul("0.503761"),
         PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
       });
     });
-    discountTests(Q18.mul(1 - 0.503761), Q18);
+    discountTests(Q18.sub(Q18.mul("0.503761")), Q18);
   });
 
   describe("contribution calculation with fixed slots, whitelist and public discounts", () => {
     beforeEach(async () => {
       [etoTerms, terms, termsKeys] = await redeployTerms({
-        WHITELIST_DISCOUNT_FRAC: Q18.mul(0.503761),
-        PUBLIC_DISCOUNT_FRAC: Q18.mul(0.7651),
+        WHITELIST_DISCOUNT_FRAC: Q18.mul("0.503761"),
+        PUBLIC_DISCOUNT_FRAC: Q18.mul("0.7651"),
       });
     });
-    discountTests(Q18.mul(1 - 0.503761), Q18.mul(1 - 0.7651));
+    discountTests(Q18.sub(Q18.mul("0.503761")), Q18.sub(Q18.mul("0.7651")));
   });
 
   describe("contribution calculation without discount", () => {
-    function tokenAmount(_, amount) {
-      return amount.div(tokenTerms.TOKEN_PRICE_EUR_ULPS).floor();
+    function tokenAmount(_, amount, power) {
+      return amount.mul(power).divToInt(tokenTerms.TOKEN_PRICE_EUR_ULPS);
     }
 
     async function fullAmount(total, amount, isWhitelisted) {
@@ -857,34 +898,34 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(total, amount));
+      expect(info[4]).to.be.bignumber.eq(tokenAmount(total, amount, getTokenPower(tokenTerms)));
       expect(info[5]).to.be.bignumber.eq(0);
     }
 
     it("simple amount", async () => {
-      await fullAmount(0, Q18.mul(1716.1991), false);
+      await fullAmount(0, Q18.mul("1716.1991"), false);
       // invest again
-      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981), false);
+      await fullAmount(Q18.mul("1121.1991"), Q18.mul("87621.18981"), false);
     });
 
     it("simple amount from former fixed slot", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const priceFrac = Q18.mul(0.6);
+      const priceFrac = Q18.mul("0.6");
       await etoTerms.addWhitelisted([investorNoDiscount], [discountAmount], [priceFrac], {
         from: admin,
       });
 
-      await fullAmount(0, Q18.mul(1716.1991), true);
+      await fullAmount(0, Q18.mul("1716.1991"), true);
       // invest again
-      await fullAmount(Q18.mul(1121.1991), Q18.mul(87621.18981), true);
+      await fullAmount(Q18.mul("1121.1991"), Q18.mul("87621.18981"), true);
     });
   });
 
   function discountTests(whitelistPriceFrac, publicPriceFrac) {
-    function tokenAmount(_, amount, priceFraction = Q18) {
+    function tokenAmount(_, amount, power, priceFraction = Q18) {
       // here we need to reproduce exact rounding as in smart contract
       const discountedPrice = divRound(tokenTerms.TOKEN_PRICE_EUR_ULPS.mul(priceFraction), Q18);
-      return amount.div(discountedPrice).floor();
+      return amount.mul(power).divToInt(discountedPrice);
     }
 
     async function amountNoFixedSlot(total, amount) {
@@ -899,7 +940,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(total, amount, whitelistPriceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(total, amount, getTokenPower(tokenTerms), whitelistPriceFrac),
+      );
       expect(info[5]).to.be.bignumber.eq(0);
     }
 
@@ -914,9 +957,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       await etoTerms.addWhitelisted([investorNoDiscount], [0], [Q18], {
         from: admin,
       });
-      await amountNoFixedSlot(0, Q18.mul(8129.1991).add(1));
+      await amountNoFixedSlot(0, Q18.mul("8129.1991").add(1));
       // invest again
-      await amountNoFixedSlot(Q18.mul(8129.1991).sub(1), Q18.mul(29811.18981));
+      await amountNoFixedSlot(Q18.mul("8129.1991").sub(1), Q18.mul("29811.18981"));
     });
 
     it("with amount crossing max ticket no discount", async () => {
@@ -928,7 +971,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
     it("with no amount and discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2).add(1);
-      const priceFrac = Q18.mul(0.6);
+      const priceFrac = Q18.mul("0.6");
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
       });
@@ -945,7 +988,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
 
     it("with amount below discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const priceFrac = Q18.mul(0.6);
+      const priceFrac = Q18.mul("0.6");
       const amount = discountAmount.divToInt(2);
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
@@ -955,13 +998,15 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(0, amount, priceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(0, amount, getTokenPower(tokenTerms), priceFrac),
+      );
       expect(info[5]).to.be.bignumber.eq(info[4]);
     });
 
     it("with amount eq discount", async () => {
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.divToInt(2);
-      const priceFrac = Q18.mul(0.6);
+      const priceFrac = Q18.mul("0.6");
       const amount = discountAmount;
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
@@ -971,7 +1016,9 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(0, amount, priceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(0, amount, getTokenPower(tokenTerms), priceFrac),
+      );
       expect(info[5]).to.be.bignumber.eq(info[4]);
     });
 
@@ -987,9 +1034,19 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      const expDiscountedTokens = tokenAmount(0, discountAmount, priceFrac);
+      const expDiscountedTokens = tokenAmount(
+        0,
+        discountAmount,
+        getTokenPower(tokenTerms),
+        priceFrac,
+      );
       const expTokens = expDiscountedTokens.add(
-        tokenAmount(discountAmount, amount.sub(discountAmount), whitelistPriceFrac),
+        tokenAmount(
+          discountAmount,
+          amount.sub(discountAmount),
+          getTokenPower(tokenTerms),
+          whitelistPriceFrac,
+        ),
       );
       expect(info[4]).to.be.bignumber.eq(expTokens);
       expect(info[5]).to.be.bignumber.eq(expDiscountedTokens);
@@ -1005,30 +1062,44 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       // all amount within discount
       const amount = discountAmount.divToInt(2);
       let info = await etoTerms.calculateContribution(investorDiscount, 0, 0, amount, true);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(0, amount, priceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(0, amount, getTokenPower(tokenTerms), priceFrac),
+      );
       expect(info[5]).to.be.bignumber.eq(info[4]);
       // next amount goes over discount
       const amount2 = amount.add(Q18);
       info = await etoTerms.calculateContribution(investorDiscount, amount, amount, amount2, true);
-      const expDiscountedTokens = tokenAmount(amount, discountAmount.sub(amount), priceFrac);
+      const expDiscountedTokens = tokenAmount(
+        amount,
+        discountAmount.sub(amount),
+        getTokenPower(tokenTerms),
+        priceFrac,
+      );
       const expPrice = expDiscountedTokens.add(
-        tokenAmount(discountAmount, amount2.sub(amount), whitelistPriceFrac),
+        tokenAmount(
+          discountAmount,
+          amount2.sub(amount),
+          getTokenPower(tokenTerms),
+          whitelistPriceFrac,
+        ),
       );
       expect(info[4]).to.be.bignumber.eq(expPrice);
       expect(info[5]).to.be.bignumber.eq(expDiscountedTokens);
 
       // next amount is without discount
-      const amount3 = Q18.mul(19209.111).add(1);
+      const amount3 = Q18.mul("19209.111").add(1);
       const total = amount.add(amount2);
       info = await etoTerms.calculateContribution(investorDiscount, total, total, amount3, true);
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(total, amount3, whitelistPriceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(total, amount3, getTokenPower(tokenTerms), whitelistPriceFrac),
+      );
       expect(info[5]).to.be.bignumber.eq(0);
     });
 
     it("with discount max ticket higher than max ticket size for other investors", async () => {
       // discounts allow overriding max ticket sizes
       const discountAmount = terms.MAX_TICKET_EUR_ULPS.mul(2);
-      const priceFrac = Q18.mul(0.6);
+      const priceFrac = Q18.mul("0.6");
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
       });
@@ -1041,7 +1112,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       );
       // max cap is discountAmount
       expect(info[3]).to.be.bignumber.eq(discountAmount);
-      const expPrice = tokenAmount(0, discountAmount, priceFrac);
+      const expPrice = tokenAmount(0, discountAmount, getTokenPower(tokenTerms), priceFrac);
       expect(info[4]).to.be.bignumber.eq(expPrice);
       expect(info[5]).to.be.bignumber.eq(info[4]);
     });
@@ -1049,7 +1120,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     it("with discount min ticket lower than min ticket for other investors", async () => {
       // discounts allow overriding min ticket size
       const discountAmount = terms.MIN_TICKET_EUR_ULPS.div(2).round();
-      const priceFrac = Q18.mul(0.7);
+      const priceFrac = Q18.mul("0.7");
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
       });
@@ -1062,7 +1133,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       );
       expect(info[2]).to.be.bignumber.eq(discountAmount);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
-      const expPrice = tokenAmount(0, discountAmount, priceFrac);
+      const expPrice = tokenAmount(0, discountAmount, getTokenPower(tokenTerms), priceFrac);
       expect(info[4]).to.be.bignumber.eq(expPrice);
       expect(info[5]).to.be.bignumber.eq(info[4]);
     });
@@ -1070,7 +1141,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     it("with discount min ticket override not applied to public", async () => {
       // discounts allow overriding min ticket size
       const discountAmount = terms.MIN_TICKET_EUR_ULPS.div(2).round();
-      const priceFrac = Q18.mul(0.7);
+      const priceFrac = Q18.mul("0.7");
       await etoTerms.addWhitelisted([investorDiscount], [discountAmount], [priceFrac], {
         from: admin,
       });
@@ -1081,14 +1152,16 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     });
 
     it("with public ticket", async () => {
-      const amount = Q18.mul(76251.212).add(1);
+      const amount = Q18.mul("76251.212").add(1);
       const info = await etoTerms.calculateContribution(investorNoDiscount, 0, 0, amount, false);
       expect(info[0]).to.be.false;
       expect(info[1]).to.be.false;
       expect(info[2]).to.be.bignumber.eq(terms.MIN_TICKET_EUR_ULPS);
       expect(info[3]).to.be.bignumber.eq(terms.MAX_TICKET_EUR_ULPS);
       // apply public discount
-      expect(info[4]).to.be.bignumber.eq(tokenAmount(0, amount, publicPriceFrac));
+      expect(info[4]).to.be.bignumber.eq(
+        tokenAmount(0, amount, getTokenPower(tokenTerms), publicPriceFrac),
+      );
       // no fixed slot tokens
       expect(info[5]).to.be.bignumber.eq(0);
     });
@@ -1105,6 +1178,10 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       // no fixed slot tokens
       expect(info[5]).to.be.bignumber.eq(0);
     });
+  }
+
+  function getTokenPower(t) {
+    return decimalBase.pow(t.EQUITY_TOKENS_PRECISION);
   }
 
   function expectLogInvestorWhitelisted(event, investor, discountAmount, priceFracFrac) {
