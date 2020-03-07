@@ -41,7 +41,7 @@ contract ETOTokenTerms is Math, IContractId {
     // equity tokens per share
     uint256 public EQUITY_TOKENS_PER_SHARE;
     // equity tokens decimals (precision)
-    uint8 public EQUITY_TOKENS_PRECISION;
+    uint8 public EQUITY_TOKEN_DECIMALS;
 
     // scale power of equity token (10**decimals)
     uint256 private EQUITY_TOKENS_POWER;
@@ -61,7 +61,7 @@ contract ETOTokenTerms is Math, IContractId {
         uint256 shareNominalValueUlps,
         uint256 shareNominalValueEurUlps,
         uint256 equityTokensPerShare,
-        uint8 equityTokensPrecision
+        uint8 equityTokenDecimals
     )
         public
     {
@@ -88,10 +88,10 @@ contract ETOTokenTerms is Math, IContractId {
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
         EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
-        EQUITY_TOKENS_PRECISION = equityTokensPrecision;
-        EQUITY_TOKENS_POWER = 10**uint256(EQUITY_TOKENS_PRECISION);
+        EQUITY_TOKEN_DECIMALS = equityTokenDecimals;
+        EQUITY_TOKENS_POWER = 10**uint256(EQUITY_TOKEN_DECIMALS);
 
-        require(equityTokensPerShare >= 0 && equityTokensPerShare % EQUITY_TOKENS_POWER == 0, "NF_SHARES_NOT_WHOLE_TOKENS");
+        require(equityTokensPerShare > 0 && equityTokensPerShare % EQUITY_TOKENS_POWER == 0, "NF_SHARES_NOT_WHOLE_TOKENS");
         require(proportion(tokenPriceEurUlps, maxNumberOfTokens, EQUITY_TOKENS_POWER) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
     }
 
