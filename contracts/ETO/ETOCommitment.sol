@@ -152,7 +152,7 @@ contract ETOCommitment is
     // platform fee in eur
     uint128 private _platformFeeEurUlps;
     // how many equity tokens goes to platform portfolio as a fee
-    uint128 private _tokenParticipationFee;
+    uint128 private _tokenParticipationFeeAmount;
 
     // signed investment agreement url
     string private _signedInvestmentAgreementUrl;
@@ -227,7 +227,7 @@ contract ETOCommitment is
         UNIVERSE = universe;
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
-        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKENS_PRECISION());
+        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
         require(nominee != address(0) && companyLegalRep != address(0));
 
         ETO_TERMS_CONSTRAINTS = etoTerms.ETO_TERMS_CONSTRAINTS();
@@ -445,7 +445,7 @@ contract ETOCommitment is
         return (
             _newShares, _newShares * ETO_TERMS.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS(),
             _additionalContributionEth, _additionalContributionEurUlps,
-            _tokenParticipationFee, _platformFeeEth, _platformFeeEurUlps,
+            _tokenParticipationFeeAmount, _platformFeeEth, _platformFeeEurUlps,
             _newShares == 0 ? 0 : divRound(_totalEquivEurUlps, _newShares)
         );
     }
@@ -696,10 +696,10 @@ contract ETOCommitment is
         // the reverse operation, that is MAX_AVAILABLE_TOKENS + calculatePlatformTokenFee will not always be MAXIMUM_NUMBER_OF_TOKENS
         // while it's probably possible to detect it we put this check here
         uint256 tokenParticipationFee;
-        uint256 maxTokens = tokenTerms.MAX_NUMBER_OF_TOKENS();
         if (_totalTokenAmount == MAX_AVAILABLE_TOKENS) {
             // rest up until MAX NUMBER OF TOKENS is our fee
             // we also assume that MAX_NUMBER_OF_TOKENS amount to full shares, which token terms contract checks
+            uint256 maxTokens = tokenTerms.MAX_NUMBER_OF_TOKENS();
             tokenParticipationFee = maxTokens - MAX_AVAILABLE_TOKENS;
         } else {
             tokenParticipationFee = PLATFORM_TERMS.calculatePlatformTokenFee(_totalTokenAmount);
@@ -725,7 +725,7 @@ contract ETOCommitment is
         _platformFeeEth = platformFeeEth;
         _platformFeeEurUlps = platformFeeEurUlps;
         // preserve platform token participation fee to be send out on claim transition
-        _tokenParticipationFee = uint128(tokenParticipationFee);
+        _tokenParticipationFeeAmount = uint128(tokenParticipationFee);
         // todo: optimizer will not handle code below, correction needs to separate storage reads and writes
         // compute additional contributions to be sent on claim transition
         _additionalContributionEth -= _platformFeeEth;
@@ -761,7 +761,7 @@ contract ETOCommitment is
             assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEurUlps, ""));
         }
         // issue missing tokens
-        EQUITY_TOKEN.issueTokens(_tokenParticipationFee);
+        EQUITY_TOKEN.issueTokens(_tokenParticipationFeeAmount);
         emit LogPlatformNeuReward(TOKEN_OFFERING_OPERATOR, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
@@ -805,15 +805,15 @@ contract ETOCommitment is
         // if any payouts are pending for this contract, recycle them, there are two reasons to get pending payouts
         // 1. not all people claimed
         // 2. during the ETO contract received some payouts from other ETOs that finished
-        // we should leave it to some periodic watched which would reject any substantial amounts
+        // we should leave it to some periodic watcher which would reject any substantial amounts
         // disbursal.reject(EURO_TOKEN, NEUMARK, 256**2-1);
         // disbursal.reject(ETHER_TOKEN, NEUMARK, 256**2-1);
         // add token participation fee to platfrom portfolio
-        EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFee);
+        EQUITY_TOKEN.distributeTokens(platformPortfolio, _tokenParticipationFeeAmount);
 
         emit LogPlatformFeePayout(ETHER_TOKEN, disbursal, _platformFeeEth);
         emit LogPlatformFeePayout(EURO_TOKEN, disbursal, _platformFeeEurUlps);
-        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFee);
+        emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFeeAmount);
     }
 
     function issueTokens(
@@ -850,8 +850,7 @@ contract ETOCommitment is
         // kick on minimum ticket and you must buy at least one token!
         require(
             equivEurUlps + ticket.equivEurUlps >= minTicketEurUlps &&
-            equityTokenAmount >= EQUITY_TOKEN_POWER &&
-            equityTokenAmount > 0, "NF_ETO_MIN_TICKET");
+            equityTokenAmount >= EQUITY_TOKEN_POWER, "NF_ETO_MIN_TICKET");
         // kick on max ticket exceeded
         require(equivEurUlps + ticket.equivEurUlps <= maxTicketEurUlps, "NF_ETO_MAX_TICKET");
         // kick on cap exceeded
@@ -969,6 +968,11 @@ contract ETOCommitment is
         _additionalContributionEurUlps = newTotalEurUlps;
     }
 
+    /// returns whether or not the cap would be exceeded if another investment defined by the given parameters would be made
+    /// @param applyDiscounts whether whitelist (true) or max (false) cap should be checked
+    /// @param equityTokenAmount total amount of new equityTokens to be added
+    /// @param fixedSlotsEquityTokenAmount tokens of the above would be associated to reserved/fixed/pre-allocated slots
+    /// @param equivEurUlps the amount of EURO_TOKEN used to acquire the equityTokenAmount of tokens
     function isCapExceeded(bool applyDiscounts, uint256 equityTokenAmount, uint256 fixedSlotsEquityTokenAmount, uint256 equivEurUlps)
         private
         constant
