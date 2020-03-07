@@ -9,13 +9,13 @@ import {
 const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
   .getFixtureAndAddressByName;
 
-// standard 18 decimals precision
-export const stdEquityTokenPrecision = new web3.BigNumber("0");
-export const stdEquityTokenPower = decimalBase.pow(stdEquityTokenPrecision);
+// standard 18 decimals scale
+export const stdEquityTokenDecimals = new web3.BigNumber("0");
+export const stdEquityTokenPower = decimalBase.pow(stdEquityTokenDecimals);
 
-// legacy (indivisible) token precision and power
-const indivisibleEquityTokenPrecision = new web3.BigNumber("0");
-const indivisibleEquityTokenPower = decimalBase.pow(indivisibleEquityTokenPrecision);
+// legacy (indivisible) token scale and power
+const indivisibleEquityTokenDecimals = new web3.BigNumber("0");
+const indivisibleEquityTokenPower = decimalBase.pow(indivisibleEquityTokenDecimals);
 
 export const defEtoTerms = {
   shareholderTerms: {
@@ -46,7 +46,7 @@ export const defEtoTerms = {
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
     EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTerms: {
     DURATION_TERMS: null,
@@ -95,7 +95,7 @@ export const hnwiEtoDeSecurityTerms = {
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
     EQUITY_TOKENS_PER_SHARE: indivisibleEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: indivisibleEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: indivisibleEquityTokenDecimals,
   },
   etoTerms: {
     ETO_TERMS_CONSTRAINTS: null,
@@ -155,7 +155,7 @@ export const retailEtoDeVmaTerms = {
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
     EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTermsConstraints: "retail eto de vma",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -201,7 +201,7 @@ export const miniEtoLiTerms = {
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
     EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -247,7 +247,7 @@ export const miniEtoLiNominalValueTerms = {
     SHARE_NOMINAL_VALUE_ULPS: Q18.mul("100"),
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18.mul("13.5"),
     EQUITY_TOKENS_PER_SHARE: indivisibleEquityTokenPower.mul("1000000"),
-    EQUITY_TOKENS_PRECISION: indivisibleEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: indivisibleEquityTokenDecimals,
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -293,7 +293,7 @@ export const hnwiEtoLiSecurityTerms = {
     SHARE_NOMINAL_VALUE_ULPS: "1000000000000000000",
     SHARE_NOMINAL_VALUE_EUR_ULPS: "1000000000000000000",
     EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTermsConstraints: "hnwi eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
@@ -339,7 +339,7 @@ export const retailSMEEtoLi = {
     SHARE_NOMINAL_VALUE_ULPS: Q18,
     SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
     EQUITY_TOKENS_PER_SHARE: stdEquityTokenPower.mul("10000"),
-    EQUITY_TOKENS_PRECISION: stdEquityTokenPrecision,
+    EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTermsConstraints: "retail EU-SME eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",

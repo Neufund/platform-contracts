@@ -9,12 +9,10 @@ export const dayInSeconds = 24 * hourInSeconds;
 export const monthInSeconds = 30 * dayInSeconds;
 export const daysToSeconds = sec => sec * dayInSeconds;
 export const hoursToSeconds = sec => sec * hourInSeconds;
-// default precision and power of equity token as used by fixtures and default test terms
-// allow to override from env variable to run ETO tests several precisions
-export const defEquityTokenPrecision = new web3.BigNumber(
-  process.env.EQUITY_TOKEN_PRECISION || "18",
-);
-export const defEquityTokenPower = decimalBase.pow(defEquityTokenPrecision);
+// default scale and power of equity token as used by fixtures and default test terms
+// allow to override from env variable to run ETO tests several scales
+export const defEquityTokenDecimals = new web3.BigNumber(process.env.EQUITY_TOKEN_DECIMALS || "18");
+export const defEquityTokenPower = decimalBase.pow(defEquityTokenDecimals);
 // default tokens per share used as above
 export const defaultTokensPerShare = defEquityTokenPower.mul(new web3.BigNumber("1000000"));
 

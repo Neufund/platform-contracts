@@ -58,7 +58,6 @@ contract PlatformTerms is Math, IContractId {
         pure
         returns (uint256)
     {
-        // mind tokens having 0 precision
         // x*0.02 == x/50
         return divRound(tokenAmount, 50);
     }

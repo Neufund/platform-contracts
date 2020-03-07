@@ -40,7 +40,7 @@ contract ETOTokenTerms is Math, IContractId {
     uint256 public SHARE_NOMINAL_VALUE_EUR_ULPS;
     // equity tokens per share
     uint256 public EQUITY_TOKENS_PER_SHARE;
-    // equity tokens decimals (precision)
+    // equity tokens decimals (scale)
     uint8 public EQUITY_TOKEN_DECIMALS;
 
     // scale power of equity token (10**decimals)

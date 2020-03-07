@@ -100,15 +100,15 @@ contract ETOTerms is
     uint256 public MAX_AVAILABLE_TOKENS;
     // number of tokens that can be sold in whitelist
     uint256 public MAX_AVAILABLE_TOKENS_IN_WHITELIST;
-    // equity token scale power (10^precision)
+    // equity token scale power (10^decimals)
     uint256 public EQUITY_TOKEN_POWER;
 
     // base token price in EUR-T, without any discount scheme
     uint256 private TOKEN_PRICE_EUR_ULPS;
     // equity tokens per share
     uint256 private EQUITY_TOKENS_PER_SHARE;
-    // full price fraction
-    uint256 private FULL_PRICE_FRACTION;
+    // public-discounted price to be paid for a full token during the eto
+    uint256 private FULL_TOKEN_PRICE_FRACTION;
 
 
     ////////////////////////
@@ -186,11 +186,11 @@ contract ETOTerms is
         UNIVERSE = universe;
 
         // compute max available tokens to be sold in ETO
-        EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKENS_PRECISION());
+        EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKEN_DECIMALS());
         require(EQUITY_TOKEN_POWER <= 10 ** 18);
         MAX_AVAILABLE_TOKENS = calculateAvailableTokens(tokenTerms.MAX_NUMBER_OF_TOKENS());
         MAX_AVAILABLE_TOKENS_IN_WHITELIST = min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
-        FULL_PRICE_FRACTION = calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
+        FULL_TOKEN_PRICE_FRACTION = calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
 
         // validate all settings
         requireValidTerms();
@@ -201,25 +201,23 @@ contract ETOTerms is
     ////////////////////////
 
     // calculates token amount for a given commitment at a position of the curve
-    // we require that equity token precision is 0
     function calculateTokenAmount(uint256 /*totalEurUlps*/, uint256 committedEurUlps)
         public
         constant
         returns (uint256 tokenAmount)
     {
         // we may disregard totalEurUlps as curve is flat, round down when calculating tokens
-        return mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_PRICE_FRACTION;
+        return mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_TOKEN_PRICE_FRACTION;
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
-    // we require that equity token precision is 0
     function calculateEurUlpsAmount(uint256 /*totalTokenAmount*/, uint256 tokenAmount)
         public
         constant
         returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokenAmount as curve is flat
-        return proportion(tokenAmount, FULL_PRICE_FRACTION, EQUITY_TOKEN_POWER);
+        return proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
     }
 
     function calculatePriceFraction(uint256 priceFrac) public constant returns(uint256) {
@@ -230,7 +228,8 @@ contract ETOTerms is
         }
     }
 
-    // calculate effective price of the token based on actual amounts
+    // calculates price of a token by dividing amountEurUlps by equityTokenAmount and scaling to 10**18
+    // note that all prices are decimal fractions as defined in Math.sol
     function calculateTokenEurPrice(uint256 amountEurUlps, uint256 equityTokenAmount) public constant returns(uint256) {
         return proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
     }
@@ -409,7 +408,7 @@ contract ETOTerms is
                     uint256 fixedSlotPrice = calculatePriceFraction(wlTicket.fullTokenPriceFrac);
                     fixedSlotEquityTokenAmount = mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
                     // calculate the really spent part to cover for rounding errors in next tranche (remainingAmount)
-                    // commented out as with 18 digit precision we have 1 wei difference max and we'll not deploy any other
+                    // commented out as with 18 digit scale we have 1 wei difference max and we'll not deploy any other
                     // precisions anymore
                     // discountedAmount = fixedSlotEquityTokenAmount * fixedSlotPrice / EQUITY_TOKEN_POWER;
                 }

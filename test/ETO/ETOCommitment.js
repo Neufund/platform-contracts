@@ -42,7 +42,7 @@ import {
   monthInSeconds,
   web3,
   defEquityTokenPower,
-  defEquityTokenPrecision,
+  defEquityTokenDecimals,
 } from "../helpers/constants";
 import { expectLogFundsCommitted } from "../helpers/commitment";
 import EvmError from "../helpers/EVMThrow";
@@ -1225,7 +1225,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployETO({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(96), MIN_TICKET_EUR_ULPS: one },
         ovrTokenTerms: {
-          EQUITY_TOKENS_PRECISION: one.sub(one),
+          EQUITY_TOKEN_DECIMALS: one.sub(one),
           TOKEN_PRICE_EUR_ULPS: one,
           MAX_NUMBER_OF_TOKENS: two.pow(128),
           EQUITY_TOKENS_PER_SHARE: two.pow(16),
@@ -1494,8 +1494,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     });
 
     it("should use available tokens with rounding discrepancy", async () => {
-      if (defEquityTokenPrecision.eq(0)) {
-        // this is magic number of tokens that generate rounding discrepancy, disregard precision
+      if (defEquityTokenDecimals.eq(0)) {
+        // this is magic number of tokens that generate rounding discrepancy, disregard token scale
         const maxTokens = new web3.BigNumber("99843987622");
         const availableTokens = getMaxAvailableTokens(maxTokens);
         const fee = await platformTerms.calculatePlatformTokenFee(availableTokens);
@@ -1523,7 +1523,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         await expectExactlyMaxCap(defEquityTokenPower.mul(maxTokens));
       } else {
         // eslint-disable-next-line no-console
-        console.log("...tests only for precision 0 - magic number of tokens used");
+        console.log("...tests only for decimals 0 - magic number of tokens used");
       }
     });
 
@@ -1741,9 +1741,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       expect(shareholderInfo[1]).to.be.bignumber.eq(totalSharesCapitalPost.mul("200"));
     });
 
-    async function deployLargeSharePriceOvr(precision) {
+    async function deployLargeSharePriceOvr(decimals) {
       const ovrTokenTerms = {
-        EQUITY_TOKENS_PRECISION: precision || defEquityTokenPrecision,
+        EQUITY_TOKEN_DECIMALS: decimals || defEquityTokenDecimals,
       };
       const tokenPower = getTokenPower(ovrTokenTerms);
       const tokensPerShare = new web3.BigNumber("10000").mul(tokenPower);
@@ -1772,7 +1772,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should lose significant amount when buying non round number of tokens", async () => {
       // we buy for 160 EUR which is almost 10 tokens, but almost makes a big difference
-      // we use low equity token precision to inflate rounding
+      // we use low equity token scale to inflate rounding
       await deployLargeSharePriceOvr(new web3.BigNumber("0"));
       // make full cap in one go
       await prepareETOForPublic();
@@ -3787,7 +3787,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   }
 
   function getTokenPower(terms) {
-    return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKENS_PRECISION);
+    return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKEN_DECIMALS);
   }
 
   function tokensCostEur(tokens, price) {
@@ -4318,7 +4318,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         .sub(effectivePrice)
         .abs(),
     ).to.be.bignumber.lt(tokenPower.mul(2));
-    // note that it returns precision 20 decimal, not integer!
+    // note that it returns precision 100+ digits decimal, not integer!
     return effectivePrice;
   }
 
