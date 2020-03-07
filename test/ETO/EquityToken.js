@@ -22,7 +22,7 @@ import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { mineBlock } from "../helpers/evmCommands";
 import increaseTime from "../helpers/increaseTime";
-import { contractId, ZERO_ADDRESS, defEquityTokenPrecision } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS, defEquityTokenDecimals } from "../helpers/constants";
 import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
@@ -65,12 +65,15 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       );
-      expect(await equityToken.decimals()).to.be.bignumber.eq(defEquityTokenPrecision);
+      expect(await equityToken.decimals()).to.be.bignumber.eq(defEquityTokenDecimals);
       expect(await equityToken.tokenController()).to.be.bignumber.eq(equityTokenController.address);
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 
       expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
+
+      // eslint-disable-next-line no-console
+      console.log(`Default Equity Token decimals: ${defEquityTokenDecimals}`);
     });
 
     it("should deposit", async () => {
@@ -129,12 +132,12 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       const equityTokenSymbol = await tokenTerms.EQUITY_TOKEN_SYMBOL();
       const equityTokenShareNominalValue = await tokenTerms.SHARE_NOMINAL_VALUE_ULPS();
       const equityTokenShareNominalEurValue = await tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
-      const equityTokenPrecision = await tokenTerms.EQUITY_TOKENS_PRECISION();
+      const equityTokenDecimals = await tokenTerms.EQUITY_TOKEN_DECIMALS();
       const equityTokensPerShare = await tokenTerms.EQUITY_TOKENS_PER_SHARE();
 
       expect(await equityToken.name()).to.have.string(equityTokenName);
       expect(await equityToken.symbol()).to.have.string(equityTokenSymbol);
-      expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenPrecision);
+      expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenDecimals);
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(equityTokensPerShare);
       expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(
         equityTokenShareNominalValue,

@@ -42,11 +42,10 @@ contract("PlatformTerms", ([_, admin]) => {
   });
 
   it("should calculate platform token fee correctly", async () => {
-    // tokens have 0 precision
-    const amountInt = new web3.BigNumber("7128918927");
-    const feeAmount = await platformTerms.calculatePlatformTokenFee(amountInt);
+    const amount = new web3.BigNumber("7128918927");
+    const feeAmount = await platformTerms.calculatePlatformTokenFee(amount);
     const fee = defaultTerms.TOKEN_PARTICIPATION_FEE_FRACTION;
-    expect(feeAmount).to.be.bignumber.eq(amountInt.mul(fee.div(Q18)).round(0, 4));
+    expect(feeAmount).to.be.bignumber.eq(amount.mul(fee.div(Q18)).round(0, 4));
   });
 
   it("should calculate neumark share when reward is 0 wei", async () => {

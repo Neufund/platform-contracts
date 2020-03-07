@@ -231,10 +231,10 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     it("rejects on tokens per share not in whole tokens", async () => {
       // tokens per share must be in whole tokens, so set tokens per share 1/10 of the whole tokens
       // so other "whole tokens" checks work but this particular don't
-      const precision = new web3.BigNumber("1");
+      const decimals = new web3.BigNumber("1");
       await expect(
         deployTokenTerms(ETOTokenTerms, {
-          EQUITY_TOKENS_PRECISION: precision, // one decimal place
+          EQUITY_TOKEN_DECIMALS: decimals, // one decimal place
           EQUITY_TOKENS_PER_SHARE: decimalBase.div(10), // scale is ten but set scale / 10
         }),
       ).to.be.rejectedWith("NF_SHARES_NOT_WHOLE_TOKENS");
@@ -361,13 +361,13 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     });
 
     it("rejects if max tokens not fit in 2**128", async () => {
-      // force token precision of 0 (indivisible), to operate on 32bytes word range
+      // force token decimals of 0 (indivisible), to operate on 32bytes word range
       const b2 = new web3.BigNumber("2");
       const b1 = new web3.BigNumber("1");
       // should pass - just one share below 2**256
       await expect(
         deployTokenTerms(ETOTokenTerms, {
-          EQUITY_TOKENS_PRECISION: new web3.BigNumber("0"),
+          EQUITY_TOKEN_DECIMALS: new web3.BigNumber("0"),
           EQUITY_TOKENS_PER_SHARE: b1,
           MAX_NUMBER_OF_TOKENS: b2.pow(128).sub(b1),
           TOKEN_PRICE_EUR_ULPS: b1,
@@ -1181,7 +1181,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   }
 
   function getTokenPower(t) {
-    return decimalBase.pow(t.EQUITY_TOKENS_PRECISION);
+    return decimalBase.pow(t.EQUITY_TOKEN_DECIMALS);
   }
 
   function expectLogInvestorWhitelisted(event, investor, discountAmount, priceFracFrac) {

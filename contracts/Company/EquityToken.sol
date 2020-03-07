@@ -112,7 +112,7 @@ contract EquityToken is
         )
         TokenMetadata(
             etoTokenTerms.EQUITY_TOKEN_NAME(),
-            etoTokenTerms.EQUITY_TOKENS_PRECISION(),
+            etoTokenTerms.EQUITY_TOKEN_DECIMALS(),
             etoTokenTerms.EQUITY_TOKEN_SYMBOL(),
             "1.0"
         )

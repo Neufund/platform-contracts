@@ -1,7 +1,7 @@
 import * as fs from "fs";
 
 export function parseNmkDataset(fileName) {
-  // parses CSV file generated from Mathematica. All numbers have 36 digits precision to approximate 18 decimals precision of Neumark token
+  // parses CSV file generated from Mathematica. All numbers have 36 digits precision to approximate 18 decimals scale of Neumark token
   const lines = fs
     .readFileSync(fileName)
     .toString()

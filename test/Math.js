@@ -60,7 +60,7 @@ contract("Math", () => {
   });
 
   it("should compute fractions", async () => {
-    // fractions are computed on 18 decimal places precision
+    // fractions are computed on 18 decimal places scale
     const amount = Q18.mul(100);
     const full = Q18; // 100%
     expect(await math._decimalFraction(amount, full)).to.be.bignumber.eq(amount);

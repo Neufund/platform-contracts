@@ -966,7 +966,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   }
 
   function getTokenPower(terms) {
-    return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKENS_PRECISION);
+    return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKEN_DECIMALS);
   }
 
   function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType) {

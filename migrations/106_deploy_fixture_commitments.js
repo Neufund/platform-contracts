@@ -412,7 +412,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log("Going to signing");
   // we must invest minimum value
-  const tokenPower = decimalBase.pow(etoDefiniton.tokenTerms.EQUITY_TOKENS_PRECISION);
+  const tokenPower = decimalBase.pow(etoDefiniton.tokenTerms.EQUITY_TOKEN_DECIMALS);
   const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
   ).divToInt(tokenPower);

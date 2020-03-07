@@ -5,7 +5,7 @@ import {
   findConstructor,
   camelCase,
   defaultTokensPerShare,
-  defEquityTokenPrecision,
+  defEquityTokenDecimals,
 } from "./constants";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 
@@ -39,7 +39,7 @@ export const defTokenTerms = {
   SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
   SHARE_NOMINAL_VALUE_ULPS: Q18.mul("4.24566"),
   EQUITY_TOKENS_PER_SHARE: defaultTokensPerShare,
-  EQUITY_TOKENS_PRECISION: defEquityTokenPrecision,
+  EQUITY_TOKEN_DECIMALS: defEquityTokenDecimals,
 };
 
 export const defEtoTerms = {
