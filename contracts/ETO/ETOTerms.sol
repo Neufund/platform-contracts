@@ -220,6 +220,8 @@ contract ETOTerms is
         return proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
     }
 
+    // calculates a fraction `priceFrac` of the full token price, typically used for discounts
+    // returns new price as decimal fraction
     function calculatePriceFraction(uint256 priceFrac) public constant returns(uint256) {
         if (priceFrac == 1) {
             return TOKEN_PRICE_EUR_ULPS;
