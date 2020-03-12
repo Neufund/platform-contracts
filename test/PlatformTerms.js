@@ -3,6 +3,7 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound, etherToWei } from "./helpers/unitConverter";
 import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
 import { contractId, Q18 } from "./helpers/constants";
+import { verifyTerms } from "./helpers/deployTerms";
 
 contract("PlatformTerms", ([_, admin]) => {
   let platformTerms;
@@ -17,17 +18,6 @@ contract("PlatformTerms", ([_, admin]) => {
   it("should deploy", async () => {
     await prettyPrintGasCost("PlatformTerms deploy", platformTerms);
   });
-
-  async function verifyTerms(c, keys, dict) {
-    for (const f of keys) {
-      const rv = await c[f]();
-      if (rv instanceof Object) {
-        expect(rv, f).to.be.bignumber.eq(dict[f]);
-      } else {
-        expect(rv, f).to.eq(dict[f]);
-      }
-    }
-  }
 
   it("should have all the constants", async () => {
     await verifyTerms(platformTerms, termsKeys, defaultTerms);
