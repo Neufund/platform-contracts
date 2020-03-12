@@ -1,3 +1,4 @@
+import { expect } from "chai";
 import {
   daysToSeconds,
   Q18,
@@ -128,6 +129,17 @@ export function validateTerms(artifact, terms) {
     idx += 1;
   }
   return [Object.keys(terms), termsValues];
+}
+
+export async function verifyTerms(c, keys, dict) {
+  for (const f of keys) {
+    const rv = await c[f]();
+    if (rv instanceof Object) {
+      expect(rv, f).to.be.bignumber.eq(dict[f]);
+    } else {
+      expect(rv, f).to.eq(dict[f]);
+    }
+  }
 }
 
 export async function deployShareholderRights(artifact, terms, fullTerms) {
