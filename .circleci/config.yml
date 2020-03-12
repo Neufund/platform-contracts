@@ -52,7 +52,7 @@ jobs:
           - v3-deps-{{ checksum "package.json" }}
           - v3-deps-
       - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
-      - run: source /opt/circleci/.nvm/nvm.sh && yarn test
+      - run: source /opt/circleci/.nvm/nvm.sh && make tests
       - save_cache:
           paths:
             - node_modules

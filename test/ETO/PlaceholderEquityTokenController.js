@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { contractId, ZERO_ADDRESS, toBytes32, Q18 } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS, toBytes32, Q18, decimalBase } from "../helpers/constants";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { GovState, GovAction } from "../helpers/govState";
 import { CommitmentState } from "../helpers/commitmentState";
@@ -227,7 +227,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const expectedValuation = divRound(
         increasedShareCapitalUlps
           .mul(tokenTermsDict.EQUITY_TOKENS_PER_SHARE)
-          .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS),
+          .mul(tokenTermsDict.TOKEN_PRICE_EUR_ULPS)
+          .divToInt(getTokenPower()),
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       );
       expectLogISHAAmended(
@@ -962,6 +963,10 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       { from: admin },
     );
     await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+  }
+
+  function getTokenPower(terms) {
+    return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKEN_DECIMALS);
   }
 
   function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType) {
