@@ -6,6 +6,7 @@ import "../Standards/IContractId.sol";
 // version history as per contract id
 // 0 - initial version
 // 1 - added SHARE_NOMINAL_VALUE_ULPS, SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL, SHARE_PRICE
+// 2 - renamed EQUITY_TOKEN_PRECISION to EQUITY_TOKEN_DECIMALS
 
 
 /// @title sets terms for tokens in ETO
@@ -108,6 +109,6 @@ contract ETOTokenTerms is Math, IContractId {
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x591e791aab2b14c80194b729a2abcba3e8cce1918be4061be170e7223357ae5c, 1);
+        return (0x591e791aab2b14c80194b729a2abcba3e8cce1918be4061be170e7223357ae5c, 2);
     }
 }
