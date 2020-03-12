@@ -433,27 +433,28 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         from: admin,
       });
       const tokenprice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS;
-      const ticket = Q18.mul("1070.61721").add(1);
-      await investAmount(investors[1], ticket, "ETH", tokenprice);
-      // set double price
+      const ticketEth = Q18.mul("1070.61721").add(1);
+      await investAmount(investors[1], ticketEth, "ETH", tokenprice);
+      // set double ETH price
       const newPrice = Q18.mul(2);
       await gasExchange.setExchangeRate(etherToken.address, euroToken.address, newPrice, {
         from: admin,
       });
-      await investAmount(investors[2], ticket, "ETH", tokenprice);
-      // token price increased twice
+      await investAmount(investors[2], ticketEth, "ETH", tokenprice);
+      // verify that the amount of ETH tokens from ticket1 at doubled ETH-price buys almost
+      // twice amount of equityToken (slightly less because of rounding)
       const i1ticket = await etoCommitment.investorTicket(investors[1]);
       const i2ticket = await etoCommitment.investorTicket(investors[2]);
       // but it does not mean that previous ticket amount is doubled due to rounding once, not twice
-      // i1ticket[2].mul(2) != i2ticket[2]
       expect(
         i1ticket[2]
           .mul(2)
           .sub(i2ticket[2])
           .abs(),
       ).to.be.bignumber.lt(2);
-      // this works because we set 1 eth == 2 eur
-      const tokensI2 = ticket
+      // this works because we set 1 eth == 2 eur so ticketEth.mul(2) is in fact currency conversion to EUR
+      // on which amount of token is calculated
+      const tokensI2 = ticketEth
         .mul(2)
         .mul(getTokenPower())
         .divToInt(tokenprice);
@@ -1221,7 +1222,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   describe("special ETO configurations", () => {
     it.skip("reverts overflow on internal equity token 128 bit", async () => {
       // totals of equity tokens are stored in 128 bits number
-      // overflowing that is practically impossible, we'll need 2^32 tickets of 2^96 tickets (which is max)
+      // overflowing that is practically impossible, we'll need 2^32 investments with 2^96 ticket amount (which is max)
       await deployETO({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: two.pow(96), MIN_TICKET_EUR_ULPS: one },
         ovrTokenTerms: {

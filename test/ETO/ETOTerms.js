@@ -14,6 +14,7 @@ import {
   deployETOTermsConstraints,
   deployETOTerms,
   defTokenTerms,
+  verifyTerms,
 } from "../helpers/deployTerms";
 import { Q18, contractId, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
 import roles from "../helpers/roles";
@@ -86,17 +87,6 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       { role: roles.whitelistAdmin, object: _etoTerms.address, subject: admin },
     ]);
     return [deployedTerms, _etoTerms, _termsKeys, termsValues];
-  }
-
-  async function verifyTerms(c, keys, dict) {
-    for (const f of keys) {
-      const rv = await c[f]();
-      if (rv instanceof Object) {
-        expect(rv, f).to.be.bignumber.eq(dict[f]);
-      } else {
-        expect(rv, f).to.eq(dict[f]);
-      }
-    }
   }
 
   it("should reject constraints not in universe", async () => {
@@ -390,7 +380,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         .div(tokenTerms.MAX_NUMBER_OF_TOKENS)
         .mul(getTokenPower(tokenTerms))
         .floor();
-      // should
+      // should pass
       await deployTokenTerms(ETOTokenTerms, {
         TOKEN_PRICE_EUR_ULPS: maxTokenPrice,
       });

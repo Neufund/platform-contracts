@@ -26,8 +26,8 @@ export const defEtoTerms = {
     GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
     RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
-    SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul(0.5),
-    VOTING_MAJORITY_FRAC: Q18.mul(0.5),
+    SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.5"),
+    VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
     INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {

@@ -48,6 +48,5 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
         TOKEN_PRICE_EUR_ULPS = tokenPriceEurUlps;
         MAX_NUMBER_OF_TOKENS_IN_WHITELIST = maxNumberOfTokensInWhitelist;
         EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
-
     }
 }
