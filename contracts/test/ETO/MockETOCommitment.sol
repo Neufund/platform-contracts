@@ -44,9 +44,10 @@ contract MockETOCommitment is
     }
 
     // convenience function for moving all timestampts towards the past
-    // such that the next state transition will occur in delta seconds
-    function _shiftToBeforeNextState(uint8 delta) public {
-        require(delta < 1800, "NF_MOCK_INVALID_DELTA");
+   // such that the next state transition will occur in delta seconds
+    // @dev maximum to be shifted is to three days before state transition
+    function _shiftToBeforeNextState(uint32 delta) public {
+        require(delta < 86400, "NF_MOCK_INVALID_DELTA");
         uint256 nextTransition = startOfInternal(ETOState(uint(state()) + 1));
         require(nextTransition != 0 && nextTransition > now + delta, "NF_MOCK_INVALID_TRANSITION_TIME");
         _mockShiftBackTime(nextTransition - now - delta);
