@@ -18,12 +18,12 @@ const evmSign = function(address, message) {
 
 // Create a signed message that @param voter wants to vote @param inFavor of the proposal with
 // @param proposalIndex at the votingContract at address @param votingContract
-export async function createSignedVote(proposalIndex, inFavor, voter, votingContract) {
+export async function createSignedVote(proposalId, inFavor, voter, votingContract) {
   // using EIP 191 signature scheme version 0 (intended validator)
   const msg = web3Utils.soliditySha3(
     { type: "bytes1", value: "0x0" },
     { type: "address", value: votingContract },
-    { type: "uint256", value: proposalIndex },
+    { type: "bytes32", value: proposalId },
     { type: "bool", value: inFavor },
   );
   const sig = await evmSign(voter, msg);

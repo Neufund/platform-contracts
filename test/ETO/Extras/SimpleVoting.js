@@ -2,7 +2,7 @@ import { testVotingWithSnapshots } from "../../helpers/votingTestCases";
 import { ZERO_ADDRESS } from "../../helpers/constants";
 
 const TestSnapshotToken = artifacts.require("TestSnapshotToken");
-const SimpleVote = artifacts.require("SimpleVote");
+const VotingCenter = artifacts.require("VotingCenter");
 
 contract("VotingWithSnaphotToken", ([owner, owner2, ...accounts]) => {
   let testSnapshotToken;
@@ -10,7 +10,7 @@ contract("VotingWithSnaphotToken", ([owner, owner2, ...accounts]) => {
 
   beforeEach(async () => {
     testSnapshotToken = await TestSnapshotToken.new(ZERO_ADDRESS, 0);
-    votingContract = await SimpleVote.new(testSnapshotToken.address, /* VotingPeriodInDays: */ 3);
+    votingContract = await VotingCenter.new(testSnapshotToken.address);
   });
 
   const getToken = () => testSnapshotToken;
