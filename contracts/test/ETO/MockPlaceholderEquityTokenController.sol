@@ -19,10 +19,11 @@ contract MockPlaceholderEquityTokenController is
 
     constructor(
         Universe universe,
-        address companyLegalRepresentative
+        address companyLegalRep,
+        IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRepresentative)
+        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     ////////////////////////
@@ -33,7 +34,7 @@ contract MockPlaceholderEquityTokenController is
         public
         onlyCompany
     {
-        enableTransfers(transfersEnabled);
+        enableTransfers(0, transfersEnabled);
     }
 
     // to easily mockup chains of controller changes
@@ -51,17 +52,17 @@ contract MockPlaceholderEquityTokenController is
     }
 
     //
-    // Implements IControllerGovernance
+    // Implements IMigrationChain
     //
 
-    function oldTokenController()
+    function migratedFrom()
         public
         constant
         returns (address)
     {
         if (_oldController == address(0)) {
             // in no override then return controller as set by base
-            return PlaceholderEquityTokenController.oldTokenController();
+            return PlaceholderEquityTokenController.migratedFrom();
         } else {
             return _oldController;
         }
