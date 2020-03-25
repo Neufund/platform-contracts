@@ -59,10 +59,11 @@ contract GranularTransferController is
 
     constructor(
         Universe universe,
-        address companyLegalRep
+        address companyLegalRep,
+        IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep)
+        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     //
@@ -151,7 +152,7 @@ contract GranularTransferController is
         //      announcement and actual execution
         //require(now - t.block > 7 days, "NF_FORCED_T_NOT_DUE");
         // obtain equity token address
-        (address[] memory equityTokens, ) = capTable();
+        (address[] memory equityTokens, ) = tokens();
         IEquityToken token = IEquityToken(equityTokens[0]);
         // execute forced transfer with this smart contract as a broker
         // this will trigger onAllowance and onTranfer controller method before completing

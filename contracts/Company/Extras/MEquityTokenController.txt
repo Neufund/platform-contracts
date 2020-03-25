@@ -1,8 +1,0 @@
-pragma solidity 0.4.26;
-
-
-contract MEquityTokenController {
-
-    function mIsRegisteredOffering(address offering) internal constant returns (bool);
-
-}

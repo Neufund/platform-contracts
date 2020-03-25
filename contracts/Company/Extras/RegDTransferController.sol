@@ -13,10 +13,11 @@ contract RegDTransferController is
 
     constructor(
         Universe universe,
-        address companyLegalRep
+        address companyLegalRep,
+        IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep)
+        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     //
@@ -38,7 +39,7 @@ contract RegDTransferController is
             if (claims.requiresRegDAccreditation) {
                 // deny transfer if in lockdown period is in place
                 // first take a date at which ETO was successfully completed
-                IETOCommitment commitment = IETOCommitment(commitmentObserver());
+                IETOCommitment commitment = IETOCommitment(_commitment);
                 // allow transfer if 1 year passed form the date tokens could be claimed
                 allow = block.timestamp > commitment.startOf(ETOState.Claim) + 365 days;
             }
