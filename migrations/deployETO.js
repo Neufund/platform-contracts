@@ -9,6 +9,7 @@ import {
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
+  predictAddress,
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
 import { prettyPrintGasCost } from "../test/helpers/gasUtils";
@@ -115,13 +116,41 @@ export async function deployETO(
     true,
   );
   logDeployed(etoTerms);
+  console.log(`Deploying ${config.artifacts.STANDARD_ETO_COMMITMENT}`);
+  const etoCommitment = await ETOCommitment.new(
+    universe.address,
+    nominee,
+    company,
+    etoTerms.address,
+  );
+  logDeployed(etoCommitment);
+  // get nonce
+  const nonce = await promisify(ETOCommitment.web3.eth.getTransactionCount)(deployer);
+  // predict token controller address (skip universe tx!)
+  const predictedControllerAddress = predictAddress(deployer, nonce + 1);
+  const predictedTokenAddress = predictAddress(deployer, nonce + 2);
+  console.log("add ETO contracts to collections in universe");
+  await universe.setCollectionsInterfaces(
+    [
+      knownInterfaces.commitmentInterface,
+      knownInterfaces.equityTokenInterface,
+      knownInterfaces.equityTokenControllerInterface,
+      knownInterfaces.termsInterface,
+    ],
+    [etoCommitment.address, predictedTokenAddress, predictedControllerAddress, etoTerms.address],
+    [true, true, true, true],
+    { from: deployer },
+  );
   // deploy equity token controller which is company management contract
   console.log("Deploying PlaceholderEquityTokenController");
   const equityTokenController = await PlaceholderEquityTokenController.new(
     universe.address,
     company,
+    etoCommitment.address,
   );
   logDeployed(equityTokenController);
+  // todo: raise if not equal
+  console.log(`${predictedControllerAddress} == ${equityTokenController.address}`);
   // deploy equity token
   console.log("Deploying EquityToken");
   const equityToken = await EquityToken.new(
@@ -132,27 +161,9 @@ export async function deployETO(
     company,
   );
   logDeployed(equityToken);
-  console.log(`Deploying ${config.artifacts.STANDARD_ETO_COMMITMENT}`);
-  const etoCommitment = await ETOCommitment.new(
-    universe.address,
-    nominee,
-    company,
-    etoTerms.address,
-    equityToken.address,
-  );
-  logDeployed(etoCommitment);
-  console.log("add ETO contracts to collections in universe");
-  await universe.setCollectionsInterfaces(
-    [
-      knownInterfaces.commitmentInterface,
-      knownInterfaces.equityTokenInterface,
-      knownInterfaces.equityTokenControllerInterface,
-      knownInterfaces.termsInterface,
-    ],
-    [etoCommitment.address, equityToken.address, equityTokenController.address, etoTerms.address],
-    [true, true, true, true],
-    { from: deployer },
-  );
+  // todo: raise if not equal
+  console.log(`${predictedTokenAddress} == ${equityToken.address}`);
+
   if (canControlNeu) {
     console.log("neu token manager allows ETOCommitment to issue NEU");
     await createAccessPolicy(accessPolicy, [
@@ -236,10 +247,32 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   const raaaCount = await eto.amendmentsCount();
   const raaUrl = raaaCount.eq(0) ? "NOT SET" : (await eto.currentAgreement())[2];
   console.log("ETO Commitment R&A URL", ...(raaaCount.eq(0) ? wrong(raaUrl) : good(raaUrl)));
-  const equityToken = await EquityToken.at(await eto.equityToken());
-  const thaCount = await equityToken.amendmentsCount();
-  const thaUrl = thaCount.eq(0) ? "NOT SET" : (await equityToken.currentAgreement())[2];
-  console.log("Equity Token THA URL", ...(thaCount.eq(0) ? wrong(thaUrl) : good(thaUrl)));
+  const equityTokenAddress = await eto.equityToken();
+  if (equityTokenAddress === ZERO_ADDRESS) {
+    console.log(...wrong("Equity Token not yet set"));
+  } else {
+    const equityToken = await EquityToken.at(equityTokenAddress);
+    const thaCount = await equityToken.amendmentsCount();
+    const thaUrl = thaCount.eq(0) ? "NOT SET" : (await equityToken.currentAgreement())[2];
+    console.log("Equity Token THA URL", ...(thaCount.eq(0) ? wrong(thaUrl) : good(thaUrl)));
+
+    const tokenInUniverse = await universe.isInterfaceCollectionInstance(
+      knownInterfaces.equityTokenInterface,
+      await eto.equityToken(),
+    );
+    console.log(
+      "Checking if EquityToken in Universe",
+      ...(tokenInUniverse ? good("YES") : wrong("NO")),
+    );
+    const controllerInUniverse = await universe.isInterfaceCollectionInstance(
+      knownInterfaces.equityTokenControllerInterface,
+      await eto.commitmentObserver(),
+    );
+    console.log(
+      "Checking if Controller in Universe",
+      ...(controllerInUniverse ? good("YES") : wrong("NO")),
+    );
+  }
   console.log("------------------------------------------------------");
   const canIssueNEU = await neuAccessPolicy.allowed.call(
     etoCommitmentAddress,
@@ -253,22 +286,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
     etoCommitmentAddress,
   );
   console.log("Checking if ETO in Universe", ...(etoInUniverse ? good("YES") : wrong("NO")));
-  const tokenInUniverse = await universe.isInterfaceCollectionInstance(
-    knownInterfaces.equityTokenInterface,
-    await eto.equityToken(),
-  );
-  console.log(
-    "Checking if EquityToken in Universe",
-    ...(tokenInUniverse ? good("YES") : wrong("NO")),
-  );
-  const controllerInUniverse = await universe.isInterfaceCollectionInstance(
-    knownInterfaces.equityTokenControllerInterface,
-    await eto.commitmentObserver(),
-  );
-  console.log(
-    "Checking if Controller in Universe",
-    ...(controllerInUniverse ? good("YES") : wrong("NO")),
-  );
+
   const termsInUniverse = await universe.isInterfaceCollectionInstance(
     knownInterfaces.termsInterface,
     etoTerms.address,
@@ -328,7 +346,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   console.log(`Example contribution ${contribution}`);
   console.log("------------------------------------------------------");
   console.log("ETO Components");
-  console.log(`Equity Token: ${equityToken.address}`);
+  console.log(`Equity Token: ${equityTokenAddress}`);
   console.log(`Token Controller: ${await eto.commitmentObserver()}`);
   console.log(`ETO Terms: ${etoTerms.address}`);
 }
