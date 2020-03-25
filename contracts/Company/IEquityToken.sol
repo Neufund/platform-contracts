@@ -21,7 +21,7 @@ contract IEquityToken is
     // number of shares represented by tokens. we round to the closest value.
     function sharesTotalSupply() public constant returns (uint256);
 
-    /// nominal value of a share in decimal(18) precision in currency as per token controller ISHA
+    /// nominal value of a share in decimal(18) scale in currency as per token controller ISHA
     function shareNominalValueUlps() public constant returns (uint256);
 
     // returns company legal representative account that never changes

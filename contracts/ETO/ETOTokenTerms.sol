@@ -13,18 +13,13 @@ import "../Standards/IContractId.sol";
 contract ETOTokenTerms is Math, IContractId {
 
     ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-
-    ////////////////////////
     // Immutable state
     ////////////////////////
 
     // equity token metadata
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
+    // TODO: add ISIN
 
     // minimum number of tokens being offered. will set min cap
     uint256 public MIN_NUMBER_OF_TOKENS;
@@ -75,8 +70,8 @@ contract ETOTokenTerms is Math, IContractId {
         require(shareNominalValueUlps > 0);
         require(shareNominalValueEurUlps > 0);
         require(equityTokensPerShare > 0);
-        require(keccak256(abi.encodePacked(equityTokenName)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
+        require(bytes(equityTokenName).length != 0);
+        require(bytes(equityTokenSymbol).length != 0);
         // overflows cannot be possible
         require(maxNumberOfTokens < 2**128, "NF_TOO_MANY_TOKENS");
 
