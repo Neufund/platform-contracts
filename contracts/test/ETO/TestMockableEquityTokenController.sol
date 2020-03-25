@@ -2,12 +2,14 @@ pragma solidity 0.4.26;
 
 import "../../Universe.sol";
 import "../../Agreement.sol";
+import "../../ETO/IETOCommitmentObserver.sol";
 import "../../Company/IEquityTokenController.sol";
 import "../TestMockableTokenController.sol";
 
 
 contract TestMockableEquityTokenController is
     IEquityTokenController,
+    IETOCommitmentObserver,
     TestMockableTokenController,
     Agreement
 {
@@ -60,14 +62,6 @@ contract TestMockableEquityTokenController is
     //
     // Implements IETOCommitmentObserver
     //
-
-    function commitmentObserver()
-        public
-        constant
-        returns (address)
-    {
-        return address(0);
-    }
 
     function onStateTransition(ETOState, ETOState)
         public

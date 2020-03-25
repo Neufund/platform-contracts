@@ -2,6 +2,7 @@ pragma solidity 0.4.26;
 
 import "./ICommitment.sol";
 import "./ETOTerms.sol";
+import "./IETOCommitmentObserver.sol";
 import "../Company/IEquityToken.sol";
 
 
