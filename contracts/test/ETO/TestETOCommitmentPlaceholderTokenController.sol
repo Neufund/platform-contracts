@@ -43,22 +43,24 @@ contract TestETOCommitmentPlaceholderTokenController is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms,
-        IEquityToken equityToken
+        ETOTerms etoTerms
     )
         public
         Agreement(universe.accessPolicy(), universe.forkArbiter())
     {
         ETO_TERMS = etoTerms;
-        EQUITY_TOKEN = equityToken;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
-        COMMITMENT_OBSERVER = IETOCommitmentObserver(EQUITY_TOKEN.tokenController());
     }
 
     ////////////////////////
     // Public Methods
     ////////////////////////
+
+    function setStartDate(ETOTerms /*etoTerms*/, IEquityToken equityToken, uint256 /*startDate*/) public {
+        EQUITY_TOKEN = equityToken;
+        COMMITMENT_OBSERVER = IETOCommitmentObserver(EQUITY_TOKEN.tokenController());
+    }
 
     //
     // Public Methods required by registerTokenOfferingPrivate in Placeholder Token Controller
@@ -78,6 +80,10 @@ contract TestETOCommitmentPlaceholderTokenController is
 
     function companyLegalRep() public constant returns (address) {
         return COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
+    function commitmentObserver() public constant returns (IETOCommitmentObserver) {
+        return COMMITMENT_OBSERVER;
     }
 
     //
@@ -110,7 +116,7 @@ contract TestETOCommitmentPlaceholderTokenController is
     }
 
     //
-    // partial implementation of
+    // partial implementation of state machine
     //
     // to provide basic state information
     //

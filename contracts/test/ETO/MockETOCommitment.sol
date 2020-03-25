@@ -15,15 +15,13 @@ contract MockETOCommitment is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms,
-        IEquityToken equityToken
+        ETOTerms etoTerms
     )
         ETOCommitment(
             universe,
             nominee,
             companyLegalRep,
-            etoTerms,
-            equityToken
+            etoTerms
         )
     public
     {
@@ -73,6 +71,8 @@ contract MockETOCommitment is
         assert(startDate < 0xFFFFFFFF);
         uint256 startAt = startOfInternal(ETOState.Whitelist);
 
+        EQUITY_TOKEN = equityToken;
+        setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
         runStateMachine(uint32(startDate));
 
         emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));

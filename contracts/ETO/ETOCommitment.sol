@@ -22,13 +22,14 @@ import "../Standards/IFeeDisbursal.sol";
 // 2 - version with recycle method added and claimMany, refundMany removed (08.06.2019)
 // 3 - capitalIncrease returned in ISHA currency, ABI and return values backward compatible
 //     calculateContribution returns actually spent amount at index 7
+// 4 - (1) removed actually spent amount (2) equity tokens generated only on claim (3) contributionSummary returns eth and eur breakdown before signing
+//     (4) removed equity token from contructor - taken at setStartDate instead (5) calls commitment observer with Setup -> Setup transition and setStartDate
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine
 ///  setup phase requires several parties to provide documents and information
 ///   (deployment (by anyone) -> eto terms (company) -> RAAA agreement (nominee) -> adding to universe (platform) + issue NEU -> start date (company))
 ///   price curves, whitelists, discounts and other offer terms are extracted to ETOTerms
-/// todo: review all divisions for rounding errors
 contract ETOCommitment is
     AccessControlled,
     Agreement,
@@ -80,7 +81,7 @@ contract ETOCommitment is
     LockedAccount private ETHER_LOCK;
     LockedAccount private EURO_LOCK;
     // equity token issued
-    IEquityToken private EQUITY_TOKEN;
+    IEquityToken internal EQUITY_TOKEN;
     // currency rate oracle
     ITokenExchangeRateOracle private CURRENCY_RATES;
 
@@ -217,17 +218,15 @@ contract ETOCommitment is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms,
-        IEquityToken equityToken
+        ETOTerms etoTerms
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
-        ETOTimedStateMachine()
+        ETOTimedStateMachine(etoTerms.DURATION_TERMS())
         public
     {
         UNIVERSE = universe;
         PLATFORM_TERMS = PlatformTerms(universe.platformTerms());
 
-        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
         require(nominee != address(0) && companyLegalRep != address(0));
 
         ETO_TERMS_CONSTRAINTS = etoTerms.ETO_TERMS_CONSTRAINTS();
@@ -246,7 +245,6 @@ contract ETOCommitment is
         CURRENCY_RATES = ITokenExchangeRateOracle(universe.tokenExchangeRateOracle());
 
         ETO_TERMS = etoTerms;
-        EQUITY_TOKEN = equityToken;
 
         MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
         MAX_AVAILABLE_TOKENS = etoTerms.MAX_AVAILABLE_TOKENS();
@@ -260,10 +258,6 @@ contract ETOCommitment is
         if (MAX_INVESTMENT_AMOUNT_EUR_ULPS == 0) {
             MAX_INVESTMENT_AMOUNT_EUR_ULPS -= 1;
         }
-        setupStateMachine(
-            ETO_TERMS.DURATION_TERMS(),
-            IETOCommitmentObserver(EQUITY_TOKEN.tokenController())
-        );
     }
 
     ////////////////////////
@@ -283,7 +277,7 @@ contract ETOCommitment is
         onlyState(ETOState.Setup)
     {
         require(etoTerms == ETO_TERMS);
-        require(equityToken == EQUITY_TOKEN);
+        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
         assert(startDate < 0xFFFFFFFF);
         // must be more than NNN days (platform terms!)
         require(
@@ -295,8 +289,11 @@ contract ETOCommitment is
         require(
             startAt == 0 || (startAt - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION()),
             "NF_ETO_START_TOO_SOON");
+        // setup token and token controller
+        EQUITY_TOKEN = equityToken;
+        setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
+        // run state machine
         runStateMachine(uint32(startDate));
-        // todo: lock ETO_TERMS whitelist to be more trustless
 
         emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
         emit LogETOStartDateSet(msg.sender, startAt, startDate);
@@ -352,7 +349,7 @@ contract ETOCommitment is
         (,,,,
             uint256 equityTokenAmount,
             uint256 fixedSlotEquityTokenAmount,
-            uint256 investorNmk) = issueTokens(investor, wallet, equivEurUlps);
+            uint256 investorNmk) = reserveTokens(investor, wallet, equivEurUlps);
 
         // update investor ticket
         bool firstTimeInvestment = updateInvestorTicket(
@@ -587,7 +584,7 @@ contract ETOCommitment is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 2);
+        return (0x70ef68fc8c585f9edc7af1bfac26c4b1b9e98ba05cf5ddd99e4b3dc46ea70073, 4);
     }
 
     ////////////////////////
@@ -760,8 +757,8 @@ contract ETOCommitment is
         if (_additionalContributionEurUlps > 0) {
             assert(EURO_TOKEN.transfer(COMPANY_LEGAL_REPRESENTATIVE, _additionalContributionEurUlps, ""));
         }
-        // issue missing tokens
-        EQUITY_TOKEN.issueTokens(_tokenParticipationFeeAmount);
+        // issue reserved equity tokens and fee
+        EQUITY_TOKEN.issueTokens(_totalTokenAmount + _tokenParticipationFeeAmount);
         emit LogPlatformNeuReward(TOKEN_OFFERING_OPERATOR, rewardNmk, platformNmk);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, ETHER_TOKEN, _additionalContributionEth);
         emit LogAdditionalContribution(COMPANY_LEGAL_REPRESENTATIVE, EURO_TOKEN, _additionalContributionEurUlps);
@@ -773,15 +770,12 @@ contract ETOCommitment is
     {
         // burn all neumark generated in this ETO (will also burn NEU sent via erroneous/malicious transfers)
         uint256 balanceNmk = NEUMARK.balanceOf(this);
-        uint256 balanceToken = EQUITY_TOKEN.balanceOf(this);
+        // uint256 balanceToken = EQUITY_TOKEN.balanceOf(this);
         if (balanceNmk > 0) {
             NEUMARK.burn(balanceNmk);
         }
         // destroy all tokens generated in ETO
-        if (balanceToken > 0) {
-            EQUITY_TOKEN.destroyTokens(balanceToken);
-        }
-        emit LogRefundStarted(EQUITY_TOKEN, balanceToken, balanceNmk);
+        emit LogRefundStarted(EQUITY_TOKEN, _totalTokenAmount, balanceNmk);
     }
 
     /// called on transition to ETOState.Payout
@@ -816,7 +810,7 @@ contract ETOCommitment is
         emit LogPlatformPortfolioPayout(EQUITY_TOKEN, platformPortfolio, _tokenParticipationFeeAmount);
     }
 
-    function issueTokens(
+    function reserveTokens(
         address investor,
         address wallet,
         uint256 equivEurUlps
@@ -873,8 +867,6 @@ contract ETOCommitment is
                 investorNmk -= PLATFORM_NEUMARK_SHARE - 1;
             }
         }
-        // issue equity token
-        EQUITY_TOKEN.issueTokens(equityTokenAmount);
     }
 
     function convertToEurEquiv(uint256 amountEth)
