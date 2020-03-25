@@ -1,7 +1,7 @@
 pragma solidity 0.4.26;
 
 import "../../SnapshotToken/StandardToken.sol";
-import "../../Standards/IMigrationSource.sol";
+import "../../ICBM/IMigrationSource.sol";
 import "../../SnapshotToken/Helpers/TrustlessTokenController.sol";
 import "../../ICBM/ICBMEuroTokenMigrationTarget.sol";
 

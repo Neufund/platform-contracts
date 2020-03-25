@@ -4,7 +4,7 @@ import "../AccessControl/AccessControlled.sol";
 import "./ICBMRoles.sol";
 import "../AccessRoles.sol";
 import "../IsContract.sol";
-import "../MigrationSource.sol";
+import "./MigrationSource.sol";
 import "./ICBMLockedAccountMigration.sol";
 import "../Neumark.sol";
 import "../Standards/IERC677Token.sol";

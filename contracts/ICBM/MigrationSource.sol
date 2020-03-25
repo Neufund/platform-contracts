@@ -1,7 +1,7 @@
 pragma solidity 0.4.26;
 
-import "./Standards/IMigrationSource.sol";
-import "./AccessControl/AccessControlled.sol";
+import "./IMigrationSource.sol";
+import "../AccessControl/AccessControlled.sol";
 
 
 /// @notice mixin that enables migration pattern for a contract

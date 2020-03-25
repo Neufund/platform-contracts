@@ -5,7 +5,7 @@ import "../Agreement.sol";
 import "./ICBMRoles.sol";
 import "../PaymentTokens/EtherToken.sol";
 import "../PaymentTokens/EuroToken.sol";
-import "../MigrationSource.sol";
+import "./MigrationSource.sol";
 import "./ICBMLockedAccount.sol";
 import "./ICBMLockedAccountMigration.sol";
 import "../Standards/IERC677Callback.sol";

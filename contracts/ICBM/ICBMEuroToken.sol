@@ -5,7 +5,7 @@ import "..//Reclaimable.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
-import "../MigrationSource.sol";
+import "./MigrationSource.sol";
 import "./ICBMEuroTokenMigrationTarget.sol";
 import "./ICBMRoles.sol";
 
