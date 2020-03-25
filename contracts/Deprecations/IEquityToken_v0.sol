@@ -21,7 +21,7 @@ contract IEquityToken_v0 is
     // number of shares represented by tokens. we round to the closest value.
     function sharesTotalSupply() public constant returns (uint256);
 
-    /// nominal value of a share in EUR decimal(18) precision
+    /// nominal value of a share in EUR decimal(18) scale
     function shareNominalValueEurUlps() public constant returns (uint256);
 
     // returns company legal representative account that never changes
