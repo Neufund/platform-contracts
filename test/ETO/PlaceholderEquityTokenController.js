@@ -1,8 +1,14 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { contractId, ZERO_ADDRESS, toBytes32, Q18, decimalBase } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS, Q18, decimalBase } from "../helpers/constants";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
-import { GovState, GovAction } from "../helpers/govState";
+import {
+  GovState,
+  GovAction,
+  GovExecutionState,
+  isTerminalExecutionState,
+  getCommitmentResolutionId,
+} from "../helpers/govState";
 import { CommitmentState } from "../helpers/commitmentState";
 import { divRound } from "../helpers/unitConverter";
 import {
@@ -24,9 +30,12 @@ import {
 } from "../helpers/tokenTestCases";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import roles from "../helpers/roles";
+import { promisify } from "../helpers/evmCommands";
+import { ffControllerV0, greypControllerV3 } from "./bin/legacyControllers";
+
+const coder = require("web3-eth-abi");
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
-
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
@@ -39,6 +48,8 @@ const TestETOCommitmentPlaceholderTokenController = artifacts.require(
 const MockPlaceholderEquityTokenController = artifacts.require(
   "MockPlaceholderEquityTokenController",
 );
+const IControllerGovernancev03 = artifacts.require("IControllerGovernance_v0_3");
+const zero = new web3.BigNumber(0);
 
 contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
   let equityToken;
@@ -57,9 +68,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await deployPlatformTerms(universe, admin);
-    [shareholderRights] = await deployShareholderRights(ShareholderRights);
+    // revoke voting rights so company can execute all resolutions without voting
+    [shareholderRights] = await deployShareholderRights(ShareholderRights, {
+      GENERAL_VOTING_RULE: zero,
+    });
     [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms);
+    await deployETO();
     await deployController();
   });
 
@@ -70,10 +85,10 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     for (const v of shareholderInfo) {
       expect(v).to.be.bignumber.eq(0);
     }
-    const capTable = await equityTokenController.capTable();
-    expect(capTable.length).to.eq(2);
-    expect(capTable[0].length).to.eq(0);
-    expect(capTable[1].length).to.eq(0);
+    const tokens = await equityTokenController.tokens();
+    expect(tokens.length).to.eq(2);
+    expect(tokens[0].length).to.eq(0);
+    expect(tokens[1].length).to.eq(0);
 
     const tokenOfferings = await equityTokenController.tokenOfferings();
     expect(tokenOfferings.length).to.eq(2);
@@ -83,22 +98,14 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect((await equityTokenController.contractId())[0]).to.eq(
       contractId("PlaceholderEquityTokenController"),
     );
-    expect(await equityTokenController.commitmentObserver()).to.eq(ZERO_ADDRESS);
-    expect(await equityTokenController.newTokenController()).to.eq(ZERO_ADDRESS);
-    expect(await equityTokenController.oldTokenController()).to.eq(ZERO_ADDRESS);
+    expect(await equityTokenController.migratedTo()).to.eq(ZERO_ADDRESS);
+    expect(await equityTokenController.migratedFrom()).to.eq(ZERO_ADDRESS);
   });
 
   describe("offering actions", () => {
-    beforeEach(async () => {
-      await deployETO();
-    });
-
     it("should register ETO start", async () => {
-      const tx = await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
-      expect(await equityTokenController.commitmentObserver()).to.eq(testCommitment.address);
+      const tx = await startOffering();
+      expect(await testCommitment.commitmentObserver()).to.eq(equityTokenController.address);
       const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
@@ -106,57 +113,80 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
-      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.RegisterOffer);
-      expectLogOfferingRegistered(tx, toBytes32("0"), testCommitment.address, equityToken.address);
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       // no cap table
-      expect(await equityTokenController.capTable()).to.deep.eq([[], []]);
+      expect(await equityTokenController.tokens()).to.deep.eq([[], []]);
       // no shareholder info yet
       expect(await equityTokenController.shareholderInformation()).to.deep.eq([
-        new web3.BigNumber(0),
-        new web3.BigNumber(0),
+        zero,
+        zero,
         ZERO_ADDRESS,
+        zero,
       ]);
-      // but offering is there
-      expect(await equityTokenController.tokenOfferings()).to.deep.eq([
-        [testCommitment.address],
-        [equityToken.address],
-      ]);
+      // no offerings registered
+      expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
+      // there's however a singular resolution ongoing
+      const resolutions = await equityTokenController.resolutionsList();
+      expect(resolutions.length).to.eq(1);
+      // verify resolutionId as keccak of address packed
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      expect(resolutions[0]).to.eq(resolutionId);
+      const resolution = await equityTokenController.resolution(resolutionId);
+      expectResolution(
+        resolution,
+        resolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Executing,
+      );
     });
 
-    it("rejects register ETO start from ETO not in universe", async () => {
+    it("rejects ETO start from ETO not in universe", async () => {
       await universe.setCollectionInterface(
         knownInterfaces.commitmentInterface,
         testCommitment.address,
         false,
         { from: admin },
       );
-      await expect(
-        testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist),
-      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
+      await expect(startOffering()).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
     });
 
-    it("rejects duplicate register ETO start", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
+    it("no state transition on second ETO start date", async () => {
+      let tx = await startOffering();
+      let etcLogs = decodeLogs(
+        tx,
+        equityTokenController.address,
+        PlaceholderEquityTokenController.abi,
       );
-      await expect(
-        testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist),
-      ).to.be.rejectedWith("NF_ETC_BAD_STATE");
+      tx.logs.push(...etcLogs);
+      expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
+      tx = await startOffering();
+      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      tx.logs.push(...etcLogs);
+      expect(hasEvent(tx, "LogGovStateTransition")).to.be.false;
+    });
+
+    it("rejects with unknown resolution on unregistered offer", async () => {
+      const oldTestCommitment = testCommitment;
+      // deploy another ETO and add to universe
+      await deployETO();
+      // add old token controller as observer without registering
+      await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+      // try to start eto from unknown address, as resolutionId is calculated from address, it will not be known!
+      await expect(startOffering()).to.be.rejectedWith("NF_GOV_NOT_EXECUTING");
+      // this will still pass
+      await startOffering(oldTestCommitment);
     });
 
     it(
       "rejects register ETO with mismatching terms, addresses, tokens and equity token controller",
     );
 
+    it("rejects on secondary ETO with new equity token");
+
     it("should allow generating and destroying tokens only by registered ETO in Offering state", async () => {
       const amount = new web3.BigNumber(281871);
       await expect(testCommitment._generateTokens(amount)).to.be.revert;
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       await testCommitment._generateTokens(amount);
       expect(await equityToken.balanceOf(testCommitment.address)).to.be.bignumber.eq(amount);
@@ -167,19 +197,26 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // try to destroy
       await testCommitment._generateTokens(amount);
       await expect(equityToken.destroyTokens(amount, { from: company })).to.be.revert;
-      // approve eto - should not be able to issue tokens
+      // approve eto
       await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Claim);
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Funded);
+      // should have single executed resolution
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      const resolution = await equityTokenController.resolution(resolutionId);
+      expectResolution(
+        resolution,
+        resolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Completed,
+      );
+      // should not be able to issue tokens
       await expect(testCommitment._generateTokens(amount)).to.be.revert;
       await expect(testCommitment._destroyTokens(amount)).to.be.revert;
     });
 
     it("should approve ETO and execute transfer rights", async () => {
       // approval sets equity token in cap table, sets Agreement to ISHA, sets general company information, moves state to Funded
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       const sharesAmount = new web3.BigNumber("2761");
       const amount = sharesAmount.mul(await equityToken.tokensPerShare());
       await testCommitment._generateTokens(amount);
@@ -209,14 +246,19 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Offering, GovState.Funded);
       expectLogOfferingSucceeded(tx, testCommitment.address, equityToken.address, sharesAmount);
-      const tokenAction = etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS
-        ? GovAction.ContinueToken
-        : GovAction.StopToken;
-      expectLogResolutionExecuted(tx, 1, toBytes32("0x0"), tokenAction);
-      expectLogResolutionExecuted(tx, 0, toBytes32("0x0"), GovAction.AmendISHA);
+      // all events attached to original resolutionId
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      expectLogOfferingRegistered(tx, resolutionId, testCommitment.address, equityToken.address);
+      expectLogResolutionExecuted(
+        tx,
+        0,
+        resolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Completed,
+      );
       expectLogTransfersStateChanged(
         tx,
-        toBytes32("0x0"),
+        resolutionId,
         equityToken.address,
         etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS,
       );
@@ -233,16 +275,17 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       );
       expectLogISHAAmended(
         tx,
-        toBytes32("0x0"),
+        resolutionId,
         await testCommitment.signedInvestmentAgreementUrl(),
         increasedShareCapitalUlps,
         expectedValuation,
         shareholderRights.address,
       );
+      expectLogAuthorizedCapitalEstablished(tx, resolutionId, etoTermsDict.AUTHORIZED_CAPITAL);
       // verify offerings and cap table
-      expect(await equityTokenController.capTable()).to.deep.equal([
+      expect(await equityTokenController.tokens()).to.deep.equal([
         [equityToken.address],
-        [new web3.BigNumber(sharesAmount)],
+        [new web3.BigNumber(sharesAmount).mul(Q18)],
       ]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([
         [testCommitment.address],
@@ -254,13 +297,21 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(agreement[0]).to.eq(equityTokenController.address);
       expect(agreement[2]).to.eq("RAAAAA");
       expect(agreement[3]).to.be.bignumber.eq(0);
+      // resolution is completed
+      const resolution = await equityTokenController.resolution(resolutionId);
+      expectResolution(
+        resolution,
+        resolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Completed,
+      );
     });
 
     it("should approve ETO with 0 new shares", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      // no authorized capital
+      await deployETO({ AUTHORIZED_CAPITAL: zero });
+      await deployController();
+      await startOffering();
       const tx = await testCommitment._triggerStateTransition(
         CommitmentState.Signing,
         CommitmentState.Claim,
@@ -278,24 +329,24 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         etoTermsDict.EXISTING_SHARE_CAPITAL.mul(await tokenTerms.SHARE_PRICE_EUR_ULPS()),
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS,
       );
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
       expectLogISHAAmended(
         tx,
-        toBytes32("0x0"),
+        resolutionId,
         await testCommitment.signedInvestmentAgreementUrl(),
         etoTermsDict.EXISTING_SHARE_CAPITAL,
         expectedValuation,
         shareholderRights.address,
       );
+      // no authorized capital established after ETO
+      expect(hasEvent(tx, "LogAuthorizedCapitalEstablished")).to.be.false;
     });
 
     it("reject approve when not in funding state", async () => {
       await expect(
         testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
-      ).to.be.rejectedWith("NF_ETC_UNREG_COMMITMENT");
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      ).to.be.rejectedWith("NF_ETC_BAD_STATE");
+      await startOffering();
       await testCommitment._triggerStateTransition(
         CommitmentState.Whitelist,
         CommitmentState.Claim,
@@ -305,41 +356,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       ).to.be.rejectedWith("NF_ETC_BAD_STATE");
     });
 
-    it("rejects approve ETO from ETO not registered before", async () => {
-      // move original commitment to be ready for approval
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
-      // create identical new one
-      const testCommitmentRound2 = await TestETOCommitmentPlaceholderTokenController.new(
-        universe.address,
-        nominee,
-        company,
-        etoTerms.address,
-        equityToken.address,
-      );
-      await universe.setCollectionsInterfaces(
-        [knownInterfaces.commitmentInterface],
-        [testCommitmentRound2.address],
-        [true],
-        { from: admin },
-      );
-      await testCommitmentRound2.amendAgreement("AGREEMENT#HASH", { from: nominee });
-      // mock approval state
-      await expect(
-        testCommitmentRound2._triggerStateTransition(
-          CommitmentState.Whitelist,
-          CommitmentState.Claim,
-        ),
-      ).to.be.rejectedWith("NF_ETC_UNREG_COMMITMENT");
-    });
-
     it("rejects approve ETO from registered ETO that was removed from universe", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       await universe.setCollectionsInterfaces(
         [knownInterfaces.commitmentInterface],
         [testCommitment.address],
@@ -352,10 +370,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
 
     it("should fail ETO", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -377,15 +392,16 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // no ISHA amended
       expect(hasEvent(tx, "LogISHAAmended")).to.be.false;
       // verify offerings and cap table
-      expect(await equityTokenController.capTable()).to.deep.equal([[], []]);
+      expect(await equityTokenController.tokens()).to.deep.equal([[], []]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([[], []]);
+      // expect failed resolution
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      const resolution = await equityTokenController.resolution(resolutionId);
+      expectResolution(resolution, resolutionId, GovAction.RegisterOffer, GovExecutionState.Failed);
     });
 
     it("should approve ETO after first one failed", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -393,26 +409,50 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       await testCommitment._destroyTokens(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
       // fail eto
       await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
-      // deploy new terms but use same controller
-      // default terms have non transferable token
-      [etoTerms, etoTermsDict] = await deployETOTerms(
-        universe,
-        ETOTerms,
-        durationTerms,
-        tokenTerms,
-        shareholderRights,
-        termsConstraints,
-        {
-          ENABLE_TRANSFERS_ON_SUCCESS: true,
-          MAX_TICKET_EUR_ULPS: Q18.mul(100000),
-        },
-      );
+      // expect failed resolution
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      const resolution = await equityTokenController.resolution(resolutionId);
+      expectResolution(resolution, resolutionId, GovAction.RegisterOffer, GovExecutionState.Failed);
       // now testCommitment will be replaced with new commitment
       const oldCommitment = testCommitment;
-      await deployETO();
-      // make it clear
+      // deploy new terms but use same controller
+      // default terms have non transferable token
+      await deployETO({
+        ENABLE_TRANSFERS_ON_SUCCESS: true,
+        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+      });
       const newCommitment = testCommitment;
-      await newCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist);
+      const newResolutionId = getCommitmentResolutionId(newCommitment.address);
+      // register new offering from legal rep address
+      await expect(
+        equityTokenController.startNewOffering(newResolutionId, newCommitment.address),
+      ).to.be.rejectedWith("NF_GOV_EXEC_ACCESS_DENIED");
+      const newOfferTx = await equityTokenController.startNewOffering(
+        newResolutionId,
+        newCommitment.address,
+        { from: company },
+      );
+      expectLogResolutionStarted(
+        newOfferTx,
+        0,
+        newResolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Executing,
+      );
+      // we should have 2 resolutions now
+      const resolutions = await equityTokenController.resolutionsList();
+      expect(resolutions.length).to.eq(2);
+      let newResolution = await equityTokenController.resolution(newResolutionId);
+      expectResolution(
+        newResolution,
+        newResolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Executing,
+      );
+      // set observer
+      await newCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+      // perform ETO
+      await startOffering();
       // generate tokens via new commitment
       await newCommitment._generateTokens(amount);
       // old commitment cannot generate tokens
@@ -422,14 +462,21 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // also cannot distribute (we didn't destroy all tokens above)
       await expect(oldCommitment._distributeTokens(investors[0], 1)).to.be.revert;
       await newCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Claim);
+      newResolution = await equityTokenController.resolution(newResolutionId);
+      expectResolution(
+        newResolution,
+        newResolutionId,
+        GovAction.RegisterOffer,
+        GovExecutionState.Completed,
+      );
       // the failed ETO didn't destroy all the tokens at the end which would be a critical bug in
       // business logic. we however use this case for test transferability.
       // here we take into account those non destroyed tokens
       // verify offerings and cap table
       const expectedShares = sharesAmount * 2 - 1; // we destroyed 1 share
-      expect(await equityTokenController.capTable()).to.deep.equal([
+      expect(await equityTokenController.tokens()).to.deep.equal([
         [equityToken.address],
-        [new web3.BigNumber(expectedShares)],
+        [new web3.BigNumber(expectedShares).mul(Q18)],
       ]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([
         [newCommitment.address],
@@ -449,16 +496,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // transfers disabled before offering - typical transfer
       expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
         .be.false;
-      // eto contract trying to
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      // eto contract trying to generate tokens
+      await startOffering();
       await testCommitment._generateTokens(amount);
       // transfers disabled for investors
       expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
         .be.false;
-      // transfers enabled for eto commitment
+      // transfers disabled for eto commitment before claim
       expect(
         await equityTokenController.onTransfer(
           testCommitment.address,
@@ -466,7 +510,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
           investors[1],
           0,
         ),
-      ).to.be.true;
+      ).to.be.false;
       // brokered transfers for eto commitment disallowed
       expect(
         await equityTokenController.onTransfer(
@@ -476,11 +520,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
           0,
         ),
       ).to.be.false;
-      // make actual token distribution
-      await testCommitment._distributeTokens(investors[0], 10);
-      await testCommitment._distributeTokens(investors[1], 20);
+      // distribution before claim will revert
+      await expect(testCommitment._distributeTokens(investors[0], 10)).to.revert;
       // approve eto
-      await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Claim);
+      await testCommitment._triggerStateTransition(
+        CommitmentState.Whitelist,
+        CommitmentState.Claim,
+      );
       expect(
         await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0),
       ).to.eq(transfersEnabled);
@@ -493,6 +539,9 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
           0,
         ),
       ).to.be.true;
+      // make actual token distribution
+      await testCommitment._distributeTokens(investors[0], 10);
+      await testCommitment._distributeTokens(investors[1], 20);
       // brokered transfers for eto commitment disallowed
       expect(
         await equityTokenController.onTransfer(
@@ -511,26 +560,24 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         await equityToken.transferFrom(investors[1], investors[3], 5, { from: investors[2] });
       }
     }
+
     it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
-      await deployController({ ENABLE_TRANSFERS_ON_SUCCESS: false });
-      await deployETO();
+      await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
+      await deployController();
       await testTransfersInOffering(false);
     });
 
     it("should allow transfers after eto if requested in terms", async () => {
-      await deployController({
+      await deployETO({
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
-      await deployETO();
+      await deployController();
       await testTransfersInOffering(true);
     });
 
     it("should prevent transfers from registered ETO when it fails", async () => {
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -541,43 +588,62 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
   });
 
-  describe("post investment actions", () => {
-    beforeEach(async () => {
-      await deployETO();
-      // register new offering
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
-      // make investments
-      const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
-      await testCommitment._generateTokens(amount);
-      // finish offering
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Whitelist,
-        CommitmentState.Claim,
-      );
-      // add upgrade admin role to admin account, apply to all contracts
-      await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
-    });
+  async function preparePostInvestmentState() {
+    // register new offering
+    await startOffering();
+    await generateTokens();
+    // add upgrade admin role to admin account, apply to all contracts
+    await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
+  }
 
-    it("should migrate token controller", async () => {
+  async function generateTokens() {
+    // make investments
+    const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
+    await testCommitment._generateTokens(amount);
+    // finish offering
+    const tx = await testCommitment._triggerStateTransition(
+      CommitmentState.Whitelist,
+      CommitmentState.Claim,
+    );
+    return tx;
+  }
+
+  describe("migrations", () => {
+    let newController;
+    beforeEach(async () => {
+      await preparePostInvestmentState();
       // deploy new mocked token controller for same company
-      const newController = await MockPlaceholderEquityTokenController.new(
+      newController = await MockPlaceholderEquityTokenController.new(
         universe.address,
         company,
+        ZERO_ADDRESS,
       );
+    });
+
+    async function startSecondaryOffering() {
+      // register secondary offering before migration
+      const oldCommitment = testCommitment;
+      await deployETO();
+      const newCommitment = testCommitment;
+      testCommitment = oldCommitment;
+      const newResolutionId = getCommitmentResolutionId(newCommitment.address);
+      await equityTokenController.startNewOffering(newResolutionId, newCommitment.address, {
+        from: company,
+      });
+
+      return newCommitment;
+    }
+
+    it("should migrate token controller", async () => {
+      const newCommitment = await startSecondaryOffering();
       // migrate data from parent
-      await newController.migrateTokenController(equityTokenController.address, false, {
-        from: admin,
+      await migrateController(equityTokenController, newController, {
+        authorizedCapital: null,
+        transfersEnabled: true,
       });
-      const tx = await equityTokenController.changeTokenController(newController.address, {
-        from: admin,
-      });
+
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
-      expect(await equityTokenController.newTokenController()).to.eq(newController.address);
-      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
-      expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
+      expect(await equityTokenController.migratedTo()).to.eq(newController.address);
       // equity token still has old controller - transfers are disabled
       await testCommitment._distributeTokens(investors[0], 10);
       await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
@@ -586,98 +652,90 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       // new mocked controller allows to enable transfer at will
       await newController._enableTransfers(true, { from: company });
       equityToken.transfer(investors[1], 1, { from: investors[0] });
-      // compare new and old controller - all should be imported
-      expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
-        await newController.companyLegalRepresentative(),
+      // make sure state is identical
+      await expectControllerEqualState(equityTokenController, newController);
+      expect(await newController.state()).to.be.bignumber.eq(GovState.Funded);
+      // swap token controller
+      equityTokenController = newController;
+      testCommitment = newCommitment;
+      // set start date again to change observer via equityToken.controller
+      await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+      // finish offering on new controller
+      await startOffering();
+      const tx = await generateTokens();
+      const etcLogs = decodeLogs(
+        tx,
+        equityTokenController.address,
+        PlaceholderEquityTokenController.abi,
       );
-      expect(await equityTokenController.capTable()).to.deep.equal(await newController.capTable());
-      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
-        await newController.tokenOfferings(),
-      );
-      expect(await equityTokenController.shareholderInformation()).to.deep.equal(
-        await newController.shareholderInformation(),
-      );
+      tx.logs.push(...etcLogs);
+      expectLogGovStateTransition(tx, GovState.Offering, GovState.Funded);
     });
 
-    it("should migrate token controller with transferability change", async () => {
-      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
-      // migrate data from parent and enable transfers
-      const migratedTx = await newController.migrateTokenController(
-        equityTokenController.address,
-        true,
-        { from: admin },
+    it("should cancel migration", async () => {
+      // start migration
+      await expect(equityTokenController.cancelMigrateTo({ from: admin })).to.be.rejectedWith(
+        "NF_INV_STATE",
       );
-      expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
-      expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
+      await equityTokenController.startMigrateTo(newController.address, { from: admin });
+      expect(await equityTokenController.preMigrationState()).to.be.bignumber.eq(GovState.Funded);
+      await expect(equityTokenController.cancelMigrateTo({ from: company })).to.revert;
+      await equityTokenController.cancelMigrateTo({ from: admin });
+      // no access to pre migration state when not migrated nor migrating
+      await expect(equityTokenController.preMigrationState()).to.revert;
+      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Funded);
+    });
 
-      // now migrate existing token controller to a new one
-      const tx = await equityTokenController.changeTokenController(newController.address, {
-        from: admin,
+    it("should migrate token controller with authorized capital change", async () => {
+      // migrate data from parent
+      const authorizedCapital = Q18.mul(5000);
+      await migrateController(equityTokenController, newController, {
+        authorizedCapital,
+        transfersEnabled: true,
       });
-      expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Migrated);
-      expect(await equityTokenController.newTokenController()).to.eq(newController.address);
-      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
-      expectLogMigratedTokenController(tx, toBytes32("0"), newController.address);
-
-      // equity token still has old controller - transfers are disabled
-      await testCommitment._distributeTokens(investors[0], 10);
-      await expect(equityToken.transfer(investors[1], 1, { from: investors[0] })).to.be.revert;
-      // now anyone can replace token controller in equity token
-      await equityToken.changeTokenController(newController.address);
-      // new mocked controller had resolution to enable transfers
-      equityToken.transfer(investors[1], 1, { from: investors[0] });
-
-      // compare new and old controller - all should be imported
-      expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
-        await newController.companyLegalRepresentative(),
-      );
-      expect(await equityTokenController.capTable()).to.deep.equal(await newController.capTable());
-      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
-        await newController.tokenOfferings(),
-      );
-      expect(await equityTokenController.shareholderInformation()).to.deep.equal(
-        await newController.shareholderInformation(),
-      );
-      const agreementData = await equityTokenController.currentAgreement();
-      expect(agreementData[2]).to.eq((await newController.currentAgreement())[2]);
-      const oldInNewAddress = await newController.oldTokenController();
-      expect(oldInNewAddress).to.eq(equityTokenController.address);
+      await expectControllerEqualState(equityTokenController, newController, { authorizedCapital });
     });
 
     it("rejects migrating token controller not by upgrade admin", async () => {
       // deploy new mocked token controller
-      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
       await expect(
-        newController.migrateTokenController(equityTokenController.address, true, {
+        newController.finishMigrateFrom(equityTokenController.address, GovState.Funded, {
           from: company,
         }),
       ).to.revert;
-      await newController.migrateTokenController(equityTokenController.address, true, {
+      await newController.finishMigrateFrom(equityTokenController.address, GovState.Funded, {
         from: admin,
       });
       await expect(
-        equityTokenController.changeTokenController(newController.address, {
+        equityTokenController.startMigrateTo(newController.address, {
           from: company,
         }),
       ).to.revert;
-      await equityTokenController.changeTokenController(newController.address, {
+      await equityTokenController.startMigrateTo(newController.address, {
+        from: admin,
+      });
+      await expect(
+        equityTokenController.finishMigrateTo(newController.address, {
+          from: company,
+        }),
+      ).to.revert;
+      await equityTokenController.finishMigrateTo(newController.address, {
         from: admin,
       });
     });
 
     it("rejects migrating token controller to new controller that migrated from different old controller", async () => {
-      const newController = await MockPlaceholderEquityTokenController.new(
-        universe.address,
-        company,
-      );
-      await newController.migrateTokenController(equityTokenController.address, true, {
+      await newController.finishMigrateFrom(equityTokenController.address, GovState.Funded, {
         from: admin,
       });
       // mockup old controller changing change chain
       await newController._overrideOldController(investors[0]);
       // now there's mismatch between old and new controller chain, so revert
+      await equityTokenController.startMigrateTo(newController.address, {
+        from: admin,
+      });
       await expect(
-        equityTokenController.changeTokenController(newController.address, {
+        equityTokenController.finishMigrateTo(newController.address, {
           from: admin,
         }),
       ).to.be.rejectedWith("NF_NOT_MIGRATED_FROM_US");
@@ -685,49 +743,35 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     it("should migrate twice", async () => {
       // first migration
-      const newController = await PlaceholderEquityTokenController.new(universe.address, company);
-      await newController.migrateTokenController(equityTokenController.address, true, {
-        from: admin,
+      await startSecondaryOffering();
+      await migrateController(equityTokenController, newController, {
+        authorizedCapital: null,
+        transfersEnabled: true,
       });
-      await equityTokenController.changeTokenController(newController.address, {
-        from: admin,
-      });
-      // second migration
-      const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
-      const migratedTx = await newController2.migrateTokenController(newController.address, true, {
-        from: admin,
-      });
-      expectLogGovStateTransition(migratedTx, GovState.Setup, GovState.Funded);
-      expectLogTransfersStateChanged(migratedTx, toBytes32("0x0"), equityToken.address, true);
-      const tx = await newController.changeTokenController(newController2.address, {
-        from: admin,
-      });
-      expect(await newController.state()).to.be.bignumber.eq(GovState.Migrated);
-      expect(await newController.newTokenController()).to.eq(newController2.address);
-      expectLogResolutionExecuted(tx, 0, toBytes32("0"), GovAction.ChangeTokenController);
-      expectLogMigratedTokenController(tx, toBytes32("0"), newController2.address);
 
-      // as we didn't change anything for shareholders, initial controller must match third controller
-      expect(await equityTokenController.companyLegalRepresentative()).to.deep.equal(
-        await newController2.companyLegalRepresentative(),
+      // second migration
+      const newController2 = await PlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+        ZERO_ADDRESS,
       );
-      expect(await equityTokenController.capTable()).to.deep.equal(await newController2.capTable());
-      expect(await equityTokenController.tokenOfferings()).to.deep.equal(
-        await newController2.tokenOfferings(),
-      );
-      expect(await equityTokenController.shareholderInformation()).to.deep.equal(
-        await newController2.shareholderInformation(),
-      );
-      const agreementData = await equityTokenController.currentAgreement();
-      expect(agreementData[2]).to.eq((await newController2.currentAgreement())[2]);
+      await migrateController(newController, newController2, {
+        authorizedCapital: null,
+        transfersEnabled: true,
+      });
+
+      // first and third identical state
+      await expectControllerEqualState(equityTokenController, newController2, {
+        checkLinking: false,
+      });
 
       // verify change chain
-      const oldInNewAddress = await newController2.oldTokenController();
+      const oldInNewAddress = await newController2.migratedFrom();
       expect(oldInNewAddress).to.eq(newController.address);
-      expect(await newController.newTokenController()).to.eq(newController2.address);
-      expect(await newController.oldTokenController()).to.eq(equityTokenController.address);
-      expect(await equityTokenController.newTokenController()).to.eq(newController.address);
-      expect(await equityTokenController.oldTokenController()).to.eq(ZERO_ADDRESS);
+      expect(await newController.migratedTo()).to.eq(newController2.address);
+      expect(await newController.migratedFrom()).to.eq(equityTokenController.address);
+      expect(await equityTokenController.migratedTo()).to.eq(newController.address);
+      expect(await equityTokenController.migratedFrom()).to.eq(ZERO_ADDRESS);
 
       // to change controller in equity token we need to follow the chain
       await expect(
@@ -739,62 +783,94 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       expect(await equityToken.tokenController()).to.be.eq(newController2.address);
     });
 
-    it("rejects change token controller in wrong states", async () => {
-      const newController = await MockPlaceholderEquityTokenController.new(
-        universe.address,
-        company,
-      );
+    it("rejects migrate token controller in wrong states", async () => {
       // can be accepted only in Setup state
       await newController._overrideState(GovState.Offering);
       expect(await newController.state()).to.be.bignumber.eq(GovState.Offering);
       await expect(
-        newController.migrateTokenController(equityTokenController.address, true, {
+        newController.finishMigrateFrom(equityTokenController.address, GovState.Funded, {
           from: admin,
         }),
       ).to.be.rejectedWith("NF_INV_STATE");
       // migrate
       await newController._overrideState(GovState.Setup);
-      await newController.migrateTokenController(equityTokenController.address, true, {
+      await newController.finishMigrateFrom(equityTokenController.address, GovState.Funded, {
         from: admin,
       });
-      await equityTokenController.changeTokenController(newController.address, {
+      await equityTokenController.startMigrateTo(newController.address, {
         from: admin,
       });
-      const newController2 = await PlaceholderEquityTokenController.new(universe.address, company);
-      // we prevent with migrating data from already migrated controller
-      await expect(
-        newController2.migrateTokenController(equityTokenController.address, true, {
-          from: admin,
-        }),
-      ).to.be.rejectedWith("NF_OLD_CONTROLLED_ALREADY_MIGRATED");
-      await newController2.migrateTokenController(newController.address, true, { from: admin });
+      await equityTokenController.finishMigrateTo(newController.address, {
+        from: admin,
+      });
+      const newController2 = await PlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+        ZERO_ADDRESS,
+      );
+      await newController2.finishMigrateFrom(newController.address, GovState.Funded, {
+        from: admin,
+      });
       // cannot migrate when company is closing
       await newController._overrideState(GovState.Closing);
       await expect(
-        newController.changeTokenController(newController2.address, {
+        newController.startMigrateTo(newController2.address, {
           from: admin,
         }),
       ).to.be.rejectedWith("NF_INV_STATE");
       // can migrate when company is closed
       await newController._overrideState(GovState.Closed);
-      await newController.changeTokenController(newController2.address, {
+      await newController.startMigrateTo(newController2.address, {
         from: admin,
       });
     });
+  });
+
+  describe("legacy migrations", () => {
+    async function expectLegacyController(data, version) {
+      // encode constructor parameters
+      const parameters = coder
+        .encodeParameters(["address", "address"], [universe.address, company])
+        .substring(2);
+      const tx = await promisify(web3.eth.sendTransaction)({
+        from: admin,
+        data: data + parameters,
+        gasPrice: "0x1",
+        gas: 6000000,
+      });
+      const receipt = await promisify(web3.eth.getTransactionReceipt)(tx);
+      const legacyController = await IControllerGovernancev03.at(receipt.contractAddress);
+      const cId = await legacyController.contractId();
+      // detect version
+      expect(cId[0]).to.eq(contractId("PlaceholderEquityTokenController"));
+      expect(cId[1]).to.be.bignumber.eq(version);
+      // read and check full empty state
+      expect(await legacyController.capTable()).to.deep.equal([[], []]);
+      expect(await legacyController.tokenOfferings()).to.deep.equal([[], []]);
+      expect(await legacyController.amendmentsCount()).to.be.bignumber.eq(zero);
+      expect(await legacyController.shareholderInformation()).to.deep.equal([
+        zero,
+        zero,
+        ZERO_ADDRESS,
+      ]);
+      expect(await legacyController.state()).to.be.bignumber.eq(GovState.Setup);
+    }
+
+    it("should migrate placeholder controler v 0 (FF)", async () => {
+      await expectLegacyController(ffControllerV0, "0");
+    });
+
+    it("should migrate placeholder controler v 3 (Greyp)", async () => {
+      await expectLegacyController(greypControllerV3, "3");
+    });
+  });
+
+  describe("post investment actions", () => {
+    beforeEach(async () => {
+      await preparePostInvestmentState();
+    });
 
     it("reverts on investor rights when operational", async () => {
-      await expect(
-        equityTokenController.startResolution(
-          "Secondary Offering",
-          "ipfs:blah",
-          GovAction.RegisterOffer,
-          toBytes32(testCommitment.address),
-          { from: company },
-        ),
-      ).to.be.rejectedWith("NF_NOT_IMPL");
-      await expect(equityTokenController.executeResolution(toBytes32("0x0"))).to.be.rejectedWith(
-        "NF_NOT_IMPL",
-      );
       await expect(equityTokenController.closeCompany()).to.be.rejectedWith("NF_INV_STATE");
       await expect(equityTokenController.cancelCompanyClosing()).to.be.rejectedWith("NF_INV_STATE");
     });
@@ -860,16 +936,13 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     beforeEach(async () => {
       // token must be transferable to run standard test suite
-      await deployController({
+      await deployETO({
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
-      await deployETO();
+      await deployController();
       // register new offering
-      await testCommitment._triggerStateTransition(
-        CommitmentState.Setup,
-        CommitmentState.Whitelist,
-      );
+      await startOffering();
       // issue equity token with Q18
       await testCommitment._generateTokens(initialBalance);
       // finish offering
@@ -910,19 +983,45 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
       erc223TokenTests(getToken, getTestErc223cb, investors[1], investors[2], initialBalance);
     });
+
     it("rejects nominee change", async () => {
       await expect(equityToken.changeNominee(investors[0])).to.be.revert;
     });
   });
 
-  async function deployController(termsOverride, constraintsOverride) {
+  async function deployController(ovrController) {
+    equityTokenController =
+      ovrController ||
+      (await PlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+        testCommitment.address,
+      ));
+    equityToken = await EquityToken.new(
+      universe.address,
+      equityTokenController.address,
+      tokenTerms.address,
+      nominee,
+      company,
+    );
+    await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
+    await universe.setCollectionsInterfaces(
+      [knownInterfaces.equityTokenInterface, knownInterfaces.equityTokenControllerInterface],
+      [equityToken.address, equityTokenController.address],
+      [true, true],
+      { from: admin },
+    );
+    // pass equity token to eto commitment
+    await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+  }
+
+  async function deployETO(termsOverride, constraintsOverride) {
     [termsConstraints] = await deployETOTermsConstraintsUniverse(
       admin,
       universe,
       ETOTermsConstraints,
       constraintsOverride,
     );
-
     // default terms have non transferable token
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
@@ -933,47 +1032,132 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       termsConstraints,
       termsOverride,
     );
-    equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
-    equityToken = await EquityToken.new(
-      universe.address,
-      equityTokenController.address,
-      tokenTerms.address,
-      nominee,
-      company,
-    );
-    await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
-  }
-
-  async function deployETO() {
     testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
       universe.address,
       nominee,
       company,
       etoTerms.address,
-      equityToken.address,
     );
     await universe.setCollectionsInterfaces(
-      [
-        knownInterfaces.commitmentInterface,
-        knownInterfaces.equityTokenInterface,
-        knownInterfaces.equityTokenControllerInterface,
-      ],
-      [testCommitment.address, equityToken.address, equityTokenController.address],
-      [true, true, true],
+      [knownInterfaces.commitmentInterface, knownInterfaces.termsInterface],
+      [testCommitment.address, etoTerms.address],
+      [true, true],
       { from: admin },
     );
     await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+  }
+
+  async function startOffering(commitmentOvr) {
+    const commitment = commitmentOvr || testCommitment;
+    const tx = await commitment._triggerStateTransition(
+      CommitmentState.Setup,
+      CommitmentState.Setup,
+    );
+    await commitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist);
+    return tx;
+  }
+
+  async function migrateController(oldController, newController, options) {
+    const opts = Object.assign({}, options);
+    // start migration
+    const tx = await oldController.startMigrateTo(newController.address, { from: admin });
+    expectLogGovStateTransition(tx, GovState.Funded, GovState.Migrating);
+    expect(await oldController.isMigrating()).to.be.true;
+    expect(await oldController.migratedTo()).to.eq(ZERO_ADDRESS);
+    // read state
+    const state = await oldController.preMigrationState();
+    const tokens = await oldController.tokens();
+    const offerings = await oldController.tokenOfferings();
+    const agreement = await oldController.currentAgreement();
+    const information = await oldController.shareholderInformation();
+    const resolutionIds = await oldController.resolutionsList();
+    // read resolutions
+    let resolutions;
+    for (const resolutionId of resolutionIds) {
+      const resolution = await oldController.resolution(resolutionId);
+      if (resolutions) {
+        resolutions = resolutions.map((v, i) => [...v, resolution[i]]);
+      } else {
+        resolutions = resolution.map(v => [v]);
+      }
+    }
+    // write state
+    // TODO: in case of FF token shareCapital is in whole shares
+    await newController.migrateGeneralInformation(
+      agreement[2],
+      information[0],
+      opts.authorizedCapital || information[3],
+      information[1],
+      opts.transfersEnabled,
+      { from: admin },
+    );
+    await newController.migrateAddCommitment(offerings[0][0], { from: admin });
+    await newController.migrateResolutions(resolutionIds, ...resolutions, { from: admin });
+    await newController.migrateGovernance(information[2], tokens[0][0], { from: admin });
+    // link old controller and set the state
+    await newController.finishMigrateFrom(oldController.address, state, { from: admin });
+    // finish migration
+    const migratedTx = await oldController.finishMigrateTo(newController.address, {
+      from: admin,
+    });
+    expectLogMigratedTo(migratedTx, oldController.address, newController.address);
+  }
+
+  async function expectControllerEqualState(oldController, newController, options) {
+    const opts = Object.assign({ checkLinking: true }, options);
+    // compare new and old controller - all should be imported
+    expect(await oldController.companyLegalRepresentative()).to.deep.equal(
+      await newController.companyLegalRepresentative(),
+    );
+    expect(await oldController.tokens()).to.deep.equal(await newController.tokens());
+    expect(await oldController.tokenOfferings()).to.deep.equal(
+      await newController.tokenOfferings(),
+    );
+    const information = await oldController.shareholderInformation();
+    if (opts.authorizedCapital) {
+      // sets authorizedCapital without breaking deep equal
+      information[3] = information[3].sub(information[3]).add(opts.authorizedCapital);
+    }
+    expect(await newController.shareholderInformation()).to.deep.equal(information);
+    const agreementData = await oldController.currentAgreement();
+    expect(agreementData[2]).to.eq((await newController.currentAgreement())[2]);
+    // check linking
+    if (opts.checkLinking) {
+      const oldInNewAddress = await newController.migratedFrom();
+      expect(oldInNewAddress).to.eq(oldController.address);
+      const newInOldAddress = await oldController.migratedTo();
+      expect(newInOldAddress).to.eq(newController.address);
+    }
+    // compare state
+    expect(await newController.state()).to.be.bignumber.eq(await oldController.preMigrationState());
+    expect(await oldController.state()).to.be.bignumber.eq(GovState.Migrated);
+    // compare resolutions
+    const resolutionIds = await oldController.resolutionsList();
+    expect(await newController.resolutionsList()).to.deep.equal(resolutionIds);
+    for (const resolutionId of resolutionIds) {
+      const resolution = await oldController.resolution(resolutionId);
+      expect(await newController.resolution(resolutionId)).to.deep.equal(resolution);
+    }
   }
 
   function getTokenPower(terms) {
     return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKEN_DECIMALS);
   }
 
-  function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType) {
+  function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType, terminalState) {
     const event = eventWithIdxValue(tx, logIdx, "LogResolutionExecuted");
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.action).to.be.bignumber.eq(actionType);
+    expect(event.args.state).to.be.bignumber.eq(terminalState);
+  }
+
+  function expectLogResolutionStarted(tx, logIdx, resolutionId, actionType, initialState) {
+    const event = eventWithIdxValue(tx, logIdx, "LogResolutionStarted");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.action).to.be.bignumber.eq(actionType);
+    expect(event.args.state).to.be.bignumber.eq(initialState);
   }
 
   function expectLogGovStateTransition(tx, oldState, newState, timestamp) {
@@ -1017,11 +1201,11 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event.args.equityToken).to.eq(equityTokenAddress);
   }
 
-  function expectLogMigratedTokenController(tx, resolutionId, newController) {
-    const event = eventValue(tx, "LogMigratedTokenController");
+  function expectLogMigratedTo(tx, oldController, newController) {
+    const event = eventValue(tx, "LogMigratedTo");
     expect(event).to.exist;
-    expect(event.args.resolutionId).to.eq(resolutionId);
-    expect(event.args.newController).eq(newController);
+    expect(event.args.oldImpl).to.eq(oldController);
+    expect(event.args.newImpl).eq(newController);
   }
 
   function expectLogGeneralInformation(tx, companyLegalRep, infoType, infoUrl) {
@@ -1044,8 +1228,31 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.ISHAUrl).to.eq(ishaUrl);
-    expect(event.args.shareCapital).to.be.bignumber.eq(newShareCapital);
+    expect(event.args.shareCapitalUlps).to.be.bignumber.eq(newShareCapital);
     expect(event.args.companyValuationEurUlps).to.be.bignumber.eq(newValuation);
     expect(event.args.newShareholderRights).eq(newShareholderRights);
+  }
+
+  function expectLogAuthorizedCapitalEstablished(tx, resolutionId, authorizedCapital) {
+    const event = eventValue(tx, "LogAuthorizedCapitalEstablished");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.authorizedCapitalUlps).to.be.bignumber.eq(authorizedCapital);
+  }
+
+  function expectResolution(resolution, resolutionId, action, execState, failedCode = 0) {
+    expect(resolution[0]).to.be.bignumber.eq(action);
+    expect(resolution[1]).to.be.bignumber.eq(execState);
+    expect(resolution[2]).to.be.bignumber.gt(0);
+    if (!isTerminalExecutionState(execState)) {
+      // final date
+      expect(resolution[3]).to.be.bignumber.eq(0);
+      // failed code
+      expect(resolution[4]).to.be.bignumber.eq(0);
+    } else {
+      expect(resolution[3]).to.be.bignumber.gt(0);
+      expect(resolution[4]).to.be.bignumber.eq(failedCode);
+    }
+    // resolution[5] is a promise (keccak hash of parameters);
   }
 });

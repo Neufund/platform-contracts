@@ -23,7 +23,7 @@ import {
   defTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
-import { GovState } from "../helpers/govState";
+import { GovState, getCommitmentResolutionId } from "../helpers/govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { eventValue, decodeLogs, eventWithIdxValue, hasEvent } from "../helpers/events";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
@@ -50,9 +50,6 @@ import EvmError from "../helpers/EVMThrow";
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const EquityToken = artifacts.require("EquityToken");
 const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
-const MockPlaceholderEquityTokenController = artifacts.require(
-  "MockPlaceholderEquityTokenController",
-);
 const ETOCommitment = artifacts.require("ETOCommitment");
 const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -81,6 +78,7 @@ const manyTokens = new web3.BigNumber(2)
 const inverseTokenFeeDec = defaultPlatformTerms.TOKEN_PARTICIPATION_FEE_FRACTION.div(Q18).add("1");
 const two = new web3.BigNumber(2);
 const one = new web3.BigNumber(1);
+const zero = new web3.BigNumber(0);
 
 contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // basic infrastructure
@@ -195,7 +193,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await prettyPrintGasCost("PlaceholderEquityTokenController deploy", equityTokenController);
       // check getters
       expect(await etoCommitment.etoTerms()).to.eq(etoTerms.address);
-      expect(await etoCommitment.equityToken()).to.eq(equityToken.address);
+      expect(await etoCommitment.equityToken()).to.eq(ZERO_ADDRESS);
       expect(await etoCommitment.nominee()).to.eq(nominee);
       expect(await etoCommitment.companyLegalRep()).to.eq(company);
       const singletons = await etoCommitment.singletons();
@@ -206,7 +204,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
       // check state machine
       expect(await etoCommitment.state()).to.be.bignumber.eq(0);
-      expect(await etoCommitment.commitmentObserver()).to.eq(equityTokenController.address);
+      expect(await etoCommitment.commitmentObserver()).to.eq(ZERO_ADDRESS);
       const startOfStates = await etoCommitment.startOfStates(); // array of 7
       for (const startOf of startOfStates) {
         expect(startOf).to.be.bignumber.lt(UNKNOWN_STATE_START_TS);
@@ -227,7 +225,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       for (const v of ticket.slice(0, -2)) {
         expect(v).to.be.bignumber.eq(0);
       }
-      await expectProperETOSetup(etoCommitment.address);
+
       const cid = await etoCommitment.contractId();
       expect(cid[0]).to.eq(contractId("ETOCommitment"));
       expect(cid[1]).to.be.bignumber.eq(2);
@@ -245,10 +243,16 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           from: company,
         },
       );
+      // equity token and controller are now set
+      expect(await etoCommitment.equityToken()).to.eq(equityToken.address);
+      expect(await etoCommitment.commitmentObserver()).to.eq(equityTokenController.address);
+      // events are generated
       expectLogTermsSet(tx, company, etoTerms.address, equityToken.address);
       expectLogETOStartDateSet(tx, company, 0, startDate);
       // timed state machine works now and we can read out expected starts of states
       await expectStateStarts({ Whitelist: startDate, Refund: 0 }, defaultDurationTable());
+      // ready to go
+      await expectProperETOSetup(etoCommitment.address);
     });
 
     it("should reset start date", async () => {
@@ -561,9 +565,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await expect(
         investAmount(investors[0], tokenTermsDict.TOKEN_PRICE_EUR_ULPS.sub(1), "EUR"),
       ).to.be.rejectedWith("NF_ETO_MIN_TICKET");
-      await expect(investAmount(investors[0], new web3.BigNumber(0), "ETH")).to.be.rejectedWith(
-        "NF_ETO_MIN_TICKET",
-      );
+      await expect(investAmount(investors[0], zero, "ETH")).to.be.rejectedWith("NF_ETO_MIN_TICKET");
     });
 
     it("rejects investment above max ticket", async () => {
@@ -669,15 +671,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // exactly max number of tokens sold
       await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       const contribution = await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
-      const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-      await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
-        from: company,
-      });
-      const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-        investmentAgreementUrl,
-        { from: nominee },
-      );
-      expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Claim);
+      const nomineeSignTx = await signInvestmentAgreement();
       await expectValidClaimState(nomineeSignTx, contribution);
     });
 
@@ -946,9 +940,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
       const expectedPrice = calculateMixedTranchePrice(tranche, slotTranche, slotDp, dp);
       await investAmount(investors[0], tranche, "EUR", expectedPrice);
-      expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
-        getTokenPower().mul(3873651 + 1982761),
-      );
+      const totals = await etoCommitment.totalInvestment();
+      expect(totals[1]).to.be.bignumber.eq(getTokenPower().mul(3873651 + 1982761));
     });
 
     it("revert on going above whitelist cap starting as fix slot and ending in whitelist", async () => {
@@ -1032,19 +1025,18 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     });
 
     it("should allow to fundraise again on the same token", async () => {
+      // no voting rights are given so secondary offering can be started by the company
+      await deployETO({
+        ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxTicket },
+        ovrShareholderRights: { GENERAL_VOTING_RULE: zero }, // no voting rights
+      });
+      await prepareETOForPublic();
       await skipTimeTo(publicStartDate.add(1));
       const missingAmount = allTokensCostEur();
       await investAmount(investors[4], missingAmount, "EUR");
       const contribution = await expectValidSigningState(investors, { expectedInvestorsCount: 1 });
       await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
-      const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-      await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
-        from: company,
-      });
-      const claimTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-        investmentAgreementUrl,
-        { from: nominee },
-      );
+      const claimTx = await signInvestmentAgreement();
       await expectValidClaimState(claimTx, contribution);
       // deploy new ETO using old token
       const newTokenPrice = tokenTermsDict.TOKEN_PRICE_EUR_ULPS.mul("1.35").floor();
@@ -1083,9 +1075,15 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         initialNomineeBalance: oldNomineeBalance,
       });
       await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
-      // do not go to claim state: 2% not yet issued
+      // do not go to claim state: no tokens yet issued
+      expect(await equityToken.totalSupply()).to.be.bignumber.eq(oldEquitySupply);
+      // go to claims
+      await signInvestmentAgreement();
+      // full amount now: old supply + new investment
+      const totals = await etoCommitment.totalInvestment();
+      const fees = await etoCommitment.contributionSummary();
       expect(await equityToken.totalSupply()).to.be.bignumber.eq(
-        oldEquitySupply.add(effectiveTokens),
+        oldEquitySupply.add(fees[4]).add(totals[1]),
       );
     });
 
@@ -1175,14 +1173,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await etherToken.transfer(etoCommitment.address, Q18, { from: investors[2] });
       await euroToken.transfer(etoCommitment.address, Q18, { from: investors[3] });
 
-      const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-      await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
-        from: company,
-      });
-      const claimTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-        investmentAgreementUrl,
-        { from: nominee },
-      );
+      const claimTx = await signInvestmentAgreement();
 
       await etherToken.transfer(etoCommitment.address, Q18, { from: investors[2] });
       await euroToken.transfer(etoCommitment.address, Q18, { from: investors[3] });
@@ -1257,14 +1248,13 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await investAmount(investors[0], two.pow(96).sub(two.pow(90).mul(2)), "EUR");
       // will generate 1 token
       await investAmount(investors[0], two.pow(90), "EUR");
-      expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
-        getTokenPower().mul(63),
-      );
+      const totals = await etoCommitment.totalInvestment();
+      expect(totals[1]).to.be.bignumber.eq(getTokenPower().mul(63));
       await expect(investAmount(investors[0], two.pow(90), "EUR")).to.be.rejectedWith("");
     });
 
     it("should skip whitelist in ETO with 0 whitelist period", async () => {
-      await deployETO({ ovrDurations: { WHITELIST_DURATION: new web3.BigNumber(0) } });
+      await deployETO({ ovrDurations: { WHITELIST_DURATION: zero } });
       await prepareETOForPublic();
       // we moved to start date but we should be in public as wl is 0
       expect(await etoCommitment.timedState()).to.be.bignumber.eq(CommitmentState.Public);
@@ -1285,7 +1275,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // but this is ok for this test - forces timed transition, not due to logic
       const maxTokensWhitelist = defTokenTerms.EQUITY_TOKENS_PER_SHARE.mul(3000);
       await deployETO({
-        ovrDurations: { PUBLIC_DURATION: new web3.BigNumber(0) },
+        ovrDurations: { PUBLIC_DURATION: zero },
         ovrTokenTerms: {
           MAX_NUMBER_OF_TOKENS: maxTokens,
           MAX_NUMBER_OF_TOKENS_IN_WHITELIST: maxTokensWhitelist,
@@ -1315,7 +1305,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should wait on whitelist for ETO with 0 max cap whitelist but with period > 0", async () => {
       await deployETO({
-        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0) },
+        ovrTokenTerms: { MAX_NUMBER_OF_TOKENS_IN_WHITELIST: zero },
       });
       await etoTerms.addWhitelisted([investors[0]], [0], [Q18], {
         from: admin,
@@ -1365,7 +1355,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployETO({
         ovrTokenTerms: {
           MAX_NUMBER_OF_TOKENS: oneShare.mul(2),
-          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: zero,
           MIN_NUMBER_OF_TOKENS: oneShare,
           TOKEN_PRICE_EUR_ULPS: tokenPrice,
         },
@@ -1382,7 +1372,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       tx = await etoCommitment.handleStateTransitions();
       expectLogStateTransition(tx, CommitmentState.Public, CommitmentState.Signing, "ignore");
       const contribution = await expectValidSigningState([investors[1]]);
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await moveETOToClaim(1, zero);
       // expect one share sold
       const totalInvestment = await etoCommitment.totalInvestment();
       expect(totalInvestment[1]).to.be.bignumber.eq(oneShare);
@@ -1400,7 +1390,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await deployETO({
         ovrTokenTerms: {
           MAX_NUMBER_OF_TOKENS: maxTokens,
-          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: zero,
           MIN_NUMBER_OF_TOKENS: minTokens,
           TOKEN_PRICE_EUR_ULPS: tokenPrice,
         },
@@ -1426,7 +1416,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         ovrTokenTerms: {
           MAX_NUMBER_OF_TOKENS: maxTokens,
           MIN_NUMBER_OF_TOKENS: defEquityTokenPower,
-          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: new web3.BigNumber(0),
+          MAX_NUMBER_OF_TOKENS_IN_WHITELIST: zero,
           TOKEN_PRICE_EUR_ULPS: tokenPrice,
           EQUITY_TOKENS_PER_SHARE: defEquityTokenPower,
         },
@@ -1542,7 +1532,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await skipTimeTo(publicStartDate);
       const missingAmount = allTokensCostEur();
       await investAmount(investors[1], missingAmount, "EUR");
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await moveETOToClaim(1, zero);
       await claimInvestor(investors[1]);
       // expect transfers are enabled
       await equityToken.transfer(investors[0], 1, { from: investors[1] });
@@ -1556,7 +1546,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await skipTimeTo(publicStartDate);
       const missingAmount = allTokensCostEur();
       await investAmount(investors[1], missingAmount, "EUR");
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await moveETOToClaim(1, zero);
       await claimInvestor(investors[1]);
       // expect transfers are enabled
       await expect(equityToken.transfer(investors[0], 1, { from: investors[1] })).to.be.revert;
@@ -1575,7 +1565,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await skipTimeTo(publicStartDate);
       const missingAmount = allTokensCostEur();
       await investAmount(investors[1], missingAmount, "EUR");
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await moveETOToClaim(1, zero);
       await claimInvestor(investors[1]);
       const currDate = new web3.BigNumber(await latestTimestamp());
       const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
@@ -1601,7 +1591,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       let currDate = new web3.BigNumber(await latestTimestamp());
       const signDate = currDate.add(durTable[CommitmentState.Public]);
       await skipTimeTo(signDate);
-      await moveETOToClaim(1, new web3.BigNumber(0));
+      await moveETOToClaim(1, zero);
       await claimInvestor(investors[1]);
       currDate = new web3.BigNumber(await latestTimestamp());
       const payoutDate = currDate.add(durTable[CommitmentState.Claim]);
@@ -1665,7 +1655,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       );
       const missingAmount = tokensCostEur(missingTokens, publicPrice);
       await investAmount(investors[1], missingAmount, "EUR", publicPrice);
-      const contribution = await moveETOToClaim(4, new web3.BigNumber(0));
+      const contribution = await moveETOToClaim(4, zero);
       await expectExactlyMaxCap(tokenTermsDict.MAX_NUMBER_OF_TOKENS);
       await claimInvestor(investors[1]);
       await claimInvestor(investors[0]);
@@ -1722,7 +1712,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const totalNewShares = new web3.BigNumber("10000");
       expectLogSigningStarted(invTx, nominee, company, totalNewShares, Q18.mul(totalNewShares));
       // this will also check claims state
-      const contribution = await moveETOToClaim(1, new web3.BigNumber(0));
+      const contribution = await moveETOToClaim(1, zero);
       expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
       expect(contribution[1]).to.be.bignumber.eq(Q18.mul(totalNewShares));
       // this is effective price that will generate issued number of shares for collected funds
@@ -1776,7 +1766,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     it("should lose significant amount when buying non round number of tokens", async () => {
       // we buy for 160 EUR which is almost 10 tokens, but almost makes a big difference
       // we use low equity token scale to inflate rounding
-      await deployLargeSharePriceOvr(new web3.BigNumber("0"));
+      await deployLargeSharePriceOvr(zero);
       // make full cap in one go
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate);
@@ -1818,7 +1808,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         shareNominalValue.mul(totalNewShares),
       );
       // this will also check claims state
-      const contribution = await moveETOToClaim(1, new web3.BigNumber(0));
+      const contribution = await moveETOToClaim(1, zero);
       expect(contribution[0]).to.be.bignumber.eq(totalNewShares);
       expect(contribution[1]).to.be.bignumber.eq(shareNominalValue.mul(totalNewShares));
       // this is effective price that will generate issued number of shares for collected funds
@@ -2538,19 +2528,17 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         expect(whitelistTs.sub(startDate)).to.be.bignumber.gte(10);
         // token controller should be in offering state and have empty cap table and shareholder information
         expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
-        const capTable = await equityTokenController.capTable();
-        expect(capTable[0].length).to.eq(0);
-        expect(capTable[1].length).to.eq(0);
+        const tokens = await equityTokenController.tokens();
+        expect(tokens[0].length).to.eq(0);
+        expect(tokens[1].length).to.eq(0);
 
-        expect(await equityTokenController.tokenOfferings()).to.deep.eq([
-          [etoCommitment.address],
-          [equityToken.address],
-        ]);
+        expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
 
         const generalInfo = await equityTokenController.shareholderInformation();
-        expect(generalInfo[0]).to.be.bignumber.eq(ZERO_ADDRESS);
+        expect(generalInfo[0]).to.be.bignumber.eq(0);
         expect(generalInfo[1]).to.be.bignumber.eq(0);
         expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
+        expect(generalInfo[1]).to.be.bignumber.eq(0);
         // apply whitelist general discount, fixed slots not tested here
         const dp = discountedPrice(
           tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -2663,6 +2651,13 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           CommitmentState.Claim,
           claimTs,
         );
+
+        // token offerings available
+        expect(await equityTokenController.tokenOfferings()).to.deep.eq([
+          [etoCommitment.address],
+          [equityToken.address],
+        ]);
+
         const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
         await expectStateStarts(
           {
@@ -2771,14 +2766,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           expectedInvestorsCount: 5,
           icbmEurEquiv,
         });
-        const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-        await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
-          from: company,
-        });
-        const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-          investmentAgreementUrl,
-          { from: nominee },
-        );
+        const nomineeSignTx = await signInvestmentAgreement();
         const claimTs = new web3.BigNumber(await latestTimestamp());
         const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
         await expectValidClaimState(nomineeSignTx, contribution);
@@ -2895,14 +2883,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         const contribution = await expectValidSigningState(participatingInvestors, {
           icbmEurEquiv,
         });
-        const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
-        await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
-          from: company,
-        });
-        const nomineeSignTx = await etoCommitment.nomineeConfirmsInvestmentAgreement(
-          investmentAgreementUrl,
-          { from: nominee },
-        );
+        const nomineeSignTx = await signInvestmentAgreement();
         const claimTs = new web3.BigNumber(await latestTimestamp());
         const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
         await expectValidClaimState(nomineeSignTx, contribution);
@@ -3528,36 +3509,28 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       etoTermsConstraints,
       opts.ovrETOTerms,
     );
-
-    // deploy equity token controller which is company management contract
-    const oldTokenController = equityTokenController;
-    if (oldTokenController) {
-      // replace with mocked token controller, current implementation does not allow multi eto
-      equityTokenController = await MockPlaceholderEquityTokenController.new(
-        universe.address,
-        company,
-      );
-    } else {
-      equityTokenController = await PlaceholderEquityTokenController.new(universe.address, company);
-    }
+    // deploy ETOCommitment
+    etoCommitment = await opts.ovrArtifact.new(
+      universe.address,
+      nominee,
+      company,
+      etoTerms.address,
+    );
     // deploy equity token
     if (opts.ovrEquityToken) {
-      // add upgrade admin role to admin account, apply to all contracts
-      await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
-      // change token controller
-      await equityTokenController.migrateTokenController(oldTokenController.address, false, {
-        from: admin,
-      });
-      await oldTokenController.changeTokenController(equityTokenController.address, {
-        from: admin,
-      });
-      // anyone can change when allowed by controller
-      await equityToken.changeTokenController(equityTokenController.address);
-      expect(await equityToken.tokenController()).to.eq(equityTokenController.address);
+      // if keeping old equity token, keep old placeholder controller
       equityToken = opts.ovrEquityToken;
       // prepare token controller for follow on ETO
-      await equityTokenController._overrideState(GovState.Setup);
+      const resolutionId = getCommitmentResolutionId(etoCommitment.address);
+      await equityTokenController.startNewOffering(resolutionId, etoCommitment.address, {
+        from: company,
+      });
     } else {
+      equityTokenController = await PlaceholderEquityTokenController.new(
+        universe.address,
+        company,
+        etoCommitment.address,
+      );
       equityToken = await EquityToken.new(
         universe.address,
         equityTokenController.address,
@@ -3567,25 +3540,16 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       );
     }
 
-    // deploy ETOCommitment
-    etoCommitment = await opts.ovrArtifact.new(
-      universe.address,
-      nominee,
-      company,
-      etoTerms.address,
-      equityToken.address,
-    );
-
     // add ETO contracts to collections in universe in one transaction -> must be atomic
-
     await universe.setCollectionsInterfaces(
       [
         knownInterfaces.commitmentInterface,
+        knownInterfaces.termsInterface,
         knownInterfaces.equityTokenInterface,
         knownInterfaces.equityTokenControllerInterface,
       ],
-      [etoCommitment.address, equityToken.address, equityTokenController.address],
-      [true, true, true],
+      [etoCommitment.address, etoTerms.address, equityToken.address, equityTokenController.address],
+      [true, true, true, true],
       { from: admin },
     );
 
@@ -3826,7 +3790,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       wallet = euroLockedAccount;
     }
     // icbm investor already got NEU
-    const expectedNeu = new web3.BigNumber(0);
+    const expectedNeu = zero;
     // investor sends money via wallet
     // console.log(
     //   `ICBM investor ${investor} INVESTING ${amount.toString("10")} ${currency} ${eurEquiv.toString(
@@ -3894,28 +3858,40 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     return tx;
   }
 
+  async function signInvestmentAgreement() {
+    const investmentAgreementUrl = "ipfs:3290890ABINVESTMENT";
+    await etoCommitment.companySignsInvestmentAgreement(investmentAgreementUrl, {
+      from: company,
+    });
+    const tx = etoCommitment.nomineeConfirmsInvestmentAgreement(investmentAgreementUrl, {
+      from: nominee,
+    });
+    expect(await etoCommitment.state()).to.be.bignumber.eq(CommitmentState.Claim);
+    return tx;
+  }
+
   async function expectValidSigningState(participatingInvestors, o) {
     const options = Object.assign(
       {
         expectedInvestorsCount: participatingInvestors.length,
-        initalNeuEur: new web3.BigNumber(0),
-        initialEquityTokens: new web3.BigNumber(0),
-        initialNomineeBalance: new web3.BigNumber(0),
-        icbmEurEquiv: new web3.BigNumber(0),
-        etherTokenSurplus: new web3.BigNumber(0),
-        euroTokenSurplus: new web3.BigNumber(0),
+        initalNeuEur: zero,
+        initialEquityTokens: zero,
+        initialNomineeBalance: zero,
+        icbmEurEquiv: zero,
+        etherTokenSurplus: zero,
+        euroTokenSurplus: zero,
       },
       o,
     );
     const totalInvestment = await etoCommitment.totalInvestment();
     expect(totalInvestment[2]).to.be.bignumber.eq(options.expectedInvestorsCount); // number of investors
-    let expectedTokens = new web3.BigNumber(0);
-    let expectedEurEquiv = new web3.BigNumber(0);
-    let expectedInvestorNeu = new web3.BigNumber(0);
-    let expectedAmountEth = new web3.BigNumber(0);
-    let expectedAmountEur = new web3.BigNumber(0);
-    let expectedShares = new web3.BigNumber(0);
-    let expectedNewMoneyEurEquiv = new web3.BigNumber(0);
+    let expectedTokens = zero;
+    let expectedEurEquiv = zero;
+    let expectedInvestorNeu = zero;
+    let expectedAmountEth = zero;
+    let expectedAmountEur = zero;
+    let expectedShares = zero;
+    let expectedNewMoneyEurEquiv = zero;
     for (const investor of participatingInvestors) {
       const ticket = await etoCommitment.investorTicket(investor);
       expectedTokens = expectedTokens.add(ticket[2]);
@@ -3953,10 +3929,10 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         tokenTermsDict.EQUITY_TOKENS_PER_SHARE.sub(tokenSharesRemainder),
       );
     }
-    // still the equity token does not have the participation fee issued, this happens in claim
+    // still the equity tokens are not yet issued, this happens in claim transition
     // add initial balance of equity token to test secondary offerings
     expect(await equityToken.totalSupply()).to.be.bignumber.eq(
-      expectedTokens.add(options.initialEquityTokens),
+      zero.add(options.initialEquityTokens),
     );
     const expectedNewShares = expectedTokenSupply.div(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
     const contribution = await etoCommitment.contributionSummary();
@@ -4010,8 +3986,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   async function expectValidClaimState(signedTx, contribution, o) {
     const options = Object.assign(
       {
-        etherTokenSurplus: new web3.BigNumber(0),
-        euroTokenSurplus: new web3.BigNumber(0),
+        etherTokenSurplus: zero,
+        euroTokenSurplus: zero,
       },
       o,
     );
@@ -4053,9 +4029,11 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       ),
     );
     expect(generalInformation[2]).to.eq(shareholderRights.address);
-    const capTable = await equityTokenController.capTable();
-    expect(capTable[0][0]).to.eq(equityToken.address);
-    expect(capTable[1][0]).to.be.bignumber.eq(contribution[0]);
+    expect(generalInformation[3]).to.be.bignumber.eq(etoTermsDict.AUTHORIZED_CAPITAL);
+    const tokens = await equityTokenController.tokens();
+    expect(tokens[0][0]).to.eq(equityToken.address);
+    // we return shares as fractions so partial shares can be represented
+    expect(tokens[1][0]).to.be.bignumber.eq(contribution[0].mul(Q18));
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([
       [etoCommitment.address],
       [equityToken.address],
@@ -4092,8 +4070,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   }
 
   async function expectValidRefundState(refundTx, participatingInvestors, icbmEurEquiv) {
-    let expectedTokens = new web3.BigNumber(0);
-    let expectedNewMoneyEurEquiv = new web3.BigNumber(0);
+    let expectedTokens = zero;
+    let expectedNewMoneyEurEquiv = zero;
     for (const investor of participatingInvestors) {
       const ticket = await etoCommitment.investorTicket(investor);
       expectedTokens = expectedTokens.add(ticket[2]);
@@ -4121,8 +4099,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       {
         expectsEther: true,
         expectsEuro: true,
-        etherTokenSurplus: new web3.BigNumber(0),
-        euroTokenSurplus: new web3.BigNumber(0),
+        etherTokenSurplus: zero,
+        euroTokenSurplus: zero,
       },
       o,
     );
@@ -4213,21 +4191,22 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   }
 
   async function expectEmptyTokenController() {
-    const capTable = await equityTokenController.capTable();
-    expect(capTable[0].length).to.eq(0);
-    expect(capTable[1].length).to.eq(0);
+    const tokens = await equityTokenController.tokens();
+    expect(tokens[0].length).to.eq(0);
+    expect(tokens[1].length).to.eq(0);
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
     const generalInfo = await equityTokenController.shareholderInformation();
     expect(generalInfo[0]).to.be.bignumber.eq(0);
     expect(generalInfo[1]).to.be.bignumber.eq(0);
     expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
+    expect(generalInfo[3]).to.be.bignumber.eq(0);
   }
 
   async function expectStateStarts(pastStatesTable, durationTable) {
     const durTableCopy = durationTable.slice();
     // add initial 0 to align with internal algorithm which looks to state - 1 to give start of current
     durTableCopy.unshift(0);
-    let expectedDate = new web3.BigNumber(0);
+    let expectedDate = zero;
     for (const state of Object.keys(CommitmentState)) {
       // be more precise and reproduce internal timestamp algo by adding eto terms
       if (state in pastStatesTable) {

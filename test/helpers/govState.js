@@ -1,3 +1,5 @@
+import { soliditySha3 } from "web3-utils";
+
 // Needs to match contracts/Company/IControllerGovernance:GovState
 export const GovState = {
   Setup: 0,
@@ -5,7 +7,8 @@ export const GovState = {
   Funded: 2,
   Closing: 3,
   Closed: 4,
-  Migrated: 5,
+  Migrating: 5,
+  Migrated: 6,
 };
 
 export const GovAction = {
@@ -21,3 +24,34 @@ export const GovAction = {
   ChangeNominee: 9,
   Downround: 10,
 };
+
+export const GovExecutionState = {
+  New: 0,
+  // permissions are being escalated ie. voting in progress
+  Escalating: 1,
+  // permission escalation failed
+  Rejected: 2,
+  // resolution in progress
+  Executing: 3,
+  // resolution was cancelled ie. due to timeout
+  Cancelled: 4,
+  // resolution execution failed ie. ETO refunded
+  Failed: 5,
+  // resolution execution OK
+  Completed: 6,
+};
+
+export function isTerminalExecutionState(s) {
+  return (
+    [
+      GovExecutionState.Rejected,
+      GovExecutionState.Cancelled,
+      GovExecutionState.Failed,
+      GovExecutionState.Completed,
+    ].findIndex(v => v === s) >= 0
+  );
+}
+
+export function getCommitmentResolutionId(addr) {
+  return soliditySha3({ type: "address", value: addr });
+}

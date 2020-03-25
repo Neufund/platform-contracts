@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { sha3 } from "web3-utils";
 import {
   daysToSeconds,
   Q18,
@@ -9,6 +10,8 @@ import {
   defEquityTokenDecimals,
 } from "./constants";
 import { knownInterfaces } from "../helpers/knownInterfaces";
+
+const rlp = require("rlp");
 
 export const defaultShareholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(1),
@@ -48,6 +51,7 @@ export const defEtoTerms = {
   TOKEN_TERMS: null,
   SHARE_CAPITAL_CURRENCY_CODE: "PLN",
   EXISTING_SHARE_CAPITAL: Q18.mul(32000),
+  AUTHORIZED_CAPITAL: Q18.mul(1254),
   MIN_TICKET_EUR_ULPS: Q18.mul(500),
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
   ENABLE_TRANSFERS_ON_SUCCESS: false,
@@ -73,6 +77,10 @@ export const defTermsConstraints = {
   ASSET_TYPE: new web3.BigNumber(0),
   TOKEN_OFFERING_OPERATOR: "0xC5a96Db085dDA36FfBE390f455315D30D6D3DC52",
 };
+
+export function predictAddress(sender, nonce) {
+  return `0x${sha3(rlp.encode([sender, nonce])).substring(26)}`;
+}
 
 export function validateTerms(artifact, terms) {
   const constructor = findConstructor(artifact);

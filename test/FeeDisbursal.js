@@ -867,7 +867,10 @@ contract(
           neumark.address,
           investors[0],
         );
-        const expectedEmptyClaimables = [[0, 0, 0, 0], [0, 0, 0, 0]];
+        const expectedEmptyClaimables = [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ];
         expectClaimablesToEqual(emptyClaimables, expectedEmptyClaimables);
         await shouldDisburseToken(etherToken, disburseEtherToken);
         const recycleEther = await recycleAfterFromNow();
@@ -2262,12 +2265,9 @@ contract(
             TriState.Allow,
           );
           await etherToken.deposit({ from: disburser, value: Q18 });
-          const disburse2lTx = await etherToken.transfer["address,uint256,bytes"](
-            testDisburser.address,
-            Q18,
-            "",
-            { from: disburser },
-          );
+          const disburse2lTx = await etherToken.transfer[
+            "address,uint256,bytes"
+          ](testDisburser.address, Q18, "", { from: disburser });
           disburse2lTx.logs = decodeLogs(disburse2lTx, feeDisbursal.address, feeDisbursal.abi);
           expectLogDisbursalCreated(
             disburse2lTx,
@@ -2541,7 +2541,10 @@ contract(
             proRatas,
             investors[0],
           );
-          expectClaimablesToEqual(empty, [[0, 0, 0, 0], [0, 0, 0, 0]]);
+          expectClaimablesToEqual(empty, [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ]);
           const emptyTx = await feeDisbursal.acceptMultipleByProRataToken(
             etherToken.address,
             proRatas,
