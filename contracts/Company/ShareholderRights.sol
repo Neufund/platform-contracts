@@ -1,30 +1,10 @@
 pragma solidity 0.4.26;
 
+import "./GovernanceTypes.sol";
 import "../Standards/IContractId.sol";
 
 
-contract ShareholderRights is IContractId {
-
-    ////////////////////////
-    // Types
-    ////////////////////////
-
-    enum VotingRule {
-        // nominee has no voting rights
-        NoVotingRights,
-        // nominee votes yes if token holders do not say otherwise
-        Positive,
-        // nominee votes against if token holders do not say otherwise
-        Negative,
-        // nominee passes the vote as is giving yes/no split
-        Proportional
-    }
-
-    ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+contract ShareholderRights is GovernanceTypes, IContractId {
 
     ////////////////////////
     // Immutable state
@@ -85,7 +65,7 @@ contract ShareholderRights is IContractId {
         require(uint(tagAlongVotingRule) < 4);
         // quorum < 100%
         require(shareholdersVotingQuorumFrac <= 10**18);
-        require(keccak256(abi.encodePacked(investmentAgreementTemplateUrl)) != EMPTY_STRING_HASH);
+        require(bytes(investmentAgreementTemplateUrl).length != 0);
 
         GENERAL_VOTING_RULE = generalVotingRule;
         TAG_ALONG_VOTING_RULE = tagAlongVotingRule;

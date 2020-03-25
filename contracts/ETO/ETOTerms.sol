@@ -49,12 +49,6 @@ contract ETOTerms is
     }
 
     ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-
-    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -66,6 +60,8 @@ contract ETOTerms is
     string public SHARE_CAPITAL_CURRENCY_CODE;
     // shares capital in ISHA currency at the beginning of the sale, excl. Authorized Capital
     uint256 public EXISTING_SHARE_CAPITAL;
+    // authorized capital to be established after ETO
+    uint256 public AUTHORIZED_CAPITAL;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
@@ -139,6 +135,7 @@ contract ETOTerms is
         ETOTokenTerms tokenTerms,
         string shareCapitalCurrencyCode,
         uint256 existingShareCapital,
+        uint256 authorizedCapital,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
@@ -154,8 +151,8 @@ contract ETOTerms is
         require(durationTerms != address(0));
         require(tokenTerms != address(0));
         require(existingShareCapital > 0);
-        require(keccak256(abi.encodePacked(investorOfferingDocumentUrl)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(shareCapitalCurrencyCode)) != EMPTY_STRING_HASH);
+        require(bytes(investorOfferingDocumentUrl).length != 0);
+        require(bytes(shareCapitalCurrencyCode).length != 0);
         require(shareholderRights != address(0));
         // test interface
         require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
@@ -175,6 +172,7 @@ contract ETOTerms is
         TOKEN_TERMS = tokenTerms;
         SHARE_CAPITAL_CURRENCY_CODE = shareCapitalCurrencyCode;
         EXISTING_SHARE_CAPITAL = existingShareCapital;
+        AUTHORIZED_CAPITAL = authorizedCapital;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
