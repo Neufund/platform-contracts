@@ -5,12 +5,14 @@ import "../Agreement.sol";
 import "../Math.sol";
 import "./IControllerGovernance.sol";
 import "./IEquityToken.sol";
+import "../Standards/IContractId.sol";
 
 
 contract ControllerGovernanceBase is
     IControllerGovernance,
     Agreement,
-    Math
+    Math,
+    IContractId
 {
     ////////////////////////
     // Immutable state
@@ -263,6 +265,14 @@ contract ControllerGovernanceBase is
             });
             _resolutionIds.push(rId);
         }
+    }
+
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x4591efabdeba3b3cf16d6400ca05e4b482c4f56b95a48b1e96b28436818b5a02, 0);
     }
 
 

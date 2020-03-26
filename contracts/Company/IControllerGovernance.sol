@@ -184,4 +184,8 @@ contract IControllerGovernance is
     // this will cancel closing of the company due to obligations not met in time
     // being able to cancel closing should not depend on who is calling the function.
     function cancelCompanyClosing() public;
+
+    // list of governance modules in controller, same scheme as IContractId
+    /// @dev includes contractId as last one
+    function moduleId() public pure returns (bytes32[] ids, uint256[] versions);
 }

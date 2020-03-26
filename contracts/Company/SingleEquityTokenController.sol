@@ -5,7 +5,6 @@ import "../Reclaimable.sol";
 import "./IEquityTokenController.sol";
 import "./ControllerGovernanceBase.sol";
 import "./ControllerTokenOfferings.sol";
-import "../Standards/IContractId.sol";
 import "../Standards/IMigrationChain.sol";
 
 
@@ -17,8 +16,7 @@ import "../Standards/IMigrationChain.sol";
 contract SingleEquityTokenController is
     IEquityTokenController,
     ControllerTokenOfferings,
-    IMigrationChain,
-    IContractId
+    IMigrationChain
 {
     ////////////////////////
     // Immutable state
@@ -219,6 +217,16 @@ contract SingleEquityTokenController is
         public
     {
         revert("NF_NOT_IMPL");
+    }
+
+    function moduleId() public pure returns (bytes32[] ids, uint256[] versions) {
+        ids = new bytes32[](4);
+        versions = new uint256[](4);
+
+        (ids[0], versions[0]) = ControllerGovernanceBase.contractId();
+        (ids[1], versions[1]) = ControllerGeneralInformation.contractId();
+        (ids[2], versions[2]) = ControllerTokenOfferings.contractId();
+        (ids[3], versions[3]) = SingleEquityTokenController.contractId();
     }
 
     //

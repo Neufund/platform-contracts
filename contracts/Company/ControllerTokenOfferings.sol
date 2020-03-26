@@ -105,6 +105,14 @@ contract ControllerTokenOfferings is
         _commitment = commitment;
     }
 
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0xb79bf4e4fbc68d01e103a81fa749364bfcbdbe3d19c4aa1cc1c747bbb30c8b5d, 0);
+    }
+
     ////////////////////////
     // Internal functions
     ////////////////////////

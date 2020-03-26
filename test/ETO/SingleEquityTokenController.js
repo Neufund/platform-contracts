@@ -46,7 +46,7 @@ const TestETOCommitmentSingleTokenController = artifacts.require(
   "TestETOCommitmentSingleTokenController",
 );
 const MockSingleEquityTokenController = artifacts.require("MockSingleEquityTokenController");
-const IControllerGovernancev03 = artifacts.require("IControllerGovernance_v0_3");
+const IControllerGovernancev13 = artifacts.require("IControllerGovernance_v1_3");
 const zero = new web3.BigNumber(0);
 
 contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
@@ -93,11 +93,24 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(tokenOfferings[0].length).to.eq(0);
     expect(tokenOfferings[1].length).to.eq(0);
 
-    expect((await equityTokenController.contractId())[0]).to.eq(
-      contractId("SingleEquityTokenController"),
-    );
+    const cid = await equityTokenController.contractId();
+    expect(cid[0]).to.eq(contractId("SingleEquityTokenController"));
+    expect(cid[1]).to.be.bignumber.eq(0);
     expect(await equityTokenController.migratedTo()).to.eq(ZERO_ADDRESS);
     expect(await equityTokenController.migratedFrom()).to.eq(ZERO_ADDRESS);
+
+    // check if all modules listed
+    const moduleId = await equityTokenController.moduleId();
+    // have 4 modules including top contract
+    expect(moduleId[0].length).to.eq(4);
+    expect(moduleId[0][0]).to.eq(contractId("ControllerGovernanceBase"));
+    expect(moduleId[1][0]).to.be.bignumber.eq(zero);
+    expect(moduleId[0][1]).to.eq(contractId("ControllerGeneralInformation"));
+    expect(moduleId[1][1]).to.be.bignumber.eq(zero);
+    expect(moduleId[0][2]).to.eq(contractId("ControllerTokenOfferings"));
+    expect(moduleId[1][2]).to.be.bignumber.eq(zero);
+    expect(moduleId[0][3]).to.eq(cid[0]);
+    expect(moduleId[1][3]).to.be.bignumber.eq(cid[1]);
   });
 
   describe("offering actions", () => {
@@ -831,7 +844,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         gas: 6000000,
       });
       const receipt = await promisify(web3.eth.getTransactionReceipt)(tx);
-      const legacyController = await IControllerGovernancev03.at(receipt.contractAddress);
+      const legacyController = await IControllerGovernancev13.at(receipt.contractAddress);
       const cId = await legacyController.contractId();
       // detect version
       expect(cId[0]).to.eq(contractId("PlaceholderEquityTokenController"));
@@ -845,14 +858,19 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         zero,
         ZERO_ADDRESS,
       ]);
+      expect(await legacyController.newTokenController()).to.eq(ZERO_ADDRESS);
+      expect(await legacyController.oldTokenController()).to.eq(ZERO_ADDRESS);
+      await expect(legacyController.changeTokenController(ZERO_ADDRESS)).to.be.rejectedWith(
+        "NF_INV_STATE",
+      );
       expect(await legacyController.state()).to.be.bignumber.eq(GovState.Setup);
     }
 
-    it("should migrate placeholder controler v 0 (FF)", async () => {
+    it("should verify initial state of placeholder controler v 0 (FF)", async () => {
       await expectLegacyController(ffControllerV0, "0");
     });
 
-    it("should migrate placeholder controler v 3 (Greyp)", async () => {
+    it("should verify initial state of placeholder controler v 3 (Greyp)", async () => {
       await expectLegacyController(greypControllerV3, "3");
     });
   });
@@ -1092,7 +1110,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       }
     }
     // write state
-    // TODO: in case of FF token shareCapital is in whole shares
     await newController.migrateGeneralInformation(
       agreement[2],
       information[0],

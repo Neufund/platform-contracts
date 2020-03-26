@@ -105,6 +105,14 @@ contract ControllerGeneralInformation is
         _transfersEnabled = transfersEnabled;
     }
 
+    //
+    // Implements IContractId
+    //
+
+    function contractId() public pure returns (bytes32 id, uint256 version) {
+        return (0x41a703b63c912953a0cd27ec13238571806cc14534c4a31a6874db8759b9aa6a, 0);
+    }
+
     ////////////////////////
     // Internal Methods
     ////////////////////////
