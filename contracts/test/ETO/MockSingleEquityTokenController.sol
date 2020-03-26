@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "../../Company/PlaceholderEquityTokenController.sol";
+import "../../Company/SingleEquityTokenController.sol";
 
 
-contract MockPlaceholderEquityTokenController is
-    PlaceholderEquityTokenController
+contract MockSingleEquityTokenController is
+    SingleEquityTokenController
 {
     ////////////////////////
     // Mutable state
@@ -23,7 +23,7 @@ contract MockPlaceholderEquityTokenController is
         IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
+        SingleEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     ////////////////////////
@@ -62,7 +62,7 @@ contract MockPlaceholderEquityTokenController is
     {
         if (_oldController == address(0)) {
             // in no override then return controller as set by base
-            return PlaceholderEquityTokenController.migratedFrom();
+            return SingleEquityTokenController.migratedFrom();
         } else {
             return _oldController;
         }

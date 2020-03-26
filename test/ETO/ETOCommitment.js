@@ -49,7 +49,7 @@ import EvmError from "../helpers/EVMThrow";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const EquityToken = artifacts.require("EquityToken");
-const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
+const SingleEquityTokenController = artifacts.require("SingleEquityTokenController");
 const ETOCommitment = artifacts.require("ETOCommitment");
 const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -190,7 +190,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should deploy", async () => {
       await prettyPrintGasCost("ETOCommitment deploy", etoCommitment);
-      await prettyPrintGasCost("PlaceholderEquityTokenController deploy", equityTokenController);
+      await prettyPrintGasCost("SingleEquityTokenController deploy", equityTokenController);
       // check getters
       expect(await etoCommitment.etoTerms()).to.eq(etoTerms.address);
       expect(await etoCommitment.equityToken()).to.eq(ZERO_ADDRESS);
@@ -3518,7 +3518,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     );
     // deploy equity token
     if (opts.ovrEquityToken) {
-      // if keeping old equity token, keep old placeholder controller
+      // if keeping old equity token, keep old token controller
       equityToken = opts.ovrEquityToken;
       // prepare token controller for follow on ETO
       const resolutionId = getCommitmentResolutionId(etoCommitment.address);
@@ -3526,7 +3526,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         from: company,
       });
     } else {
-      equityTokenController = await PlaceholderEquityTokenController.new(
+      equityTokenController = await SingleEquityTokenController.new(
         universe.address,
         company,
         etoCommitment.address,

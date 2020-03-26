@@ -9,17 +9,12 @@ import "../Standards/IContractId.sol";
 import "../Standards/IMigrationChain.sol";
 
 
-// 4 - overhaul of equity token controller
-
-
-/// @title placeholder for on-chain company management
+/// @title on-chain company management with shareholder rights execution support
 /// several simplifications apply:
-///   - there is just one (primary) offering. no more offerings may be executed
-///   - transfer rights are executed as per ETO_TERMS
-///   - general information rights are executed
-///   - no other rights can be executed and no on-chain shareholder resolution results are in place
-///   - allows changing to better token controller by company
-contract PlaceholderEquityTokenController is
+/// - only single token is supported
+/// - not all shareholder rights are yet supported
+/// - single offering only supported
+contract SingleEquityTokenController is
     IEquityTokenController,
     ControllerTokenOfferings,
     IMigrationChain,
@@ -231,7 +226,7 @@ contract PlaceholderEquityTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 4);
+        return (0xcf797981ed83afa34271d9e461566e1f4faa04577471ac007890d663e1727723, 0);
     }
 
     //

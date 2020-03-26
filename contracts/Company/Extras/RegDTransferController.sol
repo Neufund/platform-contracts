@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "../PlaceholderEquityTokenController.sol";
+import "../SingleEquityTokenController.sol";
 
 
 contract RegDTransferController is
-    PlaceholderEquityTokenController,
+    SingleEquityTokenController,
     IdentityRecord
 {
     ////////////////////////
@@ -17,7 +17,7 @@ contract RegDTransferController is
         IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
+        SingleEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     //
@@ -30,7 +30,7 @@ contract RegDTransferController is
         returns (bool allow)
     {
         // ask base controller if transfers are enables
-        allow = PlaceholderEquityTokenController.onTransfer(broker, from, to, amount);
+        allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // control for reg d lock in in funded state
         if (allow && state() == GovState.Funded) {
             IIdentityRegistry registry = IIdentityRegistry(UNIVERSE.identityRegistry());

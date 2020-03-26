@@ -39,9 +39,7 @@ export async function deployETO(
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Neumark = artifacts.require(config.artifacts.NEUMARK);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
-  const PlaceholderEquityTokenController = artifacts.require(
-    config.artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER,
-  );
+  const SingleEquityTokenController = artifacts.require(config.artifacts.EQUITY_TOKEN_CONTROLLER);
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
@@ -142,8 +140,8 @@ export async function deployETO(
     { from: deployer },
   );
   // deploy equity token controller which is company management contract
-  console.log("Deploying PlaceholderEquityTokenController");
-  const equityTokenController = await PlaceholderEquityTokenController.new(
+  console.log("Deploying SingleEquityTokenController");
+  const equityTokenController = await SingleEquityTokenController.new(
     universe.address,
     company,
     etoCommitment.address,

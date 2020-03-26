@@ -5,7 +5,7 @@ import "../../Agreement.sol";
 import "../../Universe.sol";
 
 
-contract TestETOCommitmentPlaceholderTokenController is
+contract TestETOCommitmentSingleTokenController is
     IETOCommitmentStates,
     Agreement
 {

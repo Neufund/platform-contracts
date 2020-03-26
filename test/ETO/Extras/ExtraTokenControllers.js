@@ -26,8 +26,8 @@ const ShareholderRights = artifacts.require("ShareholderRights");
 const EquityToken = artifacts.require("EquityToken");
 
 const GranularTransferController = artifacts.require("GranularTransferController");
-const TestETOCommitmentPlaceholderTokenController = artifacts.require(
-  "TestETOCommitmentPlaceholderTokenController",
+const TestETOCommitmentSingleTokenController = artifacts.require(
+  "TestETOCommitmentSingleTokenController",
 );
 const RegDTransferController = artifacts.require("RegDTransferController");
 
@@ -63,7 +63,7 @@ contract(
         await deployController(GranularTransferController);
         await prettyPrintGasCost("GranularTransferController deploy", equityTokenController);
         const cId = await equityTokenController.contractId();
-        expect(cId[0]).to.eq(contractId("PlaceholderEquityTokenController"));
+        expect(cId[0]).to.eq(contractId("SingleEquityTokenController"));
         // temporary override marker
         expect(cId[1]).to.be.bignumber.eq(0xff);
       });
@@ -320,7 +320,7 @@ contract(
         termsOverride,
       );
 
-      testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
+      testCommitment = await TestETOCommitmentSingleTokenController.new(
         universe.address,
         nominee,
         company,

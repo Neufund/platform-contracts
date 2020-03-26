@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "../PlaceholderEquityTokenController.sol";
+import "../SingleEquityTokenController.sol";
 
 
 contract GranularTransferController is
-    PlaceholderEquityTokenController
+    SingleEquityTokenController
 {
     ////////////////////////
     // Type declarations
@@ -63,7 +63,7 @@ contract GranularTransferController is
         IETOCommitment commitment
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep, commitment)
+        SingleEquityTokenController(universe, companyLegalRep, commitment)
     {}
 
     //
@@ -92,7 +92,7 @@ contract GranularTransferController is
             }
         }
         // ask base controller if transfers are enabled
-        allow = PlaceholderEquityTokenController.onTransfer(broker, from, to, amount);
+        allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // prevent transfer if account is frozen
         if (allow && s == GovState.Funded) {
             allow = !(_frozenAddresses[from] || _frozenAddresses[to] || _frozenAddresses[broker]);
@@ -104,7 +104,7 @@ contract GranularTransferController is
         constant
         returns (uint256)
     {
-        uint256 overrideAmount = PlaceholderEquityTokenController.onAllowance(owner, spender);
+        uint256 overrideAmount = SingleEquityTokenController.onAllowance(owner, spender);
         // if no override was set by base class check frozen transfer override
         // the spender must be token controller - this contract
         if (overrideAmount == 0 && spender == address(this)) {
@@ -119,7 +119,7 @@ contract GranularTransferController is
 
     // return same contractId as base class, but mark version as special
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 0xFF);
+        return (0xcf797981ed83afa34271d9e461566e1f4faa04577471ac007890d663e1727723, 0xFF);
     }
 
     ////////////////////////

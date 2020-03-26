@@ -36,22 +36,20 @@ import { ffControllerV0, greypControllerV3 } from "./bin/legacyControllers";
 const coder = require("web3-eth-abi");
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
-const PlaceholderEquityTokenController = artifacts.require("PlaceholderEquityTokenController");
+const SingleEquityTokenController = artifacts.require("SingleEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const ShareholderRights = artifacts.require("ShareholderRights");
 const EquityToken = artifacts.require("EquityToken");
-const TestETOCommitmentPlaceholderTokenController = artifacts.require(
-  "TestETOCommitmentPlaceholderTokenController",
+const TestETOCommitmentSingleTokenController = artifacts.require(
+  "TestETOCommitmentSingleTokenController",
 );
-const MockPlaceholderEquityTokenController = artifacts.require(
-  "MockPlaceholderEquityTokenController",
-);
+const MockSingleEquityTokenController = artifacts.require("MockSingleEquityTokenController");
 const IControllerGovernancev03 = artifacts.require("IControllerGovernance_v0_3");
 const zero = new web3.BigNumber(0);
 
-contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
+contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
   let equityToken;
   let equityTokenController;
   let accessPolicy;
@@ -79,7 +77,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   });
 
   it("should deploy and check initial state", async () => {
-    await prettyPrintGasCost("PlaceholderEquityTokenController deploy", equityTokenController);
+    await prettyPrintGasCost("SingleEquityTokenController deploy", equityTokenController);
     expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Setup);
     const shareholderInfo = await equityTokenController.shareholderInformation();
     for (const v of shareholderInfo) {
@@ -96,7 +94,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(tokenOfferings[1].length).to.eq(0);
 
     expect((await equityTokenController.contractId())[0]).to.eq(
-      contractId("PlaceholderEquityTokenController"),
+      contractId("SingleEquityTokenController"),
     );
     expect(await equityTokenController.migratedTo()).to.eq(ZERO_ADDRESS);
     expect(await equityTokenController.migratedFrom()).to.eq(ZERO_ADDRESS);
@@ -109,7 +107,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
+        SingleEquityTokenController.abi,
       );
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
@@ -152,15 +150,11 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
 
     it("no state transition on second ETO start date", async () => {
       let tx = await startOffering();
-      let etcLogs = decodeLogs(
-        tx,
-        equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
-      );
+      let etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
       tx = await startOffering();
-      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       tx.logs.push(...etcLogs);
       expect(hasEvent(tx, "LogGovStateTransition")).to.be.false;
     });
@@ -224,25 +218,21 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         CommitmentState.Whitelist,
         CommitmentState.Public,
       );
-      // placeholder controller ignores this transition
-      let etcLogs = decodeLogs(
-        tx,
-        equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
-      );
+      // token controller ignores this transition
+      let etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       expect(etcLogs.length).to.eq(0);
       // go to signing - also ignores
       tx = await testCommitment._triggerStateTransition(
         CommitmentState.Public,
         CommitmentState.Signing,
       );
-      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       expect(etcLogs.length).to.eq(0);
       tx = await testCommitment._triggerStateTransition(
         CommitmentState.Signing,
         CommitmentState.Claim,
       );
-      etcLogs = decodeLogs(tx, equityTokenController.address, PlaceholderEquityTokenController.abi);
+      etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Offering, GovState.Funded);
       expectLogOfferingSucceeded(tx, testCommitment.address, equityToken.address, sharesAmount);
@@ -319,7 +309,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
+        SingleEquityTokenController.abi,
       );
       tx.logs.push(...etcLogs);
       // this valuation computation with 0 shares increase is basically meaningless
@@ -382,7 +372,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
+        SingleEquityTokenController.abi,
       );
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Offering, GovState.Setup);
@@ -615,7 +605,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     beforeEach(async () => {
       await preparePostInvestmentState();
       // deploy new mocked token controller for same company
-      newController = await MockPlaceholderEquityTokenController.new(
+      newController = await MockSingleEquityTokenController.new(
         universe.address,
         company,
         ZERO_ADDRESS,
@@ -668,7 +658,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       const etcLogs = decodeLogs(
         tx,
         equityTokenController.address,
-        PlaceholderEquityTokenController.abi,
+        SingleEquityTokenController.abi,
       );
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Offering, GovState.Funded);
@@ -752,7 +742,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       });
 
       // second migration
-      const newController2 = await PlaceholderEquityTokenController.new(
+      const newController2 = await SingleEquityTokenController.new(
         universe.address,
         company,
         ZERO_ADDRESS,
@@ -805,7 +795,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       await equityTokenController.finishMigrateTo(newController.address, {
         from: admin,
       });
-      const newController2 = await PlaceholderEquityTokenController.new(
+      const newController2 = await SingleEquityTokenController.new(
         universe.address,
         company,
         ZERO_ADDRESS,
@@ -904,19 +894,31 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
 
     it("rejects general information not from company", async () => {
+      const resolutionId = randomBytes32();
       await expect(
-        equityTokenController.issueGeneralInformation("TOKENHOLDERS CALL", "ipfs:blah", {
-          from: admin,
-        }),
+        equityTokenController.issueGeneralInformation(
+          resolutionId,
+          "TOKENHOLDERS CALL",
+          "ipfs:blah",
+          {
+            from: admin,
+          },
+        ),
       ).to.be.rejectedWith("NF_ONLY_COMPANY");
     });
 
     it("rejects general information in setup", async () => {
+      const resolutionId = randomBytes32();
       await deployController();
       await expect(
-        equityTokenController.issueGeneralInformation("TOKENHOLDERS CALL", "ipfs:blah", {
-          from: admin,
-        }),
+        equityTokenController.issueGeneralInformation(
+          resolutionId,
+          "TOKENHOLDERS CALL",
+          "ipfs:blah",
+          {
+            from: admin,
+          },
+        ),
       ).to.be.rejectedWith("NF_INV_STATE");
     });
 
@@ -1004,11 +1006,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
   async function deployController(ovrController) {
     equityTokenController =
       ovrController ||
-      (await PlaceholderEquityTokenController.new(
-        universe.address,
-        company,
-        testCommitment.address,
-      ));
+      (await SingleEquityTokenController.new(universe.address, company, testCommitment.address));
     equityToken = await EquityToken.new(
       universe.address,
       equityTokenController.address,
@@ -1044,7 +1042,7 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
       termsConstraints,
       termsOverride,
     );
-    testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
+    testCommitment = await TestETOCommitmentSingleTokenController.new(
       universe.address,
       nominee,
       company,
@@ -1228,14 +1226,6 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event).to.exist;
     expect(event.args.oldImpl).to.eq(oldController);
     expect(event.args.newImpl).eq(newController);
-  }
-
-  function expectLogGeneralInformation(tx, companyLegalRep, infoType, infoUrl) {
-    const event = eventValue(tx, "LogGeneralInformation");
-    expect(event).to.exist;
-    expect(event.args.companyLegalRep).to.eq(companyLegalRep);
-    expect(event.args.informationType).eq(infoType);
-    expect(event.args.informationUrl).eq(infoUrl);
   }
 
   function expectLogISHAAmended(

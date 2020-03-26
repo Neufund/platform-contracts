@@ -42,7 +42,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       k => etoFixtures[k].name === "ETOInClaimState",
     );
     const equityToken = await EquityToken.at(etoFixtures[claimFixture].equityToken);
-    // const tokenController = await PlaceholderEquityTokenController.at(await equityToken.tokenController());
+    // const tokenController = await SingleEquityTokenController.at(await equityToken.tokenController());
     // console.log(await tokenController.onTransfer(sender, sender, receiver, 7));
     await equityToken.transfer(receiver, 7, { from: sender });
     // withdraw and send

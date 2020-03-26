@@ -10,7 +10,7 @@ path[4]=../contracts/Universe.sol
 path[5]=../contracts/Identity/IdentityRegistry.sol
 path[6]=../contracts/SimpleExchange.sol
 path[7]=../contracts/Company/EquityToken.sol
-path[8]=../contracts/Company/PlaceholderEquityTokenController.sol
+path[8]=../contracts/Company/SingleEquityTokenController.sol
 path[9]=../contracts/PaymentTokens/EuroTokenController.sol
 path[10]=../contracts/PlatformTerms.sol
 
