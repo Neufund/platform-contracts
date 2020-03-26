@@ -11,7 +11,7 @@ import "../Standards/IContractId.sol";
 // 1 - standardizes migration function to require two side commitment
 // 2 - migration management shifted from company to UPGRADE ADMIN
 // 3 - company shares replaced by share capital
-contract IControllerGovernance_v0_3 is
+contract IControllerGovernance_v1_3 is
     IAgreement,
     IContractId
 {
@@ -32,7 +32,7 @@ contract IControllerGovernance_v0_3 is
         public
         constant
         returns (
-            // v0 returns shares, not share capital
+            // v0-2 returns shares, not share capital
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
             address shareholderRights
@@ -55,4 +55,23 @@ contract IControllerGovernance_v0_3 is
             address[] offerings,
             address[] equityTokens
         );
+
+    //
+    // Old Migration Interface v1-3
+    //
+
+    /// @dev requires UPGRADE ADMIN role in v2-3, company in v1
+    function changeTokenController(address newController)
+        public;
+
+    function newTokenController()
+        public
+        constant
+        returns (address);
+
+    function oldTokenController()
+        public
+        constant
+        returns (address);
+
 }
