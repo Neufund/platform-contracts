@@ -36,6 +36,7 @@ export const defDurTerms = {
 export const defTokenTerms = {
   EQUITY_TOKEN_NAME: "Quintessence",
   EQUITY_TOKEN_SYMBOL: "FFT",
+  ISIN: "DE037652",
   MIN_NUMBER_OF_TOKENS: defaultTokensPerShare.mul(20),
   MAX_NUMBER_OF_TOKENS: defaultTokensPerShare.mul(100),
   TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189651788"),

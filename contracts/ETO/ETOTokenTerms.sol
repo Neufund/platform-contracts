@@ -7,6 +7,7 @@ import "../Standards/IContractId.sol";
 // 0 - initial version
 // 1 - added SHARE_NOMINAL_VALUE_ULPS, SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL, SHARE_PRICE
 // 2 - renamed EQUITY_TOKEN_PRECISION to EQUITY_TOKEN_DECIMALS
+// 3 - added ISIN
 
 
 /// @title sets terms for tokens in ETO
@@ -19,7 +20,7 @@ contract ETOTokenTerms is Math, IContractId {
     // equity token metadata
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
-    // TODO: add ISIN
+    string public ISIN;
 
     // minimum number of tokens being offered. will set min cap
     uint256 public MIN_NUMBER_OF_TOKENS;
@@ -50,6 +51,7 @@ contract ETOTokenTerms is Math, IContractId {
     constructor(
         string equityTokenName,
         string equityTokenSymbol,
+        string isin,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
         uint256 tokenPriceEurUlps,
@@ -83,6 +85,7 @@ contract ETOTokenTerms is Math, IContractId {
         SHARE_NOMINAL_VALUE_ULPS = shareNominalValueUlps;
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
+        ISIN = isin;
         EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
         EQUITY_TOKEN_DECIMALS = equityTokenDecimals;
         EQUITY_TOKENS_POWER = 10**uint256(EQUITY_TOKEN_DECIMALS);

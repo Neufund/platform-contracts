@@ -131,6 +131,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     it("should set token symbol and other metadata from eto terms correctly", async () => {
       const equityTokenName = await tokenTerms.EQUITY_TOKEN_NAME();
       const equityTokenSymbol = await tokenTerms.EQUITY_TOKEN_SYMBOL();
+      const ISIN = await tokenTerms.ISIN();
       const equityTokenShareNominalValue = await tokenTerms.SHARE_NOMINAL_VALUE_ULPS();
       const equityTokenShareNominalEurValue = await tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS();
       const equityTokenDecimals = await tokenTerms.EQUITY_TOKEN_DECIMALS();
@@ -138,6 +139,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
 
       expect(await equityToken.name()).to.have.string(equityTokenName);
       expect(await equityToken.symbol()).to.have.string(equityTokenSymbol);
+      expect(await equityToken.ISIN()).to.have.string(ISIN);
       expect(await equityToken.decimals()).to.be.bignumber.eq(equityTokenDecimals);
       expect(await equityToken.tokensPerShare()).to.be.bignumber.eq(equityTokensPerShare);
       expect(await equityToken.shareNominalValueUlps()).to.be.bignumber.eq(

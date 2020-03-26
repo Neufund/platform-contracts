@@ -27,6 +27,9 @@ contract IEquityToken is
     // returns company legal representative account that never changes
     function companyLegalRepresentative() public constant returns (address);
 
+    // optional International Securities Identification Number
+    function ISIN() public constant returns (string);
+
     /// returns current nominee which is contract legal rep
     function nominee() public constant returns (address);
 

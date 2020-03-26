@@ -39,6 +39,7 @@ export const defEtoTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
+    ISIN: "LI03981289128",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
@@ -89,6 +90,7 @@ export const hnwiEtoDeSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Rich",
     EQUITY_TOKEN_SYMBOL: "RCH",
+    ISIN: "DE038748939874",
     MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.42376189"),
@@ -151,6 +153,7 @@ export const retailEtoDeVmaTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "NOMERA",
     EQUITY_TOKEN_SYMBOL: "NOM",
+    ISIN: "",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("15000000"),
     TOKEN_PRICE_EUR_ULPS: "666666666666666667",
@@ -198,6 +201,7 @@ export const miniEtoLiTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Blok",
     EQUITY_TOKEN_SYMBOL: "BLKK",
+    ISIN: "LI7632819987982",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("5000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("6000000"),
     TOKEN_PRICE_EUR_ULPS: "600000000000000000",
@@ -245,6 +249,7 @@ export const miniEtoLiNominalValueTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "6-SHARES",
     EQUITY_TOKEN_SYMBOL: "SSH",
+    ISIN: "",
     MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("6000000"),
     MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("30000000"),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.161870503597122302"),
@@ -292,6 +297,7 @@ export const hnwiEtoLiSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Bionic",
     EQUITY_TOKEN_SYMBOL: "BNIC",
+    ISIN: "LI837111821",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("20000000"),
     TOKEN_PRICE_EUR_ULPS: "796019900497512438",
@@ -339,6 +345,7 @@ export const retailSMEEtoLi = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
+    ISIN: "LI037619281",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
