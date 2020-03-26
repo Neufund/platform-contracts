@@ -8,11 +8,7 @@ import "./ControllerTokenOfferings.sol";
 import "../Standards/IContractId.sol";
 import "../Standards/IMigrationChain.sol";
 
-// version history as per contract id
-// 0 - initial version
-// 1 - standardizes migration function to require two side commitment
-// 2 - migration management shifted from company to UPGRADE ADMIN
-// 3 - company shares replaced by share capital
+
 // 4 - overhaul of equity token controller
 
 

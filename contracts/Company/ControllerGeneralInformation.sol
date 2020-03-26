@@ -70,17 +70,17 @@ contract ControllerGeneralInformation is
         sharesFraction[0] = proportion(_equityToken.totalSupply(), DECIMAL_POWER, tps);
     }
 
-    // TODO: add title
     function issueGeneralInformation(
-        string informationType,
-        string informationUrl
+        bytes32 resolutionId,
+        string title,
+        string documentUrl
     )
         public
         onlyOperational
         onlyCompany
     {
         // we emit this as Ethereum event, no need to store this in contract storage
-        emit LogGeneralInformation(COMPANY_LEGAL_REPRESENTATIVE, informationType, informationUrl);
+        emit LogResolutionStarted(resolutionId, title, documentUrl, Action.None, ExecutionState.Completed);
     }
 
     //

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { contractId, ZERO_ADDRESS, Q18, decimalBase } from "../helpers/constants";
+import { contractId, ZERO_ADDRESS, Q18, decimalBase, randomBytes32 } from "../helpers/constants";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import {
   GovState,
@@ -436,6 +436,8 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
         newOfferTx,
         0,
         newResolutionId,
+        "",
+        etoTermsDict.INVESTOR_OFFERING_DOCUMENT_URL,
         GovAction.RegisterOffer,
         GovExecutionState.Executing,
       );
@@ -883,12 +885,22 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     });
 
     it("should execute general information rights", async () => {
+      const resolutionId = randomBytes32();
       const tx = await equityTokenController.issueGeneralInformation(
+        resolutionId,
         "TOKENHOLDERS CALL",
         "ipfs:blah",
         { from: company },
       );
-      expectLogGeneralInformation(tx, company, "TOKENHOLDERS CALL", "ipfs:blah");
+      expectLogResolutionStarted(
+        tx,
+        0,
+        resolutionId,
+        "TOKENHOLDERS CALL",
+        "ipfs:blah",
+        GovAction.None,
+        GovExecutionState.Completed,
+      );
     });
 
     it("rejects general information not from company", async () => {
@@ -1152,10 +1164,20 @@ contract("PlaceholderEquityTokenController", ([_, admin, company, nominee, ...in
     expect(event.args.state).to.be.bignumber.eq(terminalState);
   }
 
-  function expectLogResolutionStarted(tx, logIdx, resolutionId, actionType, initialState) {
+  function expectLogResolutionStarted(
+    tx,
+    logIdx,
+    resolutionId,
+    title,
+    documentUrl,
+    actionType,
+    initialState,
+  ) {
     const event = eventWithIdxValue(tx, logIdx, "LogResolutionStarted");
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.resolutionTitle).to.eq(title);
+    expect(event.args.documentUrl).to.eq(documentUrl);
     expect(event.args.action).to.be.bignumber.eq(actionType);
     expect(event.args.state).to.be.bignumber.eq(initialState);
   }

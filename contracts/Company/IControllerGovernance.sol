@@ -65,6 +65,8 @@ contract IControllerGovernance is
     // logged when new resolution is registered for execution
     event LogResolutionStarted(
         bytes32 indexed resolutionId,
+        string resolutionTitle,
+        string documentUrl,
         Action action,
         ExecutionState state
     );
@@ -109,13 +111,6 @@ contract IControllerGovernance is
         address etoCommitment,
         address equityToken,
         uint256 newShares
-    );
-
-    // logs when company issues official information to shareholders
-    event LogGeneralInformation(
-        address companyLegalRep,
-        string informationType,
-        string informationUrl
     );
 
     //
@@ -174,7 +169,8 @@ contract IControllerGovernance is
     // officially inform shareholders, can be quarterly report, yearly closing
     // @dev this can be called only by company wallet
     function issueGeneralInformation(
-        string informationType,
+        bytes32 resolutionId,
+        string title,
         string informationUrl
     )
         public;

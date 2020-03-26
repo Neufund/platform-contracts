@@ -53,7 +53,12 @@ contract ControllerTokenOfferings is
         public
         onlyStates(GovState.Setup, GovState.Funded)
         withNonAtomicExecution(resolutionId, defaultValidator)
-        withGovernance(resolutionId, Action.RegisterOffer, defaultPermissionEscalator)
+        withGovernance(
+            resolutionId,
+            Action.RegisterOffer,
+            commitment.etoTerms().INVESTOR_OFFERING_DOCUMENT_URL(),
+            defaultPermissionEscalator
+        )
         // withExclusiveAction(resolutionId, Action.RegisterOffer)
     {
         // dev note: non atomic action will allow multiple entry

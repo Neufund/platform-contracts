@@ -105,9 +105,10 @@ contract ControllerGovernanceBase is
     modifier withGovernance(
         bytes32 resolutionId,
         Action action,
+        string documentUrl,
         function (ResolutionExecution storage) constant returns (ExecutionState) escalator)
     {
-        if (withGovernancePrivate(resolutionId, action, escalator) == ExecutionState.Executing) {
+        if (withGovernancePrivate(resolutionId, action, documentUrl, escalator) == ExecutionState.Executing) {
             // inner modifiers and function body only in Executing state
             _;
         }
@@ -386,6 +387,7 @@ contract ControllerGovernanceBase is
     function withGovernancePrivate(
         bytes32 resolutionId,
         Action action,
+        string documentUrl,
         function (ResolutionExecution storage) constant returns (ExecutionState) escalator
     )
         private
@@ -407,8 +409,7 @@ contract ControllerGovernanceBase is
             // that could give us access to msg.data at all times making subsequenct calls to
             // push execution forward easier
             _resolutionIds.push(resolutionId);
-            // TODO: add ipfs document uri to event below, we could also add empty title
-            emit LogResolutionStarted(resolutionId, action, s);
+            emit LogResolutionStarted(resolutionId, "", documentUrl, action, s);
         } else if (e.state == ExecutionState.Escalating) {
             // check voting results in voting center
             // if voting still there

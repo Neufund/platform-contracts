@@ -1,4 +1,5 @@
 const Web3 = require("web3");
+const sha3 = require("web3-utils").sha3;
 
 export const web3 = new Web3();
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -94,4 +95,8 @@ export const recoverBigNumbers = terms => {
 
 export function contractId(contractName) {
   return web3.sha3(`neufund-platform:${contractName}`);
+}
+
+export function randomBytes32() {
+  return sha3(web3.BigNumber.random().toString());
 }
