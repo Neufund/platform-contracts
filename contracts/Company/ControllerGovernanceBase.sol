@@ -403,7 +403,11 @@ contract ControllerGovernanceBase is
             e.startedAt = uint32(now);
             // use calldata as promise
             e.promise = keccak256(msg.data);
+            // we should use tx.hash as resolutionId, it's however not available in EVM
+            // that could give us access to msg.data at all times making subsequenct calls to
+            // push execution forward easier
             _resolutionIds.push(resolutionId);
+            // TODO: add ipfs document uri to event below, we could also add empty title
             emit LogResolutionStarted(resolutionId, action, s);
         } else if (e.state == ExecutionState.Escalating) {
             // check voting results in voting center

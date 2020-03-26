@@ -228,7 +228,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
       const cid = await etoCommitment.contractId();
       expect(cid[0]).to.eq(contractId("ETOCommitment"));
-      expect(cid[1]).to.be.bignumber.eq(2);
+      expect(cid[1]).to.be.bignumber.eq(4);
     });
 
     it("should set start date", async () => {

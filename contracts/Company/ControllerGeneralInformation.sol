@@ -7,18 +7,6 @@ contract ControllerGeneralInformation is
     ControllerGovernanceBase
 {
     ////////////////////////
-    // Types
-    ////////////////////////
-
-    struct ControllerGeneralInformationStorage
-    {
-        uint256 shareCapital;
-        uint256 authorizedCapital;
-        uint256 companyValuationEurUlps;
-        ShareholderRights shareholderRights;
-    }
-
-    ////////////////////////
     // Mutable state
     ////////////////////////
 
