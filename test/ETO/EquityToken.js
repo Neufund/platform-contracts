@@ -70,8 +70,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.nominee()).to.be.bignumber.eq(nominee);
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 
-      expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
-      expect((await equityToken.contractId())[1]).to.be.bignumber.eq(2);
+      expect((await equityToken.contractId())).to.deep.eq([contractId("EquityToken"), new web3.BigNumber("2")]);
 
       // eslint-disable-next-line no-console
       console.log(`Default Equity Token decimals: ${defEquityTokenDecimals}`);
