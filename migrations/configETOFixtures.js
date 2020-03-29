@@ -10,7 +10,7 @@ const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixture
   .getFixtureAndAddressByName;
 
 // standard 18 decimals scale
-export const stdEquityTokenDecimals = new web3.BigNumber("0");
+export const stdEquityTokenDecimals = new web3.BigNumber("18");
 export const stdEquityTokenPower = decimalBase.pow(stdEquityTokenDecimals);
 
 // legacy (indivisible) token scale and power
