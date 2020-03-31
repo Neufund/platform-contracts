@@ -48,9 +48,14 @@ contract MockETOCommitment is
     // @dev maximum to be shifted is to three days before state transition
     function _shiftToBeforeNextState(uint32 delta) public {
         require(delta < 86400, "NF_MOCK_INVALID_DELTA");
-        uint256 nextTransition = startOfInternal(ETOState(uint(state()) + 1));
+        ETOState s = state();
+        uint256 nextTransition = startOfInternal(ETOState(uint(s) + 1));
         require(nextTransition != 0 && nextTransition > now + delta, "NF_MOCK_INVALID_TRANSITION_TIME");
         _mockShiftBackTime(nextTransition - now - delta);
+        // generate set start date if still in setup
+        if (s == ETOState.Setup) {
+            emit LogETOStartDateSet(msg.sender, nextTransition, nextTransition - delta);
+        }
     }
 
     function _mockPastTime(uint256 idx, uint256 timestamp) public {

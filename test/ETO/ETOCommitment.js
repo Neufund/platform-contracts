@@ -388,25 +388,27 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       const timestamp = await latestTimestamp();
       durTable = defaultDurationTable();
       startDate = new web3.BigNumber(timestamp + 2 * dayInSeconds);
-      const whitelistD = durTable[CommitmentState.Whitelist].add(1);
       // set start data to 2 days from now via mocker
-      const startTx = await etoCommitment._mockStartDate(
+      let startTx = await etoCommitment._mockStartDate(
         etoTerms.address,
         equityToken.address,
         startDate,
-        startDate.add(whitelistD),
+        startDate,
         { from: company },
       );
-      expectLogETOStartDateSet(startTx, company, 0, startDate.add(whitelistD));
+      expectLogETOStartDateSet(startTx, company, 0, startDate);
 
       // move to right before startDate via mocker
-      await etoCommitment._shiftToBeforeNextState(10);
+      startTx = await etoCommitment._shiftToBeforeNextState(10, { from: company });
+      expectLogETOStartDateSet(startTx, company, startDate, startDate.sub(10));
+
       await increaseTime(15);
       const tx = await etoCommitment.handleStateTransitions();
       expectLogStateTransition(tx, CommitmentState.Setup, CommitmentState.Whitelist, "ignore");
 
       // do so again for whitelist->public transition
-      await etoCommitment._shiftToBeforeNextState(10);
+      const nextTx = await etoCommitment._shiftToBeforeNextState(10);
+      expect(hasEvent(nextTx, "LogETOStartDateSet")).to.be.false;
       await increaseTime(15);
       const tx2 = await etoCommitment.handleStateTransitions();
       expectLogStateTransition(tx2, CommitmentState.Whitelist, CommitmentState.Public, "ignore");
