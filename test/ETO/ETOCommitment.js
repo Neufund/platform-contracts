@@ -15,7 +15,7 @@ import {
   defaultPlatformTerms,
 } from "../helpers/deployContracts";
 import {
-  deployShareholderRights,
+  deployTokenholderRights,
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
@@ -23,7 +23,12 @@ import {
   defTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
-import { GovState, getCommitmentResolutionId } from "../helpers/govState";
+import {
+  GovState,
+  getCommitmentResolutionId,
+  GovTokenType,
+  GovTokenState,
+} from "../helpers/govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { eventValue, decodeLogs, eventWithIdxValue, hasEvent } from "../helpers/events";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
@@ -55,7 +60,7 @@ const MockETOCommitment = artifacts.require("MockETOCommitment");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETOTokenTerms = artifacts.require("MockUncheckedETOTokenTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
+const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 
 // in a few places we use linear approximations and we require high precision
@@ -103,8 +108,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   let etoTermsDict;
   let etoTermsConstraints;
   // let etoTermsConstraintsDict;
-  let shareholderRights;
-  // let shareholderTermsDict;
+  let tokenholderRights;
   let durationTerms;
   let durTermsDict;
   // eto contracts
@@ -283,6 +287,19 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
           from: company,
         }),
       ).to.be.rejectedWith("NF_ETO_DATE_TOO_EARLY");
+    });
+
+    it("reject changing equity token on second set start date", async () => {
+      startDate = new web3.BigNumber(await latestTimestamp()).add(3);
+      startDate = startDate.add(await etoTermsConstraints.DATE_TO_WHITELIST_MIN_DURATION());
+      await etoCommitment.setStartDate(etoTerms.address, equityToken.address, startDate, {
+        from: company,
+      });
+      await expect(
+        etoCommitment.setStartDate(etoTerms.address, etoTerms.address, startDate, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_ETO_EQ_TOKEN_DIFF");
     });
 
     it("rejects re-setting start date if now is less than DATE_TO_WHITELIST_MIN_DURATION to previous start date", async () => {
@@ -1028,7 +1045,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       // no voting rights are given so secondary offering can be started by the company
       await deployETO({
         ovrETOTerms: { MAX_TICKET_EUR_ULPS: maxTicket },
-        ovrShareholderRights: { GENERAL_VOTING_RULE: zero }, // no voting rights
+        ovrTokenholderRights: { GENERAL_VOTING_RULE: zero }, // no voting rights
       });
       await prepareETOForPublic();
       await skipTimeTo(publicStartDate.add(1));
@@ -2528,17 +2545,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         expect(whitelistTs.sub(startDate)).to.be.bignumber.gte(10);
         // token controller should be in offering state and have empty cap table and shareholder information
         expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
-        const tokens = await equityTokenController.tokens();
-        expect(tokens[0].length).to.eq(0);
-        expect(tokens[1].length).to.eq(0);
+        await expectEmptyTokenController();
 
-        expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
-
-        const generalInfo = await equityTokenController.shareholderInformation();
-        expect(generalInfo[0]).to.be.bignumber.eq(0);
-        expect(generalInfo[1]).to.be.bignumber.eq(0);
-        expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
-        expect(generalInfo[1]).to.be.bignumber.eq(0);
         // apply whitelist general discount, fixed slots not tested here
         const dp = discountedPrice(
           tokenTermsDict.TOKEN_PRICE_EUR_ULPS,
@@ -3486,9 +3494,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   async function deployETO(options) {
     const opts = Object.assign({ ovrArtifact: ETOCommitment }, options);
     // deploy ETO Terms: here deployment of single ETO contracts start
-    [shareholderRights] = await deployShareholderRights(
-      ShareholderRights,
-      opts.ovrShareholderRights,
+    [tokenholderRights] = await deployTokenholderRights(
+      TokenholderRights,
+      opts.ovrTokenholderRights,
     );
     [durationTerms, durTermsDict] = await deployDurationTerms(ETODurationTerms, opts.ovrDurations);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms, opts.ovrTokenTerms);
@@ -3505,7 +3513,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       ETOTerms,
       durationTerms,
       tokenTerms,
-      shareholderRights,
+      tokenholderRights,
       etoTermsConstraints,
       opts.ovrETOTerms,
     );
@@ -4028,12 +4036,17 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS.mul(getTokenPower()),
       ),
     );
-    expect(generalInformation[2]).to.eq(shareholderRights.address);
+    expect(generalInformation[2]).to.eq(tokenholderRights.address);
     expect(generalInformation[3]).to.be.bignumber.eq(etoTermsDict.AUTHORIZED_CAPITAL);
+    expect(generalInformation[4]).to.eq(await etoCommitment.signedInvestmentAgreementUrl());
+
     const tokens = await equityTokenController.tokens();
     expect(tokens[0][0]).to.eq(equityToken.address);
-    // we return shares as fractions so partial shares can be represented
-    expect(tokens[1][0]).to.be.bignumber.eq(contribution[0].mul(Q18));
+    expect(tokens[1][0]).to.be.bignumber.eq(GovTokenType.Equity);
+    expect(tokens[2][0]).to.be.bignumber.eq(GovTokenState.Open);
+    expect(tokens[3][0]).to.eq(tokenholderRights.address);
+    expect(tokens[4][0]).to.eq(etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS);
+
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([
       [etoCommitment.address],
       [equityToken.address],
@@ -4192,14 +4205,16 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
   async function expectEmptyTokenController() {
     const tokens = await equityTokenController.tokens();
-    expect(tokens[0].length).to.eq(0);
-    expect(tokens[1].length).to.eq(0);
+    for (const vals of tokens) {
+      expect(vals.length).to.eq(0);
+    }
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
     const generalInfo = await equityTokenController.shareholderInformation();
     expect(generalInfo[0]).to.be.bignumber.eq(0);
     expect(generalInfo[1]).to.be.bignumber.eq(0);
     expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
     expect(generalInfo[3]).to.be.bignumber.eq(0);
+    expect(generalInfo[4]).eq("");
   }
 
   async function expectStateStarts(pastStatesTable, durationTable) {

@@ -11,7 +11,7 @@ import { CommitmentState } from "../../helpers/commitmentState";
 import {
   deployDurationTerms,
   deployETOTerms,
-  deployShareholderRights,
+  deployTokenholderRights,
   deployTokenTerms,
   deployETOTermsConstraintsUniverse,
 } from "../../helpers/deployTerms";
@@ -22,7 +22,7 @@ const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
+const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const EquityToken = artifacts.require("EquityToken");
 
 const GranularTransferController = artifacts.require("GranularTransferController");
@@ -45,14 +45,14 @@ contract(
     let etoTerms;
     let tokenTerms;
     let testCommitment;
-    let shareholderRights;
+    let tokenholderRights;
     let durationTerms;
     let termsConstraints;
 
     beforeEach(async () => {
       [universe] = await deployUniverse(admin, admin);
       await deployPlatformTerms(universe, admin);
-      [shareholderRights] = await deployShareholderRights(ShareholderRights);
+      [tokenholderRights] = await deployTokenholderRights(TokenholderRights);
       [durationTerms] = await deployDurationTerms(ETODurationTerms);
       [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
     });
@@ -315,7 +315,7 @@ contract(
         ETOTerms,
         durationTerms,
         tokenTerms,
-        shareholderRights,
+        tokenholderRights,
         termsConstraints,
         termsOverride,
       );

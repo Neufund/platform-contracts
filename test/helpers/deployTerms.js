@@ -13,7 +13,7 @@ import { knownInterfaces } from "../helpers/knownInterfaces";
 
 const rlp = require("rlp");
 
-export const defaultShareholderTerms = {
+export const defaultTokenholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(1),
   TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
   LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
@@ -23,7 +23,6 @@ export const defaultShareholderTerms = {
   VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul(0.1),
   VOTING_MAJORITY_FRAC: Q18.mul(0.1),
-  INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
 };
 
 export const defDurTerms = {
@@ -57,7 +56,8 @@ export const defEtoTerms = {
   MAX_TICKET_EUR_ULPS: Q18.mul(1000000),
   ENABLE_TRANSFERS_ON_SUCCESS: false,
   INVESTOR_OFFERING_DOCUMENT_URL: "893289290300923809jdkljoi3",
-  SHAREHOLDER_RIGHTS: null,
+  INVESTMENT_AGREEMENT_TEMPLATE_URL: "9032ujidjosa9012809919293",
+  TOKENHOLDER_RIGHTS: null,
   WHITELIST_DISCOUNT_FRAC: Q18.mul("0.3"),
   PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
 };
@@ -151,12 +151,12 @@ export async function verifyTerms(c, keys, dict) {
   }
 }
 
-export async function deployShareholderRights(artifact, terms, fullTerms) {
-  const defaults = fullTerms ? {} : defaultShareholderTerms;
-  const shareholderTerms = Object.assign({}, defaults, terms || {});
-  const [shareholderTermsKeys, shareholderTermsValues] = validateTerms(artifact, shareholderTerms);
-  const shareholderRights = await artifact.new.apply(this, shareholderTermsValues);
-  return [shareholderRights, shareholderTerms, shareholderTermsKeys, shareholderTermsValues];
+export async function deployTokenholderRights(artifact, terms, fullTerms) {
+  const defaults = fullTerms ? {} : defaultTokenholderTerms;
+  const tokenholderTerms = Object.assign({}, defaults, terms || {});
+  const [tokenholderTermsKeys, tokenholderTermsValues] = validateTerms(artifact, tokenholderTerms);
+  const tokenholderRights = await artifact.new.apply(this, tokenholderTermsValues);
+  return [tokenholderRights, tokenholderTerms, tokenholderTermsKeys, tokenholderTermsValues];
 }
 
 export async function deployDurationTerms(artifact, terms, fullTerms) {
@@ -180,7 +180,7 @@ export async function deployETOTerms(
   artifact,
   durationTerms,
   tokenTerms,
-  shareholderRights,
+  tokenholderRights,
   termsConstraints,
   terms,
   fullTerms,
@@ -190,7 +190,7 @@ export async function deployETOTerms(
   etoTerms.UNIVERSE = universe.address;
   etoTerms.DURATION_TERMS = durationTerms.address;
   etoTerms.TOKEN_TERMS = tokenTerms.address;
-  etoTerms.SHAREHOLDER_RIGHTS = shareholderRights.address;
+  etoTerms.TOKENHOLDER_RIGHTS = tokenholderRights.address;
   etoTerms.ETO_TERMS_CONSTRAINTS = termsConstraints.address;
   const [termsKeys, termsValues] = validateTerms(artifact, etoTerms);
   const deployedTerms = await artifact.new.apply(this, termsValues);

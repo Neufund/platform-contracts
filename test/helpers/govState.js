@@ -41,6 +41,17 @@ export const GovExecutionState = {
   Completed: 6,
 };
 
+export const GovTokenType = {
+  Equity: 0,
+  Safe: 1,
+};
+
+export const GovTokenState = {
+  Open: 0,
+  Closing: 1,
+  Closed: 2,
+};
+
 export function isTerminalExecutionState(s) {
   return (
     [

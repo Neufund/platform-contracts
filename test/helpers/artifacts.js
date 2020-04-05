@@ -19,7 +19,7 @@ export const artifacts = {
   STANDARD_EQUITY_TOKEN: "EquityToken",
   EQUITY_TOKEN_CONTROLLER: "SingleEquityTokenController",
   STANDARD_ETO_TERMS: "ETOTerms",
-  STANDARD_SHAREHOLDER_RIGHTS: "ShareholderRights",
+  STANDARD_TOKENHOLDER_RIGHTS: "EquityTokenholderRights",
   STANDARD_DURATION_TERMS: "ETODurationTerms",
   STANDARD_TOKEN_TERMS: "ETOTokenTerms",
   FEE_DISBURSAL: "FeeDisbursal",
