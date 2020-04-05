@@ -64,12 +64,12 @@ module.exports = async function deploy() {
   }
   // parsed.eto_terms["ETO_TERMS_CONSTRAINTS"] = "0x5a7523368646E116288848074eA2f1bD5DeF0c21";
   const etoTerms = recoverBigNumbers(parsed.eto_terms);
-  const shareholderTerms = recoverBigNumbers(parsed.shareholder_rights);
+  const tokenholderTerms = recoverBigNumbers(parsed.tokenholder_rights);
   const durTerms = recoverBigNumbers(parsed.duration_terms);
   const tokenTerms = recoverBigNumbers(parsed.token_terms);
 
   explainTerms("etoTerms", etoTerms);
-  explainTerms("shareholderTerms", shareholderTerms);
+  explainTerms("tokenholderTerms", tokenholderTerms);
   explainTerms("durTerms", durTerms);
   explainTerms("tokenTerms", tokenTerms);
   console.log("\nETO Terms Constaints:");
@@ -91,7 +91,7 @@ module.exports = async function deploy() {
       parsed.nominee,
       parsed.company,
       etoTerms,
-      shareholderTerms,
+      tokenholderTerms,
       durTerms,
       tokenTerms,
       etoTerms.ETO_TERMS_CONSTRAINTS,

@@ -15,7 +15,7 @@ path[9]=../contracts/PaymentTokens/EuroTokenController.sol
 path[10]=../contracts/PlatformTerms.sol
 
 path[11]=../contracts/ETO/ETOTerms.sol
-path[12]=../contracts/Company/ShareholderRights.sol
+path[12]=../contracts/Company/EquityTokenholderRights.sol
 path[13]=../contracts/ETO/ETOTokenTerms.sol
 path[14]=../contracts/ETO/ETODurationTerms.sol
 path[15]=../contracts/Company/EquityToken.sol

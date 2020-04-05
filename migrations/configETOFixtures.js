@@ -18,7 +18,7 @@ const indivisibleEquityTokenDecimals = new web3.BigNumber("0");
 const indivisibleEquityTokenPower = decimalBase.pow(indivisibleEquityTokenDecimals);
 
 export const defEtoTerms = {
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0.5),
@@ -28,7 +28,6 @@ export const defEtoTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.5"),
     VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
@@ -50,8 +49,6 @@ export const defEtoTerms = {
     EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTerms: {
-    DURATION_TERMS: null,
-    TOKEN_TERMS: null,
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul(40976),
     AUTHORIZED_CAPITAL: Q18.mul(1273),
@@ -59,7 +56,7 @@ export const defEtoTerms = {
     MAX_TICKET_EUR_ULPS: Q18.mul(5000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
-    SHAREHOLDER_RIGHTS: null,
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
@@ -69,7 +66,7 @@ export const defEtoTerms = {
 };
 
 export const hnwiEtoDeSecurityTerms = {
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0.5),
@@ -79,7 +76,6 @@ export const hnwiEtoDeSecurityTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul(0.5),
     VOTING_MAJORITY_FRAC: Q18.mul(0.5),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(8)),
@@ -101,9 +97,6 @@ export const hnwiEtoDeSecurityTerms = {
     EQUITY_TOKEN_DECIMALS: indivisibleEquityTokenDecimals,
   },
   etoTerms: {
-    ETO_TERMS_CONSTRAINTS: null,
-    DURATION_TERMS: null,
-    TOKEN_TERMS: null,
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     AUTHORIZED_CAPITAL: Q18.mul(1273),
     EXISTING_SHARE_CAPITAL: Q18.mul(41976),
@@ -111,7 +104,7 @@ export const hnwiEtoDeSecurityTerms = {
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
-    SHAREHOLDER_RIGHTS: null,
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
@@ -131,8 +124,9 @@ export const retailEtoDeVmaTerms = {
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmcoZxecpVUaWCG2CjdNucNtRzKsCYBGaTkC54eW6MkRg3",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmdJQ9mrepd6mNQ6KTyoPwPELhbRZnN4pYUVyg2VY2vTG1",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -142,7 +136,6 @@ export const retailEtoDeVmaTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmdJQ9mrepd6mNQ6KTyoPwPELhbRZnN4pYUVyg2VY2vTG1",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -179,8 +172,9 @@ export const miniEtoLiTerms = {
     WHITELIST_DISCOUNT_FRAC: "400000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -190,7 +184,6 @@ export const miniEtoLiTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -227,8 +220,9 @@ export const miniEtoLiNominalValueTerms = {
     WHITELIST_DISCOUNT_FRAC: Q18.mul("0.1"),
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -238,7 +232,6 @@ export const miniEtoLiNominalValueTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
     VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -275,8 +268,9 @@ export const hnwiEtoLiSecurityTerms = {
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -286,7 +280,6 @@ export const hnwiEtoLiSecurityTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   durTerms: {
     WHITELIST_DURATION: "1209600",
@@ -323,8 +316,9 @@ export const retailSMEEtoLi = {
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -334,7 +328,6 @@ export const retailSMEEtoLi = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   durTerms: {
     WHITELIST_DURATION: "1209600",

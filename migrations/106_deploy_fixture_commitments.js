@@ -271,7 +271,7 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     nominee.address,
     issuer.address,
     etoDefiniton.etoTerms,
-    etoDefiniton.shareholderTerms,
+    etoDefiniton.tokenholderTerms,
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
     etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
@@ -434,15 +434,15 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log(
     // eslint-disable-next-line max-len
-    `Going to Claim.. putting signatures ${etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
+    `Going to Claim.. putting signatures ${etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
   );
   await etoCommitment._mockShiftBackTime(signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
-    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
   );
   await etoCommitment.nomineeConfirmsInvestmentAgreement(
-    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: nominee.address },
   );
   await ensureState(etoCommitment, CommitmentState.Claim);

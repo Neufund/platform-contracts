@@ -5,7 +5,7 @@ import { knownInterfaces } from "../test/helpers/knownInterfaces";
 import { promisify } from "../test/helpers/evmCommands";
 import { Q18, ZERO_ADDRESS } from "../test/helpers/constants";
 import {
-  deployShareholderRights,
+  deployTokenholderRights,
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
@@ -31,7 +31,7 @@ export async function deployETO(
   nominee,
   company,
   defETOTerms,
-  defShareholderRights,
+  defTokenholderRights,
   defDurations,
   defTokenTerms,
   etoTermsConstraintsAddress,
@@ -44,7 +44,7 @@ export async function deployETO(
   const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
   const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
   const ETOTokenTerms = artifacts.require(config.artifacts.STANDARD_TOKEN_TERMS);
-  const ShareholderRights = artifacts.require(config.artifacts.STANDARD_SHAREHOLDER_RIGHTS);
+  const TokenholderRights = artifacts.require(config.artifacts.STANDARD_TOKENHOLDER_RIGHTS);
 
   // preliminary checks
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
@@ -89,13 +89,13 @@ export async function deployETO(
     throw new Error("Initial checks failed");
   }
   // deployment
-  console.log("Deploying ShareholderRights");
-  const [shareholderRights] = await deployShareholderRights(
-    ShareholderRights,
-    defShareholderRights,
+  console.log("Deploying TokenholderRights");
+  const [tokenholderRights] = await deployTokenholderRights(
+    TokenholderRights,
+    defTokenholderRights,
     true,
   );
-  logDeployed(shareholderRights);
+  logDeployed(tokenholderRights);
   console.log("Deploying ETODurationTerms");
   const [durationTerms] = await deployDurationTerms(ETODurationTerms, defDurations, true);
   logDeployed(durationTerms);
@@ -108,7 +108,7 @@ export async function deployETO(
     ETOTerms,
     durationTerms,
     tokenTerms,
-    shareholderRights,
+    tokenholderRights,
     { address: etoTermsConstraintsAddress },
     defETOTerms,
     true,
