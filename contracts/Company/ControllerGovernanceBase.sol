@@ -5,6 +5,7 @@ import "../Agreement.sol";
 import "../Math.sol";
 import "./IControllerGovernance.sol";
 import "./IEquityToken.sol";
+import "./EquityTokenholderRights.sol";
 import "../Standards/IContractId.sol";
 
 
@@ -28,8 +29,11 @@ contract ControllerGovernanceBase is
     // Mutable state
     ////////////////////////
 
-     // set of shareholder rights that will be executed
+    // set of shareholder rights, typically of Nominee
     ShareholderRights internal _shareholderRights;
+
+     // set of equity token rights associated with the token
+    EquityTokenholderRights internal _tokenholderRights;
 
     // equity token from ETO
     IEquityToken internal _equityToken;
@@ -74,8 +78,10 @@ contract ControllerGovernanceBase is
         bytes32 resolutionId,
         function (ResolutionExecution storage) constant returns (string memory) validator)
     {
-        // validate resolution
         ResolutionExecution storage e = _resolutions[resolutionId];
+        // prevent to execute twice
+        require(e.state != ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
+        // validate resolution
         if(validateResolution(resolutionId, keccak256(msg.data), e, validator)) {
             _;
             // does not set resolution as completed, registers timeout
@@ -230,12 +236,13 @@ contract ControllerGovernanceBase is
     // Migration storage access
     //
 
-    function migrateGovernance(ShareholderRights shareholderRights, IEquityToken equityToken)
+    function migrateGovernance(EquityTokenholderRights tokenholderRights, IEquityToken equityToken)
         public
         onlyState(GovState.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        _shareholderRights = shareholderRights;
+        _shareholderRights = tokenholderRights;
+        _tokenholderRights = tokenholderRights;
         _equityToken = equityToken;
     }
 
@@ -319,7 +326,7 @@ contract ControllerGovernanceBase is
                 // permission escalation into campaign state of voting so voting is not yet official
 
                 // if no voting rights permission escalation is not possible and legal rep can trigger any action
-                if (_shareholderRights.GENERAL_VOTING_RULE() == VotingRule.NoVotingRights) {
+                if (_tokenholderRights.GENERAL_VOTING_RULE() == VotingRule.NoVotingRights) {
                     s = msg.sender == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
                 } else {
                     // 1. start voting is campaign mode if msg.sender is equity token holder
