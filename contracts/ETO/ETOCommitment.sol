@@ -277,7 +277,14 @@ contract ETOCommitment is
         onlyState(ETOState.Setup)
     {
         require(etoTerms == ETO_TERMS);
-        require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
+        if (address(EQUITY_TOKEN) == address(0)) {
+            require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
+            // log set terms only once
+            emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
+        } else {
+            // subsequent calls to start date cannot change equity token address
+            require(equityToken == EQUITY_TOKEN, "NF_ETO_EQ_TOKEN_DIFF");
+        }
         assert(startDate < 0xFFFFFFFF);
         // must be more than NNN days (platform terms!)
         require(
@@ -294,8 +301,6 @@ contract ETOCommitment is
         setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
         // run state machine
         runStateMachine(uint32(startDate));
-
-        emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
         emit LogETOStartDateSet(msg.sender, startAt, startDate);
     }
 

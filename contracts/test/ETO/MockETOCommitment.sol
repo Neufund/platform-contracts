@@ -75,7 +75,10 @@ contract MockETOCommitment is
         setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
         runStateMachine(uint32(startDate));
 
-        emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
+        if (startAt == 0) {
+            // log set terms only once
+            emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
+        }
         emit LogETOStartDateSet(msg.sender, startAt, logStartDate);
     }
 
