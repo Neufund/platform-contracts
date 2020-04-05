@@ -152,7 +152,7 @@ contract GranularTransferController is
         //      announcement and actual execution
         //require(now - t.block > 7 days, "NF_FORCED_T_NOT_DUE");
         // obtain equity token address
-        (address[] memory equityTokens, ) = tokens();
+        (address[] memory equityTokens,,,,) = tokens();
         IEquityToken token = IEquityToken(equityTokens[0]);
         // execute forced transfer with this smart contract as a broker
         // this will trigger onAllowance and onTranfer controller method before completing

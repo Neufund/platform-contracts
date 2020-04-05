@@ -49,5 +49,20 @@ contract GovernanceTypes {
         CancelResolution // a resolution that cancels another resolution, like calling off dividend payout or company closing
     }
 
+    enum TokenType {
+        Equity, // equity token
+        Safe // SAFE-based convertible note
+    }
+
+    enum TokenState {
+        Open, // token is open and may be transferred if controller permits
+        Closing, // token is being closed or converted, transfers are disabled
+        Closed // token is irreversibly closed and all rights are migrated or void
+    }
+
+    ////////////////////////
+    // Constructor
+    ////////////////////////
+
     constructor () internal {}
 }

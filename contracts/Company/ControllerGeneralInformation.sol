@@ -22,7 +22,11 @@ contract ControllerGeneralInformation is
     // are transfers on token enabled
     bool internal _transfersEnabled;
 
+    ////////////////////////
+    // Constructor
+    ////////////////////////
 
+    constructor () internal {}
 
     ////////////////////////
     // Public Methods
@@ -39,14 +43,19 @@ contract ControllerGeneralInformation is
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
             ShareholderRights shareholderRights,
-            uint256 authorizedCapital
+            uint256 authorizedCapital,
+            string shaUrl
         )
     {
+        if (amendmentsCount() > 0) {
+            (,,shaUrl,) = currentAgreement();
+        }
         return (
             _shareCapital,
             _companyValuationEurUlps,
             _shareholderRights,
-            _authorizedCapital
+            _authorizedCapital,
+            shaUrl
         );
     }
 
@@ -55,19 +64,26 @@ contract ControllerGeneralInformation is
         constant
         returns (
             address[] token,
-            uint256[] sharesFraction
+            TokenType[] tokenType,
+            TokenState[] tokenState,
+            address[] holderRights,
+            bool[] tokenTransferable
         )
     {
-        // no cap table before any shareholder agreement is attached
-        if (amendmentsCount() == 0) {
+        // no table of tokens before any token is set
+        if (_equityToken == address(0)) {
             return;
         }
+        tokenType = new TokenType[](1);
+        tokenType[0] = TokenType.Equity;
         token = new address[](1);
-        sharesFraction = new uint256[](1);
-
         token[0] = _equityToken;
-        uint256 tps = _equityToken.tokensPerShare();
-        sharesFraction[0] = proportion(_equityToken.totalSupply(), DECIMAL_POWER, tps);
+        holderRights = new address[](1);
+        holderRights[0] = _tokenholderRights;
+        tokenTransferable = new bool[](1);
+        tokenTransferable[0] = _transfersEnabled;
+        tokenState = new TokenState[](1);
+        tokenState[0] = TokenState.Open;
     }
 
     function issueGeneralInformation(

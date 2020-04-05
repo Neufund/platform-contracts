@@ -144,17 +144,20 @@ contract IControllerGovernance is
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
             ShareholderRights shareholderRights,
-            uint256 authorizedCapital
+            uint256 authorizedCapital,
+            string shaUrl
         );
 
-    // returns list of tokens and shares (as fraction) that given token represents
+    // returns list of tokens and associated holder rights
     function tokens()
         public
         constant
         returns (
             address[] token,
-            // we return shares as fractions so partial shares can be represented
-            uint256[] sharesFraction
+            TokenType[] tokenType,
+            TokenState[] tokenState,
+            address[] holderRights,
+            bool[] tokenTransferable
         );
 
     // returns all started offerings
