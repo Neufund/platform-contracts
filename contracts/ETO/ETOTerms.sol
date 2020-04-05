@@ -5,7 +5,7 @@ import "./ETOTokenTerms.sol";
 import "./ETOTermsConstraints.sol";
 import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
-import "../Company/ShareholderRights.sol";
+import "../Company/EquityTokenholderRights.sol";
 import "../Math.sol";
 import "../Universe.sol";
 import "../KnownInterfaces.sol";
@@ -18,6 +18,7 @@ import "../AccessRoles.sol";
 // 2 - whitelist management shifted from company to WHITELIST ADMIN
 // 3 - SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL moved to ETOTokenTerms
 //     replaces EXISTING_COMPANY_SHARS with EXISTING_SHARE_CAPITAL, adds CURRENCY CODE
+// 4 - replaces SHAREHOLDER_RIGHTS with TOKENHOLDER_RIGHTS
 //
 //     MAX_AVAILABLE_TOKENS with the actual amount of tokens for sale
 //     MAX_AVAILABLE_TOKENS_IN_WHITELIST with the actual amount of tokens for sale in whitelist
@@ -85,7 +86,7 @@ contract ETOTerms is
     // prospectus / investment memorandum / crowdfunding pamphlet etc.
     string public INVESTOR_OFFERING_DOCUMENT_URL;
     // settings for shareholder rights
-    ShareholderRights public SHAREHOLDER_RIGHTS;
+    EquityTokenholderRights public TOKENHOLDER_RIGHTS;
 
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
@@ -105,6 +106,9 @@ contract ETOTerms is
     uint256 private EQUITY_TOKENS_PER_SHARE;
     // public-discounted price to be paid for a full token during the eto
     uint256 private FULL_TOKEN_PRICE_FRACTION;
+
+    // url (typically IPFS hash) to investment agreement between nominee and company
+    string public INVESTMENT_AGREEMENT_TEMPLATE_URL;
 
 
     ////////////////////////
@@ -140,7 +144,8 @@ contract ETOTerms is
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
         string investorOfferingDocumentUrl,
-        ShareholderRights shareholderRights,
+        string investmentAgreementTemplateUrl,
+        EquityTokenholderRights tokenholderRights,
         uint256 whitelistDiscountFrac,
         uint256 publicDiscountFrac,
         ETOTermsConstraints etoTermsConstraints
@@ -153,9 +158,10 @@ contract ETOTerms is
         require(existingShareCapital > 0);
         require(bytes(investorOfferingDocumentUrl).length != 0);
         require(bytes(shareCapitalCurrencyCode).length != 0);
-        require(shareholderRights != address(0));
+        require(bytes(investmentAgreementTemplateUrl).length != 0);
+        require(tokenholderRights != address(0));
         // test interface
-        require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
+        require(tokenholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(minTicketEurUlps<=maxTicketEurUlps);
@@ -177,11 +183,12 @@ contract ETOTerms is
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         INVESTOR_OFFERING_DOCUMENT_URL = investorOfferingDocumentUrl;
-        SHAREHOLDER_RIGHTS = shareholderRights;
+        TOKENHOLDER_RIGHTS = tokenholderRights;
         WHITELIST_DISCOUNT_FRAC = whitelistDiscountFrac;
         PUBLIC_DISCOUNT_FRAC = publicDiscountFrac;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
+        INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
 
         // compute max available tokens to be sold in ETO
         EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKEN_DECIMALS());
@@ -362,7 +369,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 3);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 4);
     }
 
     ////////////////////////

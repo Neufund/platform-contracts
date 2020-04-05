@@ -12,7 +12,7 @@ import "../Standards/IMigrationChain.sol";
 /// several simplifications apply:
 /// - only single token is supported
 /// - not all shareholder rights are yet supported
-/// - single offering only supported
+/// - secondary offering must be on the same token
 contract SingleEquityTokenController is
     IEquityTokenController,
     ControllerTokenOfferings,

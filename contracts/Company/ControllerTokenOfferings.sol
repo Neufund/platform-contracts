@@ -27,6 +27,12 @@ contract ControllerTokenOfferings is
     }
 
     ////////////////////////
+    // Constructor
+    ////////////////////////
+
+    constructor () internal {}
+
+    ////////////////////////
     // Public Methods
     ////////////////////////
 
@@ -61,7 +67,6 @@ contract ControllerTokenOfferings is
         )
         // withExclusiveAction(resolutionId, Action.RegisterOffer)
     {
-        // dev note: non atomic action will allow multiple entry
         // this is the only governance method that can be started from a constructor, in that case
         // we must create promise ourselves as msg.data does not contain calldata to this function
         if (msg.data.length == 0) {
@@ -69,6 +74,8 @@ contract ControllerTokenOfferings is
             e.promise = keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment)));
         }
     }
+
+    // TODO: implement cancelDelistedOffering(resolution, commitment) to fail resolution if commitment delisted, onlyCompany
 
     //
     // Implements IETOCommitmentObserver
@@ -117,10 +124,16 @@ contract ControllerTokenOfferings is
     // Internal functions
     ////////////////////////
 
-    function addOffering(bytes32 resolutionId, IEquityToken equityToken, address tokenOffering)
+    function addOffering(
+        bytes32 resolutionId,
+        IEquityToken equityToken,
+        EquityTokenholderRights tokenholderRights,
+        address tokenOffering
+    )
         internal
     {
         _equityToken = equityToken;
+        _tokenholderRights = tokenholderRights;
         _commitment = tokenOffering;
 
         emit LogOfferingRegistered(resolutionId, tokenOffering, equityToken);
@@ -200,13 +213,14 @@ contract ControllerTokenOfferings is
         uint256 shareNominalValueUlps = etoTerms.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS();
         uint256 increasedValuationEurUlps = proportion(marginalSharePrice, increasedShareCapital, shareNominalValueUlps);
         string memory ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
+        EquityTokenholderRights tokenholderRights = tokenOffering.etoTerms().TOKENHOLDER_RIGHTS();
         // set new ISHA, increase share capital and company valuations, establish shareholder rights matrix
         amendISHA(
             resolutionId,
             ISHAUrl,
             increasedShareCapital,  // share capital increased
             increasedValuationEurUlps, // new valuation set based on increased share capital
-            tokenOffering.etoTerms().SHAREHOLDER_RIGHTS()
+            tokenholderRights
         );
         // establish authorized capital if it was specified
         uint256 authorizedCapitalUlps = etoTerms.AUTHORIZED_CAPITAL();
@@ -214,7 +228,7 @@ contract ControllerTokenOfferings is
             establishAuthorizedCapital(resolutionId, authorizedCapitalUlps);
         }
         // register successful offering and equity token
-        addOffering(resolutionId, equityToken, tokenOffering);
+        addOffering(resolutionId, equityToken, tokenholderRights, tokenOffering);
         // enable/disable transfers per ETO Terms
         enableTransfers(resolutionId, tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS());
         // move state to funded
