@@ -9,7 +9,7 @@ import "./EquityTokenholderRights.sol";
 import "../Standards/IContractId.sol";
 
 
-contract ControllerGovernanceBase is
+contract ControllerGovernanceEngine is
     IControllerGovernance,
     Agreement,
     Math,
@@ -279,7 +279,7 @@ contract ControllerGovernanceBase is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x4591efabdeba3b3cf16d6400ca05e4b482c4f56b95a48b1e96b28436818b5a02, 0);
+        return (0xd8b228c791b70f75338df4d4d644c638f1a58faec0b2f187daf42fb3722af438, 0);
     }
 
 

@@ -104,7 +104,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     const moduleId = await equityTokenController.moduleId();
     // have 4 modules including top contract
     expect(moduleId[0].length).to.eq(4);
-    expect(moduleId[0][0]).to.eq(contractId("ControllerGovernanceBase"));
+    expect(moduleId[0][0]).to.eq(contractId("ControllerGovernanceEngine"));
     expect(moduleId[1][0]).to.be.bignumber.eq(zero);
     expect(moduleId[0][1]).to.eq(contractId("ControllerGeneralInformation"));
     expect(moduleId[1][1]).to.be.bignumber.eq(zero);

@@ -3,7 +3,6 @@ pragma solidity 0.4.26;
 import "../Reclaimable.sol";
 
 import "./IEquityTokenController.sol";
-import "./ControllerGovernanceBase.sol";
 import "./ControllerTokenOfferings.sol";
 import "../Standards/IMigrationChain.sol";
 
@@ -46,7 +45,7 @@ contract SingleEquityTokenController is
         IETOCommitment commitment
     )
         public
-        ControllerGovernanceBase(universe, companyLegalRep)
+        ControllerGovernanceEngine(universe, companyLegalRep)
     {
         if (commitment != address(0)) {
             // initialize new offering accepting off-chain shareholder resolution
@@ -223,7 +222,7 @@ contract SingleEquityTokenController is
         ids = new bytes32[](4);
         versions = new uint256[](4);
 
-        (ids[0], versions[0]) = ControllerGovernanceBase.contractId();
+        (ids[0], versions[0]) = ControllerGovernanceEngine.contractId();
         (ids[1], versions[1]) = ControllerGeneralInformation.contractId();
         (ids[2], versions[2]) = ControllerTokenOfferings.contractId();
         (ids[3], versions[3]) = SingleEquityTokenController.contractId();

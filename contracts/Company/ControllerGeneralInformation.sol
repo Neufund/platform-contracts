@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "./ControllerGovernanceBase.sol";
+import "./ControllerGovernanceEngine.sol";
 
 
 contract ControllerGeneralInformation is
-    ControllerGovernanceBase
+    ControllerGovernanceEngine
 {
     ////////////////////////
     // Mutable state
