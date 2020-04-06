@@ -7,6 +7,32 @@ contract ControllerGeneralInformation is
     ControllerGovernanceEngine
 {
     ////////////////////////
+    // Events
+    ////////////////////////
+
+    // logged when transferability of given token was changed
+    event LogTransfersStateChanged(
+        bytes32 indexed resolutionId,
+        address equityToken,
+        bool transfersEnabled
+    );
+
+    // logged when ISHA was amended (new text, new shareholders, new cap table, offline round etc.)
+    event LogISHAAmended(
+        bytes32 indexed resolutionId,
+        string ISHAUrl,
+        uint256 shareCapitalUlps,
+        uint256 companyValuationEurUlps,
+        address newShareholderRights
+    );
+
+    // logged when authorized share capital is established
+    event LogAuthorizedCapitalEstablished(
+        bytes32 indexed resolutionId,
+        uint256 authorizedCapitalUlps
+    );
+
+    ////////////////////////
     // Mutable state
     ////////////////////////
 

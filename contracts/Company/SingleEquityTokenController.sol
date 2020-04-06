@@ -3,6 +3,7 @@ pragma solidity 0.4.26;
 import "../Reclaimable.sol";
 
 import "./IEquityTokenController.sol";
+import "./IControllerGovernance.sol";
 import "./ControllerTokenOfferings.sol";
 import "../Standards/IMigrationChain.sol";
 
@@ -13,6 +14,7 @@ import "../Standards/IMigrationChain.sol";
 /// - not all shareholder rights are yet supported
 /// - secondary offering must be on the same token
 contract SingleEquityTokenController is
+    IControllerGovernance,
     IEquityTokenController,
     ControllerTokenOfferings,
     IMigrationChain

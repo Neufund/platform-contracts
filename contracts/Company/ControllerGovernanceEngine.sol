@@ -3,18 +3,45 @@ pragma solidity 0.4.26;
 import "../Universe.sol";
 import "../Agreement.sol";
 import "../Math.sol";
-import "./IControllerGovernance.sol";
+import "./GovernanceTypes.sol";
 import "./IEquityToken.sol";
 import "./EquityTokenholderRights.sol";
 import "../Standards/IContractId.sol";
 
 
 contract ControllerGovernanceEngine is
-    IControllerGovernance,
+    GovernanceTypes,
     Agreement,
     Math,
     IContractId
 {
+    ////////////////////////
+    // Events
+    ////////////////////////
+
+    // logged on controller state transition
+    event LogGovStateTransition(
+        uint32 oldState,
+        uint32 newState,
+        uint32 timestamp
+    );
+
+    // logged when new resolution is registered for execution
+    event LogResolutionStarted(
+        bytes32 indexed resolutionId,
+        string resolutionTitle,
+        string documentUrl,
+        Action action,
+        ExecutionState state
+    );
+
+    // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
+    event LogResolutionExecuted(
+        bytes32 indexed resolutionId,
+        Action action,
+        ExecutionState state
+    );
+
     ////////////////////////
     // Immutable state
     ////////////////////////

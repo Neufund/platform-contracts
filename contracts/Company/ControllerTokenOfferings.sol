@@ -10,6 +10,30 @@ contract ControllerTokenOfferings is
     KnownInterfaces
 {
     ////////////////////////
+    // Events
+    ////////////////////////
+
+    // offering of the token in ETO failed (Refund)
+    event LogOfferingFailed(
+        address etoCommitment,
+        address equityToken
+    );
+
+    // offering of the token in ETO succeeded (with all on-chain consequences)
+    event LogOfferingSucceeded(
+        address etoCommitment,
+        address equityToken,
+        uint256 newShares
+    );
+
+    //
+    event LogOfferingRegistered(
+        bytes32 indexed resolutionId,
+        address etoCommitment,
+        address equityToken
+    );
+
+    ////////////////////////
     // Mutable state
     ////////////////////////
 

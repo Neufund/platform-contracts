@@ -60,6 +60,43 @@ contract GovernanceTypes {
         Closed // token is irreversibly closed and all rights are migrated or void
     }
 
+    enum ExecutionState {
+        New,
+        // permissions are being escalated ie. voting in progress
+        Escalating,
+        // permission escalation failed
+        Rejected,
+        // resolution in progress
+        Executing,
+        // resolution was cancelled ie. due to timeout
+        Cancelled,
+        // resolution execution failed ie. ETO refunded
+        Failed,
+        // resolution execution OK
+        Completed
+    }
+
+    struct ResolutionExecution {
+        // payload promise
+        bytes32 promise; // 256 bits
+        // next WORD
+        // failed code which is keccak of revert code from validator
+        bytes32 failedCode;
+        // next WORD
+        // initial action being executed
+        Action action; // 8-bit
+        // state of the execution
+        ExecutionState state; // 8-bit
+        // resolution started
+        uint32 startedAt; // 32-bit
+        // resolution finished
+        uint32 finishedAt; // 32-bit
+        // reserved
+
+        // resolution deadline
+        // child executions
+    }
+
     ////////////////////////
     // Constructor
     ////////////////////////
