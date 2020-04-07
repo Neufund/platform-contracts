@@ -25,8 +25,8 @@ tests:
 	# default 18 decimals test
 	yarn test
 	# run eto tests in two scales
-	EQUITY_TOKEN_DECIMALS=0 yarn truffle test test/ETO/* test/setup.js --network inprocess_test
-	EQUITY_TOKEN_DECIMALS=10 yarn truffle test test/ETO/* test/setup.js --network inprocess_test
+	EQUITY_TOKEN_DECIMALS=0 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
+	EQUITY_TOKEN_DECIMALS=10 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
 
 down:
 ifneq ($(shell docker ps -q -f NAME=^/platform-contracts$),)
