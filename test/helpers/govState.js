@@ -11,18 +11,30 @@ export const GovState = {
   Migrated: 6,
 };
 
+// Needs to match GovernanceTypes:Action
 export const GovAction = {
-  None: 0, // no on-chain action on resolution
-  StopToken: 1, // blocks transfers
-  ContinueToken: 2, // enables transfers
-  CloseToken: 3, // any liquidation: dissolution, tag, drag, exit (settlement time, amount eur, amount eth)
-  Payout: 4, // any dividend payout (amount eur, amount eth)
-  RegisterOffer: 5, // start new token offering
-  ChangeTokenController: 6, // (new token controller)
-  AmendISHA: 7, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur)
-  IssueTokensForExistingShares: 8, // (number of converted shares, allocation (address => balance))
-  ChangeNominee: 9,
-  Downround: 10,
+  None: 0,
+  StopToken: 1,
+  ContinueToken: 2,
+  CloseToken: 3,
+  OrdinaryPayout: 4,
+  ExtraodindaryPayout: 5,
+  RegisterOffer: 6,
+  ChangeTokenController: 7,
+  AmendISHA: 8,
+  IssueTokensForExistingShares: 9,
+  IssueSharesForExistingTokens: 10,
+  ChangeNominee: 11,
+  Downround: 12,
+  EstablishAuthorizedCapital: 13,
+  EstablishESOP: 14,
+  ConvertESOP: 15,
+  ChangeOfControl: 16,
+  DissolveCompany: 17,
+  TagAlong: 18,
+  AnnualGeneralMeeting: 19,
+  AmendSharesAndValuation: 20,
+  CancelResolution: 21,
 };
 
 export const GovExecutionState = {

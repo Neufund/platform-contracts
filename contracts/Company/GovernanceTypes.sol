@@ -33,20 +33,61 @@ contract GovernanceTypes {
         None, // no on-chain action on resolution
         StopToken, // blocks transfers
         ContinueToken, // enables transfers
-        CloseToken, // any liquidation: dissolution, tag, drag, exit (settlement time, amount eur, amount eth)
-        Payout, // any dividend payout (amount eur, amount eth)
+        // requires change of control resolution/dissolution to be in executing state
+        // on entering executing state will stop token
+        // will be completed on payout of certain amount of nEUR
+        CloseToken,
+        OrdinaryPayout, // any scheduled or expected payout initiated by company legal rep
+        ExtraodindaryPayout, // a payout that requires resolution to pass
         RegisterOffer, // start new token offering
         ChangeTokenController, // (new token controller)
         AmendISHA, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur, new authorized capital)
-        IssueTokensForExistingShares, // (number of converted shares, allocation (address => balance))
+        // allocates tokens against shares that are transferred to nominee
+        // requires SHR
+        IssueTokensForExistingShares,
+        // transfers shares to particular investors, destroying equity tokens
+        // requires SHR
+        IssueSharesForExistingTokens,
         ChangeNominee,
         Downround, // results in issuance of new equity token and disbursing it to current token holders
         EstablishAuthorizedCapital, // results in new amount of authorized capital
-        // results with establishing authorized capital (optional), new ESOP contract address with ESOP params and assigning authorized capital to pools
+        // requires new ESOP contract address with ESOP params and assigning authorized capital to pools
         // existing authorized capital pool can be assigned then voting is not required
         // same ESOP can be established - then pool will be increased
         EstablishESOP,
+        // converts ESOP into equity token or an internal 'payout token', completed only when conversion is over
+        ConvertESOP,
+        // any change of control event, will result in company closing
+        // will create child resolutions for all tokens to be closed and ESOP to be converted
+        // drag along is mandatory, we do not support governance without it
+        ChangeOfControl,
+        // same as above, will close company when it's dissolved
+        DissolveCompany,
+        TagAlong, // equity token holders vote on tag along
+        // voting on yearly report, also Nominee may attend the meeting off-chain
+        AnnualGeneralMeeting,
+        // changes valuation and number of shares, initiated by company legal rep
+        // for example when note is converted after offering or when company wants to announce new official valuation
+        AmendSharesAndValuation,
         CancelResolution // a resolution that cancels another resolution, like calling off dividend payout or company closing
+    }
+
+    struct ActionGovernance {
+        // permission level (any token holder, company legal rep, nominee, company or legal rep, token holders, share holders, parent resolution)
+        uint8 escalationLevel;
+        // voting period in seconds
+        uint32 votingPeriod;
+        // voting quorum fraction scaled to 32bits
+        uint32 votingQuorum32Frac;
+        // voting majority fraction scaled to 32 bits
+        uint32 votingMajority32Frac;
+        // majority voting power - specific voting power required to pass
+        // if not 0 voting quorum and majority will be ignored
+        uint32 votingPower32Frac;
+        // voting rule for token holders
+        VotingRule votingRule;
+        // off chain rep of the voting (none, nominee, company legal rep)
+        uint8 votingLegalRepresentative;
     }
 
     enum TokenType {
