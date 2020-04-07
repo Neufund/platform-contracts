@@ -1,5 +1,6 @@
 pragma solidity 0.4.26;
 
+import "../Math.sol";
 import "../ETO/IETOCommitment.sol";
 import "./ControllerGeneralInformation.sol";
 
@@ -7,7 +8,8 @@ import "./ControllerGeneralInformation.sol";
 contract ControllerTokenOfferings is
     IETOCommitmentObserver,
     ControllerGeneralInformation,
-    KnownInterfaces
+    KnownInterfaces,
+    Math
 {
     ////////////////////////
     // Events
@@ -181,8 +183,7 @@ contract ControllerTokenOfferings is
         private
         withAtomicContinuedExecution(
             resolutionId,
-            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment))),
-            defaultValidator
+            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment)))
         )
     {
         if (newState == ETOState.Claim) {
@@ -197,8 +198,7 @@ contract ControllerTokenOfferings is
         private
         withNonAtomicContinuedExecution(
             resolutionId,
-            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(tokenOffering))),
-            defaultValidator
+            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(tokenOffering)))
         )
     {
         IEquityToken equityToken = tokenOffering.equityToken();
