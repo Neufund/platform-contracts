@@ -13,7 +13,8 @@ import {
 } from "./helpers/deployContracts";
 import { TriState, GLOBAL } from "./helpers/triState";
 import roles from "./helpers/roles";
-import { toBytes32, Q18, ZERO_ADDRESS, contractId, daysToSeconds } from "./helpers/constants";
+import { Q18, ZERO_ADDRESS, daysToSeconds } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 import { identityClaims } from "./helpers/identityClaims";
 import increaseTime from "./helpers/increaseTime";
 import { latestTimestamp } from "./helpers/latestTime";

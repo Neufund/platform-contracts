@@ -1,10 +1,5 @@
-import {
-  web3,
-  decimalBase,
-  Q18,
-  daysToSeconds,
-  recoverBigNumbers,
-} from "../test/helpers/constants";
+import { web3, decimalBase, Q18, daysToSeconds } from "../test/helpers/constants";
+import { recoverBigNumbers } from "../test/helpers/utils";
 
 const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
   .getFixtureAndAddressByName;

@@ -42,13 +42,12 @@ import {
   decimalBase,
   Q18,
   dayInSeconds,
-  toBytes32,
-  contractId,
   monthInSeconds,
   web3,
   defEquityTokenPower,
   defEquityTokenDecimals,
 } from "../helpers/constants";
+import { toBytes32, contractId } from "../helpers/utils";
 import { expectLogFundsCommitted } from "../helpers/commitment";
 import EvmError from "../helpers/EVMThrow";
 

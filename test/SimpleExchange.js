@@ -15,7 +15,8 @@ import roles from "./helpers/roles";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import { divRound, etherToWei } from "./helpers/unitConverter";
 import increaseTime from "./helpers/increaseTime";
-import { toBytes32, Q18, contractId, ZERO_ADDRESS } from "./helpers/constants";
+import { Q18, ZERO_ADDRESS } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 
 const gasExchangeMaxAllowanceEurUlps = Q18.mul(50);
 const gasExchangeFee = Q18.mul(0.07);

@@ -21,14 +21,13 @@ import { etherToWei, divRound } from "./helpers/unitConverter";
 import roles from "./helpers/roles";
 import { promisify } from "./helpers/evmCommands";
 import {
-  contractId,
   dayInSeconds,
   daysToSeconds,
   monthInSeconds,
   Q18,
-  toBytes32,
   ZERO_ADDRESS,
 } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { expectLogFundsCommitted } from "./helpers/commitment";

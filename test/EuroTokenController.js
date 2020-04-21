@@ -5,7 +5,8 @@ import roles from "./helpers/roles";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import registerSingletons from "./helpers/registerSingletons";
-import { contractId, Q18, toBytes32, ZERO_ADDRESS } from "./helpers/constants";
+import { Q18, ZERO_ADDRESS } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 import { TriState } from "./helpers/triState";
 
 const EuroTokenController = artifacts.require("EuroTokenController");

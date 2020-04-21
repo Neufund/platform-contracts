@@ -22,7 +22,8 @@ import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { mineBlock } from "../helpers/evmCommands";
 import increaseTime from "../helpers/increaseTime";
-import { contractId, ZERO_ADDRESS, defEquityTokenDecimals } from "../helpers/constants";
+import { ZERO_ADDRESS, defEquityTokenDecimals } from "../helpers/constants";
+import { contractId } from "../helpers/utils";
 import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");

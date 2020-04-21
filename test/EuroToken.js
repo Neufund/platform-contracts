@@ -21,7 +21,8 @@ import {
   deployEuroTokenUniverse,
 } from "./helpers/deployContracts";
 import { identityClaims } from "./helpers/identityClaims";
-import { ZERO_ADDRESS, toBytes32, Q18, contractId } from "./helpers/constants";
+import { ZERO_ADDRESS, Q18 } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 import createAccessPolicy from "./helpers/createAccessPolicy";
 import roles from "./helpers/roles";
 import { testChangeTokenController, testTokenController } from "./helpers/tokenControllerTestCases";

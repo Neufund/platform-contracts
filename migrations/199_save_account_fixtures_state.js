@@ -2,7 +2,7 @@ require("babel-register");
 const fs = require("fs");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
-const stringify = require("../test/helpers/constants").stringify;
+const stringify = require("../test/helpers/utils").stringify;
 const { join } = require("path");
 const promisify = require("../test/helpers/evmCommands").promisify;
 

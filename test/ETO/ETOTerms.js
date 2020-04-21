@@ -16,7 +16,8 @@ import {
   defTokenTerms,
   verifyTerms,
 } from "../helpers/deployTerms";
-import { Q18, contractId, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
+import { Q18, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
+import { contractId } from "../helpers/utils";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 

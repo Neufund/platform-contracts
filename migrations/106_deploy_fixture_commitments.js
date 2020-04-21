@@ -18,7 +18,7 @@ const {
   retailSMEEtoLi,
 } = require("./configETOFixtures");
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
-const stringify = require("../test/helpers/constants").stringify;
+const stringify = require("../test/helpers/utils").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const decimalBase = require("../test/helpers/constants").decimalBase;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
@@ -518,6 +518,7 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
     equityToken: toChecksumAddress(await etoCommitment.equityToken()),
     etoTerms: toChecksumAddress(await etoCommitment.etoTerms()),
     definition: etoDefinition,
+    investmentAgreement: await etoCommitment.signedInvestmentAgreementUrl(),
   };
   const whitelist = {};
   const investors = {};

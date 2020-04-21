@@ -17,7 +17,8 @@ import { etherToWei } from "./helpers/unitConverter";
 import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
 import EvmError from "./helpers/EVMThrow";
-import { contractId, ZERO_ADDRESS } from "./helpers/constants";
+import { ZERO_ADDRESS } from "./helpers/constants";
+import { contractId } from "./helpers/utils";
 import { promisify } from "./helpers/evmCommands";
 
 const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage

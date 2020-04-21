@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { CommitmentState } from "./commitmentState";
 import increaseTime from "../helpers/increaseTime";
 import { latestTimestamp } from "../helpers/latestTime";
+import { getKeyByValue } from "../helpers/utils";
 
 // always give one minute more to let testRPC settle
 const START_DATE_GAP = 60;
@@ -90,10 +91,6 @@ contract("TimedStateMachine", () => {
       [CommitmentState.Public, [CommitmentState.Public, CommitmentState.Finished]],
       [CommitmentState.Finished, [CommitmentState.Finished]],
     ];
-
-    function getKeyByValue(object, value) {
-      return Object.keys(object).find(key => object[key] === value);
-    }
 
     for (const inStateMap of DesiredTimedTransitions) {
       for (const outState of inStateMap[1]) {

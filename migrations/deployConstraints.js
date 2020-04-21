@@ -3,7 +3,7 @@ import { toChecksumAddress } from "web3-utils";
 import createAccessPolicy from "../test/helpers/createAccessPolicy";
 import { TriState } from "../test/helpers/triState";
 import roles from "../test/helpers/roles";
-import { stringify } from "../test/helpers/constants";
+import { stringify } from "../test/helpers/utils";
 import { knownInterfaces } from "../test/helpers/knownInterfaces";
 import { constraints } from "./config";
 import { deployedAddresses, describedConstraints } from "./configETOTermsFixtures";

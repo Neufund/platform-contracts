@@ -4,7 +4,8 @@ import {
   deployUniverse,
   deployIdentityRegistry,
 } from "../../helpers/deployContracts";
-import { contractId, toBytes32, daysToSeconds } from "../../helpers/constants";
+import { daysToSeconds } from "../../helpers/constants";
+import { toBytes32, contractId } from "../../helpers/utils";
 import { prettyPrintGasCost } from "../../helpers/gasUtils";
 import EvmError from "../../helpers/EVMThrow";
 import { CommitmentState } from "../../helpers/commitmentState";
