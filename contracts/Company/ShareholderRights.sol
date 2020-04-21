@@ -39,24 +39,13 @@ contract ShareholderRights is GovernanceTypes, IContractId {
     constructor(
         bool hasVotingRights,
         uint256 liquidationPreferenceMultiplierFrac,
-        bool hasFoundersVesting,
-        uint256 generalVotingDuration,
-        uint256 restrictedActVotingDuration,
-        uint256 shareholdersVotingQuorumFrac,
-        uint256 votingMajorityFrac
+        bool hasFoundersVesting
     )
         public
     {
-        // quorum < 100%
-        require(shareholdersVotingQuorumFrac <= 10**18);
-
         HAS_VOTING_RIGHTS = hasVotingRights;
         LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC = liquidationPreferenceMultiplierFrac;
         HAS_FOUNDERS_VESTING = hasFoundersVesting;
-        GENERAL_VOTING_DURATION = generalVotingDuration;
-        RESTRICTED_ACT_VOTING_DURATION = restrictedActVotingDuration;
-        SHAREHOLDERS_VOTING_QUORUM_FRAC = shareholdersVotingQuorumFrac;
-        VOTING_MAJORITY_FRAC = votingMajorityFrac;
     }
 
     //
