@@ -19,7 +19,14 @@ contract TestMockableTokenController is
     bool internal _allowDestroyTokens;
     bool internal _allowGenerateTokens;
     bool internal _allowChangeTokenController;
+
     mapping (address => mapping (address => uint256)) internal _overrides;
+
+    // enable to address to operate on specific amount, address could be broker, to, form, owner, spender, see below.
+    mapping (address => uint256) internal _enabledAddresses;
+
+    // swap owner and sender in generate/destroy as token sends same value and not all cases could be tested
+    bool internal _swapOwnerSender;
 
     ////////////////////////
     // Constructor
@@ -44,20 +51,20 @@ contract TestMockableTokenController is
     //  Implements ITokenController
     //
 
-    function onTransfer(address, address, address, uint256)
+    function onTransfer(address broker, address from, address to, uint256 amount)
         public
         constant
         returns (bool)
     {
-        return _allowOnTransfer;
+        return _allowOnTransfer || _enabledAddresses[broker] == amount || _enabledAddresses[from] == amount || _enabledAddresses[to] == amount;
     }
 
-    function onApprove(address, address, uint256)
+    function onApprove(address owner, address spender, uint256 amount)
         public
         constant
         returns (bool)
     {
-        return _allowOnApprove;
+        return _allowOnApprove || _enabledAddresses[owner] == amount || _enabledAddresses[spender] == amount;
     }
 
     function onAllowance(address owner, address spender)
@@ -68,28 +75,36 @@ contract TestMockableTokenController is
         return _overrides[owner][spender];
     }
 
-    function onGenerateTokens(address, address, uint256)
+    function onGenerateTokens(address sender, address owner, uint256 amount)
         public
         constant
         returns (bool)
     {
-        return _allowGenerateTokens;
+        if (_swapOwnerSender) {
+            return _allowGenerateTokens || _enabledAddresses[sender] == amount;
+        } else {
+            return _allowGenerateTokens || _enabledAddresses[owner] == amount;
+        }
     }
 
-    function onDestroyTokens(address, address, uint256)
+    function onDestroyTokens(address sender, address owner, uint256 amount)
         public
         constant
         returns (bool)
     {
-        return _allowDestroyTokens;
+        if (_swapOwnerSender) {
+            return _allowDestroyTokens || _enabledAddresses[sender] == amount;
+        } else {
+            return _allowDestroyTokens || _enabledAddresses[owner] == amount;
+        }
     }
 
-    function onChangeTokenController(address, address)
+    function onChangeTokenController(address sender, address newController)
         public
         constant
         returns (bool)
     {
-        return _allowChangeTokenController;
+        return _allowChangeTokenController || _enabledAddresses[sender] == 1 || _enabledAddresses[newController] == 1;
     }
 
     //
@@ -131,5 +146,17 @@ contract TestMockableTokenController is
         public
     {
         _overrides[owner][controller] = amount;
+    }
+
+    function setAllowedAddress(address a, uint256 amount)
+        public
+    {
+        _enabledAddresses[a] = amount;
+    }
+
+    function swapOwnerSender(bool senderFirst)
+        public
+    {
+        _swapOwnerSender = senderFirst;
     }
 }

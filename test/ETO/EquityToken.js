@@ -71,6 +71,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       expect(await equityToken.companyLegalRepresentative()).to.be.bignumber.eq(company);
 
       expect((await equityToken.contractId())[0]).to.eq(contractId("EquityToken"));
+      expect((await equityToken.contractId())[1]).to.be.bignumber.eq(2);
 
       // eslint-disable-next-line no-console
       console.log(`Default Equity Token decimals: ${defEquityTokenDecimals}`);
@@ -155,7 +156,7 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
     const generate = async (amount, account) => equityToken.issueTokens(amount, { from: account });
     const destroy = async (amount, account) => equityToken.destroyTokens(amount, { from: account });
 
-    testChangeTokenController(getToken, getController);
+    testChangeTokenController(getToken, getController, admin, holders[0]);
     testTokenController(getToken, getController, holders[0], holders[1], broker, generate, destroy);
 
     it("should change nominee if change enabled", async () => {
