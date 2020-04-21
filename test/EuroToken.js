@@ -1403,7 +1403,8 @@ contract(
           controller.address,
         );
         await createAccessPolicy(accessControl, [
-          { subject: depositManager, role: roles.eurtDepositManager },
+          { subject: investors[0], role: roles.eurtDepositManager },
+          { subject: investors[1], role: roles.eurtDepositManager },
           { subject: eurtLegalManager, role: roles.eurtLegalManager },
         ]);
         await euroToken.amendAgreement("0x0", { from: eurtLegalManager });
@@ -1412,10 +1413,10 @@ contract(
       const getToken = () => euroToken;
       const getController = () => controller;
       const generate = async (amount, account) =>
-        euroToken.deposit(account, amount, defaultDepositRef, { from: depositManager });
+        euroToken.deposit(account, amount, defaultDepositRef, { from: account });
       const destroy = async (amount, account) => euroToken.withdraw(amount, { from: account });
 
-      testChangeTokenController(getToken, getController);
+      testChangeTokenController(getToken, getController, masterManager, investors[0]);
       testTokenController(
         getToken,
         getController,
