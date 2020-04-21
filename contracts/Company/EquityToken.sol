@@ -19,6 +19,7 @@ import "../Math.sol";
 // version history as per contract id
 // 0 - inital version
 // 1 - shareNominalValueUlps added and shareNominalValueEurUlps removed in IEquityToken
+// 2 - fixed issueToken `to` bug where address(this) was sent to controller in onGenerateTokens
 
 
 contract EquityToken is
@@ -138,7 +139,7 @@ contract EquityToken is
     /// @dev token controller performs access control
     function issueTokens(uint256 amount)
         public
-        onlyIfIssueAllowed(address(this), amount)
+        onlyIfIssueAllowed(msg.sender, amount)
         acceptAgreement(msg.sender)
     {
         mGenerateTokens(msg.sender, amount);
@@ -232,7 +233,7 @@ contract EquityToken is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x45a709aff6d5ae42cb70f87551d8d7dbec5235cf2baa71a009ed0a9795258d8f, 1);
+        return (0x45a709aff6d5ae42cb70f87551d8d7dbec5235cf2baa71a009ed0a9795258d8f, 2);
     }
 
     ////////////////////////
