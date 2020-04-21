@@ -1,5 +1,3 @@
-import { soliditySha3 } from "web3-utils";
-
 // Needs to match contracts/Company/IControllerGovernance:GovState
 export const GovState = {
   Setup: 0,
@@ -11,30 +9,82 @@ export const GovState = {
   Migrated: 6,
 };
 
+export const GovTokenVotingRule = {
+  NoVotingRights: 0,
+  Positive: 1,
+  Negative: 2,
+  Prorata: 3,
+};
+
+export function hasVotingRights(vr) {
+  // make it work with bignumber
+  if (vr.eq) {
+    return !vr.eq(GovTokenVotingRule.NoVotingRights);
+  }
+  return vr !== GovTokenVotingRule.NoVotingRights;
+}
+
 // Needs to match GovernanceTypes:Action
+
 export const GovAction = {
   None: 0,
-  StopToken: 1,
-  ContinueToken: 2,
-  CloseToken: 3,
-  OrdinaryPayout: 4,
-  ExtraodindaryPayout: 5,
-  RegisterOffer: 6,
-  ChangeTokenController: 7,
-  AmendISHA: 8,
-  IssueTokensForExistingShares: 9,
-  IssueSharesForExistingTokens: 10,
-  ChangeNominee: 11,
-  Downround: 12,
-  EstablishAuthorizedCapital: 13,
-  EstablishESOP: 14,
-  ConvertESOP: 15,
-  ChangeOfControl: 16,
-  DissolveCompany: 17,
-  TagAlong: 18,
-  AnnualGeneralMeeting: 19,
-  AmendSharesAndValuation: 20,
-  CancelResolution: 21,
+  RestrictedNone: 1,
+  StopToken: 2,
+  ContinueToken: 3,
+  CloseToken: 4,
+  OrdinaryPayout: 5,
+  ExtraodindaryPayout: 6,
+  RegisterOffer: 7,
+  ChangeTokenController: 8,
+  AmendISHA: 9,
+  IssueTokensForExistingShares: 10,
+  IssueSharesForExistingTokens: 11,
+  ChangeNominee: 12,
+  AntiDilutionProtection: 13,
+  EstablishAuthorizedCapital: 14,
+  EstablishESOP: 15,
+  ConvertESOP: 16,
+  ChangeOfControl: 17,
+  DissolveCompany: 18,
+  TagAlong: 19,
+  AnnualGeneralMeeting: 20,
+  AmendSharesAndValuation: 21,
+  AmendValuation: 22,
+  CancelResolution: 23,
+};
+
+// permissions required to execute an action
+export const GovActionEscalation = {
+  // anyone can execute
+  Anyone: 0,
+  // token holder can execute
+  TokenHolder: 1,
+  // company legal rep
+  CompanyLegalRep: 2,
+  Nominee: 3,
+  CompanyOrNominee: 4,
+  // requires escalation to all tokenholders
+  THR: 5,
+  // requires escalation to all shareholders
+  SHR: 6,
+  // requires parent resolution to be completed
+  ParentResolution: 7,
+};
+
+export function isVotingEscalation(e) {
+  // make it work with bignumber
+  if (e.eq) {
+    return e.eq(GovActionEscalation.SHR) || e.eq(GovActionEscalation.THR);
+  }
+  return e === GovActionEscalation.SHR || e === GovActionEscalation.THR;
+}
+
+// legal representative of an action
+export const GovActionLegalRep = {
+  // trustless action
+  None: 0,
+  CompanyLegalRep: 1,
+  Nominee: 2,
 };
 
 export const GovExecutionState = {
@@ -63,18 +113,3 @@ export const GovTokenState = {
   Closing: 1,
   Closed: 2,
 };
-
-export function isTerminalExecutionState(s) {
-  return (
-    [
-      GovExecutionState.Rejected,
-      GovExecutionState.Cancelled,
-      GovExecutionState.Failed,
-      GovExecutionState.Completed,
-    ].findIndex(v => v === s) >= 0
-  );
-}
-
-export function getCommitmentResolutionId(addr) {
-  return soliditySha3({ type: "address", value: addr });
-}
