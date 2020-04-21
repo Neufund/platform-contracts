@@ -13,6 +13,7 @@ import "./TestMockableTokenController.sol";
 contract TestSnapshotToken is
     DailyAndSnapshotable,
     StandardSnapshotToken,
+    // we mixin controller into token and wire it as internal calls
     TestMockableTokenController,
     IWithdrawableToken,
     TokenMetadata,
@@ -53,14 +54,14 @@ contract TestSnapshotToken is
     function deposit(uint256 amount)
         public
     {
-        require(_allowGenerateTokens);
+        require(onGenerateTokens(msg.sender, msg.sender, amount));
         mGenerateTokens(msg.sender, amount);
     }
 
     function withdraw(uint256 amount)
         public
     {
-        require(_allowDestroyTokens);
+        require(onDestroyTokens(msg.sender, msg.sender, amount));
         mDestroyTokens(msg.sender, amount);
     }
 
@@ -92,25 +93,25 @@ contract TestSnapshotToken is
     //
 
     function mOnTransfer(
-        address,
-        address, // to
-        uint256 // amount
+        address from,
+        address to,
+        uint256 amount
     )
         internal
         returns (bool allow)
     {
-        return _allowOnTransfer;
+        return onTransfer(msg.sender, from, to, amount);
     }
 
     function mOnApprove(
-        address,
-        address, // spender,
-        uint256 // amount
+        address owner,
+        address spender,
+        uint256 amount
     )
         internal
         returns (bool allow)
     {
-        return _allowOnApprove;
+        return onApprove(owner, spender, amount);
     }
 
     function mAllowanceOverride(address owner, address spender)
@@ -118,6 +119,6 @@ contract TestSnapshotToken is
         constant
         returns (uint256)
     {
-        return _overrides[owner][spender];
+        return onAllowance(owner, spender);
     }
 }
