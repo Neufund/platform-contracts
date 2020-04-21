@@ -1,28 +1,36 @@
 import { expect } from "chai";
-import { sha3 } from "web3-utils";
+import { sha3, leftPad, isHex } from "web3-utils";
 import {
   daysToSeconds,
   Q18,
   web3,
-  findConstructor,
-  camelCase,
   defaultTokensPerShare,
   defEquityTokenDecimals,
+  dayInSeconds,
+  ZERO_BN,
 } from "./constants";
+import { findConstructor, camelCase, getKeyByValue } from "./utils";
+import {
+  GovAction,
+  GovTokenVotingRule,
+  GovActionEscalation,
+  GovActionLegalRep,
+  hasVotingRights,
+} from "./govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 
 const rlp = require("rlp");
 
 export const defaultTokenholderTerms = {
-  GENERAL_VOTING_RULE: new web3.BigNumber(1),
-  TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
+  GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Positive),
+  TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Negative),
   LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
   HAS_FOUNDERS_VESTING: true,
   GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
   RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
   VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
-  SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul(0.1),
-  VOTING_MAJORITY_FRAC: Q18.mul(0.1),
+  SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
+  VOTING_MAJORITY_FRAC: Q18.mul("0.1"),
 };
 
 export const defDurTerms = {
@@ -123,6 +131,12 @@ export function validateTerms(artifact, terms) {
       case "bool":
         typeMatch = typeof termValue === "boolean";
         break;
+      case "uint56[24]":
+      case "uint56[25]":
+        if (typeof termValue === "object") {
+          typeMatch = termValue.constructor.name.includes("Array");
+        }
+        break;
       default:
         throw new Error(
           `Unsupported abi type ${input.type} name ${input.name} of ${artifact.contract_name}`,
@@ -144,16 +158,274 @@ export async function verifyTerms(c, keys, dict) {
   for (const f of keys) {
     const rv = await c[f]();
     if (rv instanceof Object) {
-      expect(rv, f).to.be.bignumber.eq(dict[f]);
+      if (rv.constructor.name.includes("Array")) {
+        expect(rv.length, f).to.eq(dict[f].length);
+        // assume arrays contain only big numbers
+        for (let ii = 0; ii < rv.length; ii += 1) {
+          expect(rv[ii], f).to.be.bignumber.eq(dict[f][ii]);
+        }
+        // expect(rv, f).to.deep.eq(dict[f]);
+      } else {
+        expect(rv, f).to.be.bignumber.eq(dict[f]);
+      }
     } else {
       expect(rv, f).to.eq(dict[f]);
     }
   }
 }
 
+export function encodeBylaw(
+  actionEscalation,
+  votingDuration,
+  quorum,
+  majority,
+  votingPower,
+  votingRule,
+  legalRep,
+) {
+  const f = n => {
+    const r = leftPad(n.toString(16), 2);
+    if (r.length > 2) {
+      throw new Error(`left pad value ${r} for ${n} invalid`);
+    }
+    return r;
+  };
+  const prc = bn => {
+    const r = bn.mul("100").div(Q18);
+    if (r.gt("100") || !r.round().eq(r)) {
+      throw new Error(`prc value ${r.toString()} of ${bn.toString()} invalid`);
+    }
+    return r;
+  };
+  const days = bn => {
+    const r = bn.div(dayInSeconds);
+    if (r.gt(255)) {
+      throw new Error(`days value ${r.toString()} of ${bn.toString()} invalid`);
+    }
+    return r;
+  };
+
+  let encodedBylaw;
+  if (!hasVotingRights(votingRule)) {
+    // modify for no voting rights
+    let effectiveEscalation;
+    // set escalation accordingly
+    switch (legalRep) {
+      case GovActionLegalRep.CompanyLegalRep:
+        // company can execute instead of SHR
+        effectiveEscalation = GovActionEscalation.CompanyLegalRep;
+        break;
+      case GovActionLegalRep.Nominee:
+        // nominee can execute instead of THR
+        effectiveEscalation = GovActionEscalation.Nominee;
+        break;
+      default:
+        effectiveEscalation = actionEscalation;
+        break;
+    }
+    encodedBylaw = `0x${f(effectiveEscalation)}${f(days(ZERO_BN))}${f(prc(ZERO_BN))}${f(
+      prc(ZERO_BN),
+    )}${f(prc(ZERO_BN))}${f(votingRule)}${f(legalRep)}`;
+  } else {
+    encodedBylaw = `0x${f(actionEscalation)}${f(days(votingDuration))}${f(prc(quorum))}${f(
+      prc(majority),
+    )}${f(prc(votingPower))}${f(votingRule)}${f(legalRep)}`;
+  }
+  return encodedBylaw;
+}
+
+export function decodeBylaw(idx, bylaw) {
+  if (!isHex(bylaw)) {
+    throw new Error(`bylaw ${bylaw} must be a hex number`);
+  }
+  // skip hex prefix
+  const npBylaw = bylaw.substring(2);
+  if (npBylaw.length !== 14) {
+    throw new Error(`bylaw ${bylaw} must contain 7 8 bit elements`);
+  }
+  const elems = npBylaw.match(/.{2}/g);
+  // convert idx in the bylaws to action string
+  const action = getKeyByValue(GovAction, idx);
+  const frac = hex => new web3.BigNumber(hex, 16).mul(Q18).div("100");
+  const num = hex => new web3.BigNumber(hex, 16);
+  const bn = n => new web3.BigNumber(n);
+
+  return [
+    // action as string
+    action,
+    // escalation level
+    num(elems[0]),
+    // voting duration seconds
+    bn(daysToSeconds(parseInt(elems[1], 16))),
+    // quorum
+    frac(elems[2]),
+    // majority
+    frac(elems[3]),
+    // voting power
+    frac(elems[4]),
+    // token holder voting rule
+    num(elems[5]),
+    // legal rep for voting
+    num(elems[6]),
+  ];
+}
+
+export function generateDefaultBylaws(terms) {
+  const bylaws = [];
+  for (const action of Object.keys(GovAction)) {
+    switch (action) {
+      case "RestrictedNone":
+      case "ChangeOfControl":
+      case "DissolveCompany":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.SHR,
+            terms.RESTRICTED_ACT_VOTING_DURATION,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            terms.GENERAL_VOTING_RULE,
+            GovActionLegalRep.CompanyLegalRep,
+          ),
+        );
+        break;
+      case "TagAlong":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.THR,
+            terms.GENERAL_VOTING_DURATION,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            terms.TAG_ALONG_VOTING_RULE,
+            GovActionLegalRep.Nominee,
+          ),
+        );
+        break;
+      case "ChangeNominee":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.Nominee,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            GovActionLegalRep.None,
+          ),
+        );
+        break;
+      case "AntiDilutionProtection":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.TokenHolder,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            GovActionLegalRep.None,
+          ),
+        );
+        break;
+      case "CloseToken":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.ParentResolution,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            GovActionLegalRep.None,
+          ),
+        );
+        break;
+      case "ChangeTokenController":
+      case "CancelResolution":
+        // empty setting
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.Anyone,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            GovActionLegalRep.None,
+          ),
+        );
+        break;
+      case "StopToken":
+      case "ContinueToken":
+      case "OrdinaryPayout":
+      case "EstablishESOP":
+      case "ConvertESOP":
+      case "AmendSharesAndValuation":
+      case "AmendValuation":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.CompanyLegalRep,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            ZERO_BN,
+            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            GovActionLegalRep.None,
+          ),
+        );
+        break;
+      case "None":
+      case "ExtraodindaryPayout":
+      case "RegisterOffer":
+      case "AmendISHA":
+      case "IssueTokensForExistingShares":
+      case "IssueSharesForExistingTokens":
+      case "EstablishAuthorizedCapital":
+      case "AnnualGeneralMeeting":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.SHR,
+            terms.GENERAL_VOTING_DURATION,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            terms.GENERAL_VOTING_RULE,
+            GovActionLegalRep.CompanyLegalRep,
+          ),
+        );
+        break;
+      default:
+        throw new Error(`Unknown action ${action}`);
+    }
+  }
+  return bylaws;
+}
+
+export function applyBylawsToRights(terms, bylaws) {
+  const modifiedTerms = Object.assign({}, terms);
+  // drop properties transformed into bylaws
+  [
+    "GENERAL_VOTING_RULE",
+    "TAG_ALONG_VOTING_RULE",
+    "GENERAL_VOTING_DURATION",
+    "RESTRICTED_ACT_VOTING_DURATION",
+    "SHAREHOLDERS_VOTING_QUORUM_FRAC",
+    "VOTING_MAJORITY_FRAC",
+  ].forEach(e => delete modifiedTerms[e]);
+  // add bylaws and voting rights flag
+  modifiedTerms.HAS_VOTING_RIGHTS = hasVotingRights(terms.GENERAL_VOTING_RULE);
+  modifiedTerms.ACTION_BYLAWS = bylaws.map(bylaw => new web3.BigNumber(bylaw, 16));
+  return modifiedTerms;
+}
+
 export async function deployTokenholderRights(artifact, terms, fullTerms) {
   const defaults = fullTerms ? {} : defaultTokenholderTerms;
-  const tokenholderTerms = Object.assign({}, defaults, terms || {});
+  let tokenholderTerms = Object.assign({}, defaults, terms || {});
+  if (tokenholderTerms.ACTION_BYLAWS === undefined) {
+    const bylaws = generateDefaultBylaws(tokenholderTerms);
+    tokenholderTerms = applyBylawsToRights(tokenholderTerms, bylaws);
+  }
   const [tokenholderTermsKeys, tokenholderTermsValues] = validateTerms(artifact, tokenholderTerms);
   const tokenholderRights = await artifact.new.apply(this, tokenholderTermsValues);
   return [tokenholderRights, tokenholderTerms, tokenholderTermsKeys, tokenholderTermsValues];
