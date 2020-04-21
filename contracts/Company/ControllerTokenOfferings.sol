@@ -12,6 +12,12 @@ contract ControllerTokenOfferings is
     Math
 {
     ////////////////////////
+    // Constants
+    ////////////////////////
+
+    string private constant NF_ETC_ETO_NOT_U = "NF_ETC_ETO_NOT_U";
+
+    ////////////////////////
     // Events
     ////////////////////////
 
@@ -48,7 +54,7 @@ contract ControllerTokenOfferings is
 
     // require caller is ETO in universe
     modifier onlyUniverseETO() {
-        require(UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, msg.sender), "NF_ETC_ETO_NOT_U");
+        require(inUniverseCommitment(msg.sender), NF_ETC_ETO_NOT_U);
         _;
     }
 
@@ -84,7 +90,7 @@ contract ControllerTokenOfferings is
     function startNewOffering(bytes32 resolutionId, IETOCommitment commitment)
         public
         onlyStates(GovState.Setup, GovState.Funded)
-        withNonAtomicExecution(resolutionId, defaultValidator)
+        withNonAtomicExecution(resolutionId, msg.data.length == 0 ? defaultValidator : commitmentUniverseValidator)
         withGovernance(
             resolutionId,
             Action.RegisterOffer,
@@ -179,11 +185,37 @@ contract ControllerTokenOfferings is
     // Private functions
     ////////////////////////
 
+    function commitmentUniverseValidator(ResolutionExecution storage /*e*/)
+        private
+        constant
+        returns (string memory code)
+    {
+        // unpack calldata to extract address payload
+        address commitment;
+        assembly {
+            // skip 4 bytes selector and 32 bytes resolution id
+            // _rId := calldataload(4)
+            commitment := calldataload(36)
+        }
+        if (!inUniverseCommitment(commitment)) {
+            return NF_ETC_ETO_NOT_U;
+        }
+    }
+
+    function inUniverseCommitment(address commitment)
+        private
+        constant
+        returns (bool)
+    {
+        return UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment);
+    }
+
     function execOfferCompleted(bytes32 resolutionId, IETOCommitment commitment, ETOState newState)
         private
         withAtomicContinuedExecution(
             resolutionId,
-            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment)))
+            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment))),
+            0
         )
     {
         if (newState == ETOState.Claim) {
@@ -198,7 +230,8 @@ contract ControllerTokenOfferings is
         private
         withNonAtomicContinuedExecution(
             resolutionId,
-            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(tokenOffering)))
+            keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(tokenOffering))),
+            0
         )
     {
         IEquityToken equityToken = tokenOffering.equityToken();
