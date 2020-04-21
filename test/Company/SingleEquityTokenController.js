@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { contractId, ZERO_ADDRESS, Q18, decimalBase, randomBytes32 } from "../helpers/constants";
+import { ZERO_ADDRESS, Q18, decimalBase } from "../helpers/constants";
+import { contractId, randomBytes32 } from "../helpers/utils";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import {
   GovState,
@@ -8,9 +9,14 @@ import {
   GovExecutionState,
   GovTokenType,
   GovTokenState,
-  isTerminalExecutionState,
-  getCommitmentResolutionId,
 } from "../helpers/govState";
+import {
+  expectLogResolutionStarted,
+  expectLogResolutionExecuted,
+  expectLogGovStateTransition,
+  expectResolution,
+  getCommitmentResolutionId,
+} from "../helpers/govUtils";
 import { CommitmentState } from "../helpers/commitmentState";
 import { divRound } from "../helpers/unitConverter";
 import {
@@ -21,7 +27,7 @@ import {
   deployETOTermsConstraintsUniverse,
 } from "../helpers/deployTerms";
 import { knownInterfaces } from "../helpers/knownInterfaces";
-import { decodeLogs, eventValue, eventWithIdxValue, hasEvent } from "../helpers/events";
+import { decodeLogs, eventValue, hasEvent } from "../helpers/events";
 import {
   basicTokenTests,
   deployTestErc223Callback,
@@ -161,6 +167,29 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         { from: admin },
       );
       await expect(startOffering()).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
+    });
+
+    it("rejects ETO registration when not in universe", async () => {
+      // deploy new terms but use same controller
+      // default terms have non transferable token
+      await deployETO({
+        ENABLE_TRANSFERS_ON_SUCCESS: true,
+        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
+      });
+      await universe.setCollectionInterface(
+        knownInterfaces.commitmentInterface,
+        testCommitment.address,
+        false,
+        { from: admin },
+      );
+      const newCommitment = testCommitment;
+      const newResolutionId = getCommitmentResolutionId(newCommitment.address);
+      // this should trigger custom validator
+      await expect(
+        equityTokenController.startNewOffering(newResolutionId, newCommitment.address, {
+          from: company,
+        }),
+      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
     });
 
     it("no state transition on second ETO start date", async () => {
@@ -1183,42 +1212,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     return decimalBase.pow((terms || tokenTermsDict).EQUITY_TOKEN_DECIMALS);
   }
 
-  function expectLogResolutionExecuted(tx, logIdx, resolutionId, actionType, terminalState) {
-    const event = eventWithIdxValue(tx, logIdx, "LogResolutionExecuted");
-    expect(event).to.exist;
-    expect(event.args.resolutionId).to.eq(resolutionId);
-    expect(event.args.action).to.be.bignumber.eq(actionType);
-    expect(event.args.state).to.be.bignumber.eq(terminalState);
-  }
-
-  function expectLogResolutionStarted(
-    tx,
-    logIdx,
-    resolutionId,
-    title,
-    documentUrl,
-    actionType,
-    initialState,
-  ) {
-    const event = eventWithIdxValue(tx, logIdx, "LogResolutionStarted");
-    expect(event).to.exist;
-    expect(event.args.resolutionId).to.eq(resolutionId);
-    expect(event.args.resolutionTitle).to.eq(title);
-    expect(event.args.documentUrl).to.eq(documentUrl);
-    expect(event.args.action).to.be.bignumber.eq(actionType);
-    expect(event.args.state).to.be.bignumber.eq(initialState);
-  }
-
-  function expectLogGovStateTransition(tx, oldState, newState, timestamp) {
-    const event = eventValue(tx, "LogGovStateTransition");
-    expect(event).to.exist;
-    expect(event.args.oldState).to.be.bignumber.eq(oldState);
-    expect(event.args.newState).to.be.bignumber.eq(newState);
-    if (timestamp) {
-      expect(event.args.timestamp).to.be.bignumber.eq(timestamp);
-    }
-  }
-
   function expectLogOfferingRegistered(tx, resolutionId, commitmentAddress, equityTokenAddress) {
     const event = eventValue(tx, "LogOfferingRegistered");
     expect(event).to.exist;
@@ -1279,21 +1272,5 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.authorizedCapitalUlps).to.be.bignumber.eq(authorizedCapital);
-  }
-
-  function expectResolution(resolution, resolutionId, action, execState, failedCode = 0) {
-    expect(resolution[0]).to.be.bignumber.eq(action);
-    expect(resolution[1]).to.be.bignumber.eq(execState);
-    expect(resolution[2]).to.be.bignumber.gt(0);
-    if (!isTerminalExecutionState(execState)) {
-      // final date
-      expect(resolution[3]).to.be.bignumber.eq(0);
-      // failed code
-      expect(resolution[4]).to.be.bignumber.eq(0);
-    } else {
-      expect(resolution[3]).to.be.bignumber.gt(0);
-      expect(resolution[4]).to.be.bignumber.eq(failedCode);
-    }
-    // resolution[5] is a promise (keccak hash of parameters);
   }
 });
