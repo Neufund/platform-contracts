@@ -41,6 +41,14 @@ contract ControllerGovernanceEngine is
     );
 
     ////////////////////////
+    // Constants
+    ////////////////////////
+
+    string private constant NF_GOV_NOT_EXECUTING = "NF_GOV_NOT_EXECUTING";
+    string private constant NF_GOV_INVALID_NEXT_STEP = "NF_GOV_INVALID_NEXT_STEP";
+    string private constant NF_GOV_UNKEPT_PROMISE = "NF_GOV_UNKEPT_PROMISE";
+
+    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -107,7 +115,7 @@ contract ControllerGovernanceEngine is
         // prevent to execute twice
         require(e.state != ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
         // validate resolution
-        if(validateResolution(resolutionId, keccak256(msg.data), e, validator)) {
+        if(validateResolution(resolutionId, e, validator)) {
             _;
             // does not set resolution as completed, registers timeout
         }
@@ -127,7 +135,7 @@ contract ControllerGovernanceEngine is
     {
         // validate resolution
         ResolutionExecution storage e = _resolutions[resolutionId];
-        if(validateResolution(resolutionId, keccak256(msg.data), e, validator)) {
+        if(validateResolution(resolutionId, e, validator)) {
             _;
             if (e.state == ExecutionState.Executing) {
                 terminateResolution(resolutionId, e, ExecutionState.Completed);
@@ -151,29 +159,35 @@ contract ControllerGovernanceEngine is
     // for the resolution to be continued in another Ethereum transaction
     modifier withNonAtomicContinuedExecution(
         bytes32 resolutionId,
-        bytes32 promise)
+        bytes32 promise,
+        uint8 nextStep)
     {
         // validate resolution
         ResolutionExecution storage e = _resolutions[resolutionId];
-        require(e.state == ExecutionState.Executing, "NF_GOV_NOT_EXECUTING");
-        // validate timeout
-        // check and progress step
-        _;
+        if(validateResolutionContinuation(e, promise, nextStep)) {
+            _;
+            // if next step > 0 then store it
+            if (nextStep > 0) {
+                e.nextStep = nextStep;
+            }
+        }
     }
 
     // continues non-atomic governance execution in Executing state on the same promise in single Ethereum tx
     modifier withAtomicContinuedExecution(
         bytes32 resolutionId,
-        bytes32 promise)
+        bytes32 promise,
+        uint8 nextStep)
     {
         // validate resolution
         ResolutionExecution storage e = _resolutions[resolutionId];
-        require(e.state == ExecutionState.Executing, "NF_GOV_NOT_EXECUTING");
-        // validate timeout
-        // check step
-        _;
-        if (e.state == ExecutionState.Executing) {
-            terminateResolution(resolutionId, e, ExecutionState.Completed);
+        if(validateResolutionContinuation(e, promise, nextStep)) {
+            // validate timeout
+            _;
+            if (e.state == ExecutionState.Executing) {
+                // no need to write final step as execution ends here
+                terminateResolution(resolutionId, e, ExecutionState.Completed);
+            }
         }
     }
 
@@ -239,7 +253,10 @@ contract ControllerGovernanceEngine is
             uint32 startedAt,
             uint32 finishedAt,
             bytes32 failedCode,
-            bytes32 promise
+            bytes32 promise,
+            bytes32 payload,
+            uint32 cancelAt,
+            uint8 nextStep
         )
     {
         ResolutionExecution storage e = _resolutions[resolutionId];
@@ -249,7 +266,10 @@ contract ControllerGovernanceEngine is
             e.startedAt,
             e.finishedAt,
             e.failedCode,
-            e.promise
+            e.promise,
+            e.payload,
+            e.cancelAt,
+            e.nextStep
         );
     }
 
@@ -274,7 +294,10 @@ contract ControllerGovernanceEngine is
         uint32[] startedAt,
         uint32[] finishedAt,
         bytes32[] failedCode,
-        bytes32[] promise
+        bytes32[] promise,
+        bytes32[] payload,
+        uint32[] cancelAt,
+        uint8[] nextStep
     )
         public
         onlyState(GovState.Setup)
@@ -289,7 +312,10 @@ contract ControllerGovernanceEngine is
                 startedAt: startedAt[ii],
                 finishedAt: finishedAt[ii],
                 failedCode: failedCode[ii],
-                promise: promise[ii]
+                promise: promise[ii],
+                payload: payload[ii],
+                cancelAt: cancelAt[ii],
+                nextStep: nextStep[ii]
             });
             _resolutionIds.push(rId);
         }
@@ -325,10 +351,66 @@ contract ControllerGovernanceEngine is
         // it's possible to decode msg.data to recover call parameters
     }
 
+    function isTokenHolder(address owner)
+        internal
+        constant
+        returns (bool)
+    {
+        return _equityToken.balanceOf(owner) > 0;
+    }
+
+    function getNominee()
+        internal
+        constant
+        returns (address)
+    {
+        return _equityToken.nominee();
+    }
+
+    function getActionLegalRep(ActionLegalRep rep)
+        internal
+        constant
+        returns (address)
+    {
+        if (rep == ActionLegalRep.CompanyLegalRep) {
+            return COMPANY_LEGAL_REPRESENTATIVE;
+        } else if (rep == ActionLegalRep.Nominee) {
+            return getNominee();
+        }
+        revert();
+    }
+
+    // figure out what right initator has for given escalation level in bylaw of particular action
+    function getBylawEscalation(ActionEscalation escalationLevel, ActionLegalRep rep, address initiator)
+        internal
+        constant
+        returns (ExecutionState s)
+    {
+        if (escalationLevel == ActionEscalation.Anyone) {
+            s = ExecutionState.Executing;
+        } else if (escalationLevel == ActionEscalation.TokenHolder) {
+            // must be a relevant token holder
+            s = isTokenHolder(initiator) ? ExecutionState.Executing : ExecutionState.Rejected;
+        } else if (escalationLevel == ActionEscalation.CompanyLegalRep) {
+            s = initiator == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
+        } else if (escalationLevel == ActionEscalation.Nominee) {
+            s = initiator == getNominee() ? ExecutionState.Executing : ExecutionState.Rejected;
+        } else if (escalationLevel == ActionEscalation.CompanyOrNominee) {
+            s = initiator == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
+            if (s == ExecutionState.Rejected) {
+                s = initiator == getNominee() ? ExecutionState.Executing : ExecutionState.Rejected;
+            }
+        } else {
+            // for THR or SHR only legal rep can put into escalation mode
+            // for generic resolutions (None) - there's special escalator where token holders can execute
+            s = initiator == getActionLegalRep(rep) ? ExecutionState.Escalating : ExecutionState.Rejected;
+        }
+    }
+
 
     // defines permission escalation for resolution. based on resolution state, action and current shareholder rights
     // allows, escalates or denies execution.
-    function defaultPermissionEscalator(Action /*action*/)
+    function defaultPermissionEscalator(Action action)
         internal
         constant
         returns (ExecutionState s)
@@ -346,39 +428,60 @@ contract ControllerGovernanceEngine is
             // check if voting in voting center even if New state to handle voting in Campaign state
             // if voting is finalized evaluate results against ActionGovernance for action
             // return Rejected if failed, executed if passed, Escalation if ongoing
-            // if no voting is in progress, evaluate ActionGovernance for action and
-            // start new voting (Escalation or New), Reject (access denied altogether and no escalation path), Executing (no voting needed)
-
-            // temporary implementation
-            // if no voting rights permission escalation is not possible and legal rep can trigger any action
-            if (_tokenholderRights.GENERAL_VOTING_RULE() == VotingRule.NoVotingRights) {
-                s = msg.sender == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
-            } else {
+            ActionBylaw memory bylaw = deserializeBylaw(_tokenholderRights.getBylaw(action));
+            s = getBylawEscalation(bylaw.escalationLevel, bylaw.votingLegalRepresentative, msg.sender);
+            if (s == ExecutionState.Escalating) {
                 // 1. start voting is campaign mode if msg.sender is equity token holder
                 //   (permission escalation into campaign state of voting so voting is not yet official)
                 // 2. start voting offically if msg.sender is company or token holder with N% stake
                 // 3. for some action legal rep can start without escalation
-                s = ExecutionState.Escalating;
+                return;
             }
         }
     }
 
-    function isResolutionTerminated(ExecutionState s)
+    /*function isResolutionTerminated(ExecutionState s)
         internal
         pure
         returns (bool)
     {
         return !(s == ExecutionState.New || s == ExecutionState.Escalating || s == ExecutionState.Executing);
-    }
+    }*/
 
     function terminateResolution(bytes32 resolutionId, ResolutionExecution storage e, ExecutionState s)
         internal
     {
         e.state = s;
         e.finishedAt = uint32(now);
-        emit LogResolutionExecuted(resolutionId, Action.RegisterOffer, s);
+        emit LogResolutionExecuted(resolutionId, e.action, s);
         // cleanup action
         // delete _exclusiveActions[uint256(e.action)];
+    }
+
+    function terminateResolutionWithCode(bytes32 resolutionId, ResolutionExecution storage e, string memory code)
+        internal
+    {
+        bytes32 failedCode = keccak256(abi.encodePacked(code));
+        terminateResolution(resolutionId, e, ExecutionState.Failed);
+        // no point of merging storage write, failed code occupies the whole slot
+        e.failedCode = failedCode;
+    }
+
+    function promiseForSelector(bytes4 selector)
+        internal
+        pure
+        returns (bytes32)
+    {
+        // replace selector and return keccak
+        bytes memory calldata = msg.data;
+        assembly {
+            // patch calldata with the selector
+            mstore8(add(calldata, 32), byte(0, selector))
+            mstore8(add(calldata, 33), byte(1, selector))
+            mstore8(add(calldata, 34), byte(2, selector))
+            mstore8(add(calldata, 35), byte(3, selector))
+        }
+        return keccak256(calldata);
     }
 
     ////////////////////////
@@ -388,7 +491,6 @@ contract ControllerGovernanceEngine is
     // guard method for atomic and non atomic executions that will revert or fail resolution that cannot execute further
     function validateResolution(
         bytes32 resolutionId,
-        bytes32 promise,
         ResolutionExecution storage e,
         function (ResolutionExecution storage) constant returns (string memory) validator
     )
@@ -396,12 +498,8 @@ contract ControllerGovernanceEngine is
         returns (bool)
     {
         // if resolution is already terminated always revert
-        require(!isResolutionTerminated(e.state), "NF_GOV_RESOLUTION_TERMINATED");
-        // TODO: revert on cancellation
-
-        bool isNew = e.state == ExecutionState.New;
-        // we must call executing function with same params
-        require(isNew || e.promise == promise, "NF_GOV_UNKEPT_PROMISE");
+        ExecutionState s = e.state;
+        require(s == ExecutionState.New || s == ExecutionState.Escalating, "NF_GOV_RESOLUTION_TERMINATED");
         // curried functions are not available in Solidity so we cannot pass any custom parameters
         // however msg.data is available and contains all call parameters
         string memory code = validator(e);
@@ -410,13 +508,23 @@ contract ControllerGovernanceEngine is
             return true;
         }
         // revert if new
-        require(!isNew, code);
+        require(s != ExecutionState.New, code);
         // if resolution is executing then set resolution to fail and continue for cleanup
-        bytes32 failedCode = keccak256(abi.encodePacked(code));
-        terminateResolution(resolutionId, e, ExecutionState.Failed);
-        e.failedCode = failedCode;
-
+        terminateResolutionWithCode(resolutionId, e, code);
         return false;
+    }
+
+    function validateResolutionContinuation(ResolutionExecution storage e, bytes32 promise, uint8 nextStep)
+        private
+        constant
+        returns (bool)
+    {
+        require(e.state == ExecutionState.Executing, NF_GOV_NOT_EXECUTING);
+        require(nextStep == 0 || e.nextStep == nextStep - 1, NF_GOV_INVALID_NEXT_STEP);
+        // we must call executing function with same params
+        require(e.promise == promise, NF_GOV_UNKEPT_PROMISE);
+        // TODO: validate timeout
+        return true;
     }
 
     function withGovernancePrivate(
@@ -426,22 +534,24 @@ contract ControllerGovernanceEngine is
         function (Action) constant returns (ExecutionState) escalator
     )
         private
-        returns (ExecutionState)
+        returns (ExecutionState s)
     {
         // executor checks resolutionId state
         ResolutionExecution storage e = _resolutions[resolutionId];
         require(e.state == ExecutionState.New || e.state == ExecutionState.Escalating);
-        // try to escalate to execution state
-        ExecutionState s = escalator(action);
-        // if New is returned, voting will be in campaign state and must be escalated further
-        // for resolution to be created
-        if (s == ExecutionState.New) {
-            return s;
-        }
-        // escalator may deny access to action
-        require(s != ExecutionState.Rejected, "NF_GOV_EXEC_ACCESS_DENIED");
+
         // save new state which may be Executing or Escalating
         if (e.state == ExecutionState.New) {
+            // try to escalate to execution state
+            s = escalator(action);
+            // if New is returned, voting will be in campaign state and must be escalated further
+            // for resolution to be created
+            // TODO: implement special escalator to test this
+            if (s == ExecutionState.New) {
+                return s;
+            }
+            // escalator may deny access to action
+            require(s != ExecutionState.Rejected, "NF_GOV_EXEC_ACCESS_DENIED");
             // save new execution
             e.action = action;
             e.state = s;
@@ -453,9 +563,8 @@ contract ControllerGovernanceEngine is
             // push execution forward easier
             _resolutionIds.push(resolutionId);
             emit LogResolutionStarted(resolutionId, "", documentUrl, action, s);
-        } else if (e.state == ExecutionState.Escalating) {
-            e.state = s;
-        }
+        } else if (e.state == ExecutionState.Escalating) {} // TODO: check voting center and check voting result
+
         return s;
     }
 
