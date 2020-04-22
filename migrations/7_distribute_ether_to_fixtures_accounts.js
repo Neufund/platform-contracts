@@ -2,7 +2,7 @@ require("babel-register");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

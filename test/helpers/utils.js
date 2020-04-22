@@ -1,4 +1,7 @@
-const sha3 = require("web3-utils").sha3;
+import { sha3, padLeft } from "web3-utils";
+import { web3 } from "./constants";
+
+const rlp = require("rlp");
 
 export function getKeyByValue(object, value) {
   return Object.keys(object).find(key => object[key] === value);
@@ -11,7 +14,7 @@ export function toBytes32(hexOrNumber) {
   } else {
     strippedHex = hexOrNumber.slice(2);
   }
-  return `0x${web3.padLeft(strippedHex, 64)}`;
+  return `0x${padLeft(strippedHex, 64)}`;
 }
 
 export function findConstructor(artifact) {
@@ -81,7 +84,7 @@ export const recoverBigNumbers = terms => {
 };
 
 export function contractId(contractName) {
-  return web3.sha3(`neufund-platform:${contractName}`);
+  return sha3(`neufund-platform:${contractName}`);
 }
 
 export function randomBytes32() {
@@ -90,4 +93,19 @@ export function randomBytes32() {
 
 export function randomAddress() {
   return randomBytes32().substr(0, 42);
+}
+
+export function predictAddress(sender, nonce) {
+  return `0x${sha3(rlp.encode([sender, nonce])).substring(26)}`;
+}
+
+export const promisify = func => async (...args) =>
+  new Promise((accept, reject) =>
+    func(...args, (error, result) => (error ? reject(error) : accept(result))),
+  );
+
+export async function predictDeploymentAddress(deployer, skipTxs = 0) {
+  // get nonce
+  const nonce = await promisify(web3.eth.getTransactionCount)(deployer);
+  return predictAddress(deployer, nonce + skipTxs);
 }

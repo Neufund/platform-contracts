@@ -9,7 +9,7 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfac
 const interfaceArtifacts = require("../test/helpers/interfaceArtifacts").interfaceToArtifacts;
 const { TriState } = require("../test/helpers/triState");
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

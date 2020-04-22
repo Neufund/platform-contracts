@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { promisify } from "./evmCommands";
+import { promisify } from "./utils";
 import roles from "./roles";
 import { deployUniverse, deployAccessControl, deployNeumarkUniverse } from "./deployContracts";
 

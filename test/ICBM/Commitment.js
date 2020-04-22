@@ -9,7 +9,7 @@ import roles from "../helpers/roles";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import { LockState } from "./lockState";
 import { CommitmentState } from "./commitmentState";
-import { promisify } from "../helpers/evmCommands";
+import { promisify } from "../helpers/utils";
 import { divRound } from "../helpers/unitConverter";
 import { Q18 } from "../helpers/constants";
 

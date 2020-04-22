@@ -1,4 +1,5 @@
-import { promisify, mineBlock } from "./evmCommands";
+import { mineBlock } from "./evmCommands";
+import { promisify } from "./utils";
 
 let firstTimeRequestedTime = true;
 

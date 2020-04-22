@@ -1,4 +1,4 @@
-import { promisify } from "./evmCommands";
+import { promisify } from "./utils";
 
 export const weiPrice = 300e-18; // http://coincap.io/
 export const gasPrice = 21e9 * weiPrice; // https://ethstats.net

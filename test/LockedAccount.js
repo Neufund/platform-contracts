@@ -19,7 +19,6 @@ import { TriState } from "./helpers/triState";
 import forceEther from "./helpers/forceEther";
 import { etherToWei, divRound } from "./helpers/unitConverter";
 import roles from "./helpers/roles";
-import { promisify } from "./helpers/evmCommands";
 import {
   dayInSeconds,
   daysToSeconds,
@@ -27,7 +26,7 @@ import {
   Q18,
   ZERO_ADDRESS,
 } from "./helpers/constants";
-import { toBytes32, contractId } from "./helpers/utils";
+import { toBytes32, contractId, promisify } from "./helpers/utils";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { expectLogFundsCommitted } from "./helpers/commitment";

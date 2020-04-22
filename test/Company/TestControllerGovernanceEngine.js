@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { soliditySha3 } from "web3-utils";
+import { soliditySha3, sha3 } from "web3-utils";
 import { deployUniverse } from "../helpers/deployContracts";
 import { ZERO_ADDRESS, Q18, dayInSeconds } from "../helpers/constants";
-import { randomBytes32, randomAddress } from "../helpers/utils";
+import { randomBytes32, randomAddress, promisify } from "../helpers/utils";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import {
   GovState,
@@ -26,10 +26,7 @@ import {
   expectResolution,
   expectResolutionById,
 } from "../helpers/govUtils";
-import { promisify } from "../helpers/evmCommands";
 import { hasEvent } from "../helpers/events";
-
-const sha3 = require("web3/lib/utils/sha3");
 
 const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const TestControllerGovernanceEngine = artifacts.require("TestControllerGovernanceEngine");

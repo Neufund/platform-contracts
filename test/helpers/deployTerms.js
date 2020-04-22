@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { sha3, leftPad, isHex } from "web3-utils";
+import { leftPad, isHex } from "web3-utils";
 import {
   daysToSeconds,
   Q18,
@@ -18,8 +18,6 @@ import {
   hasVotingRights,
 } from "./govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
-
-const rlp = require("rlp");
 
 export const defaultTokenholderTerms = {
   GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Positive),
@@ -86,10 +84,6 @@ export const defTermsConstraints = {
   ASSET_TYPE: new web3.BigNumber(0),
   TOKEN_OFFERING_OPERATOR: "0xC5a96Db085dDA36FfBE390f455315D30D6D3DC52",
 };
-
-export function predictAddress(sender, nonce) {
-  return `0x${sha3(rlp.encode([sender, nonce])).substring(26)}`;
-}
 
 export function validateTerms(artifact, terms) {
   const constructor = findConstructor(artifact);

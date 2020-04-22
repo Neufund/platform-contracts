@@ -1,7 +1,4 @@
-export const promisify = func => async (...args) =>
-  new Promise((accept, reject) =>
-    func(...args, (error, result) => (error ? reject(error) : accept(result))),
-  );
+import { promisify } from "./utils";
 
 export const rpcCommand = method => async (...params) =>
   (

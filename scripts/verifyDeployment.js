@@ -6,7 +6,7 @@ const getConfig = require("../migrations/config").getConfig;
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const roles = require("../test/helpers/roles").default;
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 async function checkAgreement(contract, agreementName) {
   // amendment count is new function, does not work with NEU

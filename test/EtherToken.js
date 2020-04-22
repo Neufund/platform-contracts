@@ -18,8 +18,7 @@ import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
 import EvmError from "./helpers/EVMThrow";
 import { ZERO_ADDRESS } from "./helpers/constants";
-import { contractId } from "./helpers/utils";
-import { promisify } from "./helpers/evmCommands";
+import { contractId, promisify } from "./helpers/utils";
 
 const gasPrice = new web3.BigNumber(0x01); // this low gas price is forced by code coverage
 const EtherToken = artifacts.require("EtherToken");
