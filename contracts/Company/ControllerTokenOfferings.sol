@@ -90,7 +90,7 @@ contract ControllerTokenOfferings is
     function startNewOffering(bytes32 resolutionId, IETOCommitment commitment)
         public
         onlyStates(GovState.Setup, GovState.Funded)
-        withNonAtomicExecution(resolutionId, msg.data.length == 0 ? defaultValidator : commitmentUniverseValidator)
+        withNonAtomicExecution(resolutionId, commitmentUniverseValidator)
         withGovernance(
             resolutionId,
             Action.RegisterOffer,
@@ -98,14 +98,7 @@ contract ControllerTokenOfferings is
             defaultPermissionEscalator
         )
         // withExclusiveAction(resolutionId, Action.RegisterOffer)
-    {
-        // this is the only governance method that can be started from a constructor, in that case
-        // we must create promise ourselves as msg.data does not contain calldata to this function
-        if (msg.data.length == 0) {
-            ResolutionExecution storage e = _resolutions[resolutionId];
-            e.promise = keccak256(abi.encodeWithSelector(this.startNewOffering.selector, resolutionId, address(commitment)));
-        }
-    }
+    {}
 
     // TODO: implement cancelDelistedOffering(resolution, commitment) to fail resolution if commitment delisted, onlyCompany
 

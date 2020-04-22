@@ -13,11 +13,10 @@ contract RegDTransferController is
 
     constructor(
         Universe universe,
-        address companyLegalRep,
-        IETOCommitment commitment
+        address companyLegalRep
     )
         public
-        SingleEquityTokenController(universe, companyLegalRep, commitment)
+        SingleEquityTokenController(universe, companyLegalRep)
     {}
 
     //

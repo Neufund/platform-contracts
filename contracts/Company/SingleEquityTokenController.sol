@@ -43,18 +43,11 @@ contract SingleEquityTokenController is
 
     constructor(
         Universe universe,
-        address companyLegalRep,
-        IETOCommitment commitment
+        address companyLegalRep
     )
         public
         ControllerGovernanceEngine(universe, companyLegalRep)
-    {
-        if (commitment != address(0)) {
-            // initialize new offering accepting off-chain shareholder resolution
-            bytes32 resolutionId = keccak256(abi.encodePacked(address(commitment)));
-            startNewOffering(resolutionId, commitment);
-        }
-    }
+    {}
 
     //
     // Implements IControllerGovernance

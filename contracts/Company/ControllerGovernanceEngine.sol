@@ -415,15 +415,10 @@ contract ControllerGovernanceEngine is
         constant
         returns (ExecutionState s)
     {
-        // may be called only in New or Escalating state, see withGovernancePrivate
+        // may be called only in New state
         if (_state == GovState.Setup) {
-            // constructor can start any action, same for company in Setup state
-            // constructor methodId is bytes(4) 0x0
-            if (msg.sig != 0x0 && msg.sender != COMPANY_LEGAL_REPRESENTATIVE) {
-                s = ExecutionState.Rejected;
-            } else {
-                s = ExecutionState.Executing;
-            }
+            // anyone can register a legitimate offering in setup state
+            s = action == Action.RegisterOffer ? ExecutionState.Executing : ExecutionState.Rejected;
         } else {
             // check if voting in voting center even if New state to handle voting in Campaign state
             // if voting is finalized evaluate results against ActionGovernance for action
