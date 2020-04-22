@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
 import { ZERO_ADDRESS, Q18, decimalBase } from "../helpers/constants";
-import { contractId, randomBytes32 } from "../helpers/utils";
+import { contractId, randomBytes32, promisify } from "../helpers/utils";
 import { prettyPrintGasCost } from "../helpers/gasUtils";
 import {
   GovState,
@@ -38,7 +38,6 @@ import {
 } from "../helpers/tokenTestCases";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import roles from "../helpers/roles";
-import { promisify } from "../helpers/evmCommands";
 import { ffControllerV0, greypControllerV3 } from "./bin/legacyControllers";
 
 const coder = require("web3-eth-abi");
@@ -442,7 +441,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
-      // eto failed - must destroy before state transition
+      // eto failed - destroy just one share
       await testCommitment._destroyTokens(tokenTermsDict.EQUITY_TOKENS_PER_SHARE);
       // fail eto
       await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
@@ -460,14 +459,10 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       });
       const newCommitment = testCommitment;
       const newResolutionId = getCommitmentResolutionId(newCommitment.address);
-      // register new offering from legal rep address
-      await expect(
-        equityTokenController.startNewOffering(newResolutionId, newCommitment.address),
-      ).to.be.rejectedWith("NF_GOV_EXEC_ACCESS_DENIED");
+      // register new offering from any address in Setup state...
       const newOfferTx = await equityTokenController.startNewOffering(
         newResolutionId,
         newCommitment.address,
-        { from: company },
       );
       expectLogResolutionStarted(
         newOfferTx,
@@ -662,11 +657,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     beforeEach(async () => {
       await preparePostInvestmentState();
       // deploy new mocked token controller for same company
-      newController = await MockSingleEquityTokenController.new(
-        universe.address,
-        company,
-        ZERO_ADDRESS,
-      );
+      newController = await MockSingleEquityTokenController.new(universe.address, company);
     });
 
     async function startSecondaryOffering() {
@@ -795,11 +786,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await migrateController(equityTokenController, newController);
 
       // second migration
-      const newController2 = await SingleEquityTokenController.new(
-        universe.address,
-        company,
-        ZERO_ADDRESS,
-      );
+      const newController2 = await SingleEquityTokenController.new(universe.address, company);
       await migrateController(newController, newController2);
 
       // first and third identical state
@@ -845,11 +832,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await equityTokenController.finishMigrateTo(newController.address, {
         from: admin,
       });
-      const newController2 = await SingleEquityTokenController.new(
-        universe.address,
-        company,
-        ZERO_ADDRESS,
-      );
+      const newController2 = await SingleEquityTokenController.new(universe.address, company);
       await newController2.finishMigrateFrom(newController.address, GovState.Funded, {
         from: admin,
       });
@@ -1060,8 +1043,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
 
   async function deployController(ovrController) {
     equityTokenController =
-      ovrController ||
-      (await SingleEquityTokenController.new(universe.address, company, testCommitment.address));
+      ovrController || (await SingleEquityTokenController.new(universe.address, company));
     equityToken = await EquityToken.new(
       universe.address,
       equityTokenController.address,
@@ -1076,6 +1058,9 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       [true, true],
       { from: admin },
     );
+    // start new offering
+    const resolutionId = getCommitmentResolutionId(testCommitment.address);
+    await equityTokenController.startNewOffering(resolutionId, testCommitment.address);
     // pass equity token to eto commitment
     await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
   }

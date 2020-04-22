@@ -18,6 +18,7 @@ import {
 } from "../../helpers/deployTerms";
 import { knownInterfaces } from "../../helpers/knownInterfaces";
 import increaseTime from "../../helpers/increaseTime";
+import { getCommitmentResolutionId } from "../../helpers/govUtils";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -235,6 +236,7 @@ contract(
 
     describe("RegDTransferController", async () => {
       it("should deploy", async () => {
+        await deployETO();
         await deployController(RegDTransferController);
         await prettyPrintGasCost("RegDTransferController deploy", equityTokenController);
       });
@@ -282,7 +284,7 @@ contract(
     });
 
     async function deployController(impl) {
-      equityTokenController = await impl.new(universe.address, company, testCommitment.address);
+      equityTokenController = await impl.new(universe.address, company);
 
       equityToken = await EquityToken.new(
         universe.address,
@@ -298,6 +300,9 @@ contract(
         [true, true],
         { from: admin },
       );
+      // start new offering
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      await equityTokenController.startNewOffering(resolutionId, testCommitment.address);
       // pass equity token to eto commitment
       await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
     }

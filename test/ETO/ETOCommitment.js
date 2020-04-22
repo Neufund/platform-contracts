@@ -23,12 +23,8 @@ import {
   defTokenTerms,
 } from "../helpers/deployTerms";
 import { CommitmentState } from "../helpers/commitmentState";
-import {
-  GovState,
-  getCommitmentResolutionId,
-  GovTokenType,
-  GovTokenState,
-} from "../helpers/govState";
+import { GovState, GovTokenType, GovTokenState } from "../helpers/govState";
+import { getCommitmentResolutionId } from "../helpers/govUtils";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 import { eventValue, decodeLogs, eventWithIdxValue, hasEvent } from "../helpers/events";
 import increaseTime, { setTimeTo } from "../helpers/increaseTime";
@@ -3527,17 +3523,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     if (opts.ovrEquityToken) {
       // if keeping old equity token, keep old token controller
       equityToken = opts.ovrEquityToken;
-      // prepare token controller for follow on ETO
-      const resolutionId = getCommitmentResolutionId(etoCommitment.address);
-      await equityTokenController.startNewOffering(resolutionId, etoCommitment.address, {
-        from: company,
-      });
     } else {
-      equityTokenController = await SingleEquityTokenController.new(
-        universe.address,
-        company,
-        etoCommitment.address,
-      );
+      equityTokenController = await SingleEquityTokenController.new(universe.address, company);
       equityToken = await EquityToken.new(
         universe.address,
         equityTokenController.address,
@@ -3568,6 +3555,11 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       { role: roles.neumarkIssuer, object: neumark.address, subject: etoCommitment.address },
       { role: roles.whitelistAdmin, object: etoTerms.address, subject: admin },
     ]);
+    // register new eto resolution
+    const resolutionId = getCommitmentResolutionId(etoCommitment.address);
+    await equityTokenController.startNewOffering(resolutionId, etoCommitment.address, {
+      from: company,
+    });
     // nominee is verified
     const oldNomineeClaims = await identityRegistry.getClaims(nominee);
     await identityRegistry.setClaims(nominee, oldNomineeClaims, toBytes32(web3.toHex(1)), {

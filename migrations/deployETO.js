@@ -2,16 +2,16 @@ import createAccessPolicy from "../test/helpers/createAccessPolicy";
 import { deserializeClaims } from "../test/helpers/identityClaims";
 import roles from "../test/helpers/roles";
 import { knownInterfaces } from "../test/helpers/knownInterfaces";
-import { promisify } from "../test/helpers/evmCommands";
+import { promisify } from "../test/helpers/utils";
 import { Q18, ZERO_ADDRESS } from "../test/helpers/constants";
 import {
   deployTokenholderRights,
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
-  predictAddress,
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
+import { getCommitmentResolutionId } from "../test/helpers/govUtils";
 import { prettyPrintGasCost } from "../test/helpers/gasUtils";
 import { good, wrong, printConstants } from "../scripts/helpers";
 
@@ -122,33 +122,10 @@ export async function deployETO(
     etoTerms.address,
   );
   logDeployed(etoCommitment);
-  // get nonce
-  const nonce = await promisify(ETOCommitment.web3.eth.getTransactionCount)(deployer);
-  // predict token controller address (skip universe tx!)
-  const predictedControllerAddress = predictAddress(deployer, nonce + 1);
-  const predictedTokenAddress = predictAddress(deployer, nonce + 2);
-  console.log("add ETO contracts to collections in universe");
-  await universe.setCollectionsInterfaces(
-    [
-      knownInterfaces.commitmentInterface,
-      knownInterfaces.equityTokenInterface,
-      knownInterfaces.equityTokenControllerInterface,
-      knownInterfaces.termsInterface,
-    ],
-    [etoCommitment.address, predictedTokenAddress, predictedControllerAddress, etoTerms.address],
-    [true, true, true, true],
-    { from: deployer },
-  );
   // deploy equity token controller which is company management contract
-  console.log("Deploying SingleEquityTokenController");
-  const equityTokenController = await SingleEquityTokenController.new(
-    universe.address,
-    company,
-    etoCommitment.address,
-  );
+  console.log(`Deploying ${config.artifacts.EQUITY_TOKEN_CONTROLLER}`);
+  const equityTokenController = await SingleEquityTokenController.new(universe.address, company);
   logDeployed(equityTokenController);
-  // todo: raise if not equal
-  console.log(`${predictedControllerAddress} == ${equityTokenController.address}`);
   // deploy equity token
   console.log("Deploying EquityToken");
   const equityToken = await EquityToken.new(
@@ -159,8 +136,21 @@ export async function deployETO(
     company,
   );
   logDeployed(equityToken);
-  // todo: raise if not equal
-  console.log(`${predictedTokenAddress} == ${equityToken.address}`);
+  console.log("add ETO contracts to collections in universe");
+  await universe.setCollectionsInterfaces(
+    [
+      knownInterfaces.commitmentInterface,
+      knownInterfaces.equityTokenInterface,
+      knownInterfaces.equityTokenControllerInterface,
+      knownInterfaces.termsInterface,
+    ],
+    [etoCommitment.address, equityToken.address, equityTokenController.address, etoTerms.address],
+    [true, true, true, true],
+    { from: deployer },
+  );
+  const resolutionId = getCommitmentResolutionId(etoCommitment.address);
+  console.log(`registering new offering as resolution id ${resolutionId}`);
+  await equityTokenController.startNewOffering(resolutionId, etoCommitment.address);
 
   if (canControlNeu) {
     console.log("neu token manager allows ETOCommitment to issue NEU");
