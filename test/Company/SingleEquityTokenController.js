@@ -1,14 +1,22 @@
 import { expect } from "chai";
-import { deployPlatformTerms, deployUniverse } from "../helpers/deployContracts";
-import { ZERO_ADDRESS, Q18, decimalBase } from "../helpers/constants";
-import { contractId, randomBytes32, promisify } from "../helpers/utils";
-import { prettyPrintGasCost } from "../helpers/gasUtils";
+import {
+  deployPlatformTerms,
+  deployUniverse,
+  deployEuroTokenUniverse,
+  // deployEtherTokenUniverse,
+  deployIdentityRegistry,
+  deployFeeDisbursalUniverse,
+} from "../helpers/deployContracts";
+import { ZERO_ADDRESS, Q18, decimalBase, daysToSeconds } from "../helpers/constants";
+import { contractId, randomBytes32, promisify, toBytes32 } from "../helpers/utils";
+import { prettyPrintGasCost, printCodeSize } from "../helpers/gasUtils";
 import {
   GovState,
   GovAction,
   GovExecutionState,
   GovTokenType,
   GovTokenState,
+  GovTokenVotingRule,
 } from "../helpers/govState";
 import {
   expectLogResolutionStarted,
@@ -16,6 +24,7 @@ import {
   expectLogGovStateTransition,
   expectResolution,
   getCommitmentResolutionId,
+  expectResolutionById,
 } from "../helpers/govUtils";
 import { CommitmentState } from "../helpers/commitmentState";
 import { divRound } from "../helpers/unitConverter";
@@ -39,9 +48,12 @@ import {
 import createAccessPolicy from "../helpers/createAccessPolicy";
 import roles from "../helpers/roles";
 import { ffControllerV0, greypControllerV3 } from "./bin/legacyControllers";
+import { expectLogDisbursalCreated } from "../helpers/disbursal";
 
 const coder = require("web3-eth-abi");
 
+const GovLibrary = artifacts.require("Gov");
+const FeeDisbursal = artifacts.require("FeeDisbursal");
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const SingleEquityTokenController = artifacts.require("SingleEquityTokenController");
 const ETOTerms = artifacts.require("ETOTerms");
@@ -70,21 +82,35 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
   let durationTerms;
   let termsConstraints;
 
+  const votingRightsOvr = {
+    GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Positive),
+    TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Negative),
+  };
+  const nonVotingRightsOvr = {
+    GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+    TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+  };
+
+  before(async () => {
+    const lib = await GovLibrary.new();
+    GovLibrary.address = lib.address;
+    await SingleEquityTokenController.link(GovLibrary, lib.address);
+    await MockSingleEquityTokenController.link(GovLibrary, lib.address);
+  });
+
   beforeEach(async () => {
     [universe, accessPolicy] = await deployUniverse(admin, admin);
     await deployPlatformTerms(universe, admin);
     // revoke voting rights so company can execute all resolutions without voting
-    [tokenholderRights] = await deployTokenholderRights(TokenholderRights, {
-      GENERAL_VOTING_RULE: zero,
-    });
+    [tokenholderRights] = await deployTokenholderRights(TokenholderRights, nonVotingRightsOvr);
     [durationTerms] = await deployDurationTerms(ETODurationTerms);
     [tokenTerms, tokenTermsDict] = await deployTokenTerms(ETOTokenTerms);
-    await deployETO();
     await deployController();
   });
 
   it("should deploy and check initial state", async () => {
     await prettyPrintGasCost("SingleEquityTokenController deploy", equityTokenController);
+    await printCodeSize("SingleEquityTokenController deploy", equityTokenController);
     expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Setup);
     const shareholderInfo = await equityTokenController.shareholderInformation();
     expect(shareholderInfo).to.deep.eq([zero, zero, ZERO_ADDRESS, zero, ""]);
@@ -108,20 +134,27 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     // check if all modules listed
     const moduleId = await equityTokenController.moduleId();
     // have 4 modules including top contract
-    expect(moduleId[0].length).to.eq(4);
+    expect(moduleId[0].length).to.eq(5);
     expect(moduleId[0][0]).to.eq(contractId("ControllerGovernanceEngine"));
     expect(moduleId[1][0]).to.be.bignumber.eq(zero);
     expect(moduleId[0][1]).to.eq(contractId("ControllerGeneralInformation"));
     expect(moduleId[1][1]).to.be.bignumber.eq(zero);
     expect(moduleId[0][2]).to.eq(contractId("ControllerTokenOfferings"));
     expect(moduleId[1][2]).to.be.bignumber.eq(zero);
-    expect(moduleId[0][3]).to.eq(cid[0]);
-    expect(moduleId[1][3]).to.be.bignumber.eq(cid[1]);
+    expect(moduleId[0][3]).to.eq(contractId("ControllerDividends"));
+    expect(moduleId[1][3]).to.be.bignumber.eq(zero);
+    expect(moduleId[0][4]).to.eq(cid[0]);
+    expect(moduleId[1][4]).to.be.bignumber.eq(cid[1]);
   });
 
   describe("offering actions", () => {
+    beforeEach(async () => {
+      await deployETO();
+      await registerOffering();
+    });
+
     it("should register ETO start", async () => {
-      const tx = await startOffering();
+      const tx = await runOffering();
       expect(await testCommitment.commitmentObserver()).to.eq(equityTokenController.address);
       const etcLogs = decodeLogs(
         tx,
@@ -165,7 +198,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         false,
         { from: admin },
       );
-      await expect(startOffering()).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
+      await expect(runOffering()).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
     });
 
     it("rejects ETO registration when not in universe", async () => {
@@ -192,11 +225,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
 
     it("no state transition on second ETO start date", async () => {
-      let tx = await startOffering();
+      let tx = await runOffering();
       let etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       tx.logs.push(...etcLogs);
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
-      tx = await startOffering();
+      tx = await runOffering();
       etcLogs = decodeLogs(tx, equityTokenController.address, SingleEquityTokenController.abi);
       tx.logs.push(...etcLogs);
       expect(hasEvent(tx, "LogGovStateTransition")).to.be.false;
@@ -209,9 +242,9 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // add old token controller as observer without registering
       await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
       // try to start eto from unknown address, as resolutionId is calculated from address, it will not be known!
-      await expect(startOffering()).to.be.rejectedWith("NF_GOV_NOT_EXECUTING");
+      await expect(runOffering()).to.be.rejectedWith("NF_GOV_NOT_EXECUTING");
       // this will still pass
-      await startOffering(oldTestCommitment);
+      await runOffering(oldTestCommitment);
     });
 
     it(
@@ -223,7 +256,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     it("should allow generating and destroying tokens only by registered ETO in Offering state", async () => {
       const amount = new web3.BigNumber(281871);
       await expect(testCommitment._generateTokens(amount)).to.be.revert;
-      await startOffering();
+      await runOffering();
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       await testCommitment._generateTokens(amount);
       expect(await equityToken.balanceOf(testCommitment.address)).to.be.bignumber.eq(amount);
@@ -253,7 +286,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
 
     it("should approve ETO and execute transfer rights", async () => {
       // approval sets equity token in cap table, sets Agreement to ISHA, sets general company information, moves state to Funded
-      await startOffering();
+      await runOffering();
       const sharesAmount = new web3.BigNumber("2761");
       const amount = sharesAmount.mul(await equityToken.tokensPerShare());
       await testCommitment._generateTokens(amount);
@@ -310,10 +343,10 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         tx,
         resolutionId,
         await testCommitment.signedInvestmentAgreementUrl(),
-        increasedShareCapitalUlps,
-        expectedValuation,
         tokenholderRights.address,
       );
+      expectLogCompanyValuationAmended(tx, resolutionId, expectedValuation);
+      expectLogShareCapitalAmended(tx, resolutionId, increasedShareCapitalUlps);
       expectLogAuthorizedCapitalEstablished(tx, resolutionId, etoTermsDict.AUTHORIZED_CAPITAL);
       // verify offerings and cap table
       expect(await equityTokenController.tokens()).to.deep.equal([
@@ -346,8 +379,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     it("should approve ETO with 0 new shares", async () => {
       // no authorized capital
       await deployETO({ AUTHORIZED_CAPITAL: zero });
-      await deployController();
-      await startOffering();
+      await registerOffering();
+      await runOffering();
       const tx = await testCommitment._triggerStateTransition(
         CommitmentState.Signing,
         CommitmentState.Claim,
@@ -370,10 +403,10 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         tx,
         resolutionId,
         await testCommitment.signedInvestmentAgreementUrl(),
-        etoTermsDict.EXISTING_SHARE_CAPITAL,
-        expectedValuation,
         tokenholderRights.address,
       );
+      expectLogCompanyValuationAmended(tx, resolutionId, expectedValuation);
+      expectLogShareCapitalAmended(tx, resolutionId, etoTermsDict.EXISTING_SHARE_CAPITAL);
       // no authorized capital established after ETO
       expect(hasEvent(tx, "LogAuthorizedCapitalEstablished")).to.be.false;
     });
@@ -382,7 +415,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await expect(
         testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
       ).to.be.rejectedWith("NF_ETC_BAD_STATE");
-      await startOffering();
+      await runOffering();
       await testCommitment._triggerStateTransition(
         CommitmentState.Whitelist,
         CommitmentState.Claim,
@@ -393,7 +426,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
 
     it("rejects approve ETO from registered ETO that was removed from universe", async () => {
-      await startOffering();
+      await runOffering();
       await universe.setCollectionsInterfaces(
         [knownInterfaces.commitmentInterface],
         [testCommitment.address],
@@ -406,7 +439,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
 
     it("should fail ETO", async () => {
-      await startOffering();
+      await runOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -437,7 +470,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
 
     it("should approve ETO after first one failed", async () => {
-      await startOffering();
+      await runOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -490,7 +523,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // set observer
       await newCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
       // perform ETO
-      await startOffering();
+      await runOffering();
       // generate tokens via new commitment
       await newCommitment._generateTokens(amount);
       // old commitment cannot generate tokens
@@ -541,7 +574,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
         .be.false;
       // eto contract trying to generate tokens
-      await startOffering();
+      await runOffering();
       await testCommitment._generateTokens(amount);
       // transfers disabled for investors
       expect(await equityTokenController.onTransfer(investors[0], investors[0], investors[1], 0)).to
@@ -608,6 +641,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
       await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
       await deployController();
+      await registerOffering();
       await testTransfersInOffering(false);
     });
 
@@ -617,11 +651,12 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
       await deployController();
+      await registerOffering();
       await testTransfersInOffering(true);
     });
 
     it("should prevent transfers from registered ETO when it fails", async () => {
-      await startOffering();
+      await runOffering();
       const sharesAmount = 2761;
       const amount = new web3.BigNumber(sharesAmount * (await equityToken.tokensPerShare()));
       await testCommitment._generateTokens(amount);
@@ -632,29 +667,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
   });
 
-  async function preparePostInvestmentState() {
-    // register new offering
-    await startOffering();
-    await generateTokens();
-    // add upgrade admin role to admin account, apply to all contracts
-    await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
-  }
-
-  async function generateTokens() {
-    // make investments
-    const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
-    await testCommitment._generateTokens(amount);
-    // finish offering
-    const tx = await testCommitment._triggerStateTransition(
-      CommitmentState.Whitelist,
-      CommitmentState.Claim,
-    );
-    return tx;
-  }
-
   describe("migrations", () => {
     let newController;
     beforeEach(async () => {
+      await deployETO();
+      await registerOffering();
       await preparePostInvestmentState();
       // deploy new mocked token controller for same company
       newController = await MockSingleEquityTokenController.new(universe.address, company);
@@ -700,7 +717,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // set start date again to change observer via equityToken.controller
       await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
       // finish offering on new controller
-      await startOffering();
+      await runOffering();
       const tx = await generateTokens();
       const etcLogs = decodeLogs(
         tx,
@@ -895,90 +912,436 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
   });
 
-  describe("post investment actions", () => {
-    beforeEach(async () => {
-      await preparePostInvestmentState();
-    });
+  describe("without ETO", async () => {
+    const ishaUrl = "ipfs:739ann3092id903";
+    const shareCapitalUlps = Q18.mul("25000");
+    // valuation not yet known
+    const companyValuationEurUlps = zero;
+    const authorizedCapital = Q18;
 
-    it("reverts on investor rights when operational", async () => {
-      await expect(equityTokenController.closeCompany()).to.be.rejectedWith("NF_INV_STATE");
-      await expect(equityTokenController.cancelCompanyClosing()).to.be.rejectedWith("NF_INV_STATE");
-    });
-
-    it("revert on receive ether and euro tokens with NOT_IMPL", async () => {
-      // tokenFallback is used to pay dividend in full implementation
-      await expect(equityTokenController.tokenFallback(ZERO_ADDRESS, 0, "")).to.be.rejectedWith(
-        "NF_NOT_IMPL",
-      );
-    });
-
-    it("should execute general information rights", async () => {
+    it("should amend ISHA in setup", async () => {
+      // company may amend ISHA in Setup state and make it operational without token and ETO
       const resolutionId = randomBytes32();
-      const tx = await equityTokenController.issueGeneralInformation(
+      // only company may do it
+      await expect(
+        equityTokenController.amendISHAResolution(
+          resolutionId,
+          ishaUrl,
+          shareCapitalUlps,
+          authorizedCapital,
+          companyValuationEurUlps,
+          tokenholderRights.address,
+          { from: admin },
+        ),
+      ).to.be.rejectedWith("NF_GOV_EXEC_ACCESS_DENIED");
+
+      // mind that tokenholderRights should not contain voting rights for the nominee
+
+      const tx = await equityTokenController.amendISHAResolution(
         resolutionId,
-        "TOKENHOLDERS CALL",
-        "ipfs:blah",
+        ishaUrl,
+        shareCapitalUlps,
+        authorizedCapital,
+        companyValuationEurUlps,
+        tokenholderRights.address,
+        { from: company },
+      );
+      expectLogISHAAmended(tx, resolutionId, ishaUrl, tokenholderRights.address);
+      expectLogCompanyValuationAmended(tx, resolutionId, companyValuationEurUlps);
+      expectLogShareCapitalAmended(tx, resolutionId, shareCapitalUlps);
+      expectLogAuthorizedCapitalEstablished(tx, resolutionId, authorizedCapital);
+      // in setup we transition to Funded
+      expectLogGovStateTransition(tx, GovState.Setup, GovState.Funded);
+
+      // can execute any action ie. amend valuation
+      const amendRid = randomBytes32();
+      const docUrl = "ABC";
+      const newValuation = Q18.mul("125000000");
+      const amendTx = await equityTokenController.amendCompanyValuationResolution(
+        amendRid,
+        newValuation,
+        docUrl,
         { from: company },
       );
       expectLogResolutionStarted(
-        tx,
+        amendTx,
         0,
-        resolutionId,
-        "TOKENHOLDERS CALL",
-        "ipfs:blah",
-        GovAction.None,
+        amendRid,
+        "",
+        docUrl,
+        GovAction.AmendValuation,
+        GovExecutionState.Executing,
+      );
+      expectLogResolutionExecuted(
+        amendTx,
+        0,
+        amendRid,
+        GovAction.AmendValuation,
+        GovExecutionState.Completed,
+      );
+      await expectResolutionById(
+        equityTokenController,
+        amendRid,
+        GovAction.AmendValuation,
         GovExecutionState.Completed,
       );
     });
 
-    it("rejects general information not from company", async () => {
+    it("rejects amend ISHA in setup with voting rights", async () => {
+      // deploy governance with voting rights
+      [tokenholderRights] = await deployTokenholderRights(TokenholderRights, votingRightsOvr);
+      // company may amend ISHA in Setup state and make it operational without token and ETO
       const resolutionId = randomBytes32();
       await expect(
-        equityTokenController.issueGeneralInformation(
+        equityTokenController.amendISHAResolution(
+          resolutionId,
+          ishaUrl,
+          shareCapitalUlps,
+          authorizedCapital,
+          companyValuationEurUlps,
+          tokenholderRights.address,
+          { from: company },
+        ),
+      ).to.be.rejectedWith("NF_TOKEN_REQ_VOTING_RIGHTS");
+    });
+  });
+
+  describe("post investment actions", () => {
+    let resolutionId;
+
+    beforeEach(async () => {
+      await deployETO();
+      await registerOffering();
+      await preparePostInvestmentState();
+      resolutionId = randomBytes32();
+    });
+
+    describe("general information", () => {
+      it("should issue general information by company", async () => {
+        const tx = await equityTokenController.issueGeneralInformation(
           resolutionId,
           "TOKENHOLDERS CALL",
           "ipfs:blah",
-          {
-            from: admin,
-          },
-        ),
-      ).to.be.rejectedWith("NF_ONLY_COMPANY");
-    });
-
-    it("rejects general information in setup", async () => {
-      const resolutionId = randomBytes32();
-      await deployController();
-      await expect(
-        equityTokenController.issueGeneralInformation(
+          { from: company },
+        );
+        expectLogResolutionStarted(
+          tx,
+          0,
           resolutionId,
           "TOKENHOLDERS CALL",
           "ipfs:blah",
-          {
-            from: admin,
-          },
-        ),
-      ).to.be.rejectedWith("NF_INV_STATE");
+          GovAction.None,
+          GovExecutionState.Completed,
+        );
+      });
+
+      it("rejects general information not from company", async () => {
+        await expect(
+          equityTokenController.issueGeneralInformation(
+            resolutionId,
+            "TOKENHOLDERS CALL",
+            "ipfs:blah",
+            {
+              from: admin,
+            },
+          ),
+        ).to.be.rejectedWith("NF_ONLY_COMPANY");
+      });
+
+      it("rejects general information in setup", async () => {
+        await deployController();
+        await expect(
+          equityTokenController.issueGeneralInformation(
+            resolutionId,
+            "TOKENHOLDERS CALL",
+            "ipfs:blah",
+            {
+              from: admin,
+            },
+          ),
+        ).to.be.rejectedWith("NF_INV_STATE");
+      });
+
+      it("rejects amend Agreement (ISHA) by company", async () => {
+        // ISHA amendment only through resolution, company cannot do that
+        await expect(equityTokenController.amendAgreement("NEW")).to.be.revert;
+      });
+
+      it("should amned ISHA", async () => {
+        const ishaUrl = "ipfs:739ann3092id903";
+        const shareCapitalUlps = Q18.mul("25000");
+        // valuation not yet known
+        const companyValuationEurUlps = Q18.mul("123654123");
+        const authorizedCapital = Q18.mul("1276");
+        const tx = await equityTokenController.amendISHAResolution(
+          resolutionId,
+          ishaUrl,
+          shareCapitalUlps,
+          authorizedCapital,
+          companyValuationEurUlps,
+          tokenholderRights.address,
+          { from: company },
+        );
+        // events already tested, make sure state transition was not executed
+        expect(hasEvent(tx, "LogGovStateTransition")).to.be.false;
+        // read general info
+        const information = await equityTokenController.shareholderInformation();
+        expect(information[0]).to.be.bignumber.eq(shareCapitalUlps);
+        expect(information[1]).to.be.bignumber.eq(companyValuationEurUlps);
+        expect(information[2]).to.eq(tokenholderRights.address);
+        expect(information[3]).to.be.bignumber.eq(authorizedCapital);
+        expect(information[4]).to.eq(ishaUrl);
+        // check agreement
+        const agreement = await equityTokenController.currentAgreement();
+        expect(agreement[2]).to.eq(ishaUrl);
+      });
+
+      it("should establish authorized capital", async () => {
+        const authorizedCapital = Q18.mul("1");
+        const tx = await equityTokenController.establishAuthorizedCapitalResolution(
+          resolutionId,
+          authorizedCapital,
+          "",
+          { from: company },
+        );
+        expectLogAuthorizedCapitalEstablished(tx, resolutionId, authorizedCapital);
+        expectLogResolutionStarted(
+          tx,
+          0,
+          resolutionId,
+          "",
+          "",
+          GovAction.EstablishAuthorizedCapital,
+          GovExecutionState.Executing,
+        );
+        expectLogResolutionExecuted(
+          tx,
+          0,
+          resolutionId,
+          GovAction.EstablishAuthorizedCapital,
+          GovExecutionState.Completed,
+        );
+        const information = await equityTokenController.shareholderInformation();
+        expect(information[3]).to.be.bignumber.eq(authorizedCapital);
+      });
+
+      it("should execute annual meeting", async () => {
+        const assemblyDoc = "doc";
+        const tx = await equityTokenController.annualGeneralMeetingResolution(
+          resolutionId,
+          assemblyDoc,
+          { from: company },
+        );
+        expectLogResolutionStarted(
+          tx,
+          0,
+          resolutionId,
+          "",
+          assemblyDoc,
+          GovAction.AnnualGeneralMeeting,
+          GovExecutionState.Executing,
+        );
+        expectLogResolutionExecuted(
+          tx,
+          0,
+          resolutionId,
+          GovAction.AnnualGeneralMeeting,
+          GovExecutionState.Completed,
+        );
+      });
+
+      it("should set company valuation", async () => {
+        const newValuation = Q18.mul("782719991");
+        const tx = await equityTokenController.amendCompanyValuationResolution(
+          resolutionId,
+          newValuation,
+          "",
+          { from: company },
+        );
+        expectLogCompanyValuationAmended(tx, resolutionId, newValuation);
+        expectLogResolutionStarted(
+          tx,
+          0,
+          resolutionId,
+          "",
+          "",
+          GovAction.AmendValuation,
+          GovExecutionState.Executing,
+        );
+        expectLogResolutionExecuted(
+          tx,
+          0,
+          resolutionId,
+          GovAction.AmendValuation,
+          GovExecutionState.Completed,
+        );
+        const information = await equityTokenController.shareholderInformation();
+        expect(information[1]).to.be.bignumber.eq(newValuation);
+      });
+
+      it("should set share capital", async () => {
+        const newValuation = Q18.mul("782719991");
+        const shareCapitalUlps = Q18.mul("25000");
+        const authorizedCapital = Q18.mul("1276");
+        const tx = await equityTokenController.amendShareCapitalResolution(
+          resolutionId,
+          shareCapitalUlps,
+          authorizedCapital,
+          newValuation,
+          "",
+          { from: company },
+        );
+
+        expectLogAuthorizedCapitalEstablished(tx, resolutionId, authorizedCapital);
+        expectLogCompanyValuationAmended(tx, resolutionId, newValuation);
+
+        expectLogShareCapitalAmended(tx, resolutionId, shareCapitalUlps);
+        expectLogResolutionStarted(
+          tx,
+          0,
+          resolutionId,
+          "",
+          "",
+          GovAction.AmendSharesAndValuation,
+          GovExecutionState.Executing,
+        );
+        expectLogResolutionExecuted(
+          tx,
+          0,
+          resolutionId,
+          GovAction.AmendSharesAndValuation,
+          GovExecutionState.Completed,
+        );
+
+        const information = await equityTokenController.shareholderInformation();
+        expect(information[0]).to.be.bignumber.eq(shareCapitalUlps);
+        expect(information[1]).to.be.bignumber.eq(newValuation);
+        expect(information[3]).to.be.bignumber.eq(authorizedCapital);
+      });
     });
 
-    it("rejects amend Agreement (ISHA) by company", async () => {
-      // ISHA amendment only through resolution, company cannot do that
-      await expect(equityTokenController.amendAgreement("NEW")).to.be.revert;
+    describe("economic rights", () => {
+      it("should distribute ordinary dividend", async () => {
+        // identity and disbursal must be deployed before the token so it can config permissions
+        const identityRegistry = await deployIdentityRegistry(universe, admin, admin);
+        const [feeDisbursal] = await deployFeeDisbursalUniverse(universe, admin);
+        const [euroToken] = await deployEuroTokenUniverse(
+          universe,
+          admin,
+          admin,
+          admin,
+          zero,
+          zero,
+          zero,
+        );
+        // promise to disburse 1000 euro
+        const amount = Q18.mul("1000");
+        const recycleAfter = daysToSeconds(30);
+        const tx = await equityTokenController.ordinaryPayoutResolution(
+          resolutionId,
+          euroToken.address,
+          amount,
+          recycleAfter,
+          "",
+          { from: company },
+        );
+        expectLogResolutionStarted(
+          tx,
+          0,
+          resolutionId,
+          "",
+          "",
+          GovAction.OrdinaryPayout,
+          GovExecutionState.Executing,
+        );
+
+        // extract unpacked promise from the event
+        const promise = eventValue(tx, "LogResolutionStarted").args.promise;
+
+        // make payout from company wallet
+        await identityRegistry.setClaims(company, toBytes32("0x0"), toBytes32("0x1"), {
+          from: admin,
+        });
+        await euroToken.deposit(company, amount, 0x0, { from: admin });
+        const trTx = await euroToken.transfer[
+          "address,uint256,bytes"
+        ](equityTokenController.address, amount, promise, { from: company });
+        // add controller logs
+        const etcLogs = decodeLogs(
+          trTx,
+          equityTokenController.address,
+          SingleEquityTokenController.abi,
+        );
+        trTx.logs.push(...etcLogs);
+        expectLogResolutionExecuted(
+          trTx,
+          0,
+          resolutionId,
+          GovAction.OrdinaryPayout,
+          GovExecutionState.Completed,
+        );
+        // add disbursal logs
+        const disbursalLogs = decodeLogs(trTx, feeDisbursal.address, FeeDisbursal.abi);
+        trTx.logs.push(...disbursalLogs);
+        // check if disbural happened in feeDisbursal
+        expectLogDisbursalCreated(
+          trTx,
+          equityToken.address,
+          euroToken.address,
+          amount,
+          equityTokenController.address,
+          recycleAfter,
+          0,
+        );
+      });
+
+      it("revert on unexpected token transfer", async () => {
+        // token transfer must be done against valid resolution and unpacked promise must be present in data
+        await expect(equityTokenController.tokenFallback(ZERO_ADDRESS, 0, "")).to.be.rejectedWith(
+          "NF_UNEXPECTED_TOKEN_TX",
+        );
+      });
+
+      it.only("revert on unexpected dividend payout", async () => {
+        // mock data to sig of ordinaryPayoutResolution
+        const sig = coder.encodeFunctionSignature(
+          "extraOrdinaryPayoutResolution(bytes32,address,uint256,uint256,string",
+        );
+        await expect(equityTokenController.tokenFallback(ZERO_ADDRESS, 0, sig)).to.be.rejectedWith(
+          "NF_UNEXPECTED_TOKEN_TX",
+        );
+      });
+
+      it("should cancel dividend payout");
     });
 
-    it("should return true onApprove", async () => {
-      expect(await equityTokenController.onApprove(investors[0], investors[1], 0)).to.be.true;
+    describe("dissolve and change of control", () => {
+      it("reverts on investor rights when operational", async () => {
+        await expect(equityTokenController.closeCompany()).to.be.rejectedWith("NF_INV_STATE");
+        await expect(equityTokenController.cancelCompanyClosing()).to.be.rejectedWith(
+          "NF_INV_STATE",
+        );
+      });
     });
 
-    it("should return 0 on onAllowance", async () => {
-      expect(
-        await equityTokenController.onAllowance(investors[0], investors[1]),
-      ).to.be.bignumber.eq(0);
+    describe("token transfers", () => {
+      it("should return true onApprove", async () => {
+        expect(await equityTokenController.onApprove(investors[0], investors[1], 0)).to.be.true;
+      });
+
+      it("should return 0 on onAllowance", async () => {
+        expect(
+          await equityTokenController.onAllowance(investors[0], investors[1]),
+        ).to.be.bignumber.eq(0);
+      });
     });
 
-    it("should return false on changing nominee", async () => {
-      expect(
-        await equityTokenController.onChangeNominee(equityToken.address, nominee, investors[0]),
-      ).to.be.false;
+    describe("token ops", async () => {
+      it("should return false on changing nominee", async () => {
+        expect(
+          await equityTokenController.onChangeNominee(equityToken.address, nominee, investors[0]),
+        ).to.be.false;
+      });
     });
   });
 
@@ -994,7 +1357,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       });
       await deployController();
       // register new offering
-      await startOffering();
+      await runOffering();
       // issue equity token with Q18
       await testCommitment._generateTokens(initialBalance);
       // finish offering
@@ -1058,11 +1421,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       [true, true],
       { from: admin },
     );
-    // start new offering
-    const resolutionId = getCommitmentResolutionId(testCommitment.address);
-    await equityTokenController.startNewOffering(resolutionId, testCommitment.address);
-    // pass equity token to eto commitment
-    await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
   }
 
   async function deployETO(termsOverride, constraintsOverride) {
@@ -1097,13 +1455,41 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
   }
 
-  async function startOffering(commitmentOvr) {
+  async function registerOffering() {
+    // start new offering
+    const resolutionId = getCommitmentResolutionId(testCommitment.address);
+    await equityTokenController.startNewOffering(resolutionId, testCommitment.address);
+    // pass equity token to eto commitment
+    await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+  }
+
+  async function runOffering(commitmentOvr) {
     const commitment = commitmentOvr || testCommitment;
     const tx = await commitment._triggerStateTransition(
       CommitmentState.Setup,
       CommitmentState.Setup,
     );
     await commitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Whitelist);
+    return tx;
+  }
+
+  async function preparePostInvestmentState() {
+    // register new offering
+    await runOffering();
+    await generateTokens();
+    // add upgrade admin role to admin account, apply to all contracts
+    await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
+  }
+
+  async function generateTokens() {
+    // make investments
+    const amount = new web3.BigNumber(7162 * (await equityToken.tokensPerShare()));
+    await testCommitment._generateTokens(amount);
+    // finish offering
+    const tx = await testCommitment._triggerStateTransition(
+      CommitmentState.Whitelist,
+      CommitmentState.Claim,
+    );
     return tx;
   }
 
@@ -1235,21 +1621,26 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(event.args.newImpl).eq(newController);
   }
 
-  function expectLogISHAAmended(
-    tx,
-    resolutionId,
-    ishaUrl,
-    newShareCapital,
-    newValuation,
-    newShareholderRights,
-  ) {
+  function expectLogISHAAmended(tx, resolutionId, ishaUrl, newShareholderRights) {
     const event = eventValue(tx, "LogISHAAmended");
     expect(event).to.exist;
     expect(event.args.resolutionId).to.eq(resolutionId);
     expect(event.args.ISHAUrl).to.eq(ishaUrl);
-    expect(event.args.shareCapitalUlps).to.be.bignumber.eq(newShareCapital);
-    expect(event.args.companyValuationEurUlps).to.be.bignumber.eq(newValuation);
     expect(event.args.newShareholderRights).eq(newShareholderRights);
+  }
+
+  function expectLogCompanyValuationAmended(tx, resolutionId, newValuation) {
+    const event = eventValue(tx, "LogCompanyValuationAmended");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.companyValuationEurUlps).to.be.bignumber.eq(newValuation);
+  }
+
+  function expectLogShareCapitalAmended(tx, resolutionId, newShareCapital) {
+    const event = eventValue(tx, "LogShareCapitalAmended");
+    expect(event).to.exist;
+    expect(event.args.resolutionId).to.eq(resolutionId);
+    expect(event.args.shareCapitalUlps).to.be.bignumber.eq(newShareCapital);
   }
 
   function expectLogAuthorizedCapitalEstablished(tx, resolutionId, authorizedCapital) {
