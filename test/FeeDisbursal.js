@@ -22,6 +22,7 @@ import { knownInterfaces } from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
 import { decodeLogs, eventValue, eventValueAtIndex } from "./helpers/events";
 import { divRound } from "./helpers/unitConverter";
+import { expectLogDisbursalCreated } from "./helpers/disbursal";
 
 const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 const EtherToken = artifacts.require("EtherToken");
@@ -216,29 +217,6 @@ contract(
       /**
        * Assertion helpers
        */
-      function expectLogDisbursalCreated(
-        tx,
-        proRataToken,
-        token,
-        amount,
-        disburserAddr,
-        recycleDur,
-        index,
-      ) {
-        const event = eventValue(tx, "LogDisbursalCreated");
-        expect(event).to.exist;
-        expect(event.args.proRataToken).to.eq(proRataToken);
-        expect(event.args.token).to.eq(token);
-        expect(event.args.amount).to.be.bignumber.eq(amount);
-        expect(event.args.recycleAfterDuration).to.be.bignumber.eq(
-          recycleDur || platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
-        );
-        expect(event.args.disburser).to.eq(disburserAddr);
-        if (index) {
-          expect(event.args.index).to.be.bignumber.eq(index);
-        }
-      }
-
       function expectLogDisbursalAccepted(
         tx,
         claimer,
@@ -2626,7 +2604,14 @@ contract(
           });
           tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
           // icbm ether token gets converted and we expect new etherToken
-          expectLogDisbursalCreated(tx, neumark.address, etherToken.address, Q18, disburser);
+          expectLogDisbursalCreated(
+            tx,
+            neumark.address,
+            etherToken.address,
+            Q18,
+            disburser,
+            platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+          );
         });
 
         it("disburse via approveAndCall with icbm euro token conversion", async () => {
@@ -2659,7 +2644,14 @@ contract(
           });
           tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
           // icbm euro token gets converted and we expect new euroToken
-          expectLogDisbursalCreated(tx, neumark.address, euroToken.address, Q18, disburser);
+          expectLogDisbursalCreated(
+            tx,
+            neumark.address,
+            euroToken.address,
+            Q18,
+            disburser,
+            platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+          );
         });
       });
     });

@@ -370,7 +370,7 @@ export function generateDefaultBylaws(terms) {
         );
         break;
       case "None":
-      case "ExtraodindaryPayout":
+      case "ExtraordinaryPayout":
       case "RegisterOffer":
       case "AmendISHA":
       case "IssueTokensForExistingShares":

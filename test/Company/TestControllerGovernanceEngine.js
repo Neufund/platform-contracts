@@ -28,6 +28,7 @@ import {
 } from "../helpers/govUtils";
 import { hasEvent } from "../helpers/events";
 
+const GovLibrary = artifacts.require("Gov");
 const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const TestControllerGovernanceEngine = artifacts.require("TestControllerGovernanceEngine");
 const TestTokenControllerPassThrough = artifacts.require("TestTokenControllerPassThrough");
@@ -48,6 +49,12 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
     GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
   };
+
+  before(async () => {
+    const lib = await GovLibrary.new();
+    GovLibrary.address = lib.address;
+    await TestControllerGovernanceEngine.link(GovLibrary, lib.address);
+  });
 
   beforeEach(async () => {
     [universe] = await deployUniverse(admin, admin);
@@ -101,7 +108,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         );
         const txdata = await promisify(web3.eth.getTransaction)(tx.tx);
         // verify promise
-        expect(resolution[5]).to.eq(`0x${sha3(txdata.input, { encoding: "hex" })}`);
+        expect(resolution[5]).to.eq(sha3(txdata.input, { encoding: "hex" }));
         // expect right payload to be set
         expect(await governanceEngine.addressPayload()).to.eq(payload);
       });
@@ -338,7 +345,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         );
         const txdata = await promisify(web3.eth.getTransaction)(tx.tx);
         // verify promise
-        expect(resolution[5]).to.eq(`0x${sha3(txdata.input, { encoding: "hex" })}`);
+        expect(resolution[5]).to.eq(sha3(txdata.input, { encoding: "hex" }));
         // expect right payload to be set
         expect(await governanceEngine.addressPayload()).to.eq(payload);
 

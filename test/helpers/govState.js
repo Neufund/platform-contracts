@@ -33,7 +33,7 @@ export const GovAction = {
   ContinueToken: 3,
   CloseToken: 4,
   OrdinaryPayout: 5,
-  ExtraodindaryPayout: 6,
+  ExtraordinaryPayout: 6,
   RegisterOffer: 7,
   ChangeTokenController: 8,
   AmendISHA: 9,

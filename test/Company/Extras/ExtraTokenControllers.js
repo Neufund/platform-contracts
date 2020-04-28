@@ -27,6 +27,7 @@ const ETOTokenTerms = artifacts.require("ETOTokenTerms");
 const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const EquityToken = artifacts.require("EquityToken");
 
+const GovLibrary = artifacts.require("Gov");
 const GranularTransferController = artifacts.require("GranularTransferController");
 const TestETOCommitmentSingleTokenController = artifacts.require(
   "TestETOCommitmentSingleTokenController",
@@ -50,6 +51,13 @@ contract(
     let tokenholderRights;
     let durationTerms;
     let termsConstraints;
+
+    before(async () => {
+      const lib = await GovLibrary.new();
+      GovLibrary.address = lib.address;
+      await GranularTransferController.link(GovLibrary, lib.address);
+      await RegDTransferController.link(GovLibrary, lib.address);
+    });
 
     beforeEach(async () => {
       [universe] = await deployUniverse(admin, admin);

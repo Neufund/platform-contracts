@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { prettyPrintGasCost } from "../helpers/gasUtils";
+import { prettyPrintGasCost, printCodeSize } from "../helpers/gasUtils";
 import { divRound } from "../helpers/unitConverter";
 import {
   deployUniverse,
@@ -47,6 +47,7 @@ import { toBytes32, contractId } from "../helpers/utils";
 import { expectLogFundsCommitted } from "../helpers/commitment";
 import EvmError from "../helpers/EVMThrow";
 
+const GovLibrary = artifacts.require("Gov");
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const EquityToken = artifacts.require("EquityToken");
 const SingleEquityTokenController = artifacts.require("SingleEquityTokenController");
@@ -126,6 +127,12 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // save addess of tokenOfferingOperator
   let tokenOfferingOperator;
 
+  before(async () => {
+    const lib = await GovLibrary.new();
+    GovLibrary.address = lib.address;
+    await SingleEquityTokenController.link(GovLibrary, lib.address);
+  });
+
   beforeEach(async () => {
     // deploy access policy and universe contract, admin account has all permissions of the platform
     [universe, accessPolicy] = await deployUniverse(admin, admin);
@@ -189,7 +196,9 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
     it("should deploy", async () => {
       await prettyPrintGasCost("ETOCommitment deploy", etoCommitment);
+      await printCodeSize("ETOCommitment deploy", etoCommitment);
       await prettyPrintGasCost("SingleEquityTokenController deploy", equityTokenController);
+      await printCodeSize("SingleEquityTokenController deploy", equityTokenController);
       // check getters
       expect(await etoCommitment.etoTerms()).to.eq(etoTerms.address);
       expect(await etoCommitment.equityToken()).to.eq(ZERO_ADDRESS);
