@@ -1,11 +1,10 @@
 pragma solidity 0.4.26;
 
-import "./ShareholderRights.sol";
+import "./EquityTokenholderRights.sol";
 import "../Standards/IAgreement.sol";
 
 
 contract IControllerGovernance is
-    GovernanceTypes,
     IAgreement
 {
     ////////////////////////
@@ -16,7 +15,7 @@ contract IControllerGovernance is
     function state()
         public
         constant
-        returns (GovState);
+        returns (Gov.State);
 
     // address of company legal representative able to sign agreements
     function companyLegalRepresentative()
@@ -31,7 +30,7 @@ contract IControllerGovernance is
         returns (
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
-            ShareholderRights shareholderRights,
+            EquityTokenholderRights shareholderRights,
             uint256 authorizedCapital,
             string shaUrl
         );
@@ -42,8 +41,8 @@ contract IControllerGovernance is
         constant
         returns (
             address[] token,
-            TokenType[] tokenType,
-            TokenState[] tokenState,
+            Gov.TokenType[] tokenType,
+            Gov.TokenState[] tokenState,
             address[] holderRights,
             bool[] tokenTransferable
         );
@@ -78,5 +77,5 @@ contract IControllerGovernance is
 
     // list of governance modules in controller, same scheme as IContractId
     /// @dev includes contractId as last one
-    function moduleId() public pure returns (bytes32[] ids, uint256[] versions);
+    function moduleId() public pure returns (bytes32[5] ids, uint256[5] versions);
 }

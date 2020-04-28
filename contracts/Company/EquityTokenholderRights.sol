@@ -1,10 +1,18 @@
 pragma solidity 0.4.26;
 
 import "./ShareholderRights.sol";
+import "./Gov.sol";
 
 // rights of the equity token holder vs. company. derived from ShareholderRights as those represent Nominee rights
 // as shareholder and those rights are passed to equity token holders
 contract EquityTokenholderRights is ShareholderRights {
+
+    ////////////////////////
+    // Constants
+    ////////////////////////
+
+    // number of actions declared by Action enum
+    uint256 internal constant TOTAL_ACTIONS = 24;
 
     ////////////////////////
     // Public Accessors
@@ -47,7 +55,7 @@ contract EquityTokenholderRights is ShareholderRights {
     }
 
     // get bylaw for specific action
-    function getBylaw(Action action)
+    function getBylaw(Gov.Action action)
         public
         constant
         returns (uint56)
@@ -61,7 +69,7 @@ contract EquityTokenholderRights is ShareholderRights {
         constant
         returns (uint56)
     {
-        return _ACTION_BYLAWS[uint256(Action.None)];
+        return _ACTION_BYLAWS[uint256(Gov.Action.None)];
     }
 
     // get restricted act bylaw - for governance action that is restricted act
@@ -70,7 +78,7 @@ contract EquityTokenholderRights is ShareholderRights {
         constant
         returns (uint56)
     {
-        return _ACTION_BYLAWS[uint256(Action.RestrictedNone)];
+        return _ACTION_BYLAWS[uint256(Gov.Action.RestrictedNone)];
     }
 
     // decodes uint56 packed bylaw into uint256 array that can be casted from ActionBylaw
@@ -80,7 +88,7 @@ contract EquityTokenholderRights is ShareholderRights {
         pure
         returns (uint256[7] memory decodedBylaw)
     {
-        ActionBylaw memory bylaw = deserializeBylaw(encodedBylaw);
+        Gov.ActionBylaw memory bylaw = Gov.deserializeBylaw(encodedBylaw);
         // see `deserializeBylaw` for memory layout details
         // ActionBylaw is just uint256[7]
         assembly {
