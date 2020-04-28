@@ -6,6 +6,7 @@ import "./IEquityTokenController.sol";
 import "./IControllerGovernance.sol";
 import "./ControllerTokenOfferings.sol";
 import "../Standards/IMigrationChain.sol";
+import "./ControllerDividends.sol";
 
 
 /// @title on-chain company management with shareholder rights execution support
@@ -17,8 +18,17 @@ contract SingleEquityTokenController is
     IControllerGovernance,
     IEquityTokenController,
     ControllerTokenOfferings,
-    IMigrationChain
+    ControllerDividends,
+    IMigrationChain,
+    IContractId
 {
+    ////////////////////////
+    // Governance Module Id
+    ////////////////////////
+
+    bytes32 internal constant SingleEquityTokenControllerId = 0xcf797981ed83afa34271d9e461566e1f4faa04577471ac007890d663e1727723;
+    uint256 internal constant SingleEquityTokenControllerV = 0;
+
     ////////////////////////
     // Immutable state
     ////////////////////////
@@ -34,7 +44,7 @@ contract SingleEquityTokenController is
     IMigrationChain private _newController;
 
     // preserves state when migrating so cancel possible
-    GovState private _preMigrationState;
+    Gov.State private _preMigrationState;
 
 
     ////////////////////////
@@ -55,14 +65,14 @@ contract SingleEquityTokenController is
 
     function closeCompany()
         public
-        onlyState(GovState.Closing)
+        onlyState(Gov.State.Closing)
     {
         revert("NF_NOT_IMPL");
     }
 
     function cancelCompanyClosing()
         public
-        onlyState(GovState.Closing)
+        onlyState(Gov.State.Closing)
     {
         revert("NF_NOT_IMPL");
     }
@@ -73,35 +83,35 @@ contract SingleEquityTokenController is
 
     function startMigrateTo(IMigrationChain newController)
         public
-        onlyStates(GovState.Funded, GovState.Closed)
+        onlyStates(Gov.State.Funded, Gov.State.Closed)
         // we allow account with that role to perform controller migrations, initially platform account is used
         // company may move to separate access policy contract and fully overtake migration control if they wish
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         require(newController != address(this));
-        _preMigrationState = _state;
-        transitionTo(GovState.Migrating);
+        _preMigrationState = _g._state;
+        transitionTo(Gov.State.Migrating);
     }
 
     function cancelMigrateTo()
         public
-        onlyState(GovState.Migrating)
+        onlyState(Gov.State.Migrating)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         transitionTo(_preMigrationState);
-        _preMigrationState = GovState.Setup;
+        _preMigrationState = Gov.State.Setup;
     }
 
     function finishMigrateTo(IMigrationChain newController)
         public
-        onlyState(GovState.Migrating)
+        onlyState(Gov.State.Migrating)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         require(newController != address(this));
         // must be migrated with us as a source
         require(newController.migratedFrom() == address(this), "NF_NOT_MIGRATED_FROM_US");
         _newController = newController;
-        transitionTo(GovState.Migrated);
+        transitionTo(Gov.State.Migrated);
         // emit LogResolutionExecuted(0, Action.ChangeTokenController);
         emit LogMigratedTo(address(this), newController);
     }
@@ -111,7 +121,7 @@ contract SingleEquityTokenController is
         constant
         returns (bool)
     {
-        return _state == GovState.Migrating;
+        return _g._state == Gov.State.Migrating;
     }
 
     function migratedTo()
@@ -162,7 +172,7 @@ contract SingleEquityTokenController is
         constant
         returns (bool allow)
     {
-        return _state == GovState.Offering && isActiveOffering(sender);
+        return _g._state == Gov.State.Offering && isActiveOffering(sender);
     }
 
     function onDestroyTokens(address sender, address, uint256)
@@ -170,7 +180,7 @@ contract SingleEquityTokenController is
         constant
         returns (bool allow)
     {
-        return _state == GovState.Offering && isActiveOffering(sender);
+        return _g._state == Gov.State.Offering && isActiveOffering(sender);
     }
 
     function onChangeTokenController(address /*sender*/, address newController)
@@ -203,24 +213,37 @@ contract SingleEquityTokenController is
     }
 
     //
+    // IControllerGovernance
+    //
+
+    function moduleId() public pure returns (bytes32[5] ids, uint256[5] versions) {
+        return ([
+            ControllerGovernanceEngineId,
+            ControllerGeneralInformationId,
+            ControllerTokenOfferingsId,
+            ControllerDividendsId,
+            SingleEquityTokenControllerId
+        ],
+        [
+            ControllerGovernanceEngineV,
+            ControllerGeneralInformationV,
+            ControllerTokenOfferingsV,
+            ControllerDividendsV,
+            SingleEquityTokenControllerV
+        ]);
+    }
+
+    //
     // IERC223TokenCallback (proceeds disbursal)
     //
 
     /// allows contract to receive and distribure proceeds
-    function tokenFallback(address, uint256, bytes)
+    function tokenFallback(address wallet, uint256 amount, bytes data)
         public
     {
-        revert("NF_NOT_IMPL");
-    }
-
-    function moduleId() public pure returns (bytes32[] ids, uint256[] versions) {
-        ids = new bytes32[](4);
-        versions = new uint256[](4);
-
-        (ids[0], versions[0]) = ControllerGovernanceEngine.contractId();
-        (ids[1], versions[1]) = ControllerGeneralInformation.contractId();
-        (ids[2], versions[2]) = ControllerTokenOfferings.contractId();
-        (ids[3], versions[3]) = SingleEquityTokenController.contractId();
+        if(!ControllerDividends.receiveDividend(wallet, amount, data)) {
+            revert("NF_UNEXPECTED_TOKEN_TX");
+        }
     }
 
     //
@@ -228,7 +251,7 @@ contract SingleEquityTokenController is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xcf797981ed83afa34271d9e461566e1f4faa04577471ac007890d663e1727723, 0);
+        return (SingleEquityTokenControllerId, SingleEquityTokenControllerV);
     }
 
     //
@@ -236,22 +259,22 @@ contract SingleEquityTokenController is
     //
 
     // to be called on new controller to finalize migration and link old controller
-    function finishMigrateFrom(IMigrationChain oldController, GovState oldControllerState)
+    function finishMigrateFrom(IMigrationChain oldController, Gov.State oldControllerState)
         public
-        onlyState(GovState.Setup)
+        onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         // the last state of old controller before migration
-        _state = oldControllerState;
+        _g._state = oldControllerState;
         // link old controller
         OLD_TOKEN_CONTROLLER = oldController;
     }
 
     function preMigrationState()
         public
-        onlyStates(GovState.Migrating, GovState.Migrated)
+        onlyStates(Gov.State.Migrating, Gov.State.Migrated)
         constant
-        returns (GovState)
+        returns (Gov.State)
     {
         return _preMigrationState;
     }
