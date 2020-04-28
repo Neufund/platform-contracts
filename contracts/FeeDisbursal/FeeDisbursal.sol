@@ -15,8 +15,6 @@ import "../PaymentTokens/EuroToken.sol";
 
 /// @title granular fee disbursal contract
 contract FeeDisbursal is
-    Serialization,
-    Math,
     KnownContracts,
     KnownInterfaces,
     IFeeDisbursal
@@ -366,11 +364,11 @@ contract FeeDisbursal is
         PlatformTerms terms = PlatformTerms(UNIVERSE.platformTerms());
         uint256 recycleAfterDuration = terms.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION();
         if (data.length == 20) {
-            proRataToken = ITokenSnapshots(decodeAddress(data));
+            proRataToken = ITokenSnapshots(Serialization.decodeAddress(data));
         }
         else if (data.length == 52) {
             address proRataTokenAddress;
-            (proRataTokenAddress, recycleAfterDuration) = decodeAddressUInt256(data);
+            (proRataTokenAddress, recycleAfterDuration) = Serialization.decodeAddressUInt256(data);
             proRataToken = ITokenSnapshots(proRataTokenAddress);
         } else {
             // legacy ICBMLockedAccount compat mode which does not send pro rata token address and we assume NEU
@@ -397,7 +395,7 @@ contract FeeDisbursal is
             proRataTokenTotalSupply -= proRataToken.balanceOfAt(address(this), snapshotId);
         }
         require(proRataTokenTotalSupply > 0, "NF_NO_DISBURSE_EMPTY_TOKEN");
-        uint256 recycleAfter = add(block.timestamp, recycleAfterDuration);
+        uint256 recycleAfter = Math.add(block.timestamp, recycleAfterDuration);
         assert(recycleAfter<2**128);
 
         Disbursal[] storage disbursals = _disbursals[token][proRataToken];
@@ -460,7 +458,7 @@ contract FeeDisbursal is
         constant
         returns (uint256 claimableAmount, uint256 totalAmount, uint256 nextIndex)
     {
-        nextIndex = min(until, _disbursals[token][proRataToken].length);
+        nextIndex = Math.min(until, _disbursals[token][proRataToken].length);
         uint256 currentIndex = _disbursalProgress[token][proRataToken][claimer];
         uint256 currentSnapshotId = proRataToken.currentSnapshotId();
         for (; currentIndex < nextIndex; currentIndex += 1) {
@@ -503,6 +501,6 @@ contract FeeDisbursal is
         // with HALF_UP first claims 2 and seconds claims2 but balance is 1 at that point
         // thus we round down here saving tons of gas by not doing additional bookkeeping
         // consequence: small amounts of disbursed funds will be left in the contract
-        return mul(disbursalAmount, proRataClaimerBalance) / proRataTokenTotalSupply;
+        return Math.mul(disbursalAmount, proRataClaimerBalance) / proRataTokenTotalSupply;
     }
 }
