@@ -13,7 +13,6 @@ import "./IESOPOptionsConverter.sol";
 
 contract ESOP is
     ESOPTypes,
-    Math,
     Agreement,
     EmployeesList,
     OptionsCalculator
@@ -711,8 +710,8 @@ contract ESOP is
         );
         // allow to convert less than amount above, bonus does not participate
         if (exercisedOptionsFrac < DECIMAL_POWER) {
-            pool = decimalFraction(pool, exercisedOptionsFrac);
-            extra = decimalFraction(extra, exercisedOptionsFrac);
+            pool = Math.decimalFraction(pool, exercisedOptionsFrac);
+            extra = Math.decimalFraction(extra, exercisedOptionsFrac);
         }
         // total converted options cannot cross max pools - assigned pools
         uint256 totalNonConverted = _totalPoolOptions - _remainingPoolOptions + _assignedExtraOptions +

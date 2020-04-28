@@ -5,9 +5,14 @@ import "../../../Math.sol";
 
 
 contract OptionsCalculator is
-    ESOPTypes,
-    Math
+    ESOPTypes
 {
+    ////////////////////////
+    // Constants
+    ////////////////////////
+
+    uint256 internal constant DECIMAL_POWER = 10**18;
+
     ////////////////////////
     // Immutable state
     ////////////////////////
@@ -82,7 +87,7 @@ contract OptionsCalculator is
         constant
         returns (uint96)
     {
-        return uint96(decimalFraction(remainingPoolOptions, NEW_EMPLOYEE_POOL_FRAC));
+        return uint96(Math.decimalFraction(remainingPoolOptions, NEW_EMPLOYEE_POOL_FRAC));
     }
 
     function calculateVestedOptions(uint32 time, uint32 vestingStarts, uint96 options)
@@ -99,7 +104,7 @@ contract OptionsCalculator is
         if (effectiveTime < CLIFF_PERIOD) {
             return 0;
         } else {
-            return  effectiveTime < VESTING_PERIOD ? uint96(proportion(options, effectiveTime, VESTING_PERIOD)) : options;
+            return  effectiveTime < VESTING_PERIOD ? uint96(Math.proportion(options, effectiveTime, VESTING_PERIOD)) : options;
         }
     }
 
@@ -121,7 +126,7 @@ contract OptionsCalculator is
         // fadeout duration equals to employment duration
         uint32 employmentPeriod = terminatedAt - issueDate;
         // minimum value of options at the end of fadeout, it is a % of all employee's options
-        uint96 minFadeValue = uint96(decimalFraction(options, DECIMAL_POWER - MAX_FADEOUT_FRAC));
+        uint96 minFadeValue = uint96(Math.decimalFraction(options, DECIMAL_POWER - MAX_FADEOUT_FRAC));
         // however employee cannot have more than options after fadeout than he was vested at termination
         if (minFadeValue >= vestedOptions) {
             return vestedOptions;
@@ -130,7 +135,7 @@ contract OptionsCalculator is
                 // fadeout options at the end of fadout
                 return minFadeValue;
             } else {
-                uint96 toFadeout = uint96(proportion(vestedOptions - minFadeValue, employmentPeriod - timefromTermination, employmentPeriod));
+                uint96 toFadeout = uint96(Math.proportion(vestedOptions - minFadeValue, employmentPeriod - timefromTermination, employmentPeriod));
                 // min fadeout + amount of options not yet fadeouted
                 return minFadeValue + toFadeout;
             }
@@ -196,7 +201,7 @@ contract OptionsCalculator is
         return  (
             vestedPoolOptions,
             vestedExtraOptions,
-            accelerateVesting ? uint96(decimalFraction(vestedPoolOptions, BONUS_OPTIONS_FRAC)) : 0 );
+            accelerateVesting ? uint96(Math.decimalFraction(vestedPoolOptions, BONUS_OPTIONS_FRAC)) : 0 );
     }
 
     function calculateOptions(
@@ -230,7 +235,7 @@ contract OptionsCalculator is
         if (issuedExtraOptions == 0) {
             return (vestedOptions, 0);
         }
-        poolVestedOptions = uint96(proportion(issuedPoolOptions, vestedOptions, issuedPoolOptions + issuedExtraOptions));
+        poolVestedOptions = uint96(Math.proportion(issuedPoolOptions, vestedOptions, issuedPoolOptions + issuedExtraOptions));
         extraVestedOptions = vestedOptions - poolVestedOptions;
     }
 
@@ -274,12 +279,12 @@ contract OptionsCalculator is
         constant
         returns(uint256 maximumBonusOptions, uint256 correctedBonusFrac)
     {
-        maximumBonusOptions = decimalFraction(totalPoolOptions, BONUS_OPTIONS_FRAC);
+        maximumBonusOptions = Math.decimalFraction(totalPoolOptions, BONUS_OPTIONS_FRAC);
         correctedBonusFrac = BONUS_OPTIONS_FRAC;
         uint256 r = maximumBonusOptions % OPTIONS_PER_SHARE_CAPITAL_UNIT;
         if (r > 0) {
             // compute corrected FRAC so we generate round number of bonus capital, subtr 1 so we never overflow
-            correctedBonusFrac = proportion(maximumBonusOptions + r, DECIMAL_POWER, BONUS_OPTIONS_FRAC) - 1;
+            correctedBonusFrac = Math.proportion(maximumBonusOptions + r, DECIMAL_POWER, BONUS_OPTIONS_FRAC) - 1;
         }
     }
 
