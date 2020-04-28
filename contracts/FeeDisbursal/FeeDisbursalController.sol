@@ -10,7 +10,6 @@ import "../KnownContracts.sol";
 
 /// @title granular fee disbursal controller
 contract FeeDisbursalController is
-    IdentityRecord,
     IFeeDisbursalController,
     KnownInterfaces,
     AccessRoles,
@@ -150,7 +149,7 @@ contract FeeDisbursalController is
         returns (bool allow)
     {
         IIdentityRegistry registry = IIdentityRegistry(UNIVERSE.identityRegistry());
-        IdentityClaims memory claims = deserializeClaims(registry.getClaims(claimer));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(registry.getClaims(claimer));
         return claims.isVerified && !claims.accountFrozen;
     }
 }
