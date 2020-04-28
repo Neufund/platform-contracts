@@ -451,8 +451,8 @@ contract(
 
       async function transferPermissionsWithInterfaces(knownInterface) {
         const isVerified = toBytes32("0x1");
-        const etoAddress = _;
-        await universe.setCollectionInterface(knownInterface, etoAddress, true, {
+        const contractAddress = _;
+        await universe.setCollectionInterface(knownInterface, contractAddress, true, {
           from: masterManager,
         });
         await tokenController.setAllowedTransferTo(explicit, true, {
@@ -467,26 +467,37 @@ contract(
           { from: masterManager },
         );
         // kyc to eto is allowed
-        expect(await tokenController.onTransfer(identity1, identity1, etoAddress, 0)).to.be.true;
-        // eto to kyc is allowed
-        expect(await tokenController.onTransfer(etoAddress, etoAddress, identity1, 0)).to.be.true;
-        // non kyc to eto is disallowed
-        expect(await tokenController.onTransfer(nonkycIdentity, nonkycIdentity, etoAddress, 0)).to
-          .be.false;
-        // eto to non kyc is disallowed
-        expect(await tokenController.onTransfer(etoAddress, etoAddress, nonkycIdentity, 0)).to.be
-          .false;
-        // eto to explicit to is allowed (refund to locked account)
-        expect(await tokenController.onTransfer(etoAddress, etoAddress, explicitTo, 0)).to.be.true;
-        // explicit from to eto is allowed
-        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, etoAddress, 0)).to.be
+        expect(await tokenController.onTransfer(identity1, identity1, contractAddress, 0)).to.be
           .true;
+        // eto to kyc is allowed
+        expect(await tokenController.onTransfer(contractAddress, contractAddress, identity1, 0)).to
+          .be.true;
+        // non kyc to eto is disallowed
+        expect(await tokenController.onTransfer(nonkycIdentity, nonkycIdentity, contractAddress, 0))
+          .to.be.false;
+        // eto to non kyc is disallowed
+        expect(
+          await tokenController.onTransfer(contractAddress, contractAddress, nonkycIdentity, 0),
+        ).to.be.false;
+        // eto to explicit to is allowed (refund to locked account)
+        expect(await tokenController.onTransfer(contractAddress, contractAddress, explicitTo, 0)).to
+          .be.true;
+        // explicit from to eto is allowed
+        expect(await tokenController.onTransfer(explicitFrom, explicitFrom, contractAddress, 0)).to
+          .be.true;
         // freeze account to disallow
         await identityRegistry.setClaims(identity1, toBytes32("0x1"), toBytes32("0xe"), {
           from: masterManager,
         });
-        expect(await tokenController.onTransfer(identity1, identity1, etoAddress, 0)).to.be.false;
-        expect(await tokenController.onTransfer(etoAddress, etoAddress, identity1, 0)).to.be.false;
+        // enabled contracts may transfer to themselves
+        expect(
+          await tokenController.onTransfer(contractAddress, contractAddress, contractAddress, 0),
+        ).to.be.true;
+
+        expect(await tokenController.onTransfer(identity1, identity1, contractAddress, 0)).to.be
+          .false;
+        expect(await tokenController.onTransfer(contractAddress, contractAddress, identity1, 0)).to
+          .be.false;
       }
 
       it("should allow/disallow transfer with ETO", async () => {
@@ -496,6 +507,8 @@ contract(
       it("should allow/disallow transfer with EquityTokenController", async () => {
         await transferPermissionsWithInterfaces(knownInterfaces.equityTokenControllerInterface);
       });
+
+      it("should allow EquityTokenController to FeeDisbursal transfer");
 
       it("should always approve", async () => {
         expect(await tokenController.onApprove(ZERO_ADDRESS, ZERO_ADDRESS, 0)).to.be.true;
