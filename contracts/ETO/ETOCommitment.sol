@@ -34,8 +34,6 @@ contract ETOCommitment is
     AccessControlled,
     Agreement,
     ETOTimedStateMachine,
-    Math,
-    Serialization,
     IContractId,
     KnownInterfaces
 {
@@ -254,7 +252,7 @@ contract ETOCommitment is
         EQUITY_TOKEN_POWER = etoTerms.EQUITY_TOKEN_POWER();
 
         MAX_INVESTMENT_AMOUNT_EUR_ULPS = ETO_TERMS_CONSTRAINTS.MAX_INVESTMENT_AMOUNT_EUR_ULPS();
-        // set it to max(unit256) to reduce number of operations later
+        // set it to Math.max(unit256) to reduce number of operations later
         if (MAX_INVESTMENT_AMOUNT_EUR_ULPS == 0) {
             MAX_INVESTMENT_AMOUNT_EUR_ULPS -= 1;
         }
@@ -344,7 +342,7 @@ contract ETOCommitment is
         // if investing via locked account, set real investor address
         if (wallet == address(ETHER_LOCK) || wallet == address(EURO_LOCK)) {
             // data contains investor address
-            investor = decodeAddress(data);
+            investor = Serialization.decodeAddress(data);
         }
         // compute euro equivalent of ETH investment
         uint256 equivEurUlps = msg.sender == address(EURO_TOKEN) ? amount : convertToEurEquiv(amount);
@@ -448,7 +446,7 @@ contract ETOCommitment is
             _newShares, _newShares * ETO_TERMS.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS(),
             _additionalContributionEth, _additionalContributionEurUlps,
             _tokenParticipationFeeAmount, _platformFeeEth, _platformFeeEurUlps,
-            _newShares == 0 ? 0 : divRound(_totalEquivEurUlps, _newShares)
+            _newShares == 0 ? 0 : Math.divRound(_totalEquivEurUlps, _newShares)
         );
     }
 
@@ -562,7 +560,7 @@ contract ETOCommitment is
         equityTokenAmount = ticket.equityTokenAmount;
         sharesFrac = ETO_TERMS.equityTokensToSharesFrac(ticket.equityTokenAmount);
         tokenPrice = equityTokenAmount > 0 ? ETO_TERMS.calculateTokenEurPrice(equivEurUlps, equityTokenAmount) : 0;
-        neuRate = rewardNmkUlps > 0 ? proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
+        neuRate = rewardNmkUlps > 0 ? Math.proportion(equivEurUlps, 10**18, rewardNmkUlps) : 0;
         amountEth = ticket.amountEth;
         amountEurUlps = ticket.amountEurUlps;
         claimedOrRefunded = ticket.claimOrRefundSettled;
@@ -736,7 +734,7 @@ contract ETOCommitment is
         uint256 capitalIncreaseEurUlps = tokenTerms.SHARE_NOMINAL_VALUE_EUR_ULPS() * _newShares;
         // limit the amount if balance on EURO_TOKEN < capitalIncreaseEurUlps. in that case Nomine must handle it offchain
         // no overflow as smaller one is uint128
-        uint128 availableCapitalEurUlps = uint128(min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
+        uint128 availableCapitalEurUlps = uint128(Math.min(capitalIncreaseEurUlps, _additionalContributionEurUlps));
         assert(EURO_TOKEN.transfer(NOMINEE, availableCapitalEurUlps, ""));
         // decrease additional contribution by value that was sent to nominee
         _additionalContributionEurUlps -= availableCapitalEurUlps;
@@ -883,7 +881,7 @@ contract ETOCommitment is
         (uint256 rate, uint256 rateTimestamp) = CURRENCY_RATES.getExchangeRate(ETHER_TOKEN, EURO_TOKEN);
         //require if rate older than 4 hours
         require(block.timestamp - rateTimestamp < TOKEN_RATE_EXPIRES_AFTER, "NF_ETO_INVALID_ETH_RATE");
-        return decimalFraction(amountEth, rate);
+        return Math.decimalFraction(amountEth, rate);
     }
 
     function updateInvestorTicket(

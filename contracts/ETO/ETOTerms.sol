@@ -31,8 +31,6 @@ import "../AccessRoles.sol";
 contract ETOTerms is
     AccessControlled,
     AccessRoles,
-    IdentityRecord,
-    Math,
     IContractId,
     KnownInterfaces
 {
@@ -194,7 +192,7 @@ contract ETOTerms is
         EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKEN_DECIMALS());
         require(EQUITY_TOKEN_POWER <= 10 ** 18);
         MAX_AVAILABLE_TOKENS = calculateAvailableTokens(tokenTerms.MAX_NUMBER_OF_TOKENS());
-        MAX_AVAILABLE_TOKENS_IN_WHITELIST = min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
+        MAX_AVAILABLE_TOKENS_IN_WHITELIST = Math.min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
         FULL_TOKEN_PRICE_FRACTION = calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
 
         // validate all settings
@@ -212,7 +210,7 @@ contract ETOTerms is
         returns (uint256 tokenAmount)
     {
         // we may disregard totalEurUlps as curve is flat, round down when calculating tokens
-        return mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_TOKEN_PRICE_FRACTION;
+        return Math.mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_TOKEN_PRICE_FRACTION;
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
@@ -222,7 +220,7 @@ contract ETOTerms is
         returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokenAmount as curve is flat
-        return proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
+        return Math.proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
     }
 
     // calculates a fraction `priceFrac` of the full token price, typically used for discounts
@@ -231,14 +229,14 @@ contract ETOTerms is
         if (priceFrac == 1) {
             return TOKEN_PRICE_EUR_ULPS;
         } else {
-            return decimalFraction(priceFrac, TOKEN_PRICE_EUR_ULPS);
+            return Math.decimalFraction(priceFrac, TOKEN_PRICE_EUR_ULPS);
         }
     }
 
     // calculates price of a token by dividing amountEurUlps by equityTokenAmount and scaling to 10**18
     // note that all prices are decimal fractions as defined in Math.sol
     function calculateTokenEurPrice(uint256 amountEurUlps, uint256 equityTokenAmount) public constant returns(uint256) {
-        return proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
+        return Math.proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
     }
 
     /// @notice returns number of shares as a decimal fraction
@@ -247,7 +245,7 @@ contract ETOTerms is
         constant
         returns (uint256)
     {
-        return proportion(amount, 10**18, EQUITY_TOKENS_PER_SHARE);
+        return Math.proportion(amount, 10**18, EQUITY_TOKENS_PER_SHARE);
     }
 
     function addWhitelisted(
@@ -309,7 +307,7 @@ contract ETOTerms is
             newInvestorContributionEurUlps,
             applyWhitelistDiscounts);
         // check if is eligible for investment
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
         // use simple formula to disallow us accredited investors
         isEligible = claims.isVerified && !claims.accountFrozen && !claims.requiresRegDAccreditation;
     }
@@ -402,18 +400,18 @@ contract ETOTerms is
         // whitelist use discount is possible
         if (applyWhitelistDiscounts) {
             // can invest more than general max ticket
-            maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, maxTicketEurUlps);
+            maxTicketEurUlps = Math.max(wlTicket.discountAmountEurUlps, maxTicketEurUlps);
             // can invest less than general min ticket
             if (wlTicket.discountAmountEurUlps > 0) {
-                minTicketEurUlps = min(wlTicket.discountAmountEurUlps, minTicketEurUlps);
+                minTicketEurUlps = Math.min(wlTicket.discountAmountEurUlps, minTicketEurUlps);
             }
             if (existingInvestorContributionEurUlps < wlTicket.discountAmountEurUlps) {
-                discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
+                discountedAmount = Math.min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
                 // discount is fixed so use base token price
                 if (discountedAmount > 0) {
                     // always round down when calculating tokens
                     uint256 fixedSlotPrice = calculatePriceFraction(wlTicket.fullTokenPriceFrac);
-                    fixedSlotEquityTokenAmount = mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
+                    fixedSlotEquityTokenAmount = Math.mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
                     // calculate the really spent part to cover for rounding errors in next tranche (remainingAmount)
                     // commented out as with 18 digit scale we have 1 wei difference max and we'll not deploy any other
                     // precisions anymore
@@ -426,7 +424,7 @@ contract ETOTerms is
         if (remainingAmount > 0) {
             if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
                 // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor, also round down
-                equityTokenAmount = mul(remainingAmount, EQUITY_TOKEN_POWER) / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
+                equityTokenAmount = Math.mul(remainingAmount, EQUITY_TOKEN_POWER) / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
             } else {
                 // use pricing along the curve
                 equityTokenAmount = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);

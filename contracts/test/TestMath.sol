@@ -3,7 +3,7 @@ pragma solidity 0.4.26;
 import "../Math.sol";
 
 
-contract TestMath is Math {
+contract TestMath {
 
     ////////////////////////
     // Public functions
@@ -14,7 +14,7 @@ contract TestMath is Math {
         pure
         returns(uint256)
     {
-        return absDiff(v1, v2);
+        return Math.absDiff(v1, v2);
     }
 
     function _divRound(uint256 v, uint256 d)
@@ -23,7 +23,7 @@ contract TestMath is Math {
         returns(uint256)
     {
 
-        return divRound(v, d);
+        return Math.divRound(v, d);
     }
 
     function _decimalFraction(uint256 amount, uint256 frac)
@@ -31,7 +31,7 @@ contract TestMath is Math {
         pure
         returns(uint256)
     {
-        return decimalFraction(amount, frac);
+        return Math.decimalFraction(amount, frac);
     }
 
     function _proportion(uint256 amount, uint256 part, uint256 total)
@@ -39,7 +39,7 @@ contract TestMath is Math {
         pure
         returns(uint256)
     {
-        return proportion(amount, part, total);
+        return Math.proportion(amount, part, total);
     }
 
     function _min(uint256 a, uint256 b)
@@ -47,7 +47,7 @@ contract TestMath is Math {
         pure
         returns (uint256)
     {
-        return min(a, b);
+        return Math.min(a, b);
     }
 
     function _max(uint256 a, uint256 b)
@@ -55,6 +55,6 @@ contract TestMath is Math {
         pure
         returns (uint256)
     {
-        return max(a, b);
+        return Math.max(a, b);
     }
 }

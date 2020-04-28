@@ -19,10 +19,7 @@ import "../Identity/IIdentityRegistry.sol";
 
 contract LockedAccount is
     Agreement,
-    Math,
-    Serialization,
     ICBMLockedAccountMigration,
-    IdentityRecord,
     KnownInterfaces,
     Reclaimable,
     IContractId
@@ -232,7 +229,7 @@ contract LockedAccount is
         require(account.balance >= amount, "NF_LOCKED_NO_FUNDS");
         // calculate unlocked NEU as proportion of invested amount to account balance
         uint112 unlockedNmkUlps = uint112(
-            proportion(
+            Math.proportion(
                 account.neumarksDue,
                 amount,
                 account.balance
@@ -361,7 +358,7 @@ contract LockedAccount is
                 require(partialAmount <= balance, "NF_LOCKED_ACCOUNT_SPLIT_OVERSPENT");
                 // compute corresponding NEU proportionally, result < 10**18 as partialAmount <= balance
                 uint112 partialNmkUlps = uint112(
-                    proportion(
+                    Math.proportion(
                         neumarksDue,
                         partialAmount,
                         balance
@@ -601,7 +598,7 @@ contract LockedAccount is
         if (block.timestamp < accountInMem.unlockDate) {
             address penaltyDisbursalAddress = UNIVERSE.feeDisbursal();
             require(penaltyDisbursalAddress != address(0));
-            uint112 penalty = uint112(decimalFraction(accountInMem.balance, PENALTY_FRACTION));
+            uint112 penalty = uint112(Math.decimalFraction(accountInMem.balance, PENALTY_FRACTION));
             // distribution via ERC223 to contract or simple address
             assert(PAYMENT_TOKEN.transfer(penaltyDisbursalAddress, penalty, abi.encodePacked(NEUMARK)));
             emit LogPenaltyDisbursed(penaltyDisbursalAddress, investor, penalty, PAYMENT_TOKEN);
@@ -646,7 +643,7 @@ contract LockedAccount is
     {
         // only verified destinations
         IIdentityRegistry identityRegistry = IIdentityRegistry(UNIVERSE.identityRegistry());
-        IdentityClaims memory claims = deserializeClaims(identityRegistry.getClaims(wallet));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(identityRegistry.getClaims(wallet));
         require(claims.isVerified && !claims.accountFrozen, "NF_DEST_NO_VERIFICATION");
         if (wallet != msg.sender) {
             // prevent squatting - cannot set destination for not yet migrated investor

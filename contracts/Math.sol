@@ -1,14 +1,7 @@
 pragma solidity 0.4.26;
 
 
-contract Math {
-
-    ////////////////////////
-    // Constants
-    ////////////////////////
-
-    uint256 internal DECIMAL_POWER = 10**18;
-
+library Math {
     ////////////////////////
     // Internal functions
     ////////////////////////

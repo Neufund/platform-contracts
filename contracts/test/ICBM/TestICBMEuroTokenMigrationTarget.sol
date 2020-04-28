@@ -59,8 +59,8 @@ contract TestICBMEuroTokenMigrationTarget is
 
     function deposit(address to, uint256 amount) private {
         require(to != address(0));
-        _balances[to] = add(_balances[to], amount);
-        _totalSupply = add(_totalSupply, amount);
+        _balances[to] = Math.add(_balances[to], amount);
+        _totalSupply = Math.add(_totalSupply, amount);
         emit Transfer(address(0), to, amount);
     }
 }

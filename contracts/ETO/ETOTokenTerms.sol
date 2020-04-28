@@ -11,7 +11,7 @@ import "../Standards/IContractId.sol";
 
 
 /// @title sets terms for tokens in ETO
-contract ETOTokenTerms is Math, IContractId {
+contract ETOTokenTerms is IContractId {
 
     ////////////////////////
     // Immutable state
@@ -91,7 +91,7 @@ contract ETOTokenTerms is Math, IContractId {
         EQUITY_TOKENS_POWER = 10**uint256(EQUITY_TOKEN_DECIMALS);
 
         require(equityTokensPerShare > 0 && equityTokensPerShare % EQUITY_TOKENS_POWER == 0, "NF_SHARES_NOT_WHOLE_TOKENS");
-        require(proportion(tokenPriceEurUlps, maxNumberOfTokens, EQUITY_TOKENS_POWER) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
+        require(Math.proportion(tokenPriceEurUlps, maxNumberOfTokens, EQUITY_TOKENS_POWER) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
     }
 
     ////////////////////////
@@ -99,7 +99,7 @@ contract ETOTokenTerms is Math, IContractId {
     ////////////////////////
 
     function SHARE_PRICE_EUR_ULPS() public constant returns (uint256) {
-        return proportion(TOKEN_PRICE_EUR_ULPS, EQUITY_TOKENS_PER_SHARE, EQUITY_TOKENS_POWER);
+        return Math.proportion(TOKEN_PRICE_EUR_ULPS, EQUITY_TOKENS_PER_SHARE, EQUITY_TOKENS_POWER);
     }
 
     //

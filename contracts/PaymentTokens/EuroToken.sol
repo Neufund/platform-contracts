@@ -123,8 +123,8 @@ contract EuroToken is
         acceptAgreement(to)
     {
         require(to != address(0));
-        _balances[to] = add(_balances[to], amount);
-        _totalSupply = add(_totalSupply, amount);
+        _balances[to] = Math.add(_balances[to], amount);
+        _totalSupply = Math.add(_totalSupply, amount);
         emit LogDeposit(to, msg.sender, amount, reference);
         emit Transfer(address(0), to, amount);
     }
@@ -307,8 +307,8 @@ contract EuroToken is
         private
     {
         require(_balances[owner] >= amount);
-        _balances[owner] = sub(_balances[owner], amount);
-        _totalSupply = sub(_totalSupply, amount);
+        _balances[owner] = Math.sub(_balances[owner], amount);
+        _totalSupply = Math.sub(_totalSupply, amount);
         emit Transfer(owner, address(0), amount);
     }
 
