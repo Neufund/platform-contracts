@@ -74,9 +74,9 @@ contract GranularTransferController is
         constant
         returns (bool allow)
     {
-        GovState s = state();
+        Gov.State s = state();
         // allow forced transfer only by the token controller itself
-        if ((s == GovState.Funded || s == GovState.Closing) && broker == address(this)) {
+        if ((s == Gov.State.Funded || s == Gov.State.Closing) && broker == address(this)) {
             ForcedTransfer storage t = _forcedTransfers[from];
             // check if forced transfer matches the actual transfer
             if (t.amount > 0) {
@@ -93,7 +93,7 @@ contract GranularTransferController is
         // ask base controller if transfers are enabled
         allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // prevent transfer if account is frozen
-        if (allow && s == GovState.Funded) {
+        if (allow && s == Gov.State.Funded) {
             allow = !(_frozenAddresses[from] || _frozenAddresses[to] || _frozenAddresses[broker]);
         }
     }

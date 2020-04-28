@@ -44,7 +44,7 @@ contract MockSingleEquityTokenController is
     }
 
     // to easily mockup state
-    function _overrideState(GovState state)
+    function _overrideState(Gov.State state)
         public
     {
         transitionTo(state);

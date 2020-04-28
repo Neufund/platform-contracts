@@ -4,8 +4,7 @@ import "../SingleEquityTokenController.sol";
 
 
 contract RegDTransferController is
-    SingleEquityTokenController,
-    IdentityRecord
+    SingleEquityTokenController
 {
     ////////////////////////
     // Constructor
@@ -31,9 +30,9 @@ contract RegDTransferController is
         // ask base controller if transfers are enables
         allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // control for reg d lock in in funded state
-        if (allow && state() == GovState.Funded) {
-            IIdentityRegistry registry = IIdentityRegistry(UNIVERSE.identityRegistry());
-            IdentityClaims memory claims = deserializeClaims(registry.getClaims(from));
+        if (allow && state() == Gov.State.Funded) {
+            IIdentityRegistry registry = IIdentityRegistry(_g.UNIVERSE.identityRegistry());
+            IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(registry.getClaims(from));
             // perform additional checks for token holders under reg-d regulations
             if (claims.requiresRegDAccreditation) {
                 // deny transfer if in lockdown period is in place

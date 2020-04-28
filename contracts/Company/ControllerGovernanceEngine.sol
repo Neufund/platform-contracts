@@ -1,18 +1,20 @@
 pragma solidity 0.4.26;
 
-import "../Universe.sol";
 import "../Agreement.sol";
-import "./GovernanceTypes.sol";
-import "./IEquityToken.sol";
-import "./EquityTokenholderRights.sol";
+import "./Gov.sol";
 import "../Standards/IContractId.sol";
 
 
 contract ControllerGovernanceEngine is
-    GovernanceTypes,
-    Agreement,
-    IContractId
+    Agreement
 {
+    ////////////////////////
+    // Governance Module Id
+    ////////////////////////
+
+    bytes32 internal constant ControllerGovernanceEngineId = 0xd8b228c791b70f75338df4d4d644c638f1a58faec0b2f187daf42fb3722af438;
+    uint256 internal constant ControllerGovernanceEngineV = 0;
+
     ////////////////////////
     // Events
     ////////////////////////
@@ -29,15 +31,16 @@ contract ControllerGovernanceEngine is
         bytes32 indexed resolutionId,
         string resolutionTitle,
         string documentUrl,
-        Action action,
-        ExecutionState state
+        Gov.Action action,
+        Gov.ExecutionState state,
+        bytes promise
     );
 
     // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
     event LogResolutionExecuted(
         bytes32 indexed resolutionId,
-        Action action,
-        ExecutionState state
+        Gov.Action action,
+        Gov.ExecutionState state
     );
 
     ////////////////////////
@@ -49,34 +52,10 @@ contract ControllerGovernanceEngine is
     string private constant NF_GOV_UNKEPT_PROMISE = "NF_GOV_UNKEPT_PROMISE";
 
     ////////////////////////
-    // Immutable state
-    ////////////////////////
-
-    // a root of trust contract
-    Universe internal UNIVERSE;
-
-    // company representative address
-    address internal COMPANY_LEGAL_REPRESENTATIVE;
-
-    ////////////////////////
     // Mutable state
     ////////////////////////
 
-    // set of shareholder rights, typically of Nominee
-    ShareholderRights internal _shareholderRights;
-
-     // set of equity token rights associated with the token
-    EquityTokenholderRights internal _tokenholderRights;
-
-    // equity token from ETO
-    IEquityToken internal _equityToken;
-
-    // controller lifecycle state
-    GovState internal _state;
-
-    // resolutions being executed
-    mapping (bytes32 => ResolutionExecution) internal _resolutions;
-    bytes32[] internal _resolutionIds;
+    Gov.GovernanceStorage _g;
 
     // maps resolution to actions
     // mapping (uint256 => bytes32) private _exclusiveActions;
@@ -86,22 +65,24 @@ contract ControllerGovernanceEngine is
     ////////////////////////
 
     modifier onlyCompany() {
-        require(msg.sender == COMPANY_LEGAL_REPRESENTATIVE, "NF_ONLY_COMPANY");
+        require(msg.sender == _g.COMPANY_LEGAL_REPRESENTATIVE, "NF_ONLY_COMPANY");
         _;
     }
 
     modifier onlyOperational() {
-        require(_state == GovState.Offering || _state == GovState.Funded || _state == GovState.Closing, "NF_INV_STATE");
+        Gov.State s = _g._state;
+        require(s == Gov.State.Offering || s == Gov.State.Funded || s == Gov.State.Closing, "NF_INV_STATE");
         _;
     }
 
-    modifier onlyState(GovState state) {
-        require(_state == state, "NF_INV_STATE");
+    modifier onlyState(Gov.State state) {
+        require(_g._state == state, "NF_INV_STATE");
         _;
     }
 
-    modifier onlyStates(GovState state1, GovState state2) {
-        require(_state == state1 || _state == state2, "NF_INV_STATE");
+    modifier onlyStates(Gov.State state1, Gov.State state2) {
+        Gov.State s = _g._state;
+        require(s == state1 || s == state2, "NF_INV_STATE");
         _;
     }
 
@@ -109,11 +90,11 @@ contract ControllerGovernanceEngine is
     // instead timeout will be watched
     modifier withNonAtomicExecution(
         bytes32 resolutionId,
-        function (ResolutionExecution storage) constant returns (string memory) validator)
+        function (Gov.ResolutionExecution storage) constant returns (string memory) validator)
     {
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         // prevent to execute twice
-        require(e.state != ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
+        require(e.state != Gov.ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
         // validate resolution
         if(validateResolution(resolutionId, e, validator)) {
             _;
@@ -131,25 +112,24 @@ contract ControllerGovernanceEngine is
     // starts new governance execution that must complete in single transaction once it enters Executing state
     modifier withAtomicExecution(
         bytes32 resolutionId,
-        function (ResolutionExecution storage) constant returns (string memory) validator)
+        function (Gov.ResolutionExecution storage) constant returns (string memory) validator)
     {
         // validate resolution
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         if(validateResolution(resolutionId, e, validator)) {
             _;
-            if (e.state == ExecutionState.Executing) {
-                terminateResolution(resolutionId, e, ExecutionState.Completed);
+            if (e.state == Gov.ExecutionState.Executing) {
+                terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
             }
         }
     }
 
     modifier withGovernance(
         bytes32 resolutionId,
-        Action action,
-        string documentUrl,
-        function (Action) constant returns (ExecutionState) escalator)
+        Gov.Action action,
+        string documentUrl)
     {
-        if (withGovernancePrivate(resolutionId, action, documentUrl, escalator) == ExecutionState.Executing) {
+        if (withGovernancePrivate(resolutionId, action, documentUrl) == Gov.ExecutionState.Executing) {
             // inner modifiers and function body only in Executing state
             _;
         }
@@ -163,7 +143,7 @@ contract ControllerGovernanceEngine is
         uint8 nextStep)
     {
         // validate resolution
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         if(validateResolutionContinuation(e, promise, nextStep)) {
             _;
             // if next step > 0 then store it
@@ -180,18 +160,18 @@ contract ControllerGovernanceEngine is
         uint8 nextStep)
     {
         // validate resolution
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         if(validateResolutionContinuation(e, promise, nextStep)) {
             // validate timeout
             _;
-            if (e.state == ExecutionState.Executing) {
+            if (e.state == Gov.ExecutionState.Executing) {
                 // no need to write final step as execution ends here
-                terminateResolution(resolutionId, e, ExecutionState.Completed);
+                terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
             }
         }
     }
 
-    /*modifier withExclusiveAction(bytes32 resolutionId, Action action) {
+    /*modifier withExclusiveAction(bytes32 resolutionId, Gov.Action action) {
         if (withExclusiveActionPrivate(resolutionId, action)) {
             _;
         }
@@ -208,8 +188,8 @@ contract ControllerGovernanceEngine is
         internal
         Agreement(universe.accessPolicy(), universe.forkArbiter())
     {
-        UNIVERSE = universe;
-        COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
+        _g.UNIVERSE = universe;
+        _g.COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
     }
 
     //
@@ -219,9 +199,9 @@ contract ControllerGovernanceEngine is
     function state()
         public
         constant
-        returns (GovState)
+        returns (Gov.State)
     {
-        return _state;
+        return _g._state;
     }
 
     function companyLegalRepresentative()
@@ -229,7 +209,7 @@ contract ControllerGovernanceEngine is
         constant
         returns (address)
     {
-        return COMPANY_LEGAL_REPRESENTATIVE;
+        return _g.COMPANY_LEGAL_REPRESENTATIVE;
     }
 
     //
@@ -241,15 +221,15 @@ contract ControllerGovernanceEngine is
         constant
         returns (bytes32[])
     {
-        return _resolutionIds;
+        return _g._resolutionIds;
     }
 
     function resolution(bytes32 resolutionId)
         public
         constant
         returns (
-            Action action,
-            ExecutionState s,
+            Gov.Action action,
+            Gov.ExecutionState,
             uint32 startedAt,
             uint32 finishedAt,
             bytes32 failedCode,
@@ -259,7 +239,7 @@ contract ControllerGovernanceEngine is
             uint8 nextStep
         )
     {
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         return (
             e.action,
             e.state,
@@ -279,18 +259,17 @@ contract ControllerGovernanceEngine is
 
     function migrateGovernance(EquityTokenholderRights tokenholderRights, IEquityToken equityToken)
         public
-        onlyState(GovState.Setup)
+        onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        _shareholderRights = tokenholderRights;
-        _tokenholderRights = tokenholderRights;
-        _equityToken = equityToken;
+        _g._tokenholderRights = tokenholderRights;
+        _g._equityToken = equityToken;
     }
 
     function migrateResolutions(
         bytes32[] resolutionId,
-        Action[] action,
-        ExecutionState[] s,
+        Gov.Action[] action,
+        Gov.ExecutionState[] s,
         uint32[] startedAt,
         uint32[] finishedAt,
         bytes32[] failedCode,
@@ -300,13 +279,13 @@ contract ControllerGovernanceEngine is
         uint8[] nextStep
     )
         public
-        onlyState(GovState.Setup)
+        onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         // assert(resolutionId.length == action.length == state.length == startedAt.length == finishedAt.length == failedCode.length == promise.length);
         for(uint256 ii = 0; ii < resolutionId.length; ii++) {
             bytes32 rId = resolutionId[ii];
-            _resolutions[rId] = ResolutionExecution({
+            _g._resolutions[rId] = Gov.ResolutionExecution({
                 action: action[ii],
                 state: s[ii],
                 startedAt: startedAt[ii],
@@ -317,33 +296,24 @@ contract ControllerGovernanceEngine is
                 cancelAt: cancelAt[ii],
                 nextStep: nextStep[ii]
             });
-            _resolutionIds.push(rId);
+            _g._resolutionIds.push(rId);
         }
     }
-
-    //
-    // Implements IContractId
-    //
-
-    function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xd8b228c791b70f75338df4d4d644c638f1a58faec0b2f187daf42fb3722af438, 0);
-    }
-
 
     ////////////////////////
     // Internal functions
     ////////////////////////
 
-    function transitionTo(GovState newState)
+    function transitionTo(Gov.State newState)
         internal
     {
-        emit LogGovStateTransition(uint32(_state), uint32(newState), uint32(block.timestamp));
-        _state = newState;
+        emit LogGovStateTransition(uint32(_g._state), uint32(newState), uint32(block.timestamp));
+        _g._state = newState;
     }
 
     // defines validator function that will be called before resolution execution is started or continued
     // returns revert code on error or string of length zero when passing
-    function defaultValidator(ResolutionExecution storage /*e*/)
+    function defaultValidator(Gov.ResolutionExecution storage /*e*/)
         internal
         constant
         returns (string memory /*code*/)
@@ -351,99 +321,15 @@ contract ControllerGovernanceEngine is
         // it's possible to decode msg.data to recover call parameters
     }
 
-    function isTokenHolder(address owner)
-        internal
-        constant
-        returns (bool)
-    {
-        return _equityToken.balanceOf(owner) > 0;
-    }
-
-    function getNominee()
-        internal
-        constant
-        returns (address)
-    {
-        return _equityToken.nominee();
-    }
-
-    function getActionLegalRep(ActionLegalRep rep)
-        internal
-        constant
-        returns (address)
-    {
-        if (rep == ActionLegalRep.CompanyLegalRep) {
-            return COMPANY_LEGAL_REPRESENTATIVE;
-        } else if (rep == ActionLegalRep.Nominee) {
-            return getNominee();
-        }
-        revert();
-    }
-
-    // figure out what right initator has for given escalation level in bylaw of particular action
-    function getBylawEscalation(ActionEscalation escalationLevel, ActionLegalRep rep, address initiator)
-        internal
-        constant
-        returns (ExecutionState s)
-    {
-        if (escalationLevel == ActionEscalation.Anyone) {
-            s = ExecutionState.Executing;
-        } else if (escalationLevel == ActionEscalation.TokenHolder) {
-            // must be a relevant token holder
-            s = isTokenHolder(initiator) ? ExecutionState.Executing : ExecutionState.Rejected;
-        } else if (escalationLevel == ActionEscalation.CompanyLegalRep) {
-            s = initiator == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
-        } else if (escalationLevel == ActionEscalation.Nominee) {
-            s = initiator == getNominee() ? ExecutionState.Executing : ExecutionState.Rejected;
-        } else if (escalationLevel == ActionEscalation.CompanyOrNominee) {
-            s = initiator == COMPANY_LEGAL_REPRESENTATIVE ? ExecutionState.Executing : ExecutionState.Rejected;
-            if (s == ExecutionState.Rejected) {
-                s = initiator == getNominee() ? ExecutionState.Executing : ExecutionState.Rejected;
-            }
-        } else {
-            // for THR or SHR only legal rep can put into escalation mode
-            // for generic resolutions (None) - there's special escalator where token holders can execute
-            s = initiator == getActionLegalRep(rep) ? ExecutionState.Escalating : ExecutionState.Rejected;
-        }
-    }
-
-
-    // defines permission escalation for resolution. based on resolution state, action and current shareholder rights
-    // allows, escalates or denies execution.
-    function defaultPermissionEscalator(Action action)
-        internal
-        constant
-        returns (ExecutionState s)
-    {
-        // may be called only in New state
-        if (_state == GovState.Setup) {
-            // anyone can register a legitimate offering in setup state
-            s = action == Action.RegisterOffer ? ExecutionState.Executing : ExecutionState.Rejected;
-        } else {
-            // check if voting in voting center even if New state to handle voting in Campaign state
-            // if voting is finalized evaluate results against ActionGovernance for action
-            // return Rejected if failed, executed if passed, Escalation if ongoing
-            ActionBylaw memory bylaw = deserializeBylaw(_tokenholderRights.getBylaw(action));
-            s = getBylawEscalation(bylaw.escalationLevel, bylaw.votingLegalRepresentative, msg.sender);
-            if (s == ExecutionState.Escalating) {
-                // 1. start voting is campaign mode if msg.sender is equity token holder
-                //   (permission escalation into campaign state of voting so voting is not yet official)
-                // 2. start voting offically if msg.sender is company or token holder with N% stake
-                // 3. for some action legal rep can start without escalation
-                return;
-            }
-        }
-    }
-
-    /*function isResolutionTerminated(ExecutionState s)
+    /*function isResolutionTerminated(Gov.ExecutionState s)
         internal
         pure
         returns (bool)
     {
-        return !(s == ExecutionState.New || s == ExecutionState.Escalating || s == ExecutionState.Executing);
+        return !(s == Gov.ExecutionState.New || s == Gov.ExecutionState.Escalating || s == Gov.ExecutionState.Executing);
     }*/
 
-    function terminateResolution(bytes32 resolutionId, ResolutionExecution storage e, ExecutionState s)
+    function terminateResolution(bytes32 resolutionId, Gov.ResolutionExecution storage e, Gov.ExecutionState s)
         internal
     {
         e.state = s;
@@ -453,11 +339,11 @@ contract ControllerGovernanceEngine is
         // delete _exclusiveActions[uint256(e.action)];
     }
 
-    function terminateResolutionWithCode(bytes32 resolutionId, ResolutionExecution storage e, string memory code)
+    function terminateResolutionWithCode(bytes32 resolutionId, Gov.ResolutionExecution storage e, string memory code)
         internal
     {
         bytes32 failedCode = keccak256(abi.encodePacked(code));
-        terminateResolution(resolutionId, e, ExecutionState.Failed);
+        terminateResolution(resolutionId, e, Gov.ExecutionState.Failed);
         // no point of merging storage write, failed code occupies the whole slot
         e.failedCode = failedCode;
     }
@@ -483,18 +369,32 @@ contract ControllerGovernanceEngine is
     // Private functions
     ////////////////////////
 
+    function withGovernancePrivate(bytes32 resolutionId, Gov.Action action, string documentUrl)
+        public
+        returns (Gov.ExecutionState)
+    {
+        // call library with delegate call
+        bytes memory cdata = msg.data;
+        (Gov.ExecutionState prevState, Gov.ExecutionState nextState) = Gov.startResolutionExecution(_g, resolutionId, action, keccak256(cdata));
+        // emit event only when transitioning from new to !new
+        if (prevState == Gov.ExecutionState.New && nextState != Gov.ExecutionState.New) {
+            emit LogResolutionStarted(resolutionId, "", documentUrl, action, nextState, cdata);
+        }
+        return nextState;
+    }
+
     // guard method for atomic and non atomic executions that will revert or fail resolution that cannot execute further
     function validateResolution(
         bytes32 resolutionId,
-        ResolutionExecution storage e,
-        function (ResolutionExecution storage) constant returns (string memory) validator
+        Gov.ResolutionExecution storage e,
+        function (Gov.ResolutionExecution storage) constant returns (string memory) validator
     )
         private
         returns (bool)
     {
         // if resolution is already terminated always revert
-        ExecutionState s = e.state;
-        require(s == ExecutionState.New || s == ExecutionState.Escalating, "NF_GOV_RESOLUTION_TERMINATED");
+        Gov.ExecutionState s = e.state;
+        require(s == Gov.ExecutionState.New || s == Gov.ExecutionState.Escalating, "NF_GOV_RESOLUTION_TERMINATED");
         // curried functions are not available in Solidity so we cannot pass any custom parameters
         // however msg.data is available and contains all call parameters
         string memory code = validator(e);
@@ -503,18 +403,18 @@ contract ControllerGovernanceEngine is
             return true;
         }
         // revert if new
-        require(s != ExecutionState.New, code);
+        require(s != Gov.ExecutionState.New, code);
         // if resolution is executing then set resolution to fail and continue for cleanup
         terminateResolutionWithCode(resolutionId, e, code);
         return false;
     }
 
-    function validateResolutionContinuation(ResolutionExecution storage e, bytes32 promise, uint8 nextStep)
+    function validateResolutionContinuation(Gov.ResolutionExecution storage e, bytes32 promise, uint8 nextStep)
         private
         constant
         returns (bool)
     {
-        require(e.state == ExecutionState.Executing, NF_GOV_NOT_EXECUTING);
+        require(e.state == Gov.ExecutionState.Executing, NF_GOV_NOT_EXECUTING);
         require(nextStep == 0 || e.nextStep == nextStep - 1, NF_GOV_INVALID_NEXT_STEP);
         // we must call executing function with same params
         require(e.promise == promise, NF_GOV_UNKEPT_PROMISE);
@@ -522,48 +422,9 @@ contract ControllerGovernanceEngine is
         return true;
     }
 
-    function withGovernancePrivate(
-        bytes32 resolutionId,
-        Action action,
-        string documentUrl,
-        function (Action) constant returns (ExecutionState) escalator
-    )
-        private
-        returns (ExecutionState s)
-    {
-        // executor checks resolutionId state
-        ResolutionExecution storage e = _resolutions[resolutionId];
-        require(e.state == ExecutionState.New || e.state == ExecutionState.Escalating);
 
-        // save new state which may be Executing or Escalating
-        if (e.state == ExecutionState.New) {
-            // try to escalate to execution state
-            s = escalator(action);
-            // if New is returned, voting will be in campaign state and must be escalated further
-            // for resolution to be created
-            // TODO: implement special escalator to test this
-            if (s == ExecutionState.New) {
-                return s;
-            }
-            // escalator may deny access to action
-            require(s != ExecutionState.Rejected, "NF_GOV_EXEC_ACCESS_DENIED");
-            // save new execution
-            e.action = action;
-            e.state = s;
-            e.startedAt = uint32(now);
-            // use calldata as promise
-            e.promise = keccak256(msg.data);
-            // we should use tx.hash as resolutionId, it's however not available in EVM
-            // that could give us access to msg.data at all times making subsequenct calls to
-            // push execution forward easier
-            _resolutionIds.push(resolutionId);
-            emit LogResolutionStarted(resolutionId, "", documentUrl, action, s);
-        } else if (e.state == ExecutionState.Escalating) {} // TODO: check voting center and check voting result
 
-        return s;
-    }
-
-    /*function withExclusiveActionPrivate(bytes32 resolutionId, Action action)
+    /*function withExclusiveActionPrivate(bytes32 resolutionId, Gov.Action action)
         internal
         returns (bool)
     {
@@ -571,7 +432,7 @@ contract ControllerGovernanceEngine is
         bytes32 existingResolutionId = _exclusiveActions[uint256(action)];
         bool notExecuting = (existingResolutionId == bytes32(0) || existingResolutionId == resolutionId);
         if (!notExecuting) {
-            // ResolutionExecution storage e = _resolutions[existingResolutionId];
+            // Gov.ResolutionExecution storage e = _resolutions[existingResolutionId];
             notExecuting = true; //e.state == Escalating || isExecutionTerminalState(e.state)
         }
         if (notExecuting) {

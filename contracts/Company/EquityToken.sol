@@ -29,8 +29,7 @@ contract EquityToken is
     Daily,
     EquityTokenMetadata,
     Agreement,
-    IsContract,
-    Math
+    IsContract
 {
     ////////////////////////
     // Immutable state

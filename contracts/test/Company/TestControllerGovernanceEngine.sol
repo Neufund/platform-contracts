@@ -21,14 +21,13 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         address companyLegalRep,
         IEquityToken token,
         EquityTokenholderRights tokenholderRights,
-        GovState state
+        Gov.State state
     )
         public
         ControllerGovernanceEngine(universe, companyLegalRep)
     {
-        _shareholderRights = tokenholderRights;
-        _tokenholderRights = tokenholderRights;
-        _equityToken = token;
+        _g._tokenholderRights = tokenholderRights;
+        _g._equityToken = token;
         transitionTo(state);
     }
 
@@ -36,25 +35,25 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     // Public Methods
     ////////////////////////
 
-    function executeAtomically(bytes32 resolutionId, address payload, Action action, string resolutionUrl)
+    function executeAtomically(bytes32 resolutionId, address payload, Gov.Action action, string resolutionUrl)
         public
         onlyOperational
         withAtomicExecution(resolutionId, addressValidator)
-        withGovernance(resolutionId, action, resolutionUrl, defaultPermissionEscalator)
+        withGovernance(resolutionId, action, resolutionUrl)
     {
         executeResolution(resolutionId, 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8, payload);
     }
 
-    function executeNonAtomically(bytes32 resolutionId, address payload, Action action, string resolutionUrl)
+    function executeNonAtomically(bytes32 resolutionId, address payload, Gov.Action action, string resolutionUrl)
         public
         onlyOperational
         withNonAtomicExecution(resolutionId, addressValidator)
-        withGovernance(resolutionId, action, resolutionUrl, defaultPermissionEscalator)
+        withGovernance(resolutionId, action, resolutionUrl)
     {
         executeResolution(resolutionId, 0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8, payload);
     }
 
-    function continueNonAtomically(bytes32 resolutionId, address payload, Action /*action*/, string /*resolutionUrl*/)
+    function continueNonAtomically(bytes32 resolutionId, address payload, Gov.Action /*action*/, string /*resolutionUrl*/)
         public
         onlyOperational
         withNonAtomicContinuedExecution(resolutionId, promiseForSelector(this.executeNonAtomically.selector), 0)
@@ -62,7 +61,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         executeResolution(resolutionId, 0x7182B123AD5F6619B66533A85B6f180462AED05E, payload);
     }
 
-    function finalizeAtomically(bytes32 resolutionId, address payload, Action /*action*/, string /*resolutionUrl*/)
+    function finalizeAtomically(bytes32 resolutionId, address payload, Gov.Action /*action*/, string /*resolutionUrl*/)
         public
         onlyOperational
         withAtomicContinuedExecution(resolutionId, promiseForSelector(this.executeNonAtomically.selector), 0)
@@ -71,7 +70,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     }
 
     // dev: in production code you never pass a step as not-promised parameter! it obviously defeats the purpose of step control
-    function continueNonAtomicallyWithStep(bytes32 resolutionId, address payload, Action action, string resolutionUrl, uint8 nextStep)
+    function continueNonAtomicallyWithStep(bytes32 resolutionId, address payload, Gov.Action action, string resolutionUrl, uint8 nextStep)
         public
         onlyOperational
         withNonAtomicContinuedExecution(
@@ -84,7 +83,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         executeResolution(resolutionId, 0x7182B123AD5F6619B66533A85B6f180462AED05E, payload);
     }
 
-    function finalizeAtomicallyWithStep(bytes32 resolutionId, address payload, Action action, string resolutionUrl, uint8 nextStep)
+    function finalizeAtomicallyWithStep(bytes32 resolutionId, address payload, Gov.Action action, string resolutionUrl, uint8 nextStep)
         public
         onlyOperational
         withAtomicContinuedExecution(
@@ -100,7 +99,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     function continueNonAtomicallyWithExtraPayload(
         bytes32 resolutionId,
         address payload,
-        Action action,
+        Gov.Action action,
         string resolutionUrl,
         bytes32 extraPayload
     )
@@ -113,12 +112,12 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
             0
         )
     {
-        ResolutionExecution storage e = _resolutions[resolutionId];
+        Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         // fill extra payload slot in resolution storage
         e.payload = extraPayload;
     }
 
-    function addressValidator(ResolutionExecution storage /*e*/)
+    function addressValidator(Gov.ResolutionExecution storage /*e*/)
         internal
         constant
         returns (string memory code)
@@ -156,7 +155,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     {
         if (payload == invalidAddress) {
             // we fail resolution
-            ResolutionExecution storage e = _resolutions[resolutionId];
+            Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
             terminateResolutionWithCode(resolutionId, e, "NF_TEST_INVALID_ADDR_PAYLOAD");
         } else {
             // store payload - atomic execution modifier will complete resolution
