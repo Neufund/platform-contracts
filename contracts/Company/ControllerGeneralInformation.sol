@@ -16,18 +16,10 @@ contract ControllerGeneralInformation is
     // Events
     ////////////////////////
 
-    // logged when transferability of given token was changed
-    event LogTransfersStateChanged(
-        bytes32 indexed resolutionId,
-        address equityToken,
-        bool transfersEnabled
-    );
-
     // logged when ISHA was amended (new text, new shareholders, new cap table, offline round etc.)
     event LogISHAAmended(
         bytes32 indexed resolutionId,
-        string ISHAUrl,
-        address newShareholderRights
+        string ISHAUrl
     );
 
     // logged when company valuation changes, in case of completed offering, it's POST valuation
@@ -62,9 +54,6 @@ contract ControllerGeneralInformation is
     // valuation of the company
     uint256 internal _companyValuationEurUlps;
 
-    // are transfers on token enabled
-    bool internal _transfersEnabled;
-
     ////////////////////////
     // Constructor
     ////////////////////////
@@ -85,7 +74,6 @@ contract ControllerGeneralInformation is
         returns (
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
-            EquityTokenholderRights shareholderRights,
             uint256 authorizedCapital,
             string shaUrl
         )
@@ -96,50 +84,35 @@ contract ControllerGeneralInformation is
         return (
             _shareCapital,
             _companyValuationEurUlps,
-            _g._tokenholderRights,
             _authorizedCapital,
             shaUrl
         );
     }
 
-    function tokens()
-        public
-        constant
-        returns (
-            address[] token,
-            Gov.TokenType[] tokenType,
-            Gov.TokenState[] tokenState,
-            address[] holderRights,
-            bool[] tokenTransferable
-        )
-    {
-        // no table of tokens before any token is set
-        if (_g._equityToken == address(0)) {
-            return;
-        }
-        tokenType = new Gov.TokenType[](1);
-        tokenType[0] = Gov.TokenType.Equity;
-        token = new address[](1);
-        token[0] = _g._equityToken;
-        holderRights = new address[](1);
-        holderRights[0] = _g._tokenholderRights;
-        tokenTransferable = new bool[](1);
-        tokenTransferable[0] = _transfersEnabled;
-        tokenState = new Gov.TokenState[](1);
-        tokenState[0] = Gov.TokenState.Open;
-    }
-
-    function issueGeneralInformation(
+    // single entry for general resolutions without on chain consequences
+    // general actions are:
+    //  - None - ordinary shareholder resolution,
+    //  - RestrictedNone - restricted ordinary shareholder resolution
+    //  - AnnualGeneralMeeting - annual meeting resolution
+    //  - CompanyNone - general information from the company
+    function generalResolution(
         bytes32 resolutionId,
+        Gov.Action generalAction,
         string title,
-        string documentUrl
+        string resolutionDocumentUrl
     )
         public
         onlyOperational
-        onlyCompany
+        onlyGeneralActions(generalAction)
+        withAtomicExecution(resolutionId, defaultValidator)
+        withGovernanceTitle(
+            resolutionId,
+            generalAction,
+            title,
+            resolutionDocumentUrl
+        )
     {
-        // we emit this as Ethereum event, no need to store this in contract storage
-        emit LogResolutionStarted(resolutionId, title, documentUrl, Gov.Action.None, Gov.ExecutionState.Completed, msg.data);
+        // no special on chain consequences
     }
 
     // used to change company governance, if run in Setup state it may create a controller
@@ -166,7 +139,12 @@ contract ControllerGeneralInformation is
             require(!newShareholderRights.HAS_VOTING_RIGHTS(), "NF_TOKEN_REQ_VOTING_RIGHTS");
             transitionTo(Gov.State.Funded);
         }
-        amendISHA(resolutionId, ISHAUrl, newShareholderRights);
+        amendISHA(resolutionId, ISHAUrl);
+        // directly write new bylaws to storage and generate amend token event
+        // for new controller this will fall back to None token which exactly what we need
+        _t._tokenholderRights = newShareholderRights;
+        emit LogTokenholderRightsAmended(resolutionId, _t._type, _t._token, _t._tokenholderRights);
+
         amendCompanyValuation(resolutionId, companyValuationEurUlps);
         amendShareCapital(resolutionId, shareCapitalUlps);
         establishAuthorizedCapital(resolutionId, authorizedCapital);
@@ -187,22 +165,6 @@ contract ControllerGeneralInformation is
         )
     {
         establishAuthorizedCapital(resolutionId, authorizedCapital);
-    }
-
-    function annualGeneralMeetingResolution(
-        bytes32 resolutionId,
-        string resolutionDocumentUrl
-    )
-        public
-        onlyOperational
-        withAtomicExecution(resolutionId, defaultValidator)
-        withGovernance(
-            resolutionId,
-            Gov.Action.AnnualGeneralMeeting,
-            resolutionDocumentUrl
-        )
-    {
-        // no special on chain consequences
     }
 
     function amendShareCapitalResolution(
@@ -257,8 +219,7 @@ contract ControllerGeneralInformation is
         string ISHAUrl,
         uint256 shareCapital,
         uint256 authorizedCapital,
-        uint256 companyValuationEurUlps,
-        bool transfersEnabled
+        uint256 companyValuationEurUlps
     )
         public
         onlyState(Gov.State.Setup)
@@ -268,7 +229,6 @@ contract ControllerGeneralInformation is
         _shareCapital = shareCapital;
         _authorizedCapital = authorizedCapital;
         _companyValuationEurUlps = companyValuationEurUlps;
-        _transfersEnabled = transfersEnabled;
     }
 
     ////////////////////////
@@ -278,58 +238,46 @@ contract ControllerGeneralInformation is
 
     function amendISHA(
         bytes32 resolutionId,
-        string memory ISHAUrl,
-        EquityTokenholderRights newShareholderRights
+        string memory ISHAUrl
     )
         internal
     {
         // set ISHA. use this.<> to call externally so msg.sender is correct in mCanAmend
         this.amendAgreement(ISHAUrl);
-        // set shareholder rights corresponding to SHA part of ISHA
-        _g._tokenholderRights = newShareholderRights;
-        emit LogISHAAmended(resolutionId, ISHAUrl, newShareholderRights);
+        emit LogISHAAmended(resolutionId, ISHAUrl);
     }
 
     function amendCompanyValuation(
         bytes32 resolutionId,
-        uint256 companyValuationEurUlps
+        uint256 newCompanyValuationEurUlps
     )
         internal
     {
         // set new valuation
-        _companyValuationEurUlps = companyValuationEurUlps;
+        _companyValuationEurUlps = newCompanyValuationEurUlps;
         // todo: call observer with new valuation - other may nodules need to know it
         // e.g. this may trigger a downround when valuation increases
-        emit LogCompanyValuationAmended(resolutionId, companyValuationEurUlps);
+        emit LogCompanyValuationAmended(resolutionId, newCompanyValuationEurUlps);
     }
 
     function amendShareCapital(
         bytes32 resolutionId,
-        uint256 shareCapital
+        uint256 newShareCapital
     )
         internal
     {
         // set new share capital
-        _shareCapital = shareCapital;
-        emit LogShareCapitalAmended(resolutionId, shareCapital);
+        _shareCapital = newShareCapital;
+        emit LogShareCapitalAmended(resolutionId, newShareCapital);
     }
 
-    function establishAuthorizedCapital(bytes32 resolutionId, uint256 authorizedCapital)
+    function establishAuthorizedCapital(bytes32 resolutionId, uint256 newAuthorizedCapital)
         internal
     {
         // TODO: if we implement ESOP then we need observer in ESOP module to not let to deallocate authorized capital
-        // below lever required by ESOP
-        _authorizedCapital = authorizedCapital;
-        emit LogAuthorizedCapitalEstablished(resolutionId, authorizedCapital);
-    }
-
-    function enableTransfers(bytes32 resolutionId, bool transfersEnabled)
-        internal
-    {
-        if (_transfersEnabled != transfersEnabled) {
-            _transfersEnabled = transfersEnabled;
-        }
-        emit LogTransfersStateChanged(resolutionId, _g._equityToken, transfersEnabled);
+        // below level required by ESOP
+        _authorizedCapital = newAuthorizedCapital;
+        emit LogAuthorizedCapitalEstablished(resolutionId, newAuthorizedCapital);
     }
 
     //
