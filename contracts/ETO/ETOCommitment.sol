@@ -773,12 +773,11 @@ contract ETOCommitment is
     {
         // burn all neumark generated in this ETO (will also burn NEU sent via erroneous/malicious transfers)
         uint256 balanceNmk = NEUMARK.balanceOf(this);
-        // uint256 balanceToken = EQUITY_TOKEN.balanceOf(this);
         if (balanceNmk > 0) {
             NEUMARK.burn(balanceNmk);
         }
         // destroy all tokens generated in ETO
-        emit LogRefundStarted(EQUITY_TOKEN, _totalTokenAmount, balanceNmk);
+        emit LogRefundStarted(EQUITY_TOKEN, _totalEquivEurUlps, balanceNmk);
     }
 
     /// called on transition to ETOState.Payout
