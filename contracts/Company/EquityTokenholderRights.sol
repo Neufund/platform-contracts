@@ -12,7 +12,7 @@ contract EquityTokenholderRights is ShareholderRights {
     ////////////////////////
 
     // number of actions declared by Action enum
-    uint256 internal constant TOTAL_ACTIONS = 24;
+    uint256 internal constant TOTAL_ACTIONS = 25;
 
     ////////////////////////
     // Public Accessors
