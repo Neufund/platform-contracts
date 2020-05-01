@@ -47,7 +47,7 @@
     "solidity-coverage": "^0.5.11",
     "solium": "^1.1.7",
     "swarm-js": "^0.1.35",
-    "truffle": "Neufund/truffle#83ca31c68a3c18ff144329cd0ce25d6a3daf96a9",
+    "truffle": "Neufund/truffle#8b70e26e8ab0543e43948b53e330f43ebb740146",
     "truffle-flattener": "Neufund/truffle-flattener",
     "web3": "0.20.1",
     "web3-eth-abi": "^1.2.6",
