@@ -74,7 +74,7 @@ contract GranularTransferController is
         constant
         returns (bool allow)
     {
-        Gov.State s = state();
+        Gov.State s = _g._state;
         // allow forced transfer only by the token controller itself
         if ((s == Gov.State.Funded || s == Gov.State.Closing) && broker == address(this)) {
             ForcedTransfer storage t = _forcedTransfers[from];
@@ -151,8 +151,7 @@ contract GranularTransferController is
         //      announcement and actual execution
         //require(now - t.block > 7 days, "NF_FORCED_T_NOT_DUE");
         // obtain equity token address
-        (address[] memory equityTokens,,,,) = tokens();
-        IEquityToken token = IEquityToken(equityTokens[0]);
+        IControlledToken token = _t._token;
         // execute forced transfer with this smart contract as a broker
         // this will trigger onAllowance and onTranfer controller method before completing
         require(token.transferFrom(from, t.to, t.amount));

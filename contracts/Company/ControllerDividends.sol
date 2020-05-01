@@ -91,7 +91,7 @@ contract ControllerDividends is
         withAtomicContinuedExecution(resolutionId, promise, 0)
     {
         // fee disbursal expect token address and recycle after packed
-        bytes memory serializedAddress = abi.encodePacked(address(_g._equityToken), recycleAfter);
+        bytes memory serializedAddress = abi.encodePacked(address(_t._token), recycleAfter);
         IFeeDisbursal disbursal = IFeeDisbursal(_g.UNIVERSE.feeDisbursal());
         if (amount > 0) {
             // disburse via ERC223, where we encode token used to provide pro-rata in `data` parameter
@@ -120,7 +120,7 @@ contract ControllerDividends is
         constant
         returns (string memory code)
     {
-        if (_g._equityToken == address(0)) {
+        if (_t._token == address(0)) {
             return "NF_NO_PRORATA_TOKEN";
         }
         // unpack calldata to extract address payload

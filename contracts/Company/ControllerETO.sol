@@ -1,19 +1,23 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGeneralInformation.sol";
+import "./ControllerEquityToken.sol";
+import "./IEquityTokenController.sol";
 
 
-contract ControllerTokenOfferings is
+contract ControllerETO is
     IETOCommitmentObserver,
+    IEquityTokenController,
     ControllerGeneralInformation,
+    ControllerEquityToken,
     KnownInterfaces
 {
     ////////////////////////
     // Governance Module Id
     ////////////////////////
 
-    bytes32 internal constant ControllerTokenOfferingsId = 0xb79bf4e4fbc68d01e103a81fa749364bfcbdbe3d19c4aa1cc1c747bbb30c8b5d;
-    uint256 internal constant ControllerTokenOfferingsV = 0;
+    bytes32 internal constant ControllerETOId = 0x1c7166c78ec7465184d422ad6e22121b4881a63128a89653179065e03625ae87;
+    uint256 internal constant ControllerETOV = 0;
 
     ////////////////////////
     // Constants
@@ -50,7 +54,7 @@ contract ControllerTokenOfferings is
     ////////////////////////
 
     // ETO contract
-    address internal _commitment;
+    address[] internal _offerings;
 
     ////////////////////////
     // Modifiers
@@ -76,19 +80,10 @@ contract ControllerTokenOfferings is
         public
         constant
         returns (
-            address[] offerings,
-            address[] equityTokens
+            address[] offerings
         )
     {
-        // no offerings before any shareholder agreement is attached
-        if (amendmentsCount() == 0) {
-            return;
-        }
-        offerings = new address[](1);
-        equityTokens = new address[](1);
-
-        equityTokens[0] = _g._equityToken;
-        offerings[0] = _commitment;
+        return _offerings;
     }
 
     function startNewOffering(bytes32 resolutionId, IETOCommitment commitment)
@@ -105,6 +100,36 @@ contract ControllerTokenOfferings is
 
     // TODO: implement cancelDelistedOffering(resolution, commitment) to fail resolution if commitment delisted, onlyCompany
 
+    //
+    // Token Generation part of ITokenController
+    //
+
+    // no permission to destroy tokens by ETO commitment
+    function onDestroyTokens(address, address, uint256)
+        public
+        constant
+        returns (bool allow)
+    {
+        return false;
+    }
+
+    // only active commitment may generate tokens
+    function onGenerateTokens(address sender, address, uint256)
+        public
+        constant
+        returns (bool allow)
+    {
+        return _g._state == Gov.State.Offering && isActiveOffering(sender, Gov.ExecutionState.Executing);
+    }
+
+    // only active commitment can transfer tokens
+    function onTransfer(address broker, address from, address /*to*/, uint256 /*amount*/)
+        public
+        constant
+        returns (bool allow)
+    {
+        return isActiveOffering(from, Gov.ExecutionState.Completed) && broker == from;
+    }
     //
     // Implements IETOCommitmentObserver
     //
@@ -135,12 +160,12 @@ contract ControllerTokenOfferings is
     // Migration storage access
     //
 
-    function migrateAddCommitment(address commitment)
+    function migrateOfferings(address[] offerings)
         public
         onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        _commitment = commitment;
+        _offerings = offerings;
     }
 
     ////////////////////////
@@ -149,30 +174,28 @@ contract ControllerTokenOfferings is
 
     function addOffering(
         bytes32 resolutionId,
-        IEquityToken equityToken,
         address tokenOffering
     )
         internal
     {
-        _g._equityToken = equityToken;
-        _commitment = tokenOffering;
-
-        emit LogOfferingRegistered(resolutionId, tokenOffering, equityToken);
+        _offerings.push(tokenOffering);
+        emit LogOfferingRegistered(resolutionId, tokenOffering, _t._token);
     }
 
-    function isActiveOffering(address commitment)
+    ////////////////////////
+    // Private functions
+    ////////////////////////
+
+    function isActiveOffering(address commitment, Gov.ExecutionState expectedState)
         internal
         constant
         returns (bool)
     {
         bytes32 resolutionId = keccak256(abi.encodePacked(address(commitment)));
         Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
-        return e.state == Gov.ExecutionState.Executing;
+        Gov.ExecutionState s = e.state;
+        return s == expectedState;
     }
-
-    ////////////////////////
-    // Private functions
-    ////////////////////////
 
     function commitmentUniverseValidator(Gov.ResolutionExecution storage /*e*/)
         private
@@ -223,7 +246,7 @@ contract ControllerTokenOfferings is
             0
         )
     {
-        Gov.validateNewOffering(_g, tokenOffering);
+        Gov.validateNewOffering(_g.COMPANY_LEGAL_REPRESENTATIVE, _t._token, tokenOffering);
         // state transition to Offering
         if (_g._state != Gov.State.Offering) {
             // setup transition is called via setStartDate so it may happen multiple times
@@ -234,19 +257,17 @@ contract ControllerTokenOfferings is
     function aproveTokenOfferingPrivate(bytes32 resolutionId, IETOCommitment tokenOffering)
         private
     {
-        // call library to save a few kbs on contract size
+        // // installs new token via delegatecall
         (
             uint256 newShares,
             uint256 authorizedCapitalUlps,
             uint256 increasedShareCapital,
             uint256 increasedValuationEurUlps,
-            string memory ISHAUrl,
-            EquityTokenholderRights tokenholderRights,
-            IEquityToken equityToken,
-            bool transferable
-        ) = Gov.calculateNewValuation(tokenOffering);
-        // set new ISHA, increase share capital and company valuations, establish shareholder rights matrix
-        amendISHA(resolutionId, ISHAUrl, tokenholderRights);
+            string memory ISHAUrl
+        ) = Gov.calculateNewValuationAndInstallToken(_t, tokenOffering);
+        emit LogTokenholderRightsAmended(resolutionId, _t._type, _t._token, _t._tokenholderRights);
+        // set new ISHA, increase share capital and company valuations
+        amendISHA(resolutionId, ISHAUrl);
         // new valuation set based on increased share capital
         amendCompanyValuation(resolutionId, increasedValuationEurUlps);
         // share capital increased
@@ -256,12 +277,12 @@ contract ControllerTokenOfferings is
             establishAuthorizedCapital(resolutionId, authorizedCapitalUlps);
         }
         // register successful offering and equity token
-        addOffering(resolutionId, equityToken, tokenOffering);
+        addOffering(resolutionId, tokenOffering);
         // enable/disable transfers per ETO Terms
-        enableTransfers(resolutionId, transferable);
+        enableTransfers(resolutionId, _t._transferable);
         // move state to funded
         transitionTo(Gov.State.Funded);
-        emit LogOfferingSucceeded(tokenOffering, equityToken, newShares);
+        emit LogOfferingSucceeded(tokenOffering, _t._token, newShares);
     }
 
     function failTokenOfferingPrivate(bytes32 resolutionId, IETOCommitment tokenOffering)

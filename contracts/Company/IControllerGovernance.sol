@@ -30,7 +30,6 @@ contract IControllerGovernance is
         returns (
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
-            EquityTokenholderRights shareholderRights,
             uint256 authorizedCapital,
             string shaUrl
         );
@@ -40,11 +39,11 @@ contract IControllerGovernance is
         public
         constant
         returns (
-            address[] token,
-            Gov.TokenType[] tokenType,
-            Gov.TokenState[] tokenState,
-            address[] holderRights,
-            bool[] tokenTransferable
+            address[1] token,
+            Gov.TokenType[1] tokenType,
+            Gov.TokenState[1] tokenState,
+            address[1] holderRights,
+            bool[1] tokenTransferable
         );
 
     // returns all started offerings
@@ -52,18 +51,17 @@ contract IControllerGovernance is
         public
         constant
         returns (
-            address[] offerings,
-            address[] equityTokens
+            address[] offerings
         );
 
     // officially inform shareholders, can be quarterly report, yearly closing
     // @dev this can be called only by company wallet
-    function issueGeneralInformation(
+    /*function issueGeneralInformation(
         bytes32 resolutionId,
         string title,
         string informationUrl
     )
-        public;
+        public;*/
 
     // this will close company (transition to terminal state) and close all associated tokens
     // requires decision to be made before according to implemented governance
@@ -77,5 +75,5 @@ contract IControllerGovernance is
 
     // list of governance modules in controller, same scheme as IContractId
     /// @dev includes contractId as last one
-    function moduleId() public pure returns (bytes32[5] ids, uint256[5] versions);
+    // function moduleId() public pure returns (bytes32[6] ids, uint256[6] versions);
 }

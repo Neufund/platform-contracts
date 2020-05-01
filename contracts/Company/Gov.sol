@@ -81,7 +81,10 @@ library Gov {
         AmendSharesAndValuation,
         // changes valuation, keeping number of shares
         AmendValuation,
-        CancelResolution // a resolution that cancels another resolution, like calling off dividend payout or company closing
+        // a resolution that cancels another resolution, like calling off dividend payout or company closing
+        CancelResolution,
+        // general information from the company
+        CompanyNone
     }
 
     // permissions required to execute an action
@@ -131,6 +134,7 @@ library Gov {
     }
 
     enum TokenType {
+        None, // there's no goverance token
         Equity, // equity token
         Safe // SAFE-based convertible note
     }
@@ -195,10 +199,6 @@ library Gov {
         Universe UNIVERSE;
         // company representative address
         address COMPANY_LEGAL_REPRESENTATIVE;
-        // equity token from ETO
-        IEquityToken _equityToken;
-        // set of equity token rights associated with the token
-        EquityTokenholderRights _tokenholderRights;
 
         // controller lifecycle state
         Gov.State  _state;
@@ -208,13 +208,32 @@ library Gov {
         bytes32[]  _resolutionIds;
     }
 
-    ////////////////////////
-    // Library Methods
-    ////////////////////////
+    // single token storage
+    struct TokenStorage {
+        // type of a token
+        TokenType _type;
+        // state of a token
+        TokenState _state;
+        // is token transferable
+        bool _transferable;
+        // address of a token
+        IControlledToken _token;
+        // set of equity token rights associated with the token
+        EquityTokenholderRights _tokenholderRights;
+        // nominee address
+        address _nominee;
+        // quantum in which token may be created and destoryed
+        uint256 _quantumUlps;
+    }
+
+    ///////////////////////////
+    // Delegate Library Methods
+    ///////////////////////////
 
     // used by governance engine to advance resolution from New -> Escalating -> Executing state
     function startResolutionExecution(
         GovernanceStorage storage g,
+        TokenStorage storage t,
         bytes32 resolutionId,
         Gov.Action action,
         bytes32 promise
@@ -230,7 +249,7 @@ library Gov {
         // save new state which may be Executing or Escalating
         if (prevState == Gov.ExecutionState.New) {
             // try to escalate to execution state
-            nextState = permissionEscalator(g, action);
+            nextState = permissionEscalator(g, t, action);
             // if New is returned, voting will be in campaign state and must be escalated further
             // for resolution to be created
             // TODO: implement special escalator to test this
@@ -256,7 +275,7 @@ library Gov {
     }
 
     // validates new offering that starts in token offering module
-    function validateNewOffering(GovernanceStorage storage g, IETOCommitment tokenOffering)
+    function validateNewOffering(address company, IControlledToken token, IETOCommitment tokenOffering)
         public
         constant
     {
@@ -270,27 +289,115 @@ library Gov {
         require(nomineOffering == nomineeToken);
         // require terms set and legalRep match
         require(tokenOffering.etoTerms() != address(0));
-        require(tokenOffering.companyLegalRep() == g.COMPANY_LEGAL_REPRESENTATIVE);
+        require(tokenOffering.companyLegalRep() == company);
         // secondary offering must be on the same token
-        IEquityToken current = g._equityToken;
-        require(current == address(0) || equityToken == current, "NF_NDT_FUNDRAISE_NOT_SAME_TOKEN");
+        require(token == address(0) || equityToken == token, "NF_NDT_FUNDRAISE_NOT_SAME_TOKEN");
     }
 
-    function calculateNewValuation(IETOCommitment tokenOffering)
+    function installTokenFromETO(TokenStorage storage t, IETOCommitment tokenOffering)
         public
+    {
+        // get token data and put into the storage
+        IEquityToken equityToken = tokenOffering.equityToken();
+        EquityTokenholderRights tokenholderRights = tokenOffering.etoTerms().TOKENHOLDER_RIGHTS();
+        bool transferable = tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS();
+
+        t._type = TokenType.Equity;
+        t._state = TokenState.Open;
+        t._transferable = transferable;
+        t._token = IControlledToken(equityToken);
+        t._tokenholderRights = tokenholderRights;
+
+        setAdditionalEquityTokenData(t, equityToken);
+    }
+
+    function calculateNewValuationAndInstallToken(TokenStorage storage t, IETOCommitment tokenOffering)
+        public
+        returns (
+            uint256 newShares,
+            uint256 authorizedCapitalUlps,
+            uint256 increasedShareCapital,
+            uint256 increasedValuationEurUlps,
+            string ISHAUrl
+        )
+    {
+        installTokenFromETO(t, tokenOffering);
+        return calculateNewValuation(tokenOffering);
+    }
+
+    //////////////////////////////
+    // Internal Library Methods
+    //////////////////////////////
+
+    function isGeneralAction(Action a)
+        internal
+        pure
+        returns (bool)
+    {
+        return a == Gov.Action.None || a == Gov.Action.RestrictedNone || a == Gov.Action.AnnualGeneralMeeting || a == Gov.Action.CompanyNone;
+    }
+
+    function promiseForSelector(bytes4 selector)
+        internal
+        pure
+        returns (bytes32)
+    {
+        // replace selector and return keccak
+        bytes memory calldata = msg.data;
+        assembly {
+            // patch calldata with the selector
+            mstore8(add(calldata, 32), byte(0, selector))
+            mstore8(add(calldata, 33), byte(1, selector))
+            mstore8(add(calldata, 34), byte(2, selector))
+            mstore8(add(calldata, 35), byte(3, selector))
+        }
+        return keccak256(calldata);
+    }
+
+    function deserializeBylaw(uint56 bylaw)
+        internal
+        pure
+        returns (ActionBylaw memory decodedBylaw)
+    {
+        // up to solidity 0.4.26 struct memory layout is unpacked, where every element
+        // of the struct occupies at least single word, also verified with v 0.6
+        // so struct memory layout seems pretty stable, anyway we run a few tests on it
+        assembly {
+            // from 0 to 7
+            for { let i := 0 } lt(i, 8) { i := add(i, 1) }
+                // store a byte 32 - i into 32 byte offset with number i, starting from decodedBylaw
+                // mind that uint56 is internal Solidity construct, it occupies whole word (see `byte`)
+                { mstore(add(decodedBylaw, mul(32,i)), byte(add(25, i), bylaw)) }
+        }
+    }
+
+    function setAdditionalEquityTokenData(TokenStorage storage t, IEquityToken token)
+        internal
+    {
+        address nominee = getNominee(token);
+        // todo: compute quantum
+        uint256 quantum = 0;
+
+        t._nominee = nominee;
+        t._quantumUlps = quantum;
+    }
+
+    ////////////////////////
+    // Private Methods
+    ////////////////////////
+
+    function calculateNewValuation(IETOCommitment tokenOffering)
+        private
         constant
         returns (
             uint256 newShares,
             uint256 authorizedCapitalUlps,
             uint256 increasedShareCapital,
             uint256 increasedValuationEurUlps,
-            string ISHAUrl,
-            EquityTokenholderRights tokenholderRights,
-            IEquityToken equityToken,
-            bool transferable
+            string ISHAUrl
         )
     {
-        equityToken = tokenOffering.equityToken();
+        // get ISHA amendment
         ETOTerms etoTerms = tokenOffering.etoTerms();
         // execute pending resolutions on completed ETO
         (newShares, increasedShareCapital,,,,,,) = tokenOffering.contributionSummary();
@@ -303,17 +410,10 @@ library Gov {
         uint256 shareNominalValueUlps = etoTerms.TOKEN_TERMS().SHARE_NOMINAL_VALUE_ULPS();
         increasedValuationEurUlps = Math.proportion(marginalSharePrice, increasedShareCapital, shareNominalValueUlps);
         ISHAUrl = tokenOffering.signedInvestmentAgreementUrl();
-        tokenholderRights = tokenOffering.etoTerms().TOKENHOLDER_RIGHTS();
         authorizedCapitalUlps = etoTerms.AUTHORIZED_CAPITAL();
-        transferable = tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS();
     }
 
-    ////////////////////////
-    // Internal Methods
-    ////////////////////////
-
-
-    function isTokenHolder(IEquityToken token, address owner)
+    function isTokenHolder(IControlledToken token, address owner)
         private
         constant
         returns (bool)
@@ -348,7 +448,7 @@ library Gov {
         Gov.ActionEscalation escalationLevel,
         Gov.ActionLegalRep rep,
         address initiator,
-        IEquityToken token,
+        IControlledToken token,
         address company,
         address nominee
     )
@@ -383,7 +483,9 @@ library Gov {
     // allows, escalates or denies execution.
     function permissionEscalator(
         GovernanceStorage storage g,
-        Gov.Action action)
+        TokenStorage storage t,
+        Gov.Action action
+    )
         private
         constant
         returns (Gov.ExecutionState s)
@@ -403,14 +505,14 @@ library Gov {
             // check if voting in voting center even if New state to handle voting in Campaign state
             // if voting is finalized evaluate results against ActionGovernance for action
             // return Rejected if failed, executed if passed, Escalation if ongoing
-            Gov.ActionBylaw memory bylaw = deserializeBylaw(g._tokenholderRights.getBylaw(action));
+            Gov.ActionBylaw memory bylaw = deserializeBylaw(t._tokenholderRights.getBylaw(action));
             s = getBylawEscalation(
                 bylaw.escalationLevel,
                 bylaw.votingLegalRepresentative,
                 msg.sender,
-                g._equityToken,
+                t._token,
                 g.COMPANY_LEGAL_REPRESENTATIVE,
-                getNominee(g._equityToken)
+                t._nominee
             );
             if (s == Gov.ExecutionState.Escalating) {
                 // 1. start voting is campaign mode if msg.sender is equity token holder
@@ -419,23 +521,6 @@ library Gov {
                 // 3. for some action legal rep can start without escalation
                 return;
             }
-        }
-    }
-
-    function deserializeBylaw(uint56 bylaw)
-        internal
-        pure
-        returns (ActionBylaw memory decodedBylaw)
-    {
-        // up to solidity 0.4.26 struct memory layout is unpacked, where every element
-        // of the struct occupies at least single word, also verified with v 0.6
-        // so struct memory layout seems pretty stable, anyway we run a few tests on it
-        assembly {
-            // from 0 to 7
-            for { let i := 0 } lt(i, 8) { i := add(i, 1) }
-                // store a byte 32 - i into 32 byte offset with number i, starting from decodedBylaw
-                // mind that uint56 is internal Solidity construct, it occupies whole word (see `byte`)
-                { mstore(add(decodedBylaw, mul(32,i)), byte(add(25, i), bylaw)) }
         }
     }
 }

@@ -26,8 +26,11 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         public
         ControllerGovernanceEngine(universe, companyLegalRep)
     {
-        _g._tokenholderRights = tokenholderRights;
-        _g._equityToken = token;
+        _t._type = Gov.TokenType.Equity;
+        _t._state = Gov.TokenState.Open;
+        _t._tokenholderRights = tokenholderRights;
+        _t._token = token;
+        Gov.setAdditionalEquityTokenData(_t, token);
         transitionTo(state);
     }
 
@@ -56,7 +59,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     function continueNonAtomically(bytes32 resolutionId, address payload, Gov.Action /*action*/, string /*resolutionUrl*/)
         public
         onlyOperational
-        withNonAtomicContinuedExecution(resolutionId, promiseForSelector(this.executeNonAtomically.selector), 0)
+        withNonAtomicContinuedExecution(resolutionId, Gov.promiseForSelector(this.executeNonAtomically.selector), 0)
     {
         executeResolution(resolutionId, 0x7182B123AD5F6619B66533A85B6f180462AED05E, payload);
     }
@@ -64,7 +67,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     function finalizeAtomically(bytes32 resolutionId, address payload, Gov.Action /*action*/, string /*resolutionUrl*/)
         public
         onlyOperational
-        withAtomicContinuedExecution(resolutionId, promiseForSelector(this.executeNonAtomically.selector), 0)
+        withAtomicContinuedExecution(resolutionId, Gov.promiseForSelector(this.executeNonAtomically.selector), 0)
     {
         executeResolution(resolutionId, 0x3CB5a091E651d565d98b776a3E4AE51979Db76b2, payload);
     }

@@ -30,14 +30,14 @@ contract RegDTransferController is
         // ask base controller if transfers are enables
         allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // control for reg d lock in in funded state
-        if (allow && state() == Gov.State.Funded) {
+        if (allow && _g._state == Gov.State.Funded) {
             IIdentityRegistry registry = IIdentityRegistry(_g.UNIVERSE.identityRegistry());
             IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(registry.getClaims(from));
             // perform additional checks for token holders under reg-d regulations
             if (claims.requiresRegDAccreditation) {
                 // deny transfer if in lockdown period is in place
                 // first take a date at which ETO was successfully completed
-                IETOCommitment commitment = IETOCommitment(_commitment);
+                IETOCommitment commitment = IETOCommitment(_offerings[0]);
                 // allow transfer if 1 year passed form the date tokens could be claimed
                 allow = block.timestamp > commitment.startOf(ETOState.Claim) + 365 days;
             }

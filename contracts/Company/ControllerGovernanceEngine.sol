@@ -43,6 +43,14 @@ contract ControllerGovernanceEngine is
         Gov.ExecutionState state
     );
 
+    // logged when company bylaws are amended
+    event LogTokenholderRightsAmended(
+        bytes32 indexed resolutionId,
+        Gov.TokenType tokenType,
+        address token,
+        address tokenholderRights
+    );
+
     ////////////////////////
     // Constants
     ////////////////////////
@@ -56,6 +64,7 @@ contract ControllerGovernanceEngine is
     ////////////////////////
 
     Gov.GovernanceStorage _g;
+    Gov.TokenStorage _t;
 
     // maps resolution to actions
     // mapping (uint256 => bytes32) private _exclusiveActions;
@@ -86,6 +95,11 @@ contract ControllerGovernanceEngine is
         _;
     }
 
+    modifier onlyGeneralActions(Gov.Action a) {
+        require(Gov.isGeneralAction(a), "NF_NOT_GENERAL_ACTION");
+        _;
+    }
+
     // starts new governance execution that can happen in multiple steps so no cleanup is preformed at the end
     // instead timeout will be watched
     modifier withNonAtomicExecution(
@@ -94,7 +108,7 @@ contract ControllerGovernanceEngine is
     {
         Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         // prevent to execute twice
-        require(e.state != Gov.ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
+        ensureResolutionInExecution(e);
         // validate resolution
         if(validateResolution(resolutionId, e, validator)) {
             _;
@@ -118,9 +132,7 @@ contract ControllerGovernanceEngine is
         Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         if(validateResolution(resolutionId, e, validator)) {
             _;
-            if (e.state == Gov.ExecutionState.Executing) {
-                terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
-            }
+            terminateIfExecuting(resolutionId, e);
         }
     }
 
@@ -130,6 +142,18 @@ contract ControllerGovernanceEngine is
         string documentUrl)
     {
         if (withGovernancePrivate(resolutionId, action, documentUrl) == Gov.ExecutionState.Executing) {
+            // inner modifiers and function body only in Executing state
+            _;
+        }
+    }
+
+    modifier withGovernanceTitle(
+        bytes32 resolutionId,
+        Gov.Action action,
+        string title,
+        string documentUrl)
+    {
+        if (withGovernancePrivate(resolutionId, action, title, documentUrl) == Gov.ExecutionState.Executing) {
             // inner modifiers and function body only in Executing state
             _;
         }
@@ -164,10 +188,8 @@ contract ControllerGovernanceEngine is
         if(validateResolutionContinuation(e, promise, nextStep)) {
             // validate timeout
             _;
-            if (e.state == Gov.ExecutionState.Executing) {
-                // no need to write final step as execution ends here
-                terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
-            }
+            // no need to write final step as execution ends here
+            terminateIfExecuting(resolutionId, e);
         }
     }
 
@@ -199,9 +221,12 @@ contract ControllerGovernanceEngine is
     function state()
         public
         constant
-        returns (Gov.State)
+        returns (
+            Gov.State s
+            )
     {
-        return _g._state;
+        return
+            _g._state;
     }
 
     function companyLegalRepresentative()
@@ -256,15 +281,6 @@ contract ControllerGovernanceEngine is
     //
     // Migration storage access
     //
-
-    function migrateGovernance(EquityTokenholderRights tokenholderRights, IEquityToken equityToken)
-        public
-        onlyState(Gov.State.Setup)
-        only(ROLE_COMPANY_UPGRADE_ADMIN)
-    {
-        _g._tokenholderRights = tokenholderRights;
-        _g._equityToken = equityToken;
-    }
 
     function migrateResolutions(
         bytes32[] resolutionId,
@@ -348,39 +364,50 @@ contract ControllerGovernanceEngine is
         e.failedCode = failedCode;
     }
 
-    function promiseForSelector(bytes4 selector)
-        internal
-        pure
-        returns (bytes32)
-    {
-        // replace selector and return keccak
-        bytes memory calldata = msg.data;
-        assembly {
-            // patch calldata with the selector
-            mstore8(add(calldata, 32), byte(0, selector))
-            mstore8(add(calldata, 33), byte(1, selector))
-            mstore8(add(calldata, 34), byte(2, selector))
-            mstore8(add(calldata, 35), byte(3, selector))
-        }
-        return keccak256(calldata);
-    }
-
     ////////////////////////
     // Private functions
     ////////////////////////
 
     function withGovernancePrivate(bytes32 resolutionId, Gov.Action action, string documentUrl)
-        public
+        private
+        returns (Gov.ExecutionState)
+    {
+        return withGovernancePrivate(resolutionId, action, "", documentUrl);
+    }
+
+    function withGovernancePrivate(bytes32 resolutionId, Gov.Action action, string title, string documentUrl)
+        private
         returns (Gov.ExecutionState)
     {
         // call library with delegate call
         bytes memory cdata = msg.data;
-        (Gov.ExecutionState prevState, Gov.ExecutionState nextState) = Gov.startResolutionExecution(_g, resolutionId, action, keccak256(cdata));
+        (Gov.ExecutionState prevState, Gov.ExecutionState nextState) = Gov.startResolutionExecution(
+            _g,
+            _t,
+            resolutionId,
+            action,
+            keccak256(cdata)
+        );
         // emit event only when transitioning from new to !new
         if (prevState == Gov.ExecutionState.New && nextState != Gov.ExecutionState.New) {
-            emit LogResolutionStarted(resolutionId, "", documentUrl, action, nextState, cdata);
+            emit LogResolutionStarted(resolutionId, title, documentUrl, action, nextState, cdata);
         }
         return nextState;
+    }
+
+    function terminateIfExecuting(bytes32 resolutionId, Gov.ResolutionExecution storage e)
+        private
+    {
+        if (e.state == Gov.ExecutionState.Executing) {
+            terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
+        }
+    }
+
+    function ensureResolutionInExecution(Gov.ResolutionExecution storage e)
+        private
+        constant
+    {
+        require(e.state != Gov.ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
     }
 
     // guard method for atomic and non atomic executions that will revert or fail resolution that cannot execute further

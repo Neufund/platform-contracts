@@ -4,9 +4,9 @@ import "../Reclaimable.sol";
 
 import "./IEquityTokenController.sol";
 import "./IControllerGovernance.sol";
-import "./ControllerTokenOfferings.sol";
-import "../Standards/IMigrationChain.sol";
+import "./ControllerETO.sol";
 import "./ControllerDividends.sol";
+import "../Standards/IMigrationChain.sol";
 
 
 /// @title on-chain company management with shareholder rights execution support
@@ -17,7 +17,7 @@ import "./ControllerDividends.sol";
 contract SingleEquityTokenController is
     IControllerGovernance,
     IEquityTokenController,
-    ControllerTokenOfferings,
+    ControllerETO,
     ControllerDividends,
     IMigrationChain,
     IContractId
@@ -111,6 +111,9 @@ contract SingleEquityTokenController is
         // must be migrated with us as a source
         require(newController.migratedFrom() == address(this), "NF_NOT_MIGRATED_FROM_US");
         _newController = newController;
+        if (_t._token != address(0)) {
+            _t._token.changeTokenController(newController);
+        }
         transitionTo(Gov.State.Migrated);
         // emit LogResolutionExecuted(0, Action.ChangeTokenController);
         emit LogMigratedTo(address(this), newController);
@@ -145,16 +148,15 @@ contract SingleEquityTokenController is
     // Implements ITokenController
     //
 
-    function onTransfer(address broker, address from, address /*to*/, uint256 /*amount*/)
+    function onTransfer(address broker, address from, address to, uint256 amount)
         public
         constant
         returns (bool allow)
     {
-        // allow for initial token distribution by ETOCommitment contract (token claim)
-        if (from == _commitment && broker == from) {
-            allow = true;
-        } else {
-            allow = _transfersEnabled;
+        allow = _t._transferable;
+        if (!allow) {
+            // allow for initial token distribution by ETOCommitment contract (token claim)
+            allow = ControllerETO.onTransfer(broker, from, to, amount);
         }
     }
 
@@ -165,22 +167,6 @@ contract SingleEquityTokenController is
         returns (bool allow)
     {
         return true;
-    }
-
-    function onGenerateTokens(address sender, address, uint256)
-        public
-        constant
-        returns (bool allow)
-    {
-        return _g._state == Gov.State.Offering && isActiveOffering(sender);
-    }
-
-    function onDestroyTokens(address sender, address, uint256)
-        public
-        constant
-        returns (bool allow)
-    {
-        return _g._state == Gov.State.Offering && isActiveOffering(sender);
     }
 
     function onChangeTokenController(address /*sender*/, address newController)
@@ -216,18 +202,20 @@ contract SingleEquityTokenController is
     // IControllerGovernance
     //
 
-    function moduleId() public pure returns (bytes32[5] ids, uint256[5] versions) {
+    function moduleId() public pure returns (bytes32[6] ids, uint256[6] versions) {
         return ([
             ControllerGovernanceEngineId,
             ControllerGeneralInformationId,
-            ControllerTokenOfferingsId,
+            ControllerEquityTokenId,
+            ControllerETOId,
             ControllerDividendsId,
             SingleEquityTokenControllerId
         ],
         [
             ControllerGovernanceEngineV,
             ControllerGeneralInformationV,
-            ControllerTokenOfferingsV,
+            ControllerEquityTokenV,
+            ControllerETOV,
             ControllerDividendsV,
             SingleEquityTokenControllerV
         ]);
