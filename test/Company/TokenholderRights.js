@@ -47,7 +47,7 @@ contract("TokenholderRights", () => {
     expect((await tokenholderRights.contractId())[1]).to.be.bignumber.eq(ZERO_BN);
     expect(await tokenholderRights.HAS_VOTING_RIGHTS()).to.be.true;
     const bylaws = await tokenholderRights.ACTION_BYLAWS();
-    expect(bylaws.length).to.eq(24);
+    expect(bylaws.length).to.eq(25);
 
     await verifyTerms(tokenholderRights, tokenholderTermsKeys, tokenholderTerms);
   });
@@ -179,6 +179,7 @@ contract("TokenholderRights", () => {
     );
   }
 
+  // expected escalations of all possible actions
   const expectedEscalations = [
     GovActionEscalation.SHR,
     GovActionEscalation.SHR,
@@ -204,6 +205,7 @@ contract("TokenholderRights", () => {
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.Anyone,
+    GovActionEscalation.CompanyLegalRep,
   ];
 
   function downgradeEscalation(escalation) {

@@ -51,6 +51,7 @@ export const GovAction = {
   AmendSharesAndValuation: 21,
   AmendValuation: 22,
   CancelResolution: 23,
+  CompanyNone: 24,
 };
 
 // permissions required to execute an action
@@ -104,8 +105,9 @@ export const GovExecutionState = {
 };
 
 export const GovTokenType = {
-  Equity: 0,
-  Safe: 1,
+  None: 0,
+  Equity: 1,
+  Safe: 2,
 };
 
 export const GovTokenState = {

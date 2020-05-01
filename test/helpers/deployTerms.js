@@ -350,6 +350,7 @@ export function generateDefaultBylaws(terms) {
           ),
         );
         break;
+      case "CompanyNone":
       case "StopToken":
       case "ContinueToken":
       case "OrdinaryPayout":
