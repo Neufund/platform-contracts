@@ -41,6 +41,7 @@ export const interfaceToArtifacts = {
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
   [keyToKey.paymentTokenInterface]: ["IERC223Token"],
   [keyToKey.etoTermsConstraints]: [artifacts.ETO_TERMS_CONSTRAINTS, ""],
+  [keyToKey.votingCenter]: [artifacts.VOTING_CENTER, ""],
 };
 
 // verify all known interfaces are mapped

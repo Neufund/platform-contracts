@@ -27,6 +27,7 @@ export const artifacts = {
   // interfaces used in migrations
   TOKEN_EXCHANGE_RATE_ORACLE: "ITokenExchangeRateOracle",
   ETO_TERMS_CONSTRAINTS: "ETOTermsConstraints",
+  VOTING_CENTER: "VotingCenter",
   // not implemented
   // PLATFORM_PORTFOLIO: "IPlatformPortfolio"
 };

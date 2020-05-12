@@ -33,4 +33,5 @@ export const knownInterfaces = {
   termsInterface: sha3("IOfferingTerms").slice(0, 10),
   paymentTokenInterface: sha3("PaymentToken").slice(0, 10),
   etoTermsConstraints: sha3("ETOTermsConstraints").slice(0, 10),
+  votingCenter: sha3("IVotingCenter").slice(0, 10),
 };

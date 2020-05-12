@@ -27,9 +27,9 @@ export async function createSignedVote(proposalId, inFavor, voter, votingContrac
     { type: "bool", value: inFavor },
   );
   const sig = await evmSign(voter, msg);
-  return {
-    r: sig.substr(0, 66),
-    s: "0x".concat(sig.substr(66, 64)),
-    v: parseInt(sig.substr(130, 2), 16) + 27,
-  };
+  return [
+    sig.substr(0, 66),
+    "0x".concat(sig.substr(66, 64)),
+    parseInt(sig.substr(130, 2), 16) + 27,
+  ];
 }

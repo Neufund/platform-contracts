@@ -12,3 +12,7 @@ export async function latestTimestamp() {
 
   return (await promisify(web3.eth.getBlock)("latest")).timestamp;
 }
+
+export async function txTimestamp(tx) {
+  return (await promisify(web3.eth.getBlock)(tx.receipt.blockNumber)).timestamp;
+}
