@@ -1,199 +1,320 @@
 pragma solidity 0.4.26;
 
-import "../../SnapshotToken/Extensions/ISnapshotableToken.sol";
-import "../../Math.sol";
+import "./IVotingCenter.sol";
+import "./IVotingController.sol";
+import "./VotingProposal.sol";
 
-/// Contract to allow weighted voting based on a snapshotable token (with relayed, batched voting)
-contract VotingCenter is Math{
+/// Contract to allow voting based on a snapshotable token (with relayed, batched voting)
+contract VotingCenter is IVotingCenter {
 
-    ////////////////////////
-    // Types
-    ////////////////////////
-    enum ProposalState {
-        Campaigning,  // Initial state
-        TimedOut, // has not reached public phase
-        Public,  // has passed campaign-quorum in time
-        Final  // the total required amount of votes was in favor
-    }
-
-    struct Proposal {
-        uint256 campaignEndTime;
-        uint256 campaignQuorumTokenAmount;
-        uint256 endTime;
-        uint256 offchainVoteEndTime;
-        uint256 inFavor;
-        uint256 against;
-        address owner;
-        uint256 snapshotId;
-        uint256 offchainVotesAsTokens;
-        bool offchainVoteTallied;
-        ProposalState state;
-        mapping (address => bool) hasVoted;
-    }
+    using VotingProposal for VotingProposal.Proposal;
 
     /////////////////////////
-    // Immutable state
+    // Modifiers
     ////////////////////////
-    // TODO register with universe
-    ISnapshotableToken public TOKEN;
+
+    // @dev This modifier needs to be applied to all external non-constant functions.
+    //  this modifier goes _before_ other state modifiers like `onlyState`.
+    //  after function body execution state may transition again in `advanceLogicState`
+    modifier withStateTransition(bytes32 proposalId) {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+        // switch state due to time
+        VotingProposal.advanceTimedState(p, proposalId);
+        // execute function body
+        _;
+        // switch state due to business logic
+        VotingProposal.advanceLogicState(p, proposalId);
+    }
+
+    // @dev This modifier needs to be applied to all external non-constant functions.
+    //  this modifier goes _before_ other state modifiers like `onlyState`.
+    //  note that this function actually modifies state so it will generate warnings
+    //  and is incompatible with STATICCALL
+    modifier withTimedTransition(bytes32 proposalId) {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+        // switch state due to time
+        VotingProposal.advanceTimedState(p, proposalId);
+        // execute function body
+        _;
+    }
+
+    modifier withVotingOpen(bytes32 proposalId) {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(VotingProposal.isVotingOpen(p), "NV_VC_VOTING_CLOSED");
+        _;
+    }
+
+    modifier withRelayingOpen(bytes32 proposalId) {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(VotingProposal.isRelayOpen(p), "NV_VC_VOTING_CLOSED");
+        _;
+    }
+
+    modifier onlyTally(bytes32 proposalId) {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(p.state == VotingProposal.State.Tally, "NV_VC_NOT_TALLYING");
+        _;
+    }
 
     /////////////////////////
     // Mutable state
     ////////////////////////
-    mapping (bytes32 => Proposal) private _proposals;
-    mapping (address => bool) private _hasActiveProposal;
+
+    mapping (bytes32 => VotingProposal.Proposal) private _proposals;
+    IVotingController private _votingController;
+
 
     /////////////////////////
     // Events
     ////////////////////////
-    event LogNewProposal(address indexed owner, bytes32 indexed proposalId, uint256 snapshotId, uint256 endTime);
-    event LogReachedCampaignQuorum(bytes32 indexed proposalId);
-    event LogProposalResult(bytes32 indexed proposalId, bool valid, uint256 inFavor, uint256 against, uint total);
+
+    // must be in sync with library event, events cannot be shared
+    event LogProposalStateTransition(
+        bytes32 indexed proposalId,
+        address initiator,
+        address votingLegalRep,
+        address token,
+        VotingProposal.State oldState,
+        VotingProposal.State newState
+    );
+
+    // logged when voter casts a vote
+    event LogVoteCast(
+        bytes32 indexed proposalId,
+        address initiator,
+        address token,
+        address voter,
+        bool voteInFavor,
+        uint256 power
+    );
+
+    // logged when proposal legal rep provides off-chain voting results
+    event LogOffChainProposalResult(
+        bytes32 indexed proposalId,
+        address initiator,
+        address token,
+        address votingLegalRep,
+        uint256 inFavor,
+        uint256 against,
+        string documentUri
+    );
+
+    // logged when controller changed
+    event LogChangeVotingController(
+        address oldController,
+        address newController,
+        address by
+    );
 
     ////////////////////////
     // Constructor
     ////////////////////////
 
-    /// @param token which balances are used for voting
-    constructor(ISnapshotableToken token) public {
-        require(token != address(0), "Invalid Token");
-        TOKEN = token;
-        // TODO get controller from universe
+    constructor(IVotingController controller) public {
+        _votingController = controller;
     }
 
     /////////////////////////
     // Public functions
     ////////////////////////
 
-    /// @dev Creates a proposal, uniquely identifiable by its assigned proposalId
-    /// @param proposalId unique identifier of the proposal, e.g. ipfs-hash of info
-    /// @param campaignDurationInDays amount of days proposal has to gather enough votes to be made public (see campaignQuorum)
-    /// @param campaignQuorumFraction fraction (10**18 = 1) of token holders who have to support a proposal in order for it to be trigger an event
-    /// @param votingPeriodInDays total amount of days the proposal can be voted on by tokenholders after it was created
-    /// @param offchainVoteFraction the percentage of all votes held offchain as a decimal fraction (<10**18)
-    /// (offchainWeight the percentage of all votes held offchain as decimalFraction
+    //
+    // IVotingCenter implementation
+    //
+
     function addProposal(
         bytes32 proposalId,
-        uint256 campaignDurationInDays,
+        ITokenSnapshots token,
+        uint32 campaignDuration,
         uint256 campaignQuorumFraction,
-        uint256 votingPeriodInDays,
-        uint256 offchainVotePeriodInDays,
-        uint256 offchainVoteFraction
+        uint32 votingPeriod,
+        address votingLegalRep,
+        uint32 offchainVotePeriod,
+        uint256 offchainVotingPower,
+        uint256 action,
+        bytes actionPayload,
+        bool enableObserver
     )
         public
     {
-        require(_proposals[proposalId].endTime == 0, "Proposal must have a unique proposalId");
-        require(!_hasActiveProposal[msg.sender], "Only one active proposal per address");
-        require(campaignDurationInDays >= 1, "There must be at least one day for campaigning");
-        require(campaignQuorumFraction < 10**18, "Quorum for campaing must be nonzero and less than 100");
-        require(votingPeriodInDays * 1 days >= 10 days, "Voting period must be at least ten days");
-        require(votingPeriodInDays - campaignDurationInDays >= 7, "There must be at least one week for public voting");
+        require(token != address(0));
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+
+        require(p.token == address(0), "NF_VC_P_ID_NON_UNIQ");
+        // campaign duration must be less or eq total voting period
+        require(campaignDuration <= votingPeriod, "NF_VC_CAMPAIGN_OVR_TOTAL");
+        require(campaignQuorumFraction <= 10**18, "NF_VC_INVALID_CAMPAIGN_Q");
         require(
-            (offchainVotePeriodInDays >= 7 && offchainVoteFraction > 0) ||
-            (offchainVoteFraction == 0 && offchainVotePeriodInDays == 0),
-            "OffchainVotePeriod must be at least a week"
+            campaignQuorumFraction == 0 && campaignDuration == 0 ||
+            campaignQuorumFraction > 0 && campaignDuration > 0,
+            "NF_VC_CAMP_INCONSISTENT"
         );
-        require(offchainVoteFraction <= 10**18, "Offchain votes too powerful");
+        require(
+            offchainVotePeriod >= 0 && offchainVotingPower > 0 && votingLegalRep != address(0) ||
+            offchainVotePeriod == 0 && offchainVotingPower == 0 && votingLegalRep == address(0),
+            "NF_VC_TALLY_INCONSISTENT"
+        );
 
-        uint256 sId = TOKEN.currentSnapshotId();
-        // advance snapShotID, so that any subsequent trades will be in the non-finalized snapshot
-        TOKEN.createSnapshot();
-        uint256 totalTokenVotes = TOKEN.totalSupplyAt(sId);
+        // take sealed snapshot
+        uint256 sId = token.currentSnapshotId() - 1;
 
-        _proposals[proposalId] = Proposal({
-            campaignEndTime: now + campaignDurationInDays * 1 days,
-            campaignQuorumTokenAmount: decimalFraction(totalTokenVotes, campaignQuorumFraction),
-            endTime: now + votingPeriodInDays * 1 days,
-            offchainVoteEndTime: now + (votingPeriodInDays + offchainVotePeriodInDays) * 1 days,
-            inFavor: 0,
-            owner: msg.sender,
-            against:0,
-            snapshotId: sId,
-            offchainVotesAsTokens: proportion(totalTokenVotes, offchainVoteFraction, 10**18 - offchainVoteFraction),
-            offchainVoteTallied: offchainVoteFraction == 0,
-            state: ProposalState.Campaigning
-        });
-
-        _hasActiveProposal[msg.sender] = true;
-
-        emit LogNewProposal(msg.sender, proposalId, sId, now + votingPeriodInDays * 1 days);
+        p.initialize(
+            proposalId,
+            token,
+            sId,
+            campaignDuration,
+            campaignQuorumFraction,
+            votingPeriod,
+            votingLegalRep,
+            offchainVotePeriod,
+            offchainVotingPower,
+            action,
+            enableObserver
+        );
+        // we should do it in initialize bo stack is too small
+        p.actionPayload = actionPayload;
+        // call controller now when proposal is available via proposal method
+        require(_votingController.onAddProposal(proposalId, msg.sender, token), "NF_VC_CTR_ADD_REJECTED");
     }
 
-    /// @notice simple getter function
-    function proposal(bytes32 proposalId)
+    function vote(bytes32 proposalId, bool voteInFavor)
         public
-        view
-        returns (
-            uint256 campaignEndTime,
-            uint256 campaignQuorumTokenAmount,
-            uint256 endTime,
-            uint256 offchainVoteEndTime,
+        withStateTransition(proposalId)
+        withVotingOpen(proposalId)
+    {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(!p.hasVoted[msg.sender], "NF_VC_ALREADY_VOTED");
+        castVote(p, proposalId, voteInFavor, msg.sender);
+    }
+
+    function addOffchainVote(bytes32 proposalId, uint256 inFavor, uint256 against, string documentUri)
+        public
+        withStateTransition(proposalId)
+        onlyTally(proposalId)
+    {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(msg.sender == p.votingLegalRep, "NF_VC_ONLY_VOTING_LEGAL_REP");
+        // may not cross offchainVotingPower
+        require(inFavor + against <= p.offchainVotingPower, "NF_VC_EXCEEDS_OFFLINE_V_POWER");
+        require(inFavor + against > 0, "NF_VC_NO_OFF_EMPTY_VOTE");
+
+        p.offchainInFavor = inFavor;
+        p.offchainAgainst = against;
+
+        emit LogOffChainProposalResult(proposalId, p.initiator, p.token, msg.sender, inFavor, against, documentUri);
+    }
+
+    function tally(bytes32 proposalId)
+        public
+        constant
+        withTimedTransition(proposalId)
+        returns(
+            uint8 s,
             uint256 inFavor,
             uint256 against,
-            address owner,
-            uint256 snapshotId,
-            uint256 offchainVotesAsTokens,
-            bool offchainVoteTallied,
-            ProposalState state
-            )
+            uint256 offchainInFavor,
+            uint256 offchainAgainst,
+            uint256 totalVotingPower,
+            address initiator,
+            bool hasObserverInterface
+        )
     {
-        require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-        Proposal storage p = _proposals[proposalId];
-        campaignEndTime = p.campaignEndTime;
-        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
-        endTime = p.endTime;
-        offchainVoteEndTime = p.offchainVoteEndTime;
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+
+        s = uint8(p.state);
         inFavor = p.inFavor;
         against = p.against;
-        owner = p.owner;
+        offchainInFavor = p.offchainInFavor;
+        offchainAgainst = p.offchainAgainst;
+        initiator = p.initiator;
+        hasObserverInterface = p.observing;
+        totalVotingPower = p.token.totalSupplyAt(p.snapshotId) + p.offchainVotingPower;
+    }
+
+    function timedProposal(bytes32 proposalId)
+        public
+        withTimedTransition(proposalId)
+        constant
+        returns (
+            uint8 s,
+            address token,
+            uint256 snapshotId,
+            address initiator,
+            address votingLegalRep,
+            uint256 campaignQuorumTokenAmount,
+            uint256 offchainVotingPower,
+            uint256 action,
+            bytes actionPayload,
+            bool enableObserver,
+            uint32[5] deadlines
+        )
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+
+        s = uint8(p.state);
+        token = p.token;
         snapshotId = p.snapshotId;
-        offchainVotesAsTokens = p.offchainVotesAsTokens;
-        offchainVoteTallied = p.offchainVoteTallied;
-        state = p.state;
+        enableObserver = p.observing;
+        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
+        initiator = p.initiator;
+        votingLegalRep = p.votingLegalRep;
+        offchainVotingPower = p.offchainVotingPower;
+        deadlines = p.deadlines;
+        action = p.action;
+        actionPayload = p.actionPayload;
     }
 
-
-    /// @dev increase the votecount on a given proposal by the token balance of the sender
-    ///   throws if proposal does not exist or the vote on it has ended already. Votes are final,
-    ///   changing the vote is not allowed
-    /// @param proposalId of the proposal to be voted on
-    /// @param voteInFavor of the desired proposal
-    function vote(bytes32 proposalId, bool voteInFavor) public {
-        incrementVote(proposalId, voteInFavor, msg.sender);
+    function isVoteCast(bytes32 proposalId, address voter)
+        public
+        constant
+        returns (bool)
+    {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        return p.hasVoted[voter];
     }
 
-    // TODO function addOffchainVote(bytes32, proposalId, uint weightInFavorFraction, uint weightAgainstFraction) public {
-    // TODO add access protection
-    // NOTE for now its the weight in tokens
-    /// @notice add off-chain votes, weight parameters must add up to totalAmount of offchainVotes
-    /// @param weightInFavor decimalFraction (10**18 = 1) of offchainVotes being in favor of the proposal
-    /// @param weightAgainst decimalFraction of offchainVotes being against the proposal
-    function addOffchainVote(bytes32 proposalId, uint weightInFavor, uint weightAgainst) public {
-        require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-        Proposal storage p = _proposals[proposalId];
-        require(!p.offchainVoteTallied, "Offchain votes already taken into account");
-        require(now < p.campaignEndTime || p.state == ProposalState.Public, "Proposal has not passed campaign state");
-        require(now < p.offchainVoteEndTime, "Offchain-vote period is over");
-        // TODO require weight is correct
-        require(weightInFavor + weightAgainst <= 10**18, "Too much weight");
+    //
+    // IContractId Implementation
+    //
 
-        p.inFavor += decimalFraction(p.offchainVotesAsTokens, weightInFavor);
-        p.against += decimalFraction(p.offchainVotesAsTokens, weightAgainst);
-
-        // automatically advance to campaign or call getResult to finalize the vote
-        p.offchainVoteTallied = true;
-        if (p.state == ProposalState.Campaigning && p.inFavor >= p.campaignQuorumTokenAmount) {
-            p.state = ProposalState.Public;
-            emit LogReachedCampaignQuorum(proposalId);
-        }
-        if (now > p.endTime) {
-            finalizeProposal(proposalId);
-        }
+    function contractId()
+        public
+        pure
+        returns (bytes32 id, uint256 version)
+    {
+        return (0xbbf540c4111754f6dbce914d5e55e1c0cb26515adbc288b5ea8baa544adfbfa4, 0);
     }
+
+    //
+    // IVotingController hook
+    //
+
+    /// @notice get current controller
+    function votingController()
+        public
+        constant
+        returns (IVotingController)
+    {
+        return _votingController;
+    }
+
+    /// @notice update current controller
+    function changeVotingController(IVotingController newController)
+        public
+    {
+        require(_votingController.onChangeVotingController(msg.sender, newController), "NF_VC_CHANGING_CTR_REJECTED");
+        address oldController = address(_votingController);
+        _votingController = newController;
+        emit LogChangeVotingController(oldController, address(newController), msg.sender);
+    }
+
+    //
+    // Other methods
+    //
 
     /// @dev same as vote, only for a relayed vote. Will throw if provided signature (v,r,s) does not match
     ///  the address of the voter
-    /// @param voter address whose token balance should be used as voting weight
+    /// @param voter address whose token balance should be used as voting power
     function relayedVote(
         bytes32 proposalId,
         bool voteInFavor,
@@ -203,118 +324,212 @@ contract VotingCenter is Math{
         uint8 v
     )
         public
+        withStateTransition(proposalId)
+        withRelayingOpen(proposalId)
     {
         // check that message signature matches the voter address
-        // solium-disable indentation
-        require(ecrecover(
-            keccak256(abi.encodePacked(
-                "\x19Ethereum Signed Message:\n32",
-                keccak256(abi.encodePacked(byte(0), this, proposalId, voteInFavor)))),
-            v, r, s) == voter,
-        "Incorrect order signature");
+        assert(isValidSignature(proposalId, voteInFavor, voter, r, s, v));
         // solium-enable indentation
-
-        incrementVote(proposalId, voteInFavor, voter);
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        require(!p.hasVoted[voter], "NF_VC_ALREADY_VOTED");
+        castVote(p, proposalId, voteInFavor, voter);
     }
 
+    // batches should be grouped by proposal, that allows to tally in place and write to storage once
     function batchRelayedVotes(
-        bytes32[] proposalIds,
+        bytes32 proposalId,
         bool[] votePreferences,
-        address[] voters,
         bytes32[] r,
         bytes32[] s,
         uint8[] v
     )
         public
+        withStateTransition(proposalId)
+        withRelayingOpen(proposalId)
     {
-        require(
-            proposalIds.length == votePreferences.length &&
-            votePreferences.length == voters.length &&
-            voters.length == r.length &&
-            r.length == s.length &&
-            s.length == v.length,
-            "Invalid voting arguments"
+        assert(
+            votePreferences.length == r.length && r.length == s.length && s.length == v.length
         );
-        for (uint i = 0; i < voters.length; i++) {
-            relayedVote(
-                proposalIds[i],
-                votePreferences[i],
-                voters[i],
-                r[i],
-                s[i],
-                v[i]
-            );
-        }
+        relayBatchInternal(
+            proposalId,
+            votePreferences,
+            r, s, v
+        );
     }
 
-    /// @notice Returns the final outcome of a proposal that is finalized or can no longer accept any new votes
-    /// (timed-out proposals need to be finalized first)
-    /// @return the Votecount on a finished proposal and the total amount of eligible votes
-    /// @dev throws if proposal does not exist, public vote is still ongoing, offchainVotes could still be submitted or it has failed
-    /// during campaign and has not been finalized
-    function getOutcome(bytes32 proposalId) public view returns(uint, uint, uint) {
-        require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-        Proposal storage p = _proposals[proposalId];
-        require(
-            p.state == ProposalState.Final || p.state == ProposalState.TimedOut ||
-            (now > p.endTime && (p.offchainVoteTallied || now > p.offchainVoteEndTime)),
-            "Vote is ongoing"
-        );
-        // TODO unless the offchain weight is less than max(inFavor, against)
+    /// @notice obtains proposal state without time transitions
+    /// @dev    used mostly to detect propositions requiring timed transitions
+    function proposal(bytes32 proposalId)
+        public
+        constant
+        returns (
+            VotingProposal.State s,
+            address token,
+            uint256 snapshotId,
+            address initiator,
+            address votingLegalRep,
+            uint256 campaignQuorumTokenAmount,
+            uint256 offchainVotingPower,
+            uint256 action,
+            bytes actionPayload,
+            bool enableObserver,
+            uint32[5] deadlines
+            )
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
 
-        return (p.inFavor, p.against, TOKEN.totalSupplyAt(p.snapshotId) + p.offchainVotesAsTokens);
+        s = p.state;
+        token = p.token;
+        snapshotId = p.snapshotId;
+        enableObserver = p.observing;
+        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
+        initiator = p.initiator;
+        votingLegalRep = p.votingLegalRep;
+        offchainVotingPower = p.offchainVotingPower;
+        deadlines = p.deadlines;
+        action = p.action;
+        actionPayload = p.actionPayload;
     }
 
-    /// @notice log the result of the vote, set the state of the proposal to Final/TimedOut
-    /// and unblock creator of proposal to be able to create another one
-    function finalizeProposal(bytes32 proposalId) public {
-        require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-        Proposal storage p = _proposals[proposalId];
-        require(p.state != ProposalState.Final || p.state != ProposalState.TimedOut, "Is already in finalized state");
-        require(
-            // all voting done OR has failed during campaign
-            (now > p.endTime && (p.offchainVoteTallied || now > p.offchainVoteEndTime) ||
-            (now > p.campaignEndTime && p.state == ProposalState.Campaigning)),
-            "End conditions for vote not fulfilled"
-        );
+    function handleStateTransitions(bytes32 proposalId)
+        public
+        withTimedTransition(proposalId)
+    {}
 
-        p.state = p.state == ProposalState.Campaigning ? ProposalState.TimedOut : ProposalState.Final;
-        _hasActiveProposal[p.owner] = false;
-        uint256 total = TOKEN.totalSupplyAt(p.snapshotId) + p.offchainVotesAsTokens;
-        emit LogProposalResult(proposalId, p.state == ProposalState.Final, p.inFavor, p.against, total);
+    //
+    // Utility public functions
+    //
+
+    function isValidSignature(
+        bytes32 proposalId,
+        bool voteInFavor,
+        address voter,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    )
+        public
+        constant
+        returns (bool)
+    {
+        // solium-disable indentation
+        return ecrecoverVoterAddress(proposalId, voteInFavor, r, s, v) == voter;
     }
 
-    // function hasPassed(bytes32 proposalId) public pure returns(bool hasPassed){
-    //     require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-    //     return _proposals[proposalId].state == ProposalState.Passed;
-    // }
+    function ecrecoverVoterAddress(
+        bytes32 proposalId,
+        bool voteInFavor,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    )
+        public
+        constant
+        returns (address)
+    {
+        // solium-disable indentation
+        return ecrecover(
+            keccak256(abi.encodePacked(
+                "\x19Ethereum Signed Message:\n32",
+                keccak256(abi.encodePacked(byte(0), address(this), proposalId, voteInFavor)))),
+            v, r, s);
+    }
+
+    /////////////////////////
+    // Private functions
+    ////////////////////////
 
     /// @dev increase the votecount on a given proposal by the token balance of a given address,
     ///   throws if proposal does not exist or the vote on it has ended already. Votes are final,
     ///   changing the vote is not allowed
+    /// @param p proposal storage pointer
     /// @param proposalId of the proposal to be voted on
     /// @param voteInFavor of the desired proposal
-    /// @param voter address whose tokenBalance is to be used as voting-weight
-    function incrementVote(bytes32 proposalId, bool voteInFavor, address voter) internal {
-        require(_proposals[proposalId].endTime > 0, "Invalid proposalId");
-        Proposal storage p = _proposals[proposalId];
-        require(now < p.campaignEndTime || p.state == ProposalState.Public, "Proposal has not passed campaign state");
-        require(now < p.endTime, "Public voting period is over");
-        require(!p.hasVoted[voter], "Address has already voted");
-        uint256 weight = TOKEN.balanceOfAt(voter, p.snapshotId);
-        require(weight > 0, "Token balance at proposal time is zero");
-
+    /// @param voter address whose tokenBalance is to be used as voting-power
+    function castVote(VotingProposal.Proposal storage p, bytes32 proposalId, bool voteInFavor, address voter)
+        private
+    {
+        uint256 power = p.token.balanceOfAt(voter, p.snapshotId);
         if (voteInFavor) {
-            p.inFavor += weight;
-            if (p.state == ProposalState.Campaigning && p.inFavor >= p.campaignQuorumTokenAmount) {
-                p.state = ProposalState.Public;
-                emit LogReachedCampaignQuorum(proposalId);
-            }
+            p.inFavor = Math.add(p.inFavor, power);
         } else {
-            p.against += weight;
+            p.against = Math.add(p.against, power);
         }
-        p.hasVoted[voter] = true;
+        markVoteCast(p, proposalId, voter, voteInFavor, power);
     }
 
-    
+    function ensureExistingProposal(bytes32 proposalId)
+        private
+        constant
+        returns (VotingProposal.Proposal storage p)
+    {
+        p = _proposals[proposalId];
+        require(p.token != address(0), "NF_VC_PROP_NOT_EXIST");
+        return p;
+    }
+
+    function relayBatchInternal(
+        bytes32 proposalId,
+        bool[] votePreferences,
+        bytes32[] r,
+        bytes32[] s,
+        uint8[] v
+    )
+        private
+    {
+        uint256 inFavor;
+        uint256 against;
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        for (uint256 i = 0; i < votePreferences.length; i++) {
+            uint256 power = relayBatchElement(
+                p,
+                proposalId,
+                votePreferences[i],
+                r[i], s[i], v[i]);
+            if (votePreferences[i]) {
+                inFavor = Math.add(inFavor, power);
+            } else {
+                against = Math.add(against, power);
+            }
+        }
+        // write votes to storage
+        p.inFavor = Math.add(p.inFavor, inFavor);
+        p.against = Math.add(p.against, against);
+    }
+
+    function relayBatchElement(
+        VotingProposal.Proposal storage p,
+        bytes32 proposalId,
+        bool voteInFavor,
+        bytes32 r,
+        bytes32 s,
+        uint8 v
+    )
+        private
+        returns (uint256 power)
+    {
+        // recover voter from signature, mangled data produces mangeld voter address, which will be
+        // eliminated later
+        address voter = ecrecoverVoterAddress(
+            proposalId,
+            voteInFavor,
+            r, s, v
+        );
+        // cast vote if not cast before
+        if (!p.hasVoted[voter]) {
+            power = p.token.balanceOfAt(voter, p.snapshotId);
+            // if not holding token, power is 0
+            markVoteCast(p, proposalId, voter, voteInFavor, power);
+        }
+        // returns voting power which is zero in case of failed vote
+    }
+
+    function markVoteCast(VotingProposal.Proposal storage p, bytes32 proposalId, address voter, bool voteInFavor, uint256 power)
+        private
+    {
+        if (power > 0) {
+            p.hasVoted[voter] = true;
+            emit LogVoteCast(proposalId, p.initiator, p.token, voter, voteInFavor, power);
+        }
+    }
 }
