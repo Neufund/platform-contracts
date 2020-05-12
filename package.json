@@ -45,7 +45,7 @@
     "request-promise-native": "^1.0.7",
     "rlp": "^2.2.4",
     "solidity-coverage": "^0.5.11",
-    "solium": "^1.1.7",
+    "solium": "^1.2.5",
     "swarm-js": "^0.1.35",
     "truffle": "Neufund/truffle#8b70e26e8ab0543e43948b53e330f43ebb740146",
     "truffle-flattener": "Neufund/truffle-flattener",

@@ -8065,7 +8065,7 @@ solium-plugin-security@0.1.1:
   resolved "https://registry.yarnpkg.com/solium-plugin-security/-/solium-plugin-security-0.1.1.tgz#2a87bcf8f8c3abf7d198e292e4ac080284e3f3f6"
   integrity sha512-kpLirBwIq4mhxk0Y/nn5cQ6qdJTI+U1LO3gpoNIcqNaW+sI058moXBe2UiHs+9wvF9IzYD49jcKhFTxcR9u9SQ==
 
-solium@^1.1.7:
+solium@^1.2.5:
   version "1.2.5"
   resolved "https://registry.yarnpkg.com/solium/-/solium-1.2.5.tgz#d036c30e2901e22137bbf342f106b17529ff22a8"
   integrity sha512-NuNrm7fp8JcDN/P+SAdM5TVa4wYDtwVtLY/rG4eBOZrC5qItsUhmQKR/YhjszaEW4c8tNUYhkhQcwOsS25znpw==
@@ -8778,9 +8778,9 @@ truffle-resolver@^4.0.1:
     truffle-expect "^0.0.4"
     truffle-provisioner "^0.1.1"
 
-truffle@Neufund/truffle#56a8fb7a45a17b0c4b4610f7cc8b0e9d4aad5525:
+truffle@Neufund/truffle#8b70e26e8ab0543e43948b53e330f43ebb740146:
   version "3.4.9"
-  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/56a8fb7a45a17b0c4b4610f7cc8b0e9d4aad5525"
+  resolved "https://codeload.github.com/Neufund/truffle/tar.gz/8b70e26e8ab0543e43948b53e330f43ebb740146"
   dependencies:
     mocha "^3.4.2"
     original-require "^1.0.1"
