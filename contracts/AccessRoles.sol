@@ -60,4 +60,7 @@ contract AccessRoles {
 
     // allows to upgrade company/issuer contracts which are also equity token controllers keccak("CompanyUpgradeAdmin")
     bytes32 internal constant ROLE_COMPANY_UPGRADE_ADMIN = 0xfef15747c403732d986b29a92a880d8f2fb886b99417c8bbef226f85885ca924;
+
+    // allows to manage voting center controller keccak("VotingCenterManager)
+    bytes32 internal constant ROLE_VOTING_CENTERL_MANAGER = 0x9bcacccc20bcbf1767ee8e29e2864147661ed440e7f387fcae3af0d5151f44d8;
 }
