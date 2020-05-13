@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "../../Standards/IContractId.sol";
+import "../Standards/IContractId.sol";
 
 
 contract IVotingController is IContractId {

@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "../Company/Extras/IVotingController.sol";
+import "../VotingCenter/IVotingController.sol";
 import "../Universe.sol";
 import "../KnownContracts.sol";
 

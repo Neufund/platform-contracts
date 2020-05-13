@@ -1,7 +1,7 @@
 pragma solidity 0.4.26;
 
-import "../../Standards/ITokenSnapshots.sol";
-import "../../Standards/IContractId.sol";
+import "../Standards/ITokenSnapshots.sol";
+import "../Standards/IContractId.sol";
 
 // standard methods of VotingCenter contract that governs voting procedures on the whole platform
 contract IVotingCenter is IContractId {

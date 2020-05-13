@@ -1,8 +1,8 @@
 pragma solidity 0.4.26;
 
-import "../Company/Extras/IVotingObserver.sol";
-import "../Company/Extras/IVotingCenter.sol";
-import "../Company/Extras/VotingProposal.sol";
+import "../VotingCenter/IVotingObserver.sol";
+import "../VotingCenter/IVotingCenter.sol";
+import "../VotingCenter/VotingProposal.sol";
 
 
 contract TestVotingObserver is IVotingObserver {

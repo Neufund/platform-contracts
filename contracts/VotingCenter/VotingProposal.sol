@@ -1,7 +1,7 @@
 pragma solidity 0.4.26;
 
-import "../../Math.sol";
-import "../../Standards/ITokenSnapshots.sol";
+import "../Math.sol";
+import "../Standards/ITokenSnapshots.sol";
 import "./IVotingObserver.sol";
 
 

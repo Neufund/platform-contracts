@@ -1,9 +1,9 @@
 pragma solidity 0.4.26;
 
 import "./IVotingController.sol";
-import "../../Universe.sol";
-import "../../KnownInterfaces.sol";
-import "../../KnownContracts.sol";
+import "../Universe.sol";
+import "../KnownInterfaces.sol";
+import "../KnownContracts.sol";
 
 
 contract VotingController is
