@@ -2,11 +2,14 @@ pragma solidity 0.4.26;
 
 import "../Agreement.sol";
 import "./Gov.sol";
+import "./MGovernanceObserver.sol";
 import "../Standards/IContractId.sol";
 
 
 contract ControllerGovernanceEngine is
-    Agreement
+    Agreement,
+    IVotingObserver,
+    MGovernanceObserver
 {
     ////////////////////////
     // Governance Module Id
@@ -63,11 +66,8 @@ contract ControllerGovernanceEngine is
     // Mutable state
     ////////////////////////
 
-    Gov.GovernanceStorage _g;
-    Gov.TokenStorage _t;
-
-    // maps resolution to actions
-    // mapping (uint256 => bytes32) private _exclusiveActions;
+    Gov.GovernanceStorage internal _g;
+    Gov.TokenStorage internal _t;
 
     ////////////////////////
     // Modifiers
@@ -107,8 +107,6 @@ contract ControllerGovernanceEngine is
         function (Gov.ResolutionExecution storage) constant returns (string memory) validator)
     {
         Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
-        // prevent to execute twice
-        ensureResolutionInExecution(e);
         // validate resolution
         if(validateResolution(resolutionId, e, validator)) {
             _;
@@ -193,12 +191,6 @@ contract ControllerGovernanceEngine is
         }
     }
 
-    /*modifier withExclusiveAction(bytes32 resolutionId, Gov.Action action) {
-        if (withExclusiveActionPrivate(resolutionId, action)) {
-            _;
-        }
-    }*/
-
     ////////////////////////
     // Constructor
     ////////////////////////
@@ -235,6 +227,26 @@ contract ControllerGovernanceEngine is
         returns (address)
     {
         return _g.COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
+    //
+    // Implements IVotingObserver
+    //
+
+    function onProposalStateTransition(
+        bytes32 /*proposalId*/,
+        uint8 /*oldState*/,
+        uint8 /*newState*/)
+        public
+    {}
+
+    function votingResult(address votingCenter, bytes32 proposalId)
+        public
+        constant
+        returns (bool inFavor)
+    {
+        // delegatecall
+        return Gov.hasProposalPassed(_t, IVotingCenter(votingCenter), proposalId) == Gov.ExecutionState.Executing;
     }
 
     //
@@ -298,7 +310,6 @@ contract ControllerGovernanceEngine is
         onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        // assert(resolutionId.length == action.length == state.length == startedAt.length == finishedAt.length == failedCode.length == promise.length);
         for(uint256 ii = 0; ii < resolutionId.length; ii++) {
             bytes32 rId = resolutionId[ii];
             _g._resolutions[rId] = Gov.ResolutionExecution({
@@ -337,22 +348,12 @@ contract ControllerGovernanceEngine is
         // it's possible to decode msg.data to recover call parameters
     }
 
-    /*function isResolutionTerminated(Gov.ExecutionState s)
-        internal
-        pure
-        returns (bool)
-    {
-        return !(s == Gov.ExecutionState.New || s == Gov.ExecutionState.Escalating || s == Gov.ExecutionState.Executing);
-    }*/
-
     function terminateResolution(bytes32 resolutionId, Gov.ResolutionExecution storage e, Gov.ExecutionState s)
         internal
     {
         e.state = s;
         e.finishedAt = uint32(now);
         emit LogResolutionExecuted(resolutionId, e.action, s);
-        // cleanup action
-        // delete _exclusiveActions[uint256(e.action)];
     }
 
     function terminateResolutionWithCode(bytes32 resolutionId, Gov.ResolutionExecution storage e, string memory code)
@@ -386,11 +387,15 @@ contract ControllerGovernanceEngine is
             _t,
             resolutionId,
             action,
-            keccak256(cdata)
+            cdata
         );
         // emit event only when transitioning from new to !new
         if (prevState == Gov.ExecutionState.New && nextState != Gov.ExecutionState.New) {
             emit LogResolutionStarted(resolutionId, title, documentUrl, action, nextState, cdata);
+        }
+        // if we get terminal state, emit event
+        if (nextState == Gov.ExecutionState.Rejected) {
+            emit LogResolutionExecuted(resolutionId, action, nextState);
         }
         return nextState;
     }
@@ -401,13 +406,6 @@ contract ControllerGovernanceEngine is
         if (e.state == Gov.ExecutionState.Executing) {
             terminateResolution(resolutionId, e, Gov.ExecutionState.Completed);
         }
-    }
-
-    function ensureResolutionInExecution(Gov.ResolutionExecution storage e)
-        private
-        constant
-    {
-        require(e.state != Gov.ExecutionState.Executing, "NF_GOV_ALREADY_EXECUTED");
     }
 
     // guard method for atomic and non atomic executions that will revert or fail resolution that cannot execute further
@@ -421,7 +419,7 @@ contract ControllerGovernanceEngine is
     {
         // if resolution is already terminated always revert
         Gov.ExecutionState s = e.state;
-        require(s == Gov.ExecutionState.New || s == Gov.ExecutionState.Escalating, "NF_GOV_RESOLUTION_TERMINATED");
+        require(s == Gov.ExecutionState.New || s == Gov.ExecutionState.Escalating, "NF_GOV_ALREADY_EXECUTED");
         // curried functions are not available in Solidity so we cannot pass any custom parameters
         // however msg.data is available and contains all call parameters
         string memory code = validator(e);
@@ -448,29 +446,4 @@ contract ControllerGovernanceEngine is
         // TODO: validate timeout
         return true;
     }
-
-
-
-    /*function withExclusiveActionPrivate(bytes32 resolutionId, Gov.Action action)
-        internal
-        returns (bool)
-    {
-        // makes sure there's no other action of this kind being executed
-        bytes32 existingResolutionId = _exclusiveActions[uint256(action)];
-        bool notExecuting = (existingResolutionId == bytes32(0) || existingResolutionId == resolutionId);
-        if (!notExecuting) {
-            // Gov.ResolutionExecution storage e = _resolutions[existingResolutionId];
-            notExecuting = true; //e.state == Escalating || isExecutionTerminalState(e.state)
-        }
-        if (notExecuting) {
-            // makes resolution exclusive
-            if (existingResolutionId != resolutionId) {
-                _exclusiveActions[uint256(action)] = resolutionId;
-            }
-            // execute inner modifiers and function body
-            return true;
-        } else {
-            revert("NF_GOV_EXECUTOR_NOT_UNIQUE");
-        }
-    }*/
 }

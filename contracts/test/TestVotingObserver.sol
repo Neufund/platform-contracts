@@ -67,8 +67,8 @@ contract TestVotingObserver is IVotingObserver {
             uint256 inFavor,
             uint256 against,
             uint256 offchainInFavor,
-            uint256 offchainAgainst,
-            uint256 totalVotingPower,,) = VOTING_CENTER.tally(proposalId);
+            uint256 offchainAgainst,,
+            uint256 totalVotingPower,,,) = VOTING_CENTER.tally(proposalId);
         require(s == uint8(VotingProposal.State.Final), "NF_TEST_NOT_FINAL");
         // quorum 50%, round down on division
         if (Math.mul(inFavor + against + offchainInFavor + offchainAgainst, 10**18) / totalVotingPower >= 5*10**17) {

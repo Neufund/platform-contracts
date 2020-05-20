@@ -21,7 +21,8 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         address companyLegalRep,
         IEquityToken token,
         EquityTokenholderRights tokenholderRights,
-        Gov.State state
+        Gov.State state,
+        uint256 shareCapital
     )
         public
         ControllerGovernanceEngine(universe, companyLegalRep)
@@ -31,6 +32,8 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         _t._tokenholderRights = tokenholderRights;
         _t._token = token;
         Gov.setAdditionalEquityTokenData(_t, token);
+        // compute total voting power
+        Gov.setEquityTokenTotalVotingPower(_t, token, shareCapital);
         transitionTo(state);
     }
 
@@ -148,6 +151,39 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     {
         invalidValidatorAddress = payload;
     }
+
+    //
+    // Mock Methods
+    //
+
+    function _hasProposalPassed(
+        Gov.Action action,
+        uint256 inFavor,
+        uint256 against,
+        uint256 offchainInFavor,
+        uint256 offchainAgainst,
+        uint256 tokenVotingPower,
+        uint256 totalVotingPower
+    )
+        public
+        constant
+        returns (Gov.ExecutionState)
+    {
+        Gov.ActionBylaw memory bylaw = Gov.deserializeBylaw(_t._tokenholderRights.getBylaw(action));
+        return Gov.hasProposalPassed(inFavor, against, offchainInFavor, offchainAgainst, tokenVotingPower, totalVotingPower, bylaw);
+    }
+
+    ////////////////////////
+    // Internal Methods
+    ////////////////////////
+
+    //
+    // Observes MGovernanceObserver
+    //
+
+    function mAfterShareCapitalChange(uint256 /*newShareCapital*/)
+        internal
+    {}
 
     ////////////////////////
     // Private Methods
