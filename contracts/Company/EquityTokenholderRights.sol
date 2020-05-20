@@ -86,11 +86,11 @@ contract EquityTokenholderRights is ShareholderRights {
     function decodeBylaw(uint56 encodedBylaw)
         public
         pure
-        returns (uint256[7] memory decodedBylaw)
+        returns (uint256[9] memory decodedBylaw)
     {
         Gov.ActionBylaw memory bylaw = Gov.deserializeBylaw(encodedBylaw);
         // see `deserializeBylaw` for memory layout details
-        // ActionBylaw is just uint256[7]
+        // ActionBylaw is just uint256[9]
         assembly {
             decodedBylaw := bylaw
         }
