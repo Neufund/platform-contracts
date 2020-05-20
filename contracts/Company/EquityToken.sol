@@ -12,19 +12,12 @@ import "../Snapshot/Daily.sol";
 import "../SnapshotToken/StandardSnapshotToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
-import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../Math.sol";
-
-// version history as per contract id
-// 0 - inital version
-// 1 - shareNominalValueUlps added and shareNominalValueEurUlps removed in IEquityToken
-// 2 - adds ISIN and fixed issueToken `to` bug where address(this) was sent to controller in onGenerateTokens
 
 
 contract EquityToken is
     IEquityToken,
-    IContractId,
     StandardSnapshotToken,
     Daily,
     EquityTokenMetadata,
@@ -51,34 +44,6 @@ contract EquityToken is
     // company management contract
     IEquityTokenController private _tokenController;
 
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    event LogTokensIssued(
-        address indexed holder,
-        address controller,
-        uint256 amount
-    );
-
-    event LogTokensDestroyed(
-        address indexed holder,
-        address controller,
-        uint256 amount
-    );
-
-    event LogChangeTokenController(
-        address oldController,
-        address newController,
-        address by
-    );
-
-    event LogChangeNominee(
-        address oldNominee,
-        address newNominee,
-        address controller,
-        address by
-    );
 
     ////////////////////////
     // Modifiers

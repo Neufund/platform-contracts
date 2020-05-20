@@ -7,13 +7,46 @@ import "../Standards/IClonedTokenParent.sol";
 import "../Company/IEquityTokenController.sol";
 import "../Standards/ITokenControllerHook.sol";
 
-/// @title deprecated version of IEquityToken, deprecations usage tbd.
+/// @title deprecated version of IEquityToken
 contract IEquityToken_v0 is
     IAgreement,
     IClonedTokenParent,
     IERC223Token,
     ITokenControllerHook
 {
+    ////////////////////////
+    // Events
+    ////////////////////////
+
+    event LogTokensIssued(
+        address indexed holder,
+        address controller,
+        uint256 amount
+    );
+
+    event LogTokensDestroyed(
+        address indexed holder,
+        address controller,
+        uint256 amount
+    );
+
+    event LogChangeTokenController(
+        address oldController,
+        address newController,
+        address by
+    );
+
+    event LogChangeNominee(
+        address oldNominee,
+        address newNominee,
+        address controller,
+        address by
+    );
+
+    ////////////////////////
+    // Public functions
+    ////////////////////////
+
     /// @dev equity token is not divisible (Decimals == 0) but single share is represented by
     ///  tokensPerShare tokens
     function tokensPerShare() public constant returns (uint256);
@@ -22,6 +55,7 @@ contract IEquityToken_v0 is
     function sharesTotalSupply() public constant returns (uint256);
 
     /// nominal value of a share in EUR decimal(18) scale
+    /// deprecated
     function shareNominalValueEurUlps() public constant returns (uint256);
 
     // returns company legal representative account that never changes
