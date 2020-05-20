@@ -59,6 +59,10 @@ contract SingleEquityTokenController is
         ControllerGovernanceEngine(universe, companyLegalRep)
     {}
 
+    ////////////////////////
+    // Public Methods
+    ////////////////////////
+
     //
     // Implements IControllerGovernance
     //
@@ -266,4 +270,22 @@ contract SingleEquityTokenController is
     {
         return _preMigrationState;
     }
+
+    ////////////////////////
+    // Internal Methods
+    ////////////////////////
+
+    //
+    // Observes MGovernanceObserver
+    //
+
+    function mAfterShareCapitalChange(uint256 newShareCapital)
+        internal
+    {
+        // update total voting power of the equity token
+        if (_t._type == Gov.TokenType.Equity) {
+            Gov.setEquityTokenTotalVotingPower(_t, IEquityToken(_t._token), newShareCapital);
+        }
+    }
+
 }

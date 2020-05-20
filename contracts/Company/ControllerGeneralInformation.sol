@@ -205,11 +205,7 @@ contract ControllerGeneralInformation is
         amendCompanyValuation(resolutionId, companyValuationEurUlps);
     }
 
-
-    // todo: special resolution with SHR initiative to start and None action
     // todo: generic (None) THR
-
-
 
     //
     // Migration storage access
@@ -226,7 +222,7 @@ contract ControllerGeneralInformation is
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
         this.amendAgreement(ISHAUrl);
-        _shareCapital = shareCapital;
+        setShareCapital(shareCapital);
         _authorizedCapital = authorizedCapital;
         _companyValuationEurUlps = companyValuationEurUlps;
     }
@@ -255,7 +251,7 @@ contract ControllerGeneralInformation is
     {
         // set new valuation
         _companyValuationEurUlps = newCompanyValuationEurUlps;
-        // todo: call observer with new valuation - other may nodules need to know it
+        // TODO: call observer with new valuation - other may nodules need to know it
         // e.g. this may trigger a downround when valuation increases
         emit LogCompanyValuationAmended(resolutionId, newCompanyValuationEurUlps);
     }
@@ -266,8 +262,7 @@ contract ControllerGeneralInformation is
     )
         internal
     {
-        // set new share capital
-        _shareCapital = newShareCapital;
+        setShareCapital(newShareCapital);
         emit LogShareCapitalAmended(resolutionId, newShareCapital);
     }
 
@@ -290,5 +285,18 @@ contract ControllerGeneralInformation is
     {
         // only this contract can amend ISHA typically due to resolution
         return legalRepresentative == address(this);
+    }
+
+    ////////////////////////
+    // Private Methods
+    ////////////////////////
+
+    function setShareCapital(uint256 newShareCapital)
+        private
+    {
+        // set new share capital
+        _shareCapital = newShareCapital;
+        // call observer in final contract
+        mAfterShareCapitalChange(newShareCapital);
     }
 }
