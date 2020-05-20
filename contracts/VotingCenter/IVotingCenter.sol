@@ -62,7 +62,9 @@ contract IVotingCenter is IContractId {
             uint256 against,
             uint256 offchainInFavor,
             uint256 offchainAgainst,
+            uint256 tokenVotingPower,
             uint256 totalVotingPower,
+            uint256 campaignQuorumTokenAmount,
             address initiator,
             bool hasObserverInterface
         );
@@ -86,8 +88,33 @@ contract IVotingCenter is IContractId {
             uint32[5] deadlines
         );
 
+    /// @notice obtains proposal state without time transitions
+    /// @dev    used mostly to detect propositions requiring timed transitions
+    function proposal(bytes32 proposalId)
+        public
+        constant
+        returns (
+            uint8 s,
+            address token,
+            uint256 snapshotId,
+            address initiator,
+            address votingLegalRep,
+            uint256 campaignQuorumTokenAmount,
+            uint256 offchainVotingPower,
+            uint256 action,
+            bytes actionPayload,
+            bool enableObserver,
+            uint32[5] deadlines
+        );
+
     /// @notice tells if voter cast a vote for particular proposal
     function isVoteCast(bytes32 proposalId, address voter)
+        public
+        constant
+        returns (bool);
+
+    /// @notice tells if proposal with given id was opened
+    function hasProposal(bytes32 proposalId)
         public
         constant
         returns (bool);

@@ -115,7 +115,7 @@ library VotingProposal {
         uint32 votingPeriod,
         address votingLegalRep,
         uint32 offchainVotePeriod,
-        uint256 offchainVotingPower,
+        uint256 totalVotingPower,
         uint256 action,
         bool enableObserver
     )
@@ -123,6 +123,7 @@ library VotingProposal {
     {
         uint256 totalTokenVotes = token.totalSupplyAt(snapshotId);
         require(totalTokenVotes > 0, "NF_VC_EMPTY_TOKEN");
+        require(totalVotingPower == 0 || totalVotingPower >= totalTokenVotes, "NF_VC_TOTPOWER_LT_TOKEN");
 
         // set initial deadlines
         uint32[STATES_COUNT] memory deadlines;
@@ -138,10 +139,15 @@ library VotingProposal {
         p.token = token;
         p.snapshotId = snapshotId;
         p.observing = enableObserver;
-        p.campaignQuorumTokenAmount = Math.decimalFraction(totalTokenVotes, campaignQuorumFraction);
-        p.initiator = IVotingObserver(msg.sender);
+
         p.votingLegalRep = votingLegalRep;
-        p.offchainVotingPower = offchainVotingPower;
+        p.offchainVotingPower = totalVotingPower > 0 ? Math.sub(totalVotingPower, totalTokenVotes) : 0;
+
+        // campaign must cross total voting power
+        p.campaignQuorumTokenAmount = Math.decimalFraction(totalTokenVotes + p.offchainVotingPower, campaignQuorumFraction);
+        require(p.campaignQuorumTokenAmount <= totalTokenVotes, "NF_VC_NO_CAMP_VOTING_POWER");
+
+        p.initiator = IVotingObserver(msg.sender);
         p.deadlines = deadlines;
         p.state = State.Campaigning;
         p.action = action;

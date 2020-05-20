@@ -57,6 +57,13 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     campaignDuration: bn(daysToSeconds(2)),
     campaignQuorumFraction: Q18.mul("0.1"),
   });
+  const campaignNoOffchainParams = Object.assign({}, noCampaignProposalParams, {
+    campaignDuration: bn(daysToSeconds(2)),
+    campaignQuorumFraction: Q18.mul("0.1"),
+    offchainVotePeriod: zero,
+    offchainVotingPower: zero,
+    votingLegalRep: ZERO_ADDRESS,
+  });
   const noVotingPeriodParams = Object.assign({}, noCampaignProposalParams, {
     votingPeriod: zero,
     offchainVotePeriod: zero,
@@ -96,9 +103,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     it("should allow to open a proposal in public", async () => {
       const proposalId = randomBytes32();
       await issueTokens(2);
+      expect(await votingContract.hasProposal(proposalId)).to.be.false;
       const proposal = await openProposal(proposalId, noCampaignProposalParams);
       expect(proposal[0]).to.be.bignumber.eq(ProposalState.Public);
       expect(proposal[3]).to.eq(owner);
+      expect(await votingContract.hasProposal(proposalId)).to.be.true;
     });
 
     it("should allow to open a proposal in campaign", async () => {
@@ -352,7 +361,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
 
     beforeEach(async () => {
       // test works only with fraction below
-      expect(campaignProposalParams.campaignQuorumFraction).to.be.bignumber.eq(Q18.mul("0.1"));
+      expect(campaignNoOffchainParams.campaignQuorumFraction).to.be.bignumber.eq(Q18.mul("0.1"));
       holders = {};
       holders[accounts[0]] = Q18.mul("0.1").sub(1);
       holders[accounts[1]] = one;
@@ -361,7 +370,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       expect(await token.totalSupply()).to.be.bignumber.eq(Q18);
       // open proposal
       proposalId = randomBytes32();
-      proposal = await openProposal(proposalId, campaignProposalParams);
+      // campaignNoOffchainParams used for simple campaign quorum calculation, off chain votes not included
+      proposal = await openProposal(proposalId, campaignNoOffchainParams);
     });
 
     it("reaching the campaign-quorum before the campaign's end time logs an event and shifts deadlines", async () => {
@@ -377,7 +387,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         tx,
         proposalId,
         owner,
-        votingLegalRep,
+        ZERO_ADDRESS,
         ProposalState.Campaigning,
         ProposalState.Public,
       );
@@ -414,6 +424,18 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       expect(hasEvent(tx, "LogProposalStateTransition")).to.be.false;
       const finalProposal = await votingContract.proposal(proposalId);
       expect(finalProposal).to.deep.eq(timedProposal);
+    });
+
+    it("reject campaign when token voting power less than campaign quorum", async () => {
+      const params = Object.assign({}, campaignProposalParams, {
+        offchainVotingPower: Q18.add(1),
+        campaignQuorumFraction: Q18.mul("0.5"),
+      });
+      await expect(openProposal(randomBytes32(), params)).to.be.rejectedWith(
+        "NF_VC_NO_CAMP_VOTING_POWER",
+      );
+      const passableParams = Object.assign({}, params, { offchainVotingPower: Q18 });
+      await openProposal(randomBytes32(), passableParams);
     });
   });
 
@@ -1349,7 +1371,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     // expect(proposal[3]).to.eq(owner);
     expect(proposal[4]).to.eq(params.votingLegalRep);
     const supply = await token.totalSupplyAt(proposal[2]);
-    const quorumTokenAmount = divRound(params.campaignQuorumFraction.mul(supply), Q18);
+    // campating quorum amount based on token and offchain power
+    const quorumTokenAmount = divRound(
+      params.campaignQuorumFraction.mul(supply.add(params.offchainVotingPower)),
+      Q18,
+    );
     expect(proposal[5]).to.be.bignumber.eq(quorumTokenAmount);
     expect(proposal[6]).to.be.bignumber.eq(params.offchainVotingPower);
     expect(proposal[7]).to.be.bignumber.eq(params.action);
@@ -1460,24 +1486,33 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     const proposal = await votingContract.proposal(proposalId);
     const tally = await votingContract.tally(proposalId);
     // total voting power is offchain power + token power
-    const totalVotingPower = proposal[6].add(await token.totalSupplyAt(proposal[2]));
+    const tokenVotingPower = await token.totalSupplyAt(proposal[2]);
+    const totalVotingPower = proposal[6].add(tokenVotingPower);
     expect(tally[0]).to.be.bignumber.eq(ProposalState.Final);
     expect(tally[1]).to.be.bignumber.eq(pro);
     expect(tally[2]).to.be.bignumber.eq(contra);
     expect(tally[3]).to.be.bignumber.eq(proOffchain);
     expect(tally[4]).to.be.bignumber.eq(contraOffchain);
-    expect(tally[5]).to.be.bignumber.eq(totalVotingPower);
-    expect(tally[6]).to.eq(initiator);
-    expect(tally[7]).to.eq(observing);
+    expect(tally[5]).to.be.bignumber.eq(tokenVotingPower);
+    expect(tally[6]).to.be.bignumber.eq(totalVotingPower);
+    expect(tally[7]).to.be.bignumber.eq(proposal[5]);
+    expect(tally[8]).to.eq(initiator);
+    expect(tally[9]).to.eq(observing);
   }
 
   async function addProposal(votingCenter, proposalId, defaultParams, txParamsOvr) {
     const params = Object.assign({}, defaultParams, { proposalId, token: token.address });
-    const txParams = Object.assign({ from: owner }, txParamsOvr || {});
-    // console.log(params);
     // should be ordered as defaultProposalParams
     const list = Object.values(params);
-    // console.log(list);
+    const txParams = Object.assign({ from: owner }, txParamsOvr || {});
+    // replace offchain voting power with total voting power by adding token balance at snapshot - 1
+    if (params.offchainVotingPower.gt(0)) {
+      const snapshotId = await token.currentSnapshotId();
+      // take sealed snapshot
+      const tokenVotingPower = await token.totalSupplyAt(snapshotId.sub(1));
+      // no.7 is total voting power
+      list[7] = params.offchainVotingPower.add(tokenVotingPower);
+    }
     const tx = await votingCenter.addProposal(...list, txParams);
     return [tx, params];
   }

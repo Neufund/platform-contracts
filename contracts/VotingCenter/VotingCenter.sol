@@ -130,7 +130,7 @@ contract VotingCenter is IVotingCenter {
         uint32 votingPeriod,
         address votingLegalRep,
         uint32 offchainVotePeriod,
-        uint256 offchainVotingPower,
+        uint256 totalVotingPower,
         uint256 action,
         bytes actionPayload,
         bool enableObserver
@@ -150,8 +150,8 @@ contract VotingCenter is IVotingCenter {
             "NF_VC_CAMP_INCONSISTENT"
         );
         require(
-            offchainVotePeriod >= 0 && offchainVotingPower > 0 && votingLegalRep != address(0) ||
-            offchainVotePeriod == 0 && offchainVotingPower == 0 && votingLegalRep == address(0),
+            offchainVotePeriod >= 0 && totalVotingPower > 0 && votingLegalRep != address(0) ||
+            offchainVotePeriod == 0 && totalVotingPower == 0 && votingLegalRep == address(0),
             "NF_VC_TALLY_INCONSISTENT"
         );
 
@@ -167,7 +167,7 @@ contract VotingCenter is IVotingCenter {
             votingPeriod,
             votingLegalRep,
             offchainVotePeriod,
-            offchainVotingPower,
+            totalVotingPower,
             action,
             enableObserver
         );
@@ -214,7 +214,9 @@ contract VotingCenter is IVotingCenter {
             uint256 against,
             uint256 offchainInFavor,
             uint256 offchainAgainst,
+            uint256 tokenVotingPower,
             uint256 totalVotingPower,
+            uint256 campaignQuorumTokenAmount,
             address initiator,
             bool hasObserverInterface
         )
@@ -228,7 +230,9 @@ contract VotingCenter is IVotingCenter {
         offchainAgainst = p.offchainAgainst;
         initiator = p.initiator;
         hasObserverInterface = p.observing;
-        totalVotingPower = p.token.totalSupplyAt(p.snapshotId) + p.offchainVotingPower;
+        tokenVotingPower = p.token.totalSupplyAt(p.snapshotId);
+        totalVotingPower = tokenVotingPower + p.offchainVotingPower;
+        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
     }
 
     function timedProposal(bytes32 proposalId)
@@ -264,13 +268,54 @@ contract VotingCenter is IVotingCenter {
         actionPayload = p.actionPayload;
     }
 
+    function proposal(bytes32 proposalId)
+        public
+        constant
+        returns (
+            uint8 s,
+            address token,
+            uint256 snapshotId,
+            address initiator,
+            address votingLegalRep,
+            uint256 campaignQuorumTokenAmount,
+            uint256 offchainVotingPower,
+            uint256 action,
+            bytes actionPayload,
+            bool enableObserver,
+            uint32[5] deadlines
+            )
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+
+        s = uint8(p.state);
+        token = p.token;
+        snapshotId = p.snapshotId;
+        enableObserver = p.observing;
+        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
+        initiator = p.initiator;
+        votingLegalRep = p.votingLegalRep;
+        offchainVotingPower = p.offchainVotingPower;
+        deadlines = p.deadlines;
+        action = p.action;
+        actionPayload = p.actionPayload;
+    }
+
     function isVoteCast(bytes32 proposalId, address voter)
         public
         constant
         returns (bool)
     {
-        VotingProposal.Proposal storage p = _proposals[proposalId];
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
         return p.hasVoted[voter];
+    }
+
+    function hasProposal(bytes32 proposalId)
+        public
+        constant
+        returns (bool)
+    {
+        VotingProposal.Proposal storage p = _proposals[proposalId];
+        return p.token != address(0);
     }
 
     //
@@ -355,40 +400,6 @@ contract VotingCenter is IVotingCenter {
             votePreferences,
             r, s, v
         );
-    }
-
-    /// @notice obtains proposal state without time transitions
-    /// @dev    used mostly to detect propositions requiring timed transitions
-    function proposal(bytes32 proposalId)
-        public
-        constant
-        returns (
-            VotingProposal.State s,
-            address token,
-            uint256 snapshotId,
-            address initiator,
-            address votingLegalRep,
-            uint256 campaignQuorumTokenAmount,
-            uint256 offchainVotingPower,
-            uint256 action,
-            bytes actionPayload,
-            bool enableObserver,
-            uint32[5] deadlines
-            )
-    {
-        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
-
-        s = p.state;
-        token = p.token;
-        snapshotId = p.snapshotId;
-        enableObserver = p.observing;
-        campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
-        initiator = p.initiator;
-        votingLegalRep = p.votingLegalRep;
-        offchainVotingPower = p.offchainVotingPower;
-        deadlines = p.deadlines;
-        action = p.action;
-        actionPayload = p.actionPayload;
     }
 
     function handleStateTransitions(bytes32 proposalId)
