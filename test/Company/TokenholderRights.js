@@ -17,7 +17,6 @@ import {
   GovAction,
   GovActionEscalation,
   GovActionLegalRep,
-  hasVotingRights,
   isVotingEscalation,
 } from "../helpers/govState";
 
@@ -74,7 +73,9 @@ contract("TokenholderRights", () => {
         Q18,
         Q18.mul("0.7"),
         GovTokenVotingRule.Prorata,
+        GovActionLegalRep.None,
         GovActionLegalRep.Nominee,
+        true,
       ];
       const coc = encodeBylaw(...sourceBylaw);
       const cocDecode = decodeBylaw(GovAction.ChangeOfControl, coc);
@@ -87,33 +88,16 @@ contract("TokenholderRights", () => {
       sourceBylaw[5] = GovTokenVotingRule.NoVotingRights;
       const cocNv = encodeBylaw(...sourceBylaw);
       const cocDecodeNv = decodeBylaw(GovAction.ChangeOfControl, cocNv);
-      expect(cocDecodeNv[1]).to.be.bignumber.eq(GovActionEscalation.Nominee);
-      expect(cocDecodeNv[2]).to.be.bignumber.eq(0);
-      expect(cocDecodeNv[3]).to.be.bignumber.eq(0);
-      expect(cocDecodeNv[4]).to.be.bignumber.eq(0);
-      expect(cocDecodeNv[5]).to.be.bignumber.eq(0);
+      expect(cocDecodeNv[1]).to.be.bignumber.eq(GovActionEscalation.THR);
+      expect(cocDecodeNv[2]).to.be.bignumber.eq(dayInSeconds);
+      expect(cocDecodeNv[3]).to.be.bignumber.eq(Q18);
+      expect(cocDecodeNv[4]).to.be.bignumber.eq(Q18);
+      expect(cocDecodeNv[5]).to.be.bignumber.eq(Q18.mul("0.7"));
       expect(cocDecodeNv[6]).to.be.bignumber.eq(GovTokenVotingRule.NoVotingRights);
-      expect(cocDecodeNv[7]).to.be.bignumber.eq(GovActionLegalRep.Nominee);
+      expect(cocDecodeNv[7]).to.be.bignumber.eq(GovActionLegalRep.None);
+      expect(cocDecodeNv[8]).to.be.bignumber.eq(GovActionLegalRep.Nominee);
+      expect(cocDecodeNv[9]).to.be.bignumber.eq(1);
     });
-
-    async function expectDeployedBylaws() {
-      const bylaws = await tokenholderRights.ACTION_BYLAWS();
-      const hexBylaws = bylaws.map(bn => `0x${leftPad(bn.toString(16), 14)}`);
-      expectDefaultBylaws(hexBylaws);
-      // get decoded bylaws, encode them and verify
-      for (let ii = 0; ii < 24; ii += 1) {
-        const bylaw = await tokenholderRights.getBylaw(ii);
-        const decodedBylaw = await tokenholderRights.decodeBylaw(bylaw);
-        const reEncodedBylaw = encodeBylaw(...onchainDecodedBylawToEnums(decodedBylaw));
-        expect(bylaw, getKeyByValue(GovAction, ii)).to.be.bignumber.eq(reEncodedBylaw);
-        expect(bylaw).to.be.bignumber.eq(bylaws[ii]);
-      }
-      // get default bylaws
-      const noneBylaw = await tokenholderRights.getDefaultBylaw();
-      expect(noneBylaw).to.be.bignumber.eq(bylaws[GovAction.None]);
-      const restrictedBylaw = await tokenholderRights.getRestrictedBylaw();
-      expect(restrictedBylaw).to.be.bignumber.eq(bylaws[GovAction.RestrictedNone]);
-    }
 
     it("should deploy default bylaws with no voting rights", async () => {
       await deployRights(nonVotingRightsOvr);
@@ -137,6 +121,8 @@ contract("TokenholderRights", () => {
         Q18.mul("0.01"),
         GovTokenVotingRule.Prorata,
         GovActionLegalRep.Nominee,
+        GovActionLegalRep.CompanyLegalRep,
+        true,
       );
       bylaws[GovAction.ChangeOfControl] = coc;
       const fullRights = applyBylawsToRights(Object.assign({}, defaultTokenholderTerms), bylaws);
@@ -155,6 +141,8 @@ contract("TokenholderRights", () => {
       expect(cocDecode[4]).to.be.bignumber.eq(1);
       expect(cocDecode[5]).to.be.bignumber.eq(GovTokenVotingRule.Prorata);
       expect(cocDecode[6]).to.be.bignumber.eq(GovActionLegalRep.Nominee);
+      expect(cocDecode[7]).to.be.bignumber.eq(GovActionLegalRep.CompanyLegalRep);
+      expect(cocDecode[8]).to.be.bignumber.eq(1);
     });
   });
 
@@ -168,7 +156,28 @@ contract("TokenholderRights", () => {
       frac(bylaw[4]),
       bylaw[5].toNumber(),
       bylaw[6].toNumber(),
+      bylaw[7].toNumber(),
+      bylaw[8].eq(1),
     ];
+  }
+
+  async function expectDeployedBylaws() {
+    const bylaws = await tokenholderRights.ACTION_BYLAWS();
+    const hexBylaws = bylaws.map(bn => `0x${leftPad(bn.toString(16), 14)}`);
+    expectDefaultBylaws(hexBylaws);
+    // get decoded bylaws, encode them and verify
+    for (let ii = 0; ii < 24; ii += 1) {
+      const bylaw = await tokenholderRights.getBylaw(ii);
+      const decodedBylaw = await tokenholderRights.decodeBylaw(bylaw);
+      const reEncodedBylaw = encodeBylaw(...onchainDecodedBylawToEnums(decodedBylaw));
+      expect(bylaw, getKeyByValue(GovAction, ii)).to.be.bignumber.eq(reEncodedBylaw);
+      expect(bylaw).to.be.bignumber.eq(bylaws[ii]);
+    }
+    // get default bylaws
+    const noneBylaw = await tokenholderRights.getDefaultBylaw();
+    expect(noneBylaw).to.be.bignumber.eq(bylaws[GovAction.None]);
+    const restrictedBylaw = await tokenholderRights.getRestrictedBylaw();
+    expect(restrictedBylaw).to.be.bignumber.eq(bylaws[GovAction.RestrictedNone]);
   }
 
   async function deployRights(termsOvr) {
@@ -208,19 +217,6 @@ contract("TokenholderRights", () => {
     GovActionEscalation.CompanyLegalRep,
   ];
 
-  function downgradeEscalation(escalation) {
-    switch (escalation) {
-      case GovActionEscalation.THR:
-        return GovActionEscalation.Nominee;
-      case GovActionEscalation.SHR:
-        return GovActionEscalation.CompanyLegalRep;
-      default:
-        return escalation;
-    }
-  }
-
-  const expectedNonVotingEscalations = expectedEscalations.map(e => downgradeEscalation(e));
-
   function escalationToRep(escalation) {
     switch (escalation) {
       case GovActionEscalation.THR:
@@ -232,17 +228,28 @@ contract("TokenholderRights", () => {
     }
   }
 
-  const expectedLegalReps = expectedEscalations.map(e => escalationToRep(e));
+  const expectedLegalRep = e =>
+    e === GovActionEscalation.THR ? GovActionLegalRep.None : escalationToRep(e);
 
   function expectDefaultBylaws(bylaws) {
     expect(bylaws.length).to.eq(Object.keys(GovAction).length);
-    const escalations = hasVotingRights(sourceTerms.GENERAL_VOTING_RULE)
-      ? expectedEscalations
-      : expectedNonVotingEscalations;
     for (let ii = 0; ii < bylaws.length; ii += 1) {
       const decodedBylaw = decodeBylaw(ii, bylaws[ii]);
-      expect(decodedBylaw[1], decodedBylaw[0]).to.be.bignumber.eq(escalations[ii]);
-      expect(decodedBylaw[7], decodedBylaw[0]).to.be.bignumber.eq(expectedLegalReps[ii]);
+      // console.log(decodedBylaw);
+      expect(decodedBylaw[1], decodedBylaw[0]).to.be.bignumber.eq(expectedEscalations[ii]);
+      // voting initiator
+      expect(decodedBylaw[8], decodedBylaw[0]).to.be.bignumber.eq(
+        escalationToRep(expectedEscalations[ii]),
+      );
+      // voting legal rep
+      // console.log(escalations[ii]);
+      expect(decodedBylaw[7], decodedBylaw[0]).to.be.bignumber.eq(
+        expectedLegalRep(expectedEscalations[ii]),
+      );
+      // tokenholder voting initiative (only None has it)
+      expect(decodedBylaw[9], decodedBylaw[0]).to.be.bignumber.eq(
+        ii === GovAction.None && isVotingEscalation(expectedEscalations[ii]) ? 1 : 0,
+      );
       expectBylawCore(decodedBylaw);
     }
   }
