@@ -43,7 +43,8 @@ contract TestETOCommitmentSingleTokenController is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms
+        ETOTerms etoTerms,
+        IEquityToken equityToken
     )
         public
         Agreement(universe.accessPolicy(), universe.forkArbiter())
@@ -51,6 +52,7 @@ contract TestETOCommitmentSingleTokenController is
         ETO_TERMS = etoTerms;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
+        EQUITY_TOKEN = equityToken;
     }
 
     ////////////////////////
@@ -58,7 +60,7 @@ contract TestETOCommitmentSingleTokenController is
     ////////////////////////
 
     function setStartDate(ETOTerms /*etoTerms*/, IEquityToken equityToken, uint256 /*startDate*/) public {
-        EQUITY_TOKEN = equityToken;
+        require(equityToken == EQUITY_TOKEN, "NF_TEST_EQ_TOKEN_MISMATCH");
         COMMITMENT_OBSERVER = IETOCommitmentObserver(EQUITY_TOKEN.tokenController());
     }
 
@@ -139,6 +141,7 @@ contract TestETOCommitmentSingleTokenController is
     {
         _state = newState;
         _stateTransitions[uint256(_state)] = block.timestamp;
+        require(COMMITMENT_OBSERVER != address(0), "NF_TEST_OBSERVER_REQUIRED");
         COMMITMENT_OBSERVER.onStateTransition(prevState, newState);
     }
 

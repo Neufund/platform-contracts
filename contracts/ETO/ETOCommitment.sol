@@ -216,7 +216,8 @@ contract ETOCommitment is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms
+        ETOTerms etoTerms,
+        IEquityToken equityToken
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
         ETOTimedStateMachine(etoTerms.DURATION_TERMS())
@@ -243,6 +244,7 @@ contract ETOCommitment is
         CURRENCY_RATES = ITokenExchangeRateOracle(universe.tokenExchangeRateOracle());
 
         ETO_TERMS = etoTerms;
+        EQUITY_TOKEN = equityToken;
 
         MIN_TICKET_EUR_ULPS = etoTerms.MIN_TICKET_EUR_ULPS();
         MAX_AVAILABLE_TOKENS = etoTerms.MAX_AVAILABLE_TOKENS();
@@ -274,28 +276,29 @@ contract ETOCommitment is
         withStateTransition()
         onlyState(ETOState.Setup)
     {
+        assert(startDate < 0xFFFFFFFF);
+
         require(etoTerms == ETO_TERMS);
-        if (address(EQUITY_TOKEN) == address(0)) {
+        // subsequent calls to start date cannot change equity token address
+        require(equityToken == EQUITY_TOKEN, "NF_ETO_EQ_TOKEN_DIFF");
+        // get current start date
+        uint256 startAt = startOfInternal(ETOState.Whitelist);
+        if (startAt == 0) {
             require(equityToken.decimals() == etoTerms.TOKEN_TERMS().EQUITY_TOKEN_DECIMALS());
             // log set terms only once
             emit LogTermsSet(msg.sender, address(etoTerms), address(equityToken));
-        } else {
-            // subsequent calls to start date cannot change equity token address
-            require(equityToken == EQUITY_TOKEN, "NF_ETO_EQ_TOKEN_DIFF");
         }
-        assert(startDate < 0xFFFFFFFF);
-        // must be more than NNN days (platform terms!)
+        // must be more than duration set in terms constraints
         require(
             startDate > block.timestamp && startDate - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION(),
             "NF_ETO_DATE_TOO_EARLY");
+
         // prevent re-setting start date if ETO starts too soon
-        uint256 startAt = startOfInternal(ETOState.Whitelist);
         // block.timestamp must be less than startAt, otherwise timed state transition is done
         require(
             startAt == 0 || (startAt - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION()),
             "NF_ETO_START_TOO_SOON");
-        // setup token and token controller
-        EQUITY_TOKEN = equityToken;
+        // token controller
         setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
         // run state machine
         runStateMachine(uint32(startDate));

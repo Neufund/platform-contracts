@@ -15,13 +15,15 @@ contract MockETOCommitment is
         Universe universe,
         address nominee,
         address companyLegalRep,
-        ETOTerms etoTerms
+        ETOTerms etoTerms,
+        IEquityToken equityToken
     )
         ETOCommitment(
             universe,
             nominee,
             companyLegalRep,
-            etoTerms
+            etoTerms,
+            equityToken
         )
     public
     {
