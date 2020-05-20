@@ -5,6 +5,7 @@ const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const deployETO = require("./deployETO").deployETO;
+const deployGovLib = require("./deployETO").deployGovLib;
 const checkETO = require("./deployETO").checkETO;
 const deployWhitelist = require("./deployETO").deployWhitelist;
 const {
@@ -49,6 +50,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
       [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
     };
+    // deploy library and use single lib for all ETOs
+    const govLib = await deployGovLib(artifacts);
     const describedETOs = {};
     for (const state of Object.keys(etoFixtures)) {
       const etoVars = etoFixtures[state];
@@ -68,6 +71,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
+        govLib,
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -262,7 +266,17 @@ function findNomineeForEto(etoName, fas) {
   throw new Error(`Cannot find Nominee for eto ${etoName}`);
 }
 
-async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
+async function simulateETO(
+  DEPLOYER,
+  CONFIG,
+  universe,
+  nominee,
+  issuer,
+  etoDefiniton,
+  fas,
+  final,
+  govLib,
+) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
@@ -275,6 +289,8 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
     etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
+    govLib,
+    true,
   );
   // nominee sets agreement
   console.log("Nominee sets agreements");

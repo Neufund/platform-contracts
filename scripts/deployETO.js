@@ -8,6 +8,8 @@ const confirm = require("node-ask").confirm;
 const fs = require("fs");
 const { join } = require("path");
 const deployETO = require("../migrations/deployETO").deployETO;
+const canDeployETO = require("../migrations/deployETO").canDeployETO;
+const deployGovLib = require("../migrations/deployETO").deployGovLib;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
@@ -83,6 +85,11 @@ module.exports = async function deploy() {
   }
 
   try {
+    const [canDeploy, canControlNeu] = await canDeployETO(artifacts, DEPLOYER, CONFIG, universe);
+    if (!canDeploy) {
+      throw new Error("ETO deployment checks failed");
+    }
+    const govLib = await deployGovLib(artifacts);
     await deployETO(
       artifacts,
       DEPLOYER,
@@ -95,6 +102,8 @@ module.exports = async function deploy() {
       durTerms,
       tokenTerms,
       etoTerms.ETO_TERMS_CONSTRAINTS,
+      govLib,
+      canControlNeu,
     );
   } catch (e) {
     console.log(e);

@@ -1,2 +1,2 @@
 node_modules
-contracts/Company/Extras/VotingCenter.sol
+contracts/VotingCenter/VotingCenter.sol
