@@ -57,16 +57,6 @@ contract ControllerETO is
     address[] internal _offerings;
 
     ////////////////////////
-    // Modifiers
-    ////////////////////////
-
-    // require caller is ETO in universe
-    modifier onlyUniverseETO() {
-        require(inUniverseCommitment(msg.sender), NF_ETC_ETO_NOT_U);
-        _;
-    }
-
-    ////////////////////////
     // Constructor
     ////////////////////////
 
@@ -89,16 +79,13 @@ contract ControllerETO is
     function startNewOffering(bytes32 resolutionId, IETOCommitment commitment)
         public
         onlyStates(Gov.State.Setup, Gov.State.Funded)
-        withNonAtomicExecution(resolutionId, commitmentUniverseValidator)
+        withNonAtomicExecution(resolutionId, defaultValidator)
         withGovernance(
             resolutionId,
             Gov.Action.RegisterOffer,
             commitment.etoTerms().INVESTOR_OFFERING_DOCUMENT_URL()
         )
-        // withExclusiveAction(resolutionId, Action.RegisterOffer)
     {}
-
-    // TODO: implement cancelDelistedOffering(resolution, commitment) to fail resolution if commitment delisted, onlyCompany
 
     //
     // Token Generation part of ITokenController
@@ -119,7 +106,7 @@ contract ControllerETO is
         constant
         returns (bool allow)
     {
-        return _g._state == Gov.State.Offering && isActiveOffering(sender, Gov.ExecutionState.Executing);
+        return _g._state == Gov.State.Offering && isOfferingInState(sender, Gov.ExecutionState.Executing);
     }
 
     // only active commitment can transfer tokens
@@ -128,7 +115,7 @@ contract ControllerETO is
         constant
         returns (bool allow)
     {
-        return isActiveOffering(from, Gov.ExecutionState.Completed) && broker == from;
+        return isOfferingInState(from, Gov.ExecutionState.Completed) && broker == from;
     }
     //
     // Implements IETOCommitmentObserver
@@ -136,7 +123,6 @@ contract ControllerETO is
 
     function onStateTransition(ETOState, ETOState newState)
         public
-        onlyUniverseETO
     {
         // resolution id is calculated from eto address
         bytes32 resolutionId = keccak256(abi.encodePacked(address(msg.sender)));
@@ -186,7 +172,7 @@ contract ControllerETO is
     // Private functions
     ////////////////////////
 
-    function isActiveOffering(address commitment, Gov.ExecutionState expectedState)
+    function isOfferingInState(address commitment, Gov.ExecutionState expectedState)
         internal
         constant
         returns (bool)
@@ -195,31 +181,6 @@ contract ControllerETO is
         Gov.ResolutionExecution storage e = _g._resolutions[resolutionId];
         Gov.ExecutionState s = e.state;
         return s == expectedState;
-    }
-
-    function commitmentUniverseValidator(Gov.ResolutionExecution storage /*e*/)
-        private
-        constant
-        returns (string memory code)
-    {
-        // unpack calldata to extract address payload
-        address commitment;
-        assembly {
-            // skip 4 bytes selector and 32 bytes resolution id
-            // _rId := calldataload(4)
-            commitment := calldataload(36)
-        }
-        if (!inUniverseCommitment(commitment)) {
-            return NF_ETC_ETO_NOT_U;
-        }
-    }
-
-    function inUniverseCommitment(address commitment)
-        private
-        constant
-        returns (bool)
-    {
-        return _g.UNIVERSE.isInterfaceCollectionInstance(KNOWN_INTERFACE_COMMITMENT, commitment);
     }
 
     function execOfferCompleted(bytes32 resolutionId, IETOCommitment commitment, ETOState newState)
