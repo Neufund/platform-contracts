@@ -6,7 +6,7 @@ import {
 } from "../../helpers/deployContracts";
 import { daysToSeconds } from "../../helpers/constants";
 import { toBytes32, contractId } from "../../helpers/utils";
-import { prettyPrintGasCost } from "../../helpers/gasUtils";
+import { prettyPrintGasCost, printCodeSize } from "../../helpers/gasUtils";
 import EvmError from "../../helpers/EVMThrow";
 import { CommitmentState } from "../../helpers/commitmentState";
 import {
@@ -69,9 +69,11 @@ contract(
 
     describe("GranularTransferController", () => {
       it("should deploy", async () => {
-        await deployETO();
         await deployController(GranularTransferController);
+        await deployETO();
+        await registerOffering();
         await prettyPrintGasCost("GranularTransferController deploy", equityTokenController);
+        await printCodeSize("GranularTransferController deploy", equityTokenController);
         const cId = await equityTokenController.contractId();
         expect(cId[0]).to.eq(contractId("SingleEquityTokenController"));
         // temporary override marker
@@ -80,8 +82,9 @@ contract(
 
       describe("post investment transfers on transferable token", () => {
         beforeEach(async () => {
-          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
           await deployController(GranularTransferController);
+          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
+          await registerOffering();
           await makeInvestment(totalShares, inv1DistAmount);
         });
 
@@ -178,8 +181,9 @@ contract(
 
       describe("post investment transfers on non-transferable token", () => {
         beforeEach(async () => {
-          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
           await deployController(GranularTransferController);
+          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
+          await registerOffering();
           await makeInvestment(totalShares, inv1DistAmount);
         });
 
@@ -244,9 +248,11 @@ contract(
 
     describe("RegDTransferController", async () => {
       it("should deploy", async () => {
-        await deployETO();
         await deployController(RegDTransferController);
+        await deployETO();
+        await registerOffering();
         await prettyPrintGasCost("RegDTransferController deploy", equityTokenController);
+        await printCodeSize("GranularTransferController deploy", equityTokenController);
       });
 
       it("should lock during lockin period", async () => {
@@ -257,8 +263,8 @@ contract(
           from: admin,
         });
         // simulate ETO
-        await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
         await deployController(RegDTransferController);
+        await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
         await makeInvestment(totalShares, inv1DistAmount);
         // investor 2 is a regular investor with transfer rights
         await testCommitment._distributeTokens(investor2, "1");
@@ -308,11 +314,6 @@ contract(
         [true, true],
         { from: admin },
       );
-      // start new offering
-      const resolutionId = getCommitmentResolutionId(testCommitment.address);
-      await equityTokenController.startNewOffering(resolutionId, testCommitment.address);
-      // pass equity token to eto commitment
-      await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
     }
 
     async function deployETO(termsOverride, constraintsOverride) {
@@ -339,6 +340,7 @@ contract(
         nominee,
         company,
         etoTerms.address,
+        equityToken.address,
       );
       await universe.setCollectionsInterfaces(
         [knownInterfaces.commitmentInterface, knownInterfaces.termsInterface],
@@ -347,6 +349,16 @@ contract(
         { from: admin },
       );
       await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
+    }
+
+    async function registerOffering() {
+      // start new offering
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      await equityTokenController.startNewOffering(resolutionId, testCommitment.address, {
+        from: company,
+      });
+      // pass equity token to eto commitment
+      await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
     }
 
     async function makeInvestment(shares, inv1amount) {

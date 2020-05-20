@@ -191,37 +191,14 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       );
     });
 
-    it("rejects ETO start from ETO not in universe", async () => {
+    it("accepts ETO not registered in universe", async () => {
       await universe.setCollectionInterface(
         knownInterfaces.commitmentInterface,
         testCommitment.address,
         false,
         { from: admin },
       );
-      await expect(runOffering()).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
-    });
-
-    it("rejects ETO registration when not in universe", async () => {
-      // deploy new terms but use same controller
-      // default terms have non transferable token
-      await deployETO({
-        ENABLE_TRANSFERS_ON_SUCCESS: true,
-        MAX_TICKET_EUR_ULPS: Q18.mul(100000),
-      });
-      await universe.setCollectionInterface(
-        knownInterfaces.commitmentInterface,
-        testCommitment.address,
-        false,
-        { from: admin },
-      );
-      const newCommitment = testCommitment;
-      const newResolutionId = getCommitmentResolutionId(newCommitment.address);
-      // this should trigger custom validator
-      await expect(
-        equityTokenController.startNewOffering(newResolutionId, newCommitment.address, {
-          from: company,
-        }),
-      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
+      await runOffering();
     });
 
     it("no state transition on second ETO start date", async () => {
@@ -423,19 +400,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await expect(
         testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
       ).to.be.rejectedWith("NF_ETC_BAD_STATE");
-    });
-
-    it("rejects approve ETO from registered ETO that was removed from universe", async () => {
-      await runOffering();
-      await universe.setCollectionsInterfaces(
-        [knownInterfaces.commitmentInterface],
-        [testCommitment.address],
-        [false],
-        { from: admin },
-      );
-      await expect(
-        testCommitment._triggerStateTransition(CommitmentState.Whitelist, CommitmentState.Claim),
-      ).to.be.rejectedWith("NF_ETC_ETO_NOT_U");
     });
 
     it("should fail ETO", async () => {
@@ -696,7 +660,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
 
     it("should allow transfer if transfers disabled only from registered ETO and only after Setup state", async () => {
       await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
-      await deployController();
       await registerOffering();
       await testTransfersInOffering(false);
     });
@@ -706,7 +669,6 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
-      await deployController();
       await registerOffering();
       await testTransfersInOffering(true);
     });
@@ -731,9 +693,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await createAccessPolicy(accessPolicy, [{ subject: admin, role: roles.companyUpgradeAdmin }]);
       // deploy new mocked token controller for same company
       newController = await MockSingleEquityTokenController.new(universe.address, company);
+      await prettyPrintGasCost("MockSingleEquityTokenController deploy", equityTokenController);
+      await printCodeSize("MockSingleEquityTokenController code size", equityTokenController);
     });
 
-    it("should migrate empty controller", async () => {
+    it.skip("should migrate empty controller", async () => {
       // abuse migration function to keep controller empty in funded state
       await equityTokenController.finishMigrateFrom(ZERO_ADDRESS, GovState.Funded, { from: admin });
       await migrateController(equityTokenController, newController);
@@ -1074,11 +1038,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       );
 
       // start offering replace none token
+      await deployController(equityTokenController);
       await deployETO({
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
-      await deployController(equityTokenController);
       // register new offering
       await registerOffering();
       await runOffering();
@@ -1092,6 +1056,17 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         [tokenholderRights.address],
         [true],
       ]);
+    });
+
+    it("rejects start ETO in setup state not from universe manager", async () => {
+      await deployETO();
+      // in setup state company can do it or role with universe manager
+      await expect(registerOffering(investors[0])).to.be.rejectedWith("NF_GOV_EXEC_ACCESS_DENIED");
+      // universe manager (admin) can register resolution
+      await registerOffering(admin);
+      // company as well
+      await deployETO();
+      await registerOffering(company);
     });
 
     it("rejects amend ISHA in setup with voting rights", async () => {
@@ -1342,6 +1317,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       });
 
       it("should skip events if values not changed");
+
+      it("should start SHR with investor initiative");
     });
 
     describe("economic rights", () => {
@@ -1417,7 +1394,10 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           recycleAfter,
           0,
         );
+        // todo: get funds
       });
+
+      it("should pay dividend via erc20 broker");
 
       it("revert on unexpected token transfer", async () => {
         // token transfer must be done against valid resolution and unpacked promise must be present in data
@@ -1479,8 +1459,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         ENABLE_TRANSFERS_ON_SUCCESS: true,
         MAX_TICKET_EUR_ULPS: Q18.mul(100000),
       });
-      await deployController();
       // register new offering
+      await registerOffering();
       await runOffering();
       // issue equity tokens and move to claim
       await generateTokens(initialBalance);
@@ -1564,6 +1544,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       nominee,
       company,
       etoTerms.address,
+      equityToken.address,
     );
     await universe.setCollectionsInterfaces(
       [knownInterfaces.commitmentInterface, knownInterfaces.termsInterface],
@@ -1574,11 +1555,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
   }
 
-  async function registerOffering() {
+  async function registerOffering(fromAccount) {
     // start new offering
     const resolutionId = getCommitmentResolutionId(testCommitment.address);
     await equityTokenController.startNewOffering(resolutionId, testCommitment.address, {
-      from: company,
+      from: fromAccount || company,
     });
     // pass equity token to eto commitment
     await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");

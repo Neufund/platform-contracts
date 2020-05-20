@@ -201,7 +201,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       await printCodeSize("SingleEquityTokenController deploy", equityTokenController);
       // check getters
       expect(await etoCommitment.etoTerms()).to.eq(etoTerms.address);
-      expect(await etoCommitment.equityToken()).to.eq(ZERO_ADDRESS);
+      expect(await etoCommitment.equityToken()).to.eq(equityToken.address);
       expect(await etoCommitment.nominee()).to.eq(nominee);
       expect(await etoCommitment.companyLegalRep()).to.eq(company);
       const singletons = await etoCommitment.singletons();
@@ -2665,10 +2665,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         );
 
         // token offerings available
-        expect(await equityTokenController.tokenOfferings()).to.deep.eq([
-          [etoCommitment.address],
-          [equityToken.address],
-        ]);
+        expect(await equityTokenController.tokenOfferings()).to.deep.eq([etoCommitment.address]);
 
         const payoutStartOf = claimTs.add(durTable[CommitmentState.Claim]);
         await expectStateStarts(
@@ -3512,6 +3509,21 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       from: admin,
     });
 
+    // deploy equity token
+    if (opts.ovrEquityToken) {
+      // if keeping old equity token, keep old token controller
+      equityToken = opts.ovrEquityToken;
+    } else {
+      equityTokenController = await SingleEquityTokenController.new(universe.address, company);
+      equityToken = await EquityToken.new(
+        universe.address,
+        equityTokenController.address,
+        tokenTerms.address,
+        nominee,
+        company,
+      );
+    }
+
     [etoTerms, etoTermsDict] = await deployETOTerms(
       universe,
       ETOTerms,
@@ -3527,21 +3539,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       nominee,
       company,
       etoTerms.address,
+      equityToken.address,
     );
-    // deploy equity token
-    if (opts.ovrEquityToken) {
-      // if keeping old equity token, keep old token controller
-      equityToken = opts.ovrEquityToken;
-    } else {
-      equityTokenController = await SingleEquityTokenController.new(universe.address, company);
-      equityToken = await EquityToken.new(
-        universe.address,
-        equityTokenController.address,
-        tokenTerms.address,
-        nominee,
-        company,
-      );
-    }
 
     // add ETO contracts to collections in universe in one transaction -> must be atomic
     await universe.setCollectionsInterfaces(
@@ -4036,9 +4035,8 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
         tokenTermsDict.SHARE_NOMINAL_VALUE_ULPS.mul(getTokenPower()),
       ),
     );
-    expect(generalInformation[2]).to.eq(tokenholderRights.address);
-    expect(generalInformation[3]).to.be.bignumber.eq(etoTermsDict.AUTHORIZED_CAPITAL);
-    expect(generalInformation[4]).to.eq(await etoCommitment.signedInvestmentAgreementUrl());
+    expect(generalInformation[2]).to.be.bignumber.eq(etoTermsDict.AUTHORIZED_CAPITAL);
+    expect(generalInformation[3]).to.eq(await etoCommitment.signedInvestmentAgreementUrl());
 
     const tokens = await equityTokenController.tokens();
     expect(tokens[0][0]).to.eq(equityToken.address);
@@ -4047,10 +4045,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     expect(tokens[3][0]).to.eq(tokenholderRights.address);
     expect(tokens[4][0]).to.eq(etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS);
 
-    expect(await equityTokenController.tokenOfferings()).to.deep.eq([
-      [etoCommitment.address],
-      [equityToken.address],
-    ]);
+    expect(await equityTokenController.tokenOfferings()).to.deep.eq([etoCommitment.address]);
     expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(contribution[0]);
     // all tokens still belong to eto smart contract
     expect(await equityToken.balanceOf(etoCommitment.address)).to.be.bignumber.eq(
@@ -4083,11 +4078,11 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   }
 
   async function expectValidRefundState(refundTx, participatingInvestors, icbmEurEquiv) {
-    let expectedTokens = zero;
+    let expectedEurEquiv = zero;
     let expectedNewMoneyEurEquiv = zero;
     for (const investor of participatingInvestors) {
       const ticket = await etoCommitment.investorTicket(investor);
-      expectedTokens = expectedTokens.add(ticket[2]);
+      expectedEurEquiv = expectedEurEquiv.add(ticket[0]);
       expectedNewMoneyEurEquiv = expectedNewMoneyEurEquiv.add(ticket[0]);
       // console.log(`refund for ${investor} ${ticket[2]}`);
     }
@@ -4096,7 +4091,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
       0,
       expectedNewMoneyEurEquiv.sub(icbmEurEquiv || 0),
     );
-    expectLogRefundStarted(refundTx, equityToken.address, expectedTokens, expectedComputedNeu);
+    expectLogRefundStarted(refundTx, equityToken.address, expectedEurEquiv, expectedComputedNeu);
     // all NEU burned
     expect(await neumark.balanceOf(etoCommitment.address)).to.be.bignumber.eq(0);
     // all equity token burned
@@ -4206,15 +4201,14 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   async function expectEmptyTokenController() {
     const tokens = await equityTokenController.tokens();
     for (const vals of tokens) {
-      expect(vals.length).to.eq(0);
+      expect(vals.length).to.eq(1);
     }
-    expect(await equityTokenController.tokenOfferings()).to.deep.eq([[], []]);
+    expect(await equityTokenController.tokenOfferings()).to.deep.eq([]);
     const generalInfo = await equityTokenController.shareholderInformation();
-    expect(generalInfo[0]).to.be.bignumber.eq(0);
+    expect(generalInfo[0]).to.be.bignumber.eq(GovTokenType.None);
     expect(generalInfo[1]).to.be.bignumber.eq(0);
-    expect(generalInfo[2]).to.eq(ZERO_ADDRESS);
-    expect(generalInfo[3]).to.be.bignumber.eq(0);
-    expect(generalInfo[4]).eq("");
+    expect(generalInfo[2]).to.be.bignumber.eq(0);
+    expect(generalInfo[3]).eq("");
   }
 
   async function expectStateStarts(pastStatesTable, durationTable) {
