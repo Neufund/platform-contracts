@@ -3,6 +3,7 @@ import { leftPad, isHex } from "web3-utils";
 import {
   daysToSeconds,
   Q18,
+  Q16,
   web3,
   defaultTokensPerShare,
   defEquityTokenDecimals,
@@ -28,7 +29,7 @@ export const defaultTokenholderTerms = {
   RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
   VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
   SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
-  VOTING_MAJORITY_FRAC: Q18.mul("0.1"),
+  VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
 };
 
 export const defDurTerms = {
@@ -46,8 +47,8 @@ export const defTokenTerms = {
   MAX_NUMBER_OF_TOKENS: defaultTokensPerShare.mul(100),
   TOKEN_PRICE_EUR_ULPS: Q18.mul("0.12376189651788"),
   MAX_NUMBER_OF_TOKENS_IN_WHITELIST: defaultTokensPerShare.mul(40),
-  SHARE_NOMINAL_VALUE_EUR_ULPS: Q18,
-  SHARE_NOMINAL_VALUE_ULPS: Q18.mul("4.24566"),
+  SHARE_NOMINAL_VALUE_EUR_ULPS: Q18.mul("4.24566"),
+  SHARE_NOMINAL_VALUE_ULPS: Q18,
   EQUITY_TOKENS_PER_SHARE: defaultTokensPerShare,
   EQUITY_TOKEN_DECIMALS: defEquityTokenDecimals,
 };
@@ -175,7 +176,9 @@ export function encodeBylaw(
   majority,
   votingPower,
   votingRule,
-  legalRep,
+  votingLegalRep,
+  votingInitiator,
+  tokenholderVotingInitative,
 ) {
   const f = n => {
     const r = leftPad(n.toString(16), 2);
@@ -199,33 +202,14 @@ export function encodeBylaw(
     return r;
   };
 
-  let encodedBylaw;
-  if (!hasVotingRights(votingRule)) {
-    // modify for no voting rights
-    let effectiveEscalation;
-    // set escalation accordingly
-    switch (legalRep) {
-      case GovActionLegalRep.CompanyLegalRep:
-        // company can execute instead of SHR
-        effectiveEscalation = GovActionEscalation.CompanyLegalRep;
-        break;
-      case GovActionLegalRep.Nominee:
-        // nominee can execute instead of THR
-        effectiveEscalation = GovActionEscalation.Nominee;
-        break;
-      default:
-        effectiveEscalation = actionEscalation;
-        break;
-    }
-    encodedBylaw = `0x${f(effectiveEscalation)}${f(days(ZERO_BN))}${f(prc(ZERO_BN))}${f(
-      prc(ZERO_BN),
-    )}${f(prc(ZERO_BN))}${f(votingRule)}${f(legalRep)}`;
-  } else {
-    encodedBylaw = `0x${f(actionEscalation)}${f(days(votingDuration))}${f(prc(quorum))}${f(
-      prc(majority),
-    )}${f(prc(votingPower))}${f(votingRule)}${f(legalRep)}`;
-  }
-  return encodedBylaw;
+  // encodes voting info into single uint8 (initative 1b|initiator 3b|voting legal rep 3b)
+  const encodeVotingInfo = (rep, initiator, initative) =>
+    rep + initiator * 8 + (initative ? 64 : 0);
+
+  const votingInfo = encodeVotingInfo(votingLegalRep, votingInitiator, tokenholderVotingInitative);
+  return `0x${f(actionEscalation)}${f(days(votingDuration))}${f(prc(quorum))}${f(prc(majority))}${f(
+    prc(votingPower),
+  )}${f(votingRule)}${f(votingInfo)}`;
 }
 
 export function decodeBylaw(idx, bylaw) {
@@ -240,9 +224,11 @@ export function decodeBylaw(idx, bylaw) {
   const elems = npBylaw.match(/.{2}/g);
   // convert idx in the bylaws to action string
   const action = getKeyByValue(GovAction, idx);
-  const frac = hex => new web3.BigNumber(hex, 16).mul(Q18).div("100");
+  const frac = hex => new web3.BigNumber(hex, 16).mul(Q16);
   const num = hex => new web3.BigNumber(hex, 16);
   const bn = n => new web3.BigNumber(n);
+
+  const votingInfo = num(elems[6]).toNumber();
 
   return [
     // action as string
@@ -260,7 +246,11 @@ export function decodeBylaw(idx, bylaw) {
     // token holder voting rule
     num(elems[5]),
     // legal rep for voting
-    num(elems[6]),
+    bn(votingInfo & 0x7),
+    // voting initiator
+    bn((votingInfo & 0x38) >>> 3),
+    // voting initative
+    bn((votingInfo & 0x40) >>> 6),
   ];
 }
 
@@ -280,6 +270,8 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             terms.GENERAL_VOTING_RULE,
             GovActionLegalRep.CompanyLegalRep,
+            GovActionLegalRep.CompanyLegalRep,
+            false,
           ),
         );
         break;
@@ -288,11 +280,13 @@ export function generateDefaultBylaws(terms) {
           encodeBylaw(
             GovActionEscalation.THR,
             terms.GENERAL_VOTING_DURATION,
-            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
-            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            ZERO_BN,
             ZERO_BN,
             terms.TAG_ALONG_VOTING_RULE,
-            GovActionLegalRep.Nominee,
+            GovActionLegalRep.None,
+            GovActionLegalRep.CompanyLegalRep,
+            false,
           ),
         );
         break;
@@ -306,6 +300,8 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
+            GovActionLegalRep.None,
+            false,
           ),
         );
         break;
@@ -319,6 +315,8 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
+            GovActionLegalRep.None,
+            false,
           ),
         );
         break;
@@ -332,6 +330,8 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
+            GovActionLegalRep.None,
+            false,
           ),
         );
         break;
@@ -347,6 +347,8 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
+            GovActionLegalRep.None,
+            false,
           ),
         );
         break;
@@ -367,10 +369,11 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
+            GovActionLegalRep.None,
+            false,
           ),
         );
         break;
-      case "None":
       case "ExtraordinaryPayout":
       case "RegisterOffer":
       case "AmendISHA":
@@ -387,6 +390,23 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             terms.GENERAL_VOTING_RULE,
             GovActionLegalRep.CompanyLegalRep,
+            GovActionLegalRep.CompanyLegalRep,
+            false,
+          ),
+        );
+        break;
+      case "None":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.SHR,
+            terms.GENERAL_VOTING_DURATION,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            terms.GENERAL_VOTING_RULE,
+            GovActionLegalRep.CompanyLegalRep,
+            GovActionLegalRep.CompanyLegalRep,
+            true,
           ),
         );
         break;

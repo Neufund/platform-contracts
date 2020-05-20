@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { soliditySha3 } from "web3-utils";
 import { GovExecutionState } from "./govState";
 import { eventValue, eventWithIdxValue } from "../helpers/events";
-import { ZERO_BYTES32 } from "../helpers/constants";
+import { ZERO_BYTES32, Q16 } from "../helpers/constants";
 
 export function isTerminalExecutionState(s) {
   return (
@@ -104,4 +104,15 @@ export async function expectResolutionById(
     nextStep,
     payload,
   );
+}
+
+export function shareCapitalToTokens(shareCapital, tokensPerShare, shareNominalValueUlps) {
+  return shareCapital
+    .mul(tokensPerShare)
+    .div(shareNominalValueUlps)
+    .floor();
+}
+
+export function prcToFrac(prc) {
+  return prc.mul(Q16);
 }
