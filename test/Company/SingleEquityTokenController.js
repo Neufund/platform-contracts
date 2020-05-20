@@ -1317,6 +1317,10 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       });
 
       it("should skip events if values not changed");
+    });
+
+    describe("voting rights", () => {
+      it("should escalate to THR voting on tag along without voting rights");
 
       it("should start SHR with investor initiative");
     });

@@ -17,26 +17,34 @@ import {
   GovActionEscalation,
   GovActionLegalRep,
   hasVotingRights,
+  isVotingEscalation,
 } from "./govState";
 import { knownInterfaces } from "../helpers/knownInterfaces";
 
+const bn = n => new web3.BigNumber(n);
+
 export const defaultTokenholderTerms = {
-  GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Positive),
-  TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Negative),
+  GENERAL_VOTING_RULE: bn(GovTokenVotingRule.Positive),
+  TAG_ALONG_VOTING_RULE: bn(GovTokenVotingRule.Negative),
   LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(1.5),
   HAS_FOUNDERS_VESTING: true,
-  GENERAL_VOTING_DURATION: new web3.BigNumber(daysToSeconds(10)),
-  RESTRICTED_ACT_VOTING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
+  GENERAL_VOTING_DURATION: bn(daysToSeconds(10)),
+  RESTRICTED_ACT_VOTING_DURATION: bn(daysToSeconds(14)),
+  VOTING_FINALIZATION_DURATION: bn(daysToSeconds(5)),
   SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
   VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
 };
 
+// consider moving those to Token Holder Rights
+export const defaultTHRTerms = {
+  GENERAL_THR_VOTING_RULE: bn(GovTokenVotingRule.Prorata),
+};
+
 export const defDurTerms = {
-  WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
-  PUBLIC_DURATION: new web3.BigNumber(daysToSeconds(30)),
-  SIGNING_DURATION: new web3.BigNumber(daysToSeconds(14)),
-  CLAIM_DURATION: new web3.BigNumber(daysToSeconds(10)),
+  WHITELIST_DURATION: bn(daysToSeconds(7)),
+  PUBLIC_DURATION: bn(daysToSeconds(30)),
+  SIGNING_DURATION: bn(daysToSeconds(14)),
+  CLAIM_DURATION: bn(daysToSeconds(10)),
 };
 
 export const defTokenTerms = {
@@ -79,10 +87,10 @@ export const defTermsConstraints = {
   // unlimited
   MAX_INVESTMENT_AMOUNT_EUR_ULPS: Q18.mul(0),
   NAME: "Some Constraints",
-  OFFERING_DOCUMENT_TYPE: new web3.BigNumber(1),
-  OFFERING_DOCUMENT_SUB_TYPE: new web3.BigNumber(1),
+  OFFERING_DOCUMENT_TYPE: bn(1),
+  OFFERING_DOCUMENT_SUB_TYPE: bn(1),
   JURISDICTION: "DE",
-  ASSET_TYPE: new web3.BigNumber(0),
+  ASSET_TYPE: bn(0),
   TOKEN_OFFERING_OPERATOR: "0xC5a96Db085dDA36FfBE390f455315D30D6D3DC52",
 };
 
@@ -174,7 +182,7 @@ export function encodeBylaw(
   votingDuration,
   quorum,
   majority,
-  votingPower,
+  absoluteMajority,
   votingRule,
   votingLegalRep,
   votingInitiator,
@@ -187,20 +195,32 @@ export function encodeBylaw(
     }
     return r;
   };
-  const prc = bn => {
-    const r = bn.mul("100").div(Q18);
+  const prc = big => {
+    const r = big.mul("100").div(Q18);
     if (r.gt("100") || !r.round().eq(r)) {
-      throw new Error(`prc value ${r.toString()} of ${bn.toString()} invalid`);
+      throw new Error(`prc value ${r.toString()} of ${big.toString()} invalid`);
     }
     return r;
   };
-  const days = bn => {
-    const r = bn.div(dayInSeconds);
+  const days = big => {
+    const r = big.div(dayInSeconds);
     if (r.gt(255)) {
-      throw new Error(`days value ${r.toString()} of ${bn.toString()} invalid`);
+      throw new Error(`days value ${r.toString()} of ${big.toString()} invalid`);
     }
     return r;
   };
+
+  if (isVotingEscalation(votingRule)) {
+    if (votingDuration.eq(0)) {
+      throw new Error(`voting duration must be set for voting bylaw`);
+    }
+    // voting power OR quorum / majority must be set
+    const hasQuorum = quorum.gt(0) && majority.gt(0);
+    const hasAbsoluteMajority = absoluteMajority.gt(0);
+    if (!hasQuorum && !hasAbsoluteMajority) {
+      throw new Error(`quorum/majority or absolute majority must be set for voting bylaw`);
+    }
+  }
 
   // encodes voting info into single uint8 (initative 1b|initiator 3b|voting legal rep 3b)
   const encodeVotingInfo = (rep, initiator, initative) =>
@@ -208,7 +228,7 @@ export function encodeBylaw(
 
   const votingInfo = encodeVotingInfo(votingLegalRep, votingInitiator, tokenholderVotingInitative);
   return `0x${f(actionEscalation)}${f(days(votingDuration))}${f(prc(quorum))}${f(prc(majority))}${f(
-    prc(votingPower),
+    prc(absoluteMajority),
   )}${f(votingRule)}${f(votingInfo)}`;
 }
 
@@ -226,7 +246,6 @@ export function decodeBylaw(idx, bylaw) {
   const action = getKeyByValue(GovAction, idx);
   const frac = hex => new web3.BigNumber(hex, 16).mul(Q16);
   const num = hex => new web3.BigNumber(hex, 16);
-  const bn = n => new web3.BigNumber(n);
 
   const votingInfo = num(elems[6]).toNumber();
 
@@ -280,12 +299,12 @@ export function generateDefaultBylaws(terms) {
           encodeBylaw(
             GovActionEscalation.THR,
             terms.GENERAL_VOTING_DURATION,
-            ZERO_BN,
-            ZERO_BN,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
             ZERO_BN,
             terms.TAG_ALONG_VOTING_RULE,
             GovActionLegalRep.None,
-            GovActionLegalRep.CompanyLegalRep,
+            GovActionLegalRep.Nominee,
             false,
           ),
         );
@@ -298,7 +317,7 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             ZERO_BN,
             ZERO_BN,
-            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            bn(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
             GovActionLegalRep.None,
             false,
@@ -313,7 +332,7 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             ZERO_BN,
             ZERO_BN,
-            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            bn(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
             GovActionLegalRep.None,
             false,
@@ -328,7 +347,7 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             ZERO_BN,
             ZERO_BN,
-            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            bn(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
             GovActionLegalRep.None,
             false,
@@ -345,7 +364,7 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             ZERO_BN,
             ZERO_BN,
-            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            bn(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
             GovActionLegalRep.None,
             false,
@@ -367,7 +386,7 @@ export function generateDefaultBylaws(terms) {
             ZERO_BN,
             ZERO_BN,
             ZERO_BN,
-            new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+            bn(GovTokenVotingRule.NoVotingRights),
             GovActionLegalRep.None,
             GovActionLegalRep.None,
             false,

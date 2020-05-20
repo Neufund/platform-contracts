@@ -22,6 +22,8 @@ import {
 
 const EquityTokenholderRights = artifacts.require("EquityTokenholderRights");
 
+const bn = n => new web3.BigNumber(n);
+
 contract("TokenholderRights", () => {
   let sourceTerms;
   let tokenholderRights;
@@ -29,19 +31,20 @@ contract("TokenholderRights", () => {
   let tokenholderTermsKeys;
 
   const votingRightsOvr = {
-    GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Positive),
-    TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.Negative),
+    GENERAL_VOTING_RULE: bn(GovTokenVotingRule.Positive),
+    TAG_ALONG_VOTING_RULE: bn(GovTokenVotingRule.Negative),
   };
   const nonVotingRightsOvr = {
-    GENERAL_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
-    TAG_ALONG_VOTING_RULE: new web3.BigNumber(GovTokenVotingRule.NoVotingRights),
+    GENERAL_VOTING_RULE: bn(GovTokenVotingRule.NoVotingRights),
+    // tag along is for tokenholder voting so voting is always possible
+    TAG_ALONG_VOTING_RULE: bn(GovTokenVotingRule.Negative),
   };
 
   it("deploy", async () => {
     await deployRights();
     await prettyPrintGasCost("TokenholderRights deploy", tokenholderRights);
     // console.log(await tokenholderRights.contractId());
-    // console.log([contractId("EquityTokenholderRights"), new web3.BigNumber("1")]);
+    // console.log([contractId("EquityTokenholderRights"), bn("1")]);
     expect((await tokenholderRights.contractId())[0]).to.eq(contractId("EquityTokenholderRights"));
     expect((await tokenholderRights.contractId())[1]).to.be.bignumber.eq(ZERO_BN);
     expect(await tokenholderRights.HAS_VOTING_RIGHTS()).to.be.true;
@@ -68,7 +71,7 @@ contract("TokenholderRights", () => {
       // replace ChangeOfControl with voting power bylaw where THR vote, not SHR
       const sourceBylaw = [
         GovActionEscalation.THR,
-        new web3.BigNumber(dayInSeconds),
+        bn(dayInSeconds),
         Q18,
         Q18,
         Q18.mul("0.7"),
@@ -115,7 +118,7 @@ contract("TokenholderRights", () => {
       // replace ChangeOfControl with voting power bylaw where THR vote, not SHR
       const coc = encodeBylaw(
         GovActionEscalation.THR,
-        new web3.BigNumber(dayInSeconds).mul(255),
+        bn(dayInSeconds).mul(255),
         Q18,
         Q18,
         Q18.mul("0.01"),
@@ -147,7 +150,7 @@ contract("TokenholderRights", () => {
   });
 
   function onchainDecodedBylawToEnums(bylaw) {
-    const frac = bn => bn.mul(Q18).div("100");
+    const frac = big => big.mul(Q18).div("100");
     return [
       bylaw[0].toNumber(),
       bylaw[1].mul(dayInSeconds),
@@ -163,7 +166,7 @@ contract("TokenholderRights", () => {
 
   async function expectDeployedBylaws() {
     const bylaws = await tokenholderRights.ACTION_BYLAWS();
-    const hexBylaws = bylaws.map(bn => `0x${leftPad(bn.toString(16), 14)}`);
+    const hexBylaws = bylaws.map(big => `0x${leftPad(big.toString(16), 14)}`);
     expectDefaultBylaws(hexBylaws);
     // get decoded bylaws, encode them and verify
     for (let ii = 0; ii < 24; ii += 1) {

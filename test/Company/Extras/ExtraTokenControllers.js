@@ -265,6 +265,7 @@ contract(
         // simulate ETO
         await deployController(RegDTransferController);
         await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
+        await registerOffering();
         await makeInvestment(totalShares, inv1DistAmount);
         // investor 2 is a regular investor with transfer rights
         await testCommitment._distributeTokens(investor2, "1");

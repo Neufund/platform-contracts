@@ -60,7 +60,8 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
   };
   const nonVotingRightsOvr = {
     GENERAL_VOTING_RULE: bn(GovTokenVotingRule.NoVotingRights),
-    TAG_ALONG_VOTING_RULE: bn(GovTokenVotingRule.NoVotingRights),
+    // tag along is for tokenholder voting so voting is always possible
+    TAG_ALONG_VOTING_RULE: bn(GovTokenVotingRule.Negative),
   };
 
   before(async () => {
@@ -758,7 +759,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           payload,
           GovAction.TagAlong,
           docUrl,
-          { from: company },
+          { from: nominee },
         );
         expectLogResolutionStarted(
           tx,
@@ -1168,7 +1169,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           payload,
           GovAction.TagAlong,
           docUrl,
-          { from: company },
+          { from: nominee },
         );
         expectLogResolutionStarted(
           tx,
