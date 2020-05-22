@@ -220,7 +220,10 @@ contract ETOCommitment is
         IEquityToken equityToken
     )
         Agreement(universe.accessPolicy(), universe.forkArbiter())
-        ETOTimedStateMachine(etoTerms.DURATION_TERMS())
+        ETOTimedStateMachine(
+            etoTerms.DURATION_TERMS(),
+            IETOCommitmentObserver(equityToken.tokenController())
+        )
         public
     {
         UNIVERSE = universe;
@@ -281,6 +284,7 @@ contract ETOCommitment is
         require(etoTerms == ETO_TERMS);
         // subsequent calls to start date cannot change equity token address
         require(equityToken == EQUITY_TOKEN, "NF_ETO_EQ_TOKEN_DIFF");
+        require(address(commitmentObserver()) == equityToken.tokenController(), "NF_ETO_OBSERVER_DIFF");
         // get current start date
         uint256 startAt = startOfInternal(ETOState.Whitelist);
         if (startAt == 0) {
@@ -298,8 +302,7 @@ contract ETOCommitment is
         require(
             startAt == 0 || (startAt - block.timestamp > ETO_TERMS_CONSTRAINTS.DATE_TO_WHITELIST_MIN_DURATION()),
             "NF_ETO_START_TOO_SOON");
-        // token controller
-        setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
+
         // run state machine
         runStateMachine(uint32(startDate));
         emit LogETOStartDateSet(msg.sender, startAt, startDate);

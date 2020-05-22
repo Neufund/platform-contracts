@@ -212,7 +212,7 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
 
       // check state machine
       expect(await etoCommitment.state()).to.be.bignumber.eq(0);
-      expect(await etoCommitment.commitmentObserver()).to.eq(ZERO_ADDRESS);
+      expect(await etoCommitment.commitmentObserver()).to.eq(equityTokenController.address);
       const startOfStates = await etoCommitment.startOfStates(); // array of 7
       for (const startOf of startOfStates) {
         expect(startOf).to.be.bignumber.lt(UNKNOWN_STATE_START_TS);

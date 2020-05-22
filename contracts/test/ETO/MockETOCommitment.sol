@@ -74,7 +74,6 @@ contract MockETOCommitment is
         uint256 startAt = startOfInternal(ETOState.Whitelist);
 
         EQUITY_TOKEN = equityToken;
-        setCommitmentObserver(IETOCommitmentObserver(equityToken.tokenController()));
         runStateMachine(uint32(startDate));
 
         if (startAt == 0) {

@@ -64,11 +64,13 @@ contract ETOTimedStateMachine is
         _;
     }
 
-    constructor(ETODurationTerms durationTerms) internal {
+    constructor(ETODurationTerms durationTerms, IETOCommitmentObserver observer) internal {
+        require(observer != address(0));
         ETO_STATE_DURATIONS = [
             0, durationTerms.WHITELIST_DURATION(), durationTerms.PUBLIC_DURATION(), durationTerms.SIGNING_DURATION(),
             durationTerms.CLAIM_DURATION(), 0, 0
             ];
+        COMMITMENT_OBSERVER = observer;
     }
 
 
@@ -164,13 +166,6 @@ contract ETOTimedStateMachine is
     ////////////////////////
     // Internal functions
     ////////////////////////
-
-    function setCommitmentObserver(IETOCommitmentObserver observer)
-        internal
-    {
-        require(observer != address(0));
-        COMMITMENT_OBSERVER = observer;
-    }
 
     function runStateMachine(uint32 startDate)
         internal
