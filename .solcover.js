@@ -1,6 +1,7 @@
 module.exports = {
   port: 8255,
-  testCommand: "truffle test --network coverage",
+  testCommand: "node --max-old-space-size=8196 ../node_modules/.bin/truffle test --network coverage",
+  compileCommand: '../node_modules/.bin/truffle compile --all',
   skipFiles: [
     "SnapshotToken/Extensions/Disbursal.sol",
     "SnapshotToken/Extensions/Vote.sol",

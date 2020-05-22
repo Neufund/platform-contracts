@@ -61,7 +61,7 @@
     "lint:solium": "solium --dir contracts --reporter=pretty",
     "testrpc": "./scripts/testrpc.sh",
     "test": "truffle test --network inprocess_test",
-    "test:coverage": "SKIP_GAS_CHECKS=true solidity-coverage && codecov",
+    "test:coverage": "SKIP_GAS_CHECKS=true node --max-old-space-size=8192 ./node_modules/.bin/solidity-coverage",
     "build": "./scripts/build.sh",
     "deploy": "./scripts/deploy.sh",
     "deploy:rebuild": "./scripts/build.sh && ./scripts/deploy.sh",
