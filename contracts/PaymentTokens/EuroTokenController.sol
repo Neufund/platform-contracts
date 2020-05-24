@@ -20,7 +20,6 @@ contract EuroTokenController is
     IContractId,
     AccessControlled,
     AccessRoles,
-    IdentityRecord,
     KnownInterfaces
 {
 
@@ -305,7 +304,7 @@ contract EuroTokenController is
         if(_allowedTransferTo[owner]) {
             return true;
         }
-        IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.isVerified && !claims.accountFrozen;
     }
 
@@ -321,7 +320,7 @@ contract EuroTokenController is
         if(_allowedTransferFrom[owner]) {
             return true;
         }
-        IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(owner));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(_identityRegistry.getClaims(owner));
         return claims.isVerified && !claims.accountFrozen && claims.hasBankAccount;
     }
 
@@ -426,7 +425,7 @@ contract EuroTokenController is
         }
         // try to resolve 'from'
         if (!explicitFrom) {
-            IdentityClaims memory claimsFrom = deserializeClaims(_identityRegistry.getClaims(from));
+            IdentityRecord.IdentityClaims memory claimsFrom = IdentityRecord.deserializeClaims(_identityRegistry.getClaims(from));
             explicitFrom = claimsFrom.isVerified && !claimsFrom.accountFrozen;
         }
         if (!explicitFrom) {
@@ -443,7 +442,7 @@ contract EuroTokenController is
         }
         if (!explicitTo) {
             // if not, `to` address must have kyc (all addresses with KYC may receive transfers)
-            IdentityClaims memory claims = deserializeClaims(_identityRegistry.getClaims(to));
+            IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(_identityRegistry.getClaims(to));
             explicitTo = claims.isVerified && !claims.accountFrozen;
         }
         if (allowPeerTransfers) {

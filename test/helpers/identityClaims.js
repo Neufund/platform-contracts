@@ -1,5 +1,5 @@
 const Web3 = require("web3");
-const toBytes32 = require("./constants").toBytes32;
+const toBytes32 = require("./utils").toBytes32;
 
 const web3 = new Web3();
 

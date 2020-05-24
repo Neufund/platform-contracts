@@ -8,8 +8,7 @@ import "../../Serialization.sol";
 
 contract TestFeeDistributionPool is
     IERC677Callback,
-    IERC223Callback,
-    Serialization
+    IERC223Callback
 {
 
     ////////////////////////
@@ -58,7 +57,7 @@ contract TestFeeDistributionPool is
     function tokenFallback(address from, uint256 amount, bytes snapshotTokenEncoded)
         public
     {
-        address snapshotToken = decodeAddress(snapshotTokenEncoded);
+        address snapshotToken = Serialization.decodeAddress(snapshotTokenEncoded);
         emit LogTestReceiveTransfer(msg.sender, snapshotToken, amount, from);
     }
 }

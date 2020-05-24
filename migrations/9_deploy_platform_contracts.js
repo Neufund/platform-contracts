@@ -7,7 +7,7 @@ const { TriState } = require("../test/helpers/triState");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);

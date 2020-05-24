@@ -9,8 +9,7 @@ import "../../Serialization.sol";
 
 contract NullCommitment is
     ICommitment,
-    Agreement,
-    Serialization
+    Agreement
 {
     ////////////////////////
     // Mutable state
@@ -60,7 +59,7 @@ contract NullCommitment is
         address investor = wallet;
         if (data.length > 0) {
             // data contains investor address
-            investor = decodeAddress(data);
+            investor = Serialization.decodeAddress(data);
         }
         emit LogFundsCommitted(
             investor,

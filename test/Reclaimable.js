@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { deployAccessControl } from "./helpers/deployContracts";
 import forceEther from "./helpers/forceEther";
 import roles from "./helpers/roles";
-import { promisify } from "./helpers/evmCommands";
+import { promisify } from "./helpers/utils";
 
 const TestReclaimable = artifacts.require("TestReclaimable");
 const TestToken = artifacts.require("TestToken");

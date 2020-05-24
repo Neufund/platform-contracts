@@ -4,7 +4,7 @@ import { deployControlContracts } from "./helpers/deployContracts";
 import EvmError from "./helpers/EVMThrow";
 import { TriState } from "./helpers/triState";
 import roles from "./helpers/roles";
-import { promisify } from "./helpers/evmCommands";
+import { promisify } from "./helpers/utils";
 
 const TestAgreement = artifacts.require("TestAgreement");
 

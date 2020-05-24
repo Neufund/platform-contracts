@@ -3,7 +3,7 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { deployAccessControl } from "./helpers/deployContracts";
 import { eventValue } from "./helpers/events";
 import roles from "./helpers/roles";
-import { promisify } from "./helpers/evmCommands";
+import { promisify } from "./helpers/utils";
 
 const EthereumForkArbiter = artifacts.require("EthereumForkArbiter");
 

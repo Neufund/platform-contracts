@@ -2,7 +2,7 @@ pragma solidity 0.4.26;
 
 
 /// @title serialization of basic types from/to bytes
-contract Serialization {
+library Serialization {
 
     ////////////////////////
     // Internal functions

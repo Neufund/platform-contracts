@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "../PlaceholderEquityTokenController.sol";
+import "../SingleEquityTokenController.sol";
 
 
 contract GranularTransferController is
-    PlaceholderEquityTokenController
+    SingleEquityTokenController
 {
     ////////////////////////
     // Type declarations
@@ -62,7 +62,7 @@ contract GranularTransferController is
         address companyLegalRep
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRep)
+        SingleEquityTokenController(universe, companyLegalRep)
     {}
 
     //
@@ -74,9 +74,9 @@ contract GranularTransferController is
         constant
         returns (bool allow)
     {
-        GovState s = state();
+        Gov.State s = _g._state;
         // allow forced transfer only by the token controller itself
-        if ((s == GovState.Funded || s == GovState.Closing) && broker == address(this)) {
+        if ((s == Gov.State.Funded || s == Gov.State.Closing) && broker == address(this)) {
             ForcedTransfer storage t = _forcedTransfers[from];
             // check if forced transfer matches the actual transfer
             if (t.amount > 0) {
@@ -91,9 +91,9 @@ contract GranularTransferController is
             }
         }
         // ask base controller if transfers are enabled
-        allow = PlaceholderEquityTokenController.onTransfer(broker, from, to, amount);
+        allow = SingleEquityTokenController.onTransfer(broker, from, to, amount);
         // prevent transfer if account is frozen
-        if (allow && s == GovState.Funded) {
+        if (allow && s == Gov.State.Funded) {
             allow = !(_frozenAddresses[from] || _frozenAddresses[to] || _frozenAddresses[broker]);
         }
     }
@@ -103,7 +103,7 @@ contract GranularTransferController is
         constant
         returns (uint256)
     {
-        uint256 overrideAmount = PlaceholderEquityTokenController.onAllowance(owner, spender);
+        uint256 overrideAmount = SingleEquityTokenController.onAllowance(owner, spender);
         // if no override was set by base class check frozen transfer override
         // the spender must be token controller - this contract
         if (overrideAmount == 0 && spender == address(this)) {
@@ -118,7 +118,7 @@ contract GranularTransferController is
 
     // return same contractId as base class, but mark version as special
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0xf7e00d1a4168be33cbf27d32a37a5bc694b3a839684a8c2bef236e3594345d70, 0xFF);
+        return (0xcf797981ed83afa34271d9e461566e1f4faa04577471ac007890d663e1727723, 0xFF);
     }
 
     ////////////////////////
@@ -151,8 +151,7 @@ contract GranularTransferController is
         //      announcement and actual execution
         //require(now - t.block > 7 days, "NF_FORCED_T_NOT_DUE");
         // obtain equity token address
-        (address[] memory equityTokens, ) = capTable();
-        IEquityToken token = IEquityToken(equityTokens[0]);
+        IControlledToken token = _t._token;
         // execute forced transfer with this smart contract as a broker
         // this will trigger onAllowance and onTranfer controller method before completing
         require(token.transferFrom(from, t.to, t.amount));

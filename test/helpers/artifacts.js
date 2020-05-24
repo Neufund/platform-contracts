@@ -17,9 +17,9 @@ export const artifacts = {
   PLATFORM_TERMS: "PlatformTerms",
   STANDARD_ETO_COMMITMENT: "ETOCommitment",
   STANDARD_EQUITY_TOKEN: "EquityToken",
-  PLACEHOLDER_EQUITY_TOKEN_CONTROLLER: "PlaceholderEquityTokenController",
+  EQUITY_TOKEN_CONTROLLER: "SingleEquityTokenController",
   STANDARD_ETO_TERMS: "ETOTerms",
-  STANDARD_SHAREHOLDER_RIGHTS: "ShareholderRights",
+  STANDARD_TOKENHOLDER_RIGHTS: "EquityTokenholderRights",
   STANDARD_DURATION_TERMS: "ETODurationTerms",
   STANDARD_TOKEN_TERMS: "ETOTokenTerms",
   FEE_DISBURSAL: "FeeDisbursal",
@@ -27,6 +27,7 @@ export const artifacts = {
   // interfaces used in migrations
   TOKEN_EXCHANGE_RATE_ORACLE: "ITokenExchangeRateOracle",
   ETO_TERMS_CONSTRAINTS: "ETOTermsConstraints",
+  VOTING_CENTER: "VotingCenter",
   // not implemented
   // PLATFORM_PORTFOLIO: "IPlatformPortfolio"
 };

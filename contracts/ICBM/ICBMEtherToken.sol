@@ -67,8 +67,8 @@ contract ICBMEtherToken is
         public
         payable
     {
-        _balances[msg.sender] = add(_balances[msg.sender], msg.value);
-        _totalSupply = add(_totalSupply, msg.value);
+        _balances[msg.sender] = Math.add(_balances[msg.sender], msg.value);
+        _totalSupply = Math.add(_totalSupply, msg.value);
         emit LogDeposit(msg.sender, msg.value);
         emit Transfer(address(0), msg.sender, msg.value);
     }
@@ -78,8 +78,8 @@ contract ICBMEtherToken is
         public
     {
         require(_balances[msg.sender] >= amount);
-        _balances[msg.sender] = sub(_balances[msg.sender], amount);
-        _totalSupply = sub(_totalSupply, amount);
+        _balances[msg.sender] = Math.sub(_balances[msg.sender], amount);
+        _totalSupply = Math.sub(_totalSupply, amount);
         msg.sender.transfer(amount);
         emit LogWithdrawal(msg.sender, amount);
         emit Transfer(msg.sender, address(0), amount);

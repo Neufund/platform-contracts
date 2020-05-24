@@ -8,6 +8,8 @@ const confirm = require("node-ask").confirm;
 const fs = require("fs");
 const { join } = require("path");
 const deployETO = require("../migrations/deployETO").deployETO;
+const canDeployETO = require("../migrations/deployETO").canDeployETO;
+const deployGovLib = require("../migrations/deployETO").deployGovLib;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
@@ -64,12 +66,12 @@ module.exports = async function deploy() {
   }
   // parsed.eto_terms["ETO_TERMS_CONSTRAINTS"] = "0x5a7523368646E116288848074eA2f1bD5DeF0c21";
   const etoTerms = recoverBigNumbers(parsed.eto_terms);
-  const shareholderTerms = recoverBigNumbers(parsed.shareholder_rights);
+  const tokenholderTerms = recoverBigNumbers(parsed.tokenholder_rights);
   const durTerms = recoverBigNumbers(parsed.duration_terms);
   const tokenTerms = recoverBigNumbers(parsed.token_terms);
 
   explainTerms("etoTerms", etoTerms);
-  explainTerms("shareholderTerms", shareholderTerms);
+  explainTerms("tokenholderTerms", tokenholderTerms);
   explainTerms("durTerms", durTerms);
   explainTerms("tokenTerms", tokenTerms);
   console.log("\nETO Terms Constaints:");
@@ -83,6 +85,11 @@ module.exports = async function deploy() {
   }
 
   try {
+    const [canDeploy, canControlNeu] = await canDeployETO(artifacts, DEPLOYER, CONFIG, universe);
+    if (!canDeploy) {
+      throw new Error("ETO deployment checks failed");
+    }
+    const govLib = await deployGovLib(artifacts);
     await deployETO(
       artifacts,
       DEPLOYER,
@@ -91,10 +98,12 @@ module.exports = async function deploy() {
       parsed.nominee,
       parsed.company,
       etoTerms,
-      shareholderTerms,
+      tokenholderTerms,
       durTerms,
       tokenTerms,
       etoTerms.ETO_TERMS_CONSTRAINTS,
+      govLib,
+      canControlNeu,
     );
   } catch (e) {
     console.log(e);

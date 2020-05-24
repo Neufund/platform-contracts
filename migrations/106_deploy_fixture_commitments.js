@@ -5,6 +5,7 @@ const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const deployETO = require("./deployETO").deployETO;
+const deployGovLib = require("./deployETO").deployGovLib;
 const checkETO = require("./deployETO").checkETO;
 const deployWhitelist = require("./deployETO").deployWhitelist;
 const {
@@ -18,7 +19,7 @@ const {
   retailSMEEtoLi,
 } = require("./configETOFixtures");
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
-const stringify = require("../test/helpers/constants").stringify;
+const stringify = require("../test/helpers/utils").stringify;
 const Q18 = require("../test/helpers/constants").Q18;
 const decimalBase = require("../test/helpers/constants").decimalBase;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
@@ -49,6 +50,8 @@ module.exports = function deployContracts(deployer, network, accounts) {
       [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
       [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
     };
+    // deploy library and use single lib for all ETOs
+    const govLib = await deployGovLib(artifacts);
     const describedETOs = {};
     for (const state of Object.keys(etoFixtures)) {
       const etoVars = etoFixtures[state];
@@ -68,6 +71,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         etoTerms,
         fas,
         parseInt(state, 10),
+        govLib,
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
 
@@ -262,7 +266,17 @@ function findNomineeForEto(etoName, fas) {
   throw new Error(`Cannot find Nominee for eto ${etoName}`);
 }
 
-async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefiniton, fas, final) {
+async function simulateETO(
+  DEPLOYER,
+  CONFIG,
+  universe,
+  nominee,
+  issuer,
+  etoDefiniton,
+  fas,
+  final,
+  govLib,
+) {
   const [etoCommitment, equityToken, , etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
@@ -271,10 +285,12 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
     nominee.address,
     issuer.address,
     etoDefiniton.etoTerms,
-    etoDefiniton.shareholderTerms,
+    etoDefiniton.tokenholderTerms,
     etoDefiniton.durTerms,
     etoDefiniton.tokenTerms,
     etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
+    govLib,
+    true,
   );
   // nominee sets agreement
   console.log("Nominee sets agreements");
@@ -434,15 +450,15 @@ async function simulateETO(DEPLOYER, CONFIG, universe, nominee, issuer, etoDefin
   }
   console.log(
     // eslint-disable-next-line max-len
-    `Going to Claim.. putting signatures ${etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
+    `Going to Claim.. putting signatures ${etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
   );
   await etoCommitment._mockShiftBackTime(signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
-    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
   );
   await etoCommitment.nomineeConfirmsInvestmentAgreement(
-    etoDefiniton.shareholderTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
+    etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: nominee.address },
   );
   await ensureState(etoCommitment, CommitmentState.Claim);
@@ -518,6 +534,7 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
     equityToken: toChecksumAddress(await etoCommitment.equityToken()),
     etoTerms: toChecksumAddress(await etoCommitment.etoTerms()),
     definition: etoDefinition,
+    investmentAgreement: await etoCommitment.signedInvestmentAgreementUrl(),
   };
   const whitelist = {};
   const investors = {};

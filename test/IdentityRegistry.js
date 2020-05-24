@@ -3,7 +3,7 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { deployUniverse, deployIdentityRegistry } from "./helpers/deployContracts";
 import { referenceClaims, deserializeClaims } from "./helpers/identityClaims";
-import { contractId, toBytes32 } from "./helpers/constants";
+import { contractId, toBytes32 } from "./helpers/utils";
 
 const TestIdentityRecord = artifacts.require("TestIdentityRecord");
 const TestUpdatedIdentityRecord = artifacts.require("TestUpdatedIdentityRecord");

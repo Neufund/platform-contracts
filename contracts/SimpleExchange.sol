@@ -14,8 +14,7 @@ contract SimpleExchange is
     ITokenExchangeRateOracle,
     IGasExchange,
     IContractId,
-    Reclaimable,
-    Math
+    Reclaimable
 {
     ////////////////////////
     // Data types
@@ -180,7 +179,7 @@ contract SimpleExchange is
         private
     {
         // exchange declared amount - the exchange fee, no overflow, fee < 0
-        uint256 amountEthWei = decimalFraction(amountEurUlps - decimalFraction(amountEurUlps, exchangeFeeFraction), rate);
+        uint256 amountEthWei = Math.decimalFraction(amountEurUlps - Math.decimalFraction(amountEurUlps, exchangeFeeFraction), rate);
         // take all euro tokens
         assert(EURO_TOKEN.transferFrom(gasRecipient, this, amountEurUlps));
         // transfer ether to gasRecipient
@@ -200,7 +199,7 @@ contract SimpleExchange is
             return (requested_rate.rateFraction, requested_rate.timestamp);
         }
         else if (inversed_requested_rate.timestamp > 0) {
-            uint256 invRateFraction = proportion(10**18, 10**18, inversed_requested_rate.rateFraction);
+            uint256 invRateFraction = Math.proportion(10**18, 10**18, inversed_requested_rate.rateFraction);
             return (invRateFraction, inversed_requested_rate.timestamp);
         }
         // will return (0, 0) == (rateFraction, timestamp)
@@ -216,7 +215,7 @@ contract SimpleExchange is
         require(numeratorToken != denominatorToken, "NF_SEX_SAME_N_D");
         assert(rateFraction > 0);
         assert(rateFraction < 2**128);
-        uint256 invRateFraction = proportion(10**18, 10**18, rateFraction);
+        uint256 invRateFraction = Math.proportion(10**18, 10**18, rateFraction);
 
         // Inversion of rate biger than 10**36 is not possible and it will always be 0.
         // require(invRateFraction < 2**128, "NF_SEX_OVR_INV");

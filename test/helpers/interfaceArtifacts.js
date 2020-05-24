@@ -37,10 +37,11 @@ export const interfaceToArtifacts = {
   // more than one artifact (abi) planned soon
   [keyToKey.commitmentInterface]: [artifacts.STANDARD_ETO_COMMITMENT, ""],
   [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN, ""],
-  [keyToKey.equityTokenControllerInterface]: [artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER, ""],
+  [keyToKey.equityTokenControllerInterface]: [artifacts.EQUITY_TOKEN_CONTROLLER, ""],
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
   [keyToKey.paymentTokenInterface]: ["IERC223Token"],
   [keyToKey.etoTermsConstraints]: [artifacts.ETO_TERMS_CONSTRAINTS, ""],
+  [keyToKey.votingCenter]: [artifacts.VOTING_CENTER, ""],
 };
 
 // verify all known interfaces are mapped

@@ -24,4 +24,5 @@ export default {
   disburser: sha3("Disburser"),
   disbursalManager: sha3("DisbursalManager"),
   companyUpgradeAdmin: sha3("CompanyUpgradeAdmin"),
+  votingCenterManager: sha3("VotingCenterManager"),
 };

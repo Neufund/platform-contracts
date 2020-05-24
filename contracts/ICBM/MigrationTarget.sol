@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "./Standards/IMigrationTarget.sol";
+import "./IMigrationTarget.sol";
 
 
 /// @notice mixin that enables contract to receive migration

@@ -9,7 +9,7 @@ import "./Standards/IContractId.sol";
 // 2 - method to calculate amount before token fee added
 
 /// @title sets terms of Platform
-contract PlatformTerms is Math, IContractId {
+contract PlatformTerms is IContractId {
 
     ////////////////////////
     // Constants
@@ -59,7 +59,7 @@ contract PlatformTerms is Math, IContractId {
         returns (uint256)
     {
         // x*0.02 == x/50
-        return divRound(tokenAmount, 50);
+        return Math.divRound(tokenAmount, 50);
     }
 
     // this calculates the amount before fee from the amount that already includes token fee
@@ -69,7 +69,7 @@ contract PlatformTerms is Math, IContractId {
         returns (uint256)
     {
         // x + 0.02x = tokenAmount, x = tokenAmount * 1/1.02 = tokenAmount * 50 / 51
-        return divRound(mul(tokenAmountWithFee, 50), 51);
+        return Math.divRound(Math.mul(tokenAmountWithFee, 50), 51);
     }
 
     function calculatePlatformFee(uint256 amount)
@@ -77,7 +77,7 @@ contract PlatformTerms is Math, IContractId {
         pure
         returns (uint256)
     {
-        return decimalFraction(amount, PLATFORM_FEE_FRACTION);
+        return Math.decimalFraction(amount, PLATFORM_FEE_FRACTION);
     }
 
     //

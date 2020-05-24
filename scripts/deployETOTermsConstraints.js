@@ -12,8 +12,8 @@ const deployETOTermsConstraintsUniverse = require("../test/helpers/deployTerms")
 const { explainTerms, printConstants, good, wrong } = require("./helpers");
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
-const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const recoverBigNumbers = require("../test/helpers/utils").recoverBigNumbers;
+const promisify = require("../test/helpers/utils").promisify;
 const Q18 = require("../test/helpers/constants").Q18;
 
 module.exports = async function deploy() {

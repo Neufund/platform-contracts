@@ -23,6 +23,7 @@ const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
 const FeeDisbursal = artifacts.require("FeeDisbursal");
 const FeeDisbursalController = artifacts.require("FeeDisbursalController");
+const VotingCenter = artifacts.require("VotingCenter");
 
 export async function deployAccessControl(initialRules) {
   const accessPolicy = await RoleBasedAccessPolicy.new();
@@ -70,6 +71,15 @@ export async function deployIdentityRegistry(universe, universeManager, identity
   );
 
   return identityRegistry;
+}
+
+export async function deployVotingCenter(controllerArtifact, universe, universeManager) {
+  const votingController = await controllerArtifact.new(universe.address);
+  const votingCenter = await VotingCenter.new(votingController.address);
+  await universe.setSingleton(knownInterfaces.votingCenter, votingCenter.address, {
+    from: universeManager,
+  });
+  return [votingCenter, votingController];
 }
 
 export async function deployNeumark(accessPolicy, forkArbiter) {

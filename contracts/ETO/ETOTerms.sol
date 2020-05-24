@@ -5,7 +5,7 @@ import "./ETOTokenTerms.sol";
 import "./ETOTermsConstraints.sol";
 import "../Standards/IContractId.sol";
 import "../PlatformTerms.sol";
-import "../Company/ShareholderRights.sol";
+import "../Company/EquityTokenholderRights.sol";
 import "../Math.sol";
 import "../Universe.sol";
 import "../KnownInterfaces.sol";
@@ -18,6 +18,7 @@ import "../AccessRoles.sol";
 // 2 - whitelist management shifted from company to WHITELIST ADMIN
 // 3 - SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL moved to ETOTokenTerms
 //     replaces EXISTING_COMPANY_SHARS with EXISTING_SHARE_CAPITAL, adds CURRENCY CODE
+// 4 - replaces SHAREHOLDER_RIGHTS with TOKENHOLDER_RIGHTS
 //
 //     MAX_AVAILABLE_TOKENS with the actual amount of tokens for sale
 //     MAX_AVAILABLE_TOKENS_IN_WHITELIST with the actual amount of tokens for sale in whitelist
@@ -30,8 +31,6 @@ import "../AccessRoles.sol";
 contract ETOTerms is
     AccessControlled,
     AccessRoles,
-    IdentityRecord,
-    Math,
     IContractId,
     KnownInterfaces
 {
@@ -49,12 +48,6 @@ contract ETOTerms is
     }
 
     ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-
-    ////////////////////////
     // Immutable state
     ////////////////////////
 
@@ -66,6 +59,8 @@ contract ETOTerms is
     string public SHARE_CAPITAL_CURRENCY_CODE;
     // shares capital in ISHA currency at the beginning of the sale, excl. Authorized Capital
     uint256 public EXISTING_SHARE_CAPITAL;
+    // authorized capital to be established after ETO
+    uint256 public AUTHORIZED_CAPITAL;
     // maximum discount on token price that may be given to investor (as decimal fraction)
     // uint256 public MAXIMUM_TOKEN_PRICE_DISCOUNT_FRAC;
     // minimum ticket
@@ -89,7 +84,7 @@ contract ETOTerms is
     // prospectus / investment memorandum / crowdfunding pamphlet etc.
     string public INVESTOR_OFFERING_DOCUMENT_URL;
     // settings for shareholder rights
-    ShareholderRights public SHAREHOLDER_RIGHTS;
+    EquityTokenholderRights public TOKENHOLDER_RIGHTS;
 
     // wallet registry of KYC procedure
     IIdentityRegistry public IDENTITY_REGISTRY;
@@ -109,6 +104,9 @@ contract ETOTerms is
     uint256 private EQUITY_TOKENS_PER_SHARE;
     // public-discounted price to be paid for a full token during the eto
     uint256 private FULL_TOKEN_PRICE_FRACTION;
+
+    // url (typically IPFS hash) to investment agreement between nominee and company
+    string public INVESTMENT_AGREEMENT_TEMPLATE_URL;
 
 
     ////////////////////////
@@ -139,11 +137,13 @@ contract ETOTerms is
         ETOTokenTerms tokenTerms,
         string shareCapitalCurrencyCode,
         uint256 existingShareCapital,
+        uint256 authorizedCapital,
         uint256 minTicketEurUlps,
         uint256 maxTicketEurUlps,
         bool enableTransfersOnSuccess,
         string investorOfferingDocumentUrl,
-        ShareholderRights shareholderRights,
+        string investmentAgreementTemplateUrl,
+        EquityTokenholderRights tokenholderRights,
         uint256 whitelistDiscountFrac,
         uint256 publicDiscountFrac,
         ETOTermsConstraints etoTermsConstraints
@@ -154,11 +154,12 @@ contract ETOTerms is
         require(durationTerms != address(0));
         require(tokenTerms != address(0));
         require(existingShareCapital > 0);
-        require(keccak256(abi.encodePacked(investorOfferingDocumentUrl)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(shareCapitalCurrencyCode)) != EMPTY_STRING_HASH);
-        require(shareholderRights != address(0));
+        require(bytes(investorOfferingDocumentUrl).length != 0);
+        require(bytes(shareCapitalCurrencyCode).length != 0);
+        require(bytes(investmentAgreementTemplateUrl).length != 0);
+        require(tokenholderRights != address(0));
         // test interface
-        require(shareholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
+        require(tokenholderRights.HAS_GENERAL_INFORMATION_RIGHTS());
         require(whitelistDiscountFrac >= 0 && whitelistDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(publicDiscountFrac >= 0 && publicDiscountFrac <= 99*10**16, "NF_DISCOUNT_RANGE");
         require(minTicketEurUlps<=maxTicketEurUlps);
@@ -175,21 +176,23 @@ contract ETOTerms is
         TOKEN_TERMS = tokenTerms;
         SHARE_CAPITAL_CURRENCY_CODE = shareCapitalCurrencyCode;
         EXISTING_SHARE_CAPITAL = existingShareCapital;
+        AUTHORIZED_CAPITAL = authorizedCapital;
         MIN_TICKET_EUR_ULPS = minTicketEurUlps;
         MAX_TICKET_EUR_ULPS = maxTicketEurUlps;
         ENABLE_TRANSFERS_ON_SUCCESS = enableTransfersOnSuccess;
         INVESTOR_OFFERING_DOCUMENT_URL = investorOfferingDocumentUrl;
-        SHAREHOLDER_RIGHTS = shareholderRights;
+        TOKENHOLDER_RIGHTS = tokenholderRights;
         WHITELIST_DISCOUNT_FRAC = whitelistDiscountFrac;
         PUBLIC_DISCOUNT_FRAC = publicDiscountFrac;
         IDENTITY_REGISTRY = IIdentityRegistry(universe.identityRegistry());
         UNIVERSE = universe;
+        INVESTMENT_AGREEMENT_TEMPLATE_URL = investmentAgreementTemplateUrl;
 
         // compute max available tokens to be sold in ETO
         EQUITY_TOKEN_POWER = 10 ** uint256(tokenTerms.EQUITY_TOKEN_DECIMALS());
         require(EQUITY_TOKEN_POWER <= 10 ** 18);
         MAX_AVAILABLE_TOKENS = calculateAvailableTokens(tokenTerms.MAX_NUMBER_OF_TOKENS());
-        MAX_AVAILABLE_TOKENS_IN_WHITELIST = min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
+        MAX_AVAILABLE_TOKENS_IN_WHITELIST = Math.min(MAX_AVAILABLE_TOKENS, tokenTerms.MAX_NUMBER_OF_TOKENS_IN_WHITELIST());
         FULL_TOKEN_PRICE_FRACTION = calculatePriceFraction(10**18 - PUBLIC_DISCOUNT_FRAC);
 
         // validate all settings
@@ -207,7 +210,7 @@ contract ETOTerms is
         returns (uint256 tokenAmount)
     {
         // we may disregard totalEurUlps as curve is flat, round down when calculating tokens
-        return mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_TOKEN_PRICE_FRACTION;
+        return Math.mul(committedEurUlps, EQUITY_TOKEN_POWER) / FULL_TOKEN_PRICE_FRACTION;
     }
 
     // calculates amount of euro required to acquire amount of tokens at a position of the (inverse) curve
@@ -217,7 +220,7 @@ contract ETOTerms is
         returns (uint256 committedEurUlps)
     {
         // we may disregard totalTokenAmount as curve is flat
-        return proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
+        return Math.proportion(tokenAmount, FULL_TOKEN_PRICE_FRACTION, EQUITY_TOKEN_POWER);
     }
 
     // calculates a fraction `priceFrac` of the full token price, typically used for discounts
@@ -226,14 +229,14 @@ contract ETOTerms is
         if (priceFrac == 1) {
             return TOKEN_PRICE_EUR_ULPS;
         } else {
-            return decimalFraction(priceFrac, TOKEN_PRICE_EUR_ULPS);
+            return Math.decimalFraction(priceFrac, TOKEN_PRICE_EUR_ULPS);
         }
     }
 
     // calculates price of a token by dividing amountEurUlps by equityTokenAmount and scaling to 10**18
     // note that all prices are decimal fractions as defined in Math.sol
     function calculateTokenEurPrice(uint256 amountEurUlps, uint256 equityTokenAmount) public constant returns(uint256) {
-        return proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
+        return Math.proportion(amountEurUlps, EQUITY_TOKEN_POWER, equityTokenAmount);
     }
 
     /// @notice returns number of shares as a decimal fraction
@@ -242,7 +245,7 @@ contract ETOTerms is
         constant
         returns (uint256)
     {
-        return proportion(amount, 10**18, EQUITY_TOKENS_PER_SHARE);
+        return Math.proportion(amount, 10**18, EQUITY_TOKENS_PER_SHARE);
     }
 
     function addWhitelisted(
@@ -304,7 +307,7 @@ contract ETOTerms is
             newInvestorContributionEurUlps,
             applyWhitelistDiscounts);
         // check if is eligible for investment
-        IdentityClaims memory claims = deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
+        IdentityRecord.IdentityClaims memory claims = IdentityRecord.deserializeClaims(IDENTITY_REGISTRY.getClaims(investor));
         // use simple formula to disallow us accredited investors
         isEligible = claims.isVerified && !claims.accountFrozen && !claims.requiresRegDAccreditation;
     }
@@ -364,7 +367,7 @@ contract ETOTerms is
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 3);
+        return (0x3468b14073c33fa00ee7f8a289b14f4a10c78ab72726033b27003c31c47b3f6a, 4);
     }
 
     ////////////////////////
@@ -397,18 +400,18 @@ contract ETOTerms is
         // whitelist use discount is possible
         if (applyWhitelistDiscounts) {
             // can invest more than general max ticket
-            maxTicketEurUlps = max(wlTicket.discountAmountEurUlps, maxTicketEurUlps);
+            maxTicketEurUlps = Math.max(wlTicket.discountAmountEurUlps, maxTicketEurUlps);
             // can invest less than general min ticket
             if (wlTicket.discountAmountEurUlps > 0) {
-                minTicketEurUlps = min(wlTicket.discountAmountEurUlps, minTicketEurUlps);
+                minTicketEurUlps = Math.min(wlTicket.discountAmountEurUlps, minTicketEurUlps);
             }
             if (existingInvestorContributionEurUlps < wlTicket.discountAmountEurUlps) {
-                discountedAmount = min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
+                discountedAmount = Math.min(newInvestorContributionEurUlps, wlTicket.discountAmountEurUlps - existingInvestorContributionEurUlps);
                 // discount is fixed so use base token price
                 if (discountedAmount > 0) {
                     // always round down when calculating tokens
                     uint256 fixedSlotPrice = calculatePriceFraction(wlTicket.fullTokenPriceFrac);
-                    fixedSlotEquityTokenAmount = mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
+                    fixedSlotEquityTokenAmount = Math.mul(discountedAmount, EQUITY_TOKEN_POWER) / fixedSlotPrice;
                     // calculate the really spent part to cover for rounding errors in next tranche (remainingAmount)
                     // commented out as with 18 digit scale we have 1 wei difference max and we'll not deploy any other
                     // precisions anymore
@@ -421,7 +424,7 @@ contract ETOTerms is
         if (remainingAmount > 0) {
             if (applyWhitelistDiscounts && WHITELIST_DISCOUNT_FRAC > 0) {
                 // will not overflow, WHITELIST_DISCOUNT_FRAC < Q18 from constructor, also round down
-                equityTokenAmount = mul(remainingAmount, EQUITY_TOKEN_POWER) / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
+                equityTokenAmount = Math.mul(remainingAmount, EQUITY_TOKEN_POWER) / calculatePriceFraction(10**18 - WHITELIST_DISCOUNT_FRAC);
             } else {
                 // use pricing along the curve
                 equityTokenAmount = calculateTokenAmount(totalContributedEurUlps + discountedAmount, remainingAmount);

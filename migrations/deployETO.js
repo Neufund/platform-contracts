@@ -2,15 +2,16 @@ import createAccessPolicy from "../test/helpers/createAccessPolicy";
 import { deserializeClaims } from "../test/helpers/identityClaims";
 import roles from "../test/helpers/roles";
 import { knownInterfaces } from "../test/helpers/knownInterfaces";
-import { promisify } from "../test/helpers/evmCommands";
+import { promisify } from "../test/helpers/utils";
 import { Q18, ZERO_ADDRESS } from "../test/helpers/constants";
 import {
-  deployShareholderRights,
+  deployTokenholderRights,
   deployDurationTerms,
   deployETOTerms,
   deployTokenTerms,
 } from "../test/helpers/deployTerms";
 import { CommitmentStateRev } from "../test/helpers/commitmentState";
+import { getCommitmentResolutionId } from "../test/helpers/govUtils";
 import { prettyPrintGasCost } from "../test/helpers/gasUtils";
 import { good, wrong, printConstants } from "../scripts/helpers";
 
@@ -22,30 +23,18 @@ function logDeployed(contract) {
   console.log("...deployed at address ", ...good(contract.address));
 }
 
-export async function deployETO(
-  artifacts,
-  deployer,
-  config,
-  universe,
-  nominee,
-  company,
-  defETOTerms,
-  defShareholderRights,
-  defDurations,
-  defTokenTerms,
-  etoTermsConstraintsAddress,
-) {
+export async function deployGovLib(artifacts) {
+  console.log("Deploying GovLibrary");
+  const GovLibrary = artifacts.require("Gov");
+  const lib = await GovLibrary.new();
+  logDeployed(lib);
+  return lib;
+}
+
+export async function canDeployETO(artifacts, deployer, config, universe) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const Neumark = artifacts.require(config.artifacts.NEUMARK);
-  const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
-  const PlaceholderEquityTokenController = artifacts.require(
-    config.artifacts.PLACEHOLDER_EQUITY_TOKEN_CONTROLLER,
-  );
   const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
-  const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
-  const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
-  const ETOTokenTerms = artifacts.require(config.artifacts.STANDARD_TOKEN_TERMS);
-  const ShareholderRights = artifacts.require(config.artifacts.STANDARD_SHAREHOLDER_RIGHTS);
 
   // preliminary checks
   const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
@@ -86,17 +75,49 @@ export async function deployETO(
       : wrong(deployerBalanceEth.toNumber())),
   );
 
-  if (!canManageUniverse || !deployerHasBalance) {
-    throw new Error("Initial checks failed");
-  }
+  return [!canManageUniverse || !deployerHasBalance, canControlNeu];
+}
+
+export async function deployETO(
+  artifacts,
+  deployer,
+  config,
+  universe,
+  nominee,
+  company,
+  defETOTerms,
+  defTokenholderRights,
+  defDurations,
+  defTokenTerms,
+  etoTermsConstraintsAddress,
+  govLib,
+  canControlNeu,
+) {
+  const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
+  const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
+  const SingleEquityTokenController = artifacts.require(config.artifacts.EQUITY_TOKEN_CONTROLLER);
+  const ETOCommitment = artifacts.require(config.artifacts.STANDARD_ETO_COMMITMENT);
+  const ETOTerms = artifacts.require(config.artifacts.STANDARD_ETO_TERMS);
+  const ETODurationTerms = artifacts.require(config.artifacts.STANDARD_DURATION_TERMS);
+  const ETOTokenTerms = artifacts.require(config.artifacts.STANDARD_TOKEN_TERMS);
+  const TokenholderRights = artifacts.require(config.artifacts.STANDARD_TOKENHOLDER_RIGHTS);
+  const GovLibrary = artifacts.require("Gov");
+
+  // linking controller
+  GovLibrary.address = govLib.address;
+  await SingleEquityTokenController.link(GovLibrary, govLib.address);
+
+  const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
+  const neumarkAddress = await universe.neumark();
+
   // deployment
-  console.log("Deploying ShareholderRights");
-  const [shareholderRights] = await deployShareholderRights(
-    ShareholderRights,
-    defShareholderRights,
+  console.log("Deploying TokenholderRights");
+  const [tokenholderRights] = await deployTokenholderRights(
+    TokenholderRights,
+    defTokenholderRights,
     true,
   );
-  logDeployed(shareholderRights);
+  logDeployed(tokenholderRights);
   console.log("Deploying ETODurationTerms");
   const [durationTerms] = await deployDurationTerms(ETODurationTerms, defDurations, true);
   logDeployed(durationTerms);
@@ -109,18 +130,15 @@ export async function deployETO(
     ETOTerms,
     durationTerms,
     tokenTerms,
-    shareholderRights,
+    tokenholderRights,
     { address: etoTermsConstraintsAddress },
     defETOTerms,
     true,
   );
   logDeployed(etoTerms);
   // deploy equity token controller which is company management contract
-  console.log("Deploying PlaceholderEquityTokenController");
-  const equityTokenController = await PlaceholderEquityTokenController.new(
-    universe.address,
-    company,
-  );
+  console.log(`Deploying ${config.artifacts.EQUITY_TOKEN_CONTROLLER}`);
+  const equityTokenController = await SingleEquityTokenController.new(universe.address, company);
   logDeployed(equityTokenController);
   // deploy equity token
   console.log("Deploying EquityToken");
@@ -153,6 +171,10 @@ export async function deployETO(
     [true, true, true, true],
     { from: deployer },
   );
+  const resolutionId = getCommitmentResolutionId(etoCommitment.address);
+  console.log(`registering new offering as resolution id ${resolutionId}`);
+  await equityTokenController.startNewOffering(resolutionId, etoCommitment.address);
+
   if (canControlNeu) {
     console.log("neu token manager allows ETOCommitment to issue NEU");
     await createAccessPolicy(accessPolicy, [
@@ -236,10 +258,32 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   const raaaCount = await eto.amendmentsCount();
   const raaUrl = raaaCount.eq(0) ? "NOT SET" : (await eto.currentAgreement())[2];
   console.log("ETO Commitment R&A URL", ...(raaaCount.eq(0) ? wrong(raaUrl) : good(raaUrl)));
-  const equityToken = await EquityToken.at(await eto.equityToken());
-  const thaCount = await equityToken.amendmentsCount();
-  const thaUrl = thaCount.eq(0) ? "NOT SET" : (await equityToken.currentAgreement())[2];
-  console.log("Equity Token THA URL", ...(thaCount.eq(0) ? wrong(thaUrl) : good(thaUrl)));
+  const equityTokenAddress = await eto.equityToken();
+  if (equityTokenAddress === ZERO_ADDRESS) {
+    console.log(...wrong("Equity Token not yet set"));
+  } else {
+    const equityToken = await EquityToken.at(equityTokenAddress);
+    const thaCount = await equityToken.amendmentsCount();
+    const thaUrl = thaCount.eq(0) ? "NOT SET" : (await equityToken.currentAgreement())[2];
+    console.log("Equity Token THA URL", ...(thaCount.eq(0) ? wrong(thaUrl) : good(thaUrl)));
+
+    const tokenInUniverse = await universe.isInterfaceCollectionInstance(
+      knownInterfaces.equityTokenInterface,
+      await eto.equityToken(),
+    );
+    console.log(
+      "Checking if EquityToken in Universe",
+      ...(tokenInUniverse ? good("YES") : wrong("NO")),
+    );
+    const controllerInUniverse = await universe.isInterfaceCollectionInstance(
+      knownInterfaces.equityTokenControllerInterface,
+      await eto.commitmentObserver(),
+    );
+    console.log(
+      "Checking if Controller in Universe",
+      ...(controllerInUniverse ? good("YES") : wrong("NO")),
+    );
+  }
   console.log("------------------------------------------------------");
   const canIssueNEU = await neuAccessPolicy.allowed.call(
     etoCommitmentAddress,
@@ -253,22 +297,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
     etoCommitmentAddress,
   );
   console.log("Checking if ETO in Universe", ...(etoInUniverse ? good("YES") : wrong("NO")));
-  const tokenInUniverse = await universe.isInterfaceCollectionInstance(
-    knownInterfaces.equityTokenInterface,
-    await eto.equityToken(),
-  );
-  console.log(
-    "Checking if EquityToken in Universe",
-    ...(tokenInUniverse ? good("YES") : wrong("NO")),
-  );
-  const controllerInUniverse = await universe.isInterfaceCollectionInstance(
-    knownInterfaces.equityTokenControllerInterface,
-    await eto.commitmentObserver(),
-  );
-  console.log(
-    "Checking if Controller in Universe",
-    ...(controllerInUniverse ? good("YES") : wrong("NO")),
-  );
+
   const termsInUniverse = await universe.isInterfaceCollectionInstance(
     knownInterfaces.termsInterface,
     etoTerms.address,
@@ -328,7 +357,7 @@ export async function checkETO(artifacts, config, etoCommitmentAddress, dumpCons
   console.log(`Example contribution ${contribution}`);
   console.log("------------------------------------------------------");
   console.log("ETO Components");
-  console.log(`Equity Token: ${equityToken.address}`);
+  console.log(`Equity Token: ${equityTokenAddress}`);
   console.log(`Token Controller: ${await eto.commitmentObserver()}`);
   console.log(`ETO Terms: ${etoTerms.address}`);
 }

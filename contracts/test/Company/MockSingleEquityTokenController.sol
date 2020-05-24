@@ -1,10 +1,10 @@
 pragma solidity 0.4.26;
 
-import "../../Company/PlaceholderEquityTokenController.sol";
+import "../../Company/SingleEquityTokenController.sol";
 
 
-contract MockPlaceholderEquityTokenController is
-    PlaceholderEquityTokenController
+contract MockSingleEquityTokenController is
+    SingleEquityTokenController
 {
     ////////////////////////
     // Mutable state
@@ -19,10 +19,10 @@ contract MockPlaceholderEquityTokenController is
 
     constructor(
         Universe universe,
-        address companyLegalRepresentative
+        address companyLegalRep
     )
         public
-        PlaceholderEquityTokenController(universe, companyLegalRepresentative)
+        SingleEquityTokenController(universe, companyLegalRep)
     {}
 
     ////////////////////////
@@ -33,7 +33,7 @@ contract MockPlaceholderEquityTokenController is
         public
         onlyCompany
     {
-        enableTransfers(transfersEnabled);
+        enableTransfers(0, transfersEnabled);
     }
 
     // to easily mockup chains of controller changes
@@ -44,24 +44,24 @@ contract MockPlaceholderEquityTokenController is
     }
 
     // to easily mockup state
-    function _overrideState(GovState state)
+    function _overrideState(Gov.State state)
         public
     {
         transitionTo(state);
     }
 
     //
-    // Implements IControllerGovernance
+    // Implements IMigrationChain
     //
 
-    function oldTokenController()
+    function migratedFrom()
         public
         constant
         returns (address)
     {
         if (_oldController == address(0)) {
             // in no override then return controller as set by base
-            return PlaceholderEquityTokenController.oldTokenController();
+            return SingleEquityTokenController.migratedFrom();
         } else {
             return _oldController;
         }

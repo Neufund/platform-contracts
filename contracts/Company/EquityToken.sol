@@ -2,35 +2,27 @@ pragma solidity 0.4.26;
 
 
 import "./IEquityToken.sol";
+import "./EquityTokenMetadata.sol";
 import "../PlatformTerms.sol";
 import "../ETO/ETOTokenTerms.sol";
 import "../Agreement.sol";
 import "../Universe.sol";
 import "../Reclaimable.sol";
 import "../Snapshot/Daily.sol";
-import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardSnapshotToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
-import "../Standards/IContractId.sol";
 import "../IsContract.sol";
 import "../Math.sol";
-
-// version history as per contract id
-// 0 - inital version
-// 1 - shareNominalValueUlps added and shareNominalValueEurUlps removed in IEquityToken
-// 2 - fixed issueToken `to` bug where address(this) was sent to controller in onGenerateTokens
 
 
 contract EquityToken is
     IEquityToken,
-    IContractId,
     StandardSnapshotToken,
     Daily,
-    TokenMetadata,
+    EquityTokenMetadata,
     Agreement,
-    IsContract,
-    Math
+    IsContract
 {
     ////////////////////////
     // Immutable state
@@ -52,34 +44,6 @@ contract EquityToken is
     // company management contract
     IEquityTokenController private _tokenController;
 
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    event LogTokensIssued(
-        address indexed holder,
-        address controller,
-        uint256 amount
-    );
-
-    event LogTokensDestroyed(
-        address indexed holder,
-        address controller,
-        uint256 amount
-    );
-
-    event LogChangeTokenController(
-        address oldController,
-        address newController,
-        address by
-    );
-
-    event LogChangeNominee(
-        address oldNominee,
-        address newNominee,
-        address controller,
-        address by
-    );
 
     ////////////////////////
     // Modifiers
@@ -111,11 +75,12 @@ contract EquityToken is
             IClonedTokenParent(0x0),
             0
         )
-        TokenMetadata(
+        EquityTokenMetadata(
             etoTokenTerms.EQUITY_TOKEN_NAME(),
             etoTokenTerms.EQUITY_TOKEN_DECIMALS(),
             etoTokenTerms.EQUITY_TOKEN_SYMBOL(),
-            "1.0"
+            "1.0",
+            etoTokenTerms.ISIN()
         )
         Daily(0)
         public

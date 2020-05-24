@@ -14,6 +14,7 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
     constructor(
         string equityTokenName,
         string equityTokenSymbol,
+        string isin,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
         uint256 tokenPriceEurUlps,
@@ -28,6 +29,7 @@ contract MockUncheckedETOTokenTerms is ETOTokenTerms {
         ETOTokenTerms(
             equityTokenName,
             equityTokenSymbol,
+            isin,
             equityTokensPerShare,
             equityTokensPerShare,
             equityTokensPerShare,

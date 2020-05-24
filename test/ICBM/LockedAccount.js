@@ -20,9 +20,9 @@ import { LockState } from "./lockState";
 import forceEther from "../helpers/forceEther";
 import { etherToWei } from "../helpers/unitConverter";
 import roles from "../helpers/roles";
-import { promisify } from "../helpers/evmCommands";
 import { dayInSeconds, monthInSeconds, Q18 } from "../helpers/constants";
 import { knownInterfaces } from "../helpers/knownInterfaces";
+import { getKeyByValue, promisify } from "../helpers/utils";
 
 const ICBMEtherToken = artifacts.require("ICBMEtherToken");
 const ICBMEuroToken = artifacts.require("ICBMEuroToken");
@@ -911,10 +911,6 @@ contract(
         const adminEthAfterBalance = await promisify(web3.eth.getBalance)(admin);
         expect(adminEthAfterBalance).to.be.bignumber.eq(adminEthBalance.add(amount).sub(gasCost));
       });
-
-      function getKeyByValue(object, value) {
-        return Object.keys(object).find(key => object[key] === value);
-      }
 
       describe("should reject on invalid state", () => {
         const PublicFunctionsRejectInState = {

@@ -18,7 +18,6 @@ contract ICBMCommitment is
     Agreement,
     ICBMTimedStateMachine,
     Reclaimable,
-    Math,
     ICBMRoles
 {
     ////////////////////////
@@ -228,7 +227,7 @@ contract ICBMCommitment is
     {
         // Take with EtherToken allowance (if any)
         uint256 allowedAmount = ETHER_TOKEN.allowance(msg.sender, this);
-        uint256 committedAmount = add(allowedAmount, msg.value);
+        uint256 committedAmount = Math.add(allowedAmount, msg.value);
         uint256 committedEurUlps = convertToEur(committedAmount);
         // check against minimum ticket before proceeding
         require(committedEurUlps >= MIN_TICKET_EUR_ULPS);
@@ -317,7 +316,7 @@ contract ICBMCommitment is
         returns (uint256)
     {
         require(amount < 2**123);
-        return decimalFraction(amount, ETH_EUR_FRACTION);
+        return Math.decimalFraction(amount, ETH_EUR_FRACTION);
     }
 
     function platformWalletAddress()
@@ -490,9 +489,9 @@ contract ICBMCommitment is
 
             // Add to totals
             if (isEuro) {
-                _whitelistEuroNmk = add(_whitelistEuroNmk, rewardNmk);
+                _whitelistEuroNmk = Math.add(_whitelistEuroNmk, rewardNmk);
             } else {
-                _whitelistEtherNmk = add(_whitelistEtherNmk, rewardNmk);
+                _whitelistEtherNmk = Math.add(_whitelistEtherNmk, rewardNmk);
             }
         }
     }
@@ -503,7 +502,7 @@ contract ICBMCommitment is
         returns (uint256)
     {
         // We don't go over the cap
-        require(add(NEUMARK.totalEuroUlps(), committedEurUlps) <= CAP_EUR_ULPS);
+        require(Math.add(NEUMARK.totalEuroUlps(), committedEurUlps) <= CAP_EUR_ULPS);
 
         // Compute committed funds
         uint256 remainingEurUlps = committedEurUlps;
@@ -518,30 +517,30 @@ contract ICBMCommitment is
 
         bool whitelistActiveForToken = tokenType == Token.Euro || state() == State.Whitelist;
         if (whitelisted && whitelistActiveForToken && ticket.amountEurUlps > 0 ) {
-            uint256 ticketEurUlps = min(remainingEurUlps, ticket.amountEurUlps);
-            ticketNmk = proportion(
+            uint256 ticketEurUlps = Math.min(remainingEurUlps, ticket.amountEurUlps);
+            ticketNmk = Math.proportion(
                 ticket.rewardNmk,
                 ticketEurUlps,
                 ticket.amountEurUlps
             );
             // update investor ticket
-            ticket.amountEurUlps = sub(ticket.amountEurUlps, ticketEurUlps);
-            ticket.rewardNmk = sub(ticket.rewardNmk, ticketNmk);
+            ticket.amountEurUlps = Math.sub(ticket.amountEurUlps, ticketEurUlps);
+            ticket.rewardNmk = Math.sub(ticket.rewardNmk, ticketNmk);
             // mark ticketEurUlps as spent
-            remainingEurUlps = sub(remainingEurUlps, ticketEurUlps);
+            remainingEurUlps = Math.sub(remainingEurUlps, ticketEurUlps);
             // set neumark reward
             rewardNmk = ticketNmk;
             // decrease reserved Neumark pool accordingly
             if (tokenType == Token.Euro) {
-                _whitelistEuroNmk = sub(_whitelistEuroNmk, ticketNmk);
+                _whitelistEuroNmk = Math.sub(_whitelistEuroNmk, ticketNmk);
             } else {
-                _whitelistEtherNmk = sub(_whitelistEtherNmk, ticketNmk);
+                _whitelistEtherNmk = Math.sub(_whitelistEtherNmk, ticketNmk);
             }
         }
 
         // issue Neumarks against curve for amount left after pre-defined ticket was realized
         if (remainingEurUlps > 0) {
-            rewardNmk = add(rewardNmk, NEUMARK.issueForEuro(remainingEurUlps));
+            rewardNmk = Math.add(rewardNmk, NEUMARK.issueForEuro(remainingEurUlps));
             remainingEurUlps = 0; // not used later but we should keep variable semantics
         }
 

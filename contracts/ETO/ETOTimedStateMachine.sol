@@ -18,17 +18,11 @@ contract ETOTimedStateMachine is
 {
 
     ////////////////////////
-    // CONSTANTS
-    ////////////////////////
-
-    // uint32 private constant TS_STATE_NOT_SET = 1;
-
-    ////////////////////////
     // Immutable state
     ////////////////////////
 
     // maps states to durations (index is ETOState)
-    uint32[] private ETO_STATE_DURATIONS;
+    uint32[ETO_STATES_COUNT] private ETO_STATE_DURATIONS;
 
     // observer receives notifications on all state changes
     IETOCommitmentObserver private COMMITMENT_OBSERVER;
@@ -70,11 +64,16 @@ contract ETOTimedStateMachine is
         _;
     }
 
-    /// @dev Multiple states can be handled by adding more modifiers.
-    /* modifier notInState(ETOState state) {
-        require(_state != state);
-        _;
-    }*/
+    constructor(ETODurationTerms durationTerms, IETOCommitmentObserver observer) internal {
+        require(observer != address(0));
+        ETO_STATE_DURATIONS = [
+            0, durationTerms.WHITELIST_DURATION(), durationTerms.PUBLIC_DURATION(), durationTerms.SIGNING_DURATION(),
+            durationTerms.CLAIM_DURATION(), 0, 0
+            ];
+        COMMITMENT_OBSERVER = observer;
+    }
+
+
 
     ////////////////////////
     // Public functions
@@ -168,24 +167,12 @@ contract ETOTimedStateMachine is
     // Internal functions
     ////////////////////////
 
-    function setupStateMachine(ETODurationTerms durationTerms, IETOCommitmentObserver observer)
-        internal
-    {
-        require(COMMITMENT_OBSERVER == address(0), "NF_STM_SET_ONCE");
-        require(observer != address(0));
-
-        COMMITMENT_OBSERVER = observer;
-        ETO_STATE_DURATIONS = [
-            0, durationTerms.WHITELIST_DURATION(), durationTerms.PUBLIC_DURATION(), durationTerms.SIGNING_DURATION(),
-            durationTerms.CLAIM_DURATION(), 0, 0
-            ];
-    }
-
     function runStateMachine(uint32 startDate)
         internal
     {
         // this sets expiration of setup state
         _pastStateTransitionTimes[uint32(ETOState.Setup)] = startDate;
+        COMMITMENT_OBSERVER.onStateTransition(ETOState.Setup, ETOState.Setup);
     }
 
     function startOfInternal(ETOState s)
@@ -293,9 +280,15 @@ contract ETOTimedStateMachine is
         // should not change _state
         mAfterTransition(oldState, effectiveNewState);
         assert(_state == effectiveNewState);
+        emitStateTransition(oldState, effectiveNewState, deadline);
+    }
+
+    function emitStateTransition(ETOState oldState, ETOState newState, uint32 deadline)
+        private
+    {
         // should notify observer after internal state is settled
-        COMMITMENT_OBSERVER.onStateTransition(oldState, effectiveNewState);
-        emit LogStateTransition(uint32(oldState), uint32(effectiveNewState), deadline);
+        COMMITMENT_OBSERVER.onStateTransition(oldState, newState);
+        emit LogStateTransition(uint32(oldState), uint32(newState), deadline);
     }
 
     /*function validTransition(ETOState oldState, ETOState newState)
@@ -303,7 +296,6 @@ contract ETOTimedStateMachine is
         pure
         returns (bool valid)
     {
-        // TODO: think about disabling it before production deployment
         // (oldState == ETOState.Setup && newState == ETOState.Public) ||
         // (oldState == ETOState.Setup && newState == ETOState.Refund) ||
         return

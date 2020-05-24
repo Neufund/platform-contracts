@@ -1,10 +1,5 @@
-import {
-  web3,
-  decimalBase,
-  Q18,
-  daysToSeconds,
-  recoverBigNumbers,
-} from "../test/helpers/constants";
+import { web3, decimalBase, Q18, daysToSeconds } from "../test/helpers/constants";
+import { recoverBigNumbers } from "../test/helpers/utils";
 
 const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
   .getFixtureAndAddressByName;
@@ -18,7 +13,7 @@ const indivisibleEquityTokenDecimals = new web3.BigNumber("0");
 const indivisibleEquityTokenPower = decimalBase.pow(indivisibleEquityTokenDecimals);
 
 export const defEtoTerms = {
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0.5),
@@ -28,7 +23,6 @@ export const defEtoTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.5"),
     VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(7)),
@@ -39,6 +33,7 @@ export const defEtoTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
+    ISIN: "LI03981289128",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),
@@ -49,15 +44,14 @@ export const defEtoTerms = {
     EQUITY_TOKEN_DECIMALS: stdEquityTokenDecimals,
   },
   etoTerms: {
-    DURATION_TERMS: null,
-    TOKEN_TERMS: null,
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul(40976),
+    AUTHORIZED_CAPITAL: Q18.mul(1273),
     MIN_TICKET_EUR_ULPS: Q18.mul(10),
     MAX_TICKET_EUR_ULPS: Q18.mul(5000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
-    SHAREHOLDER_RIGHTS: null,
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
@@ -67,7 +61,7 @@ export const defEtoTerms = {
 };
 
 export const hnwiEtoDeSecurityTerms = {
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: new web3.BigNumber(1),
     TAG_ALONG_VOTING_RULE: new web3.BigNumber(2),
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: Q18.mul(0.5),
@@ -77,7 +71,6 @@ export const hnwiEtoDeSecurityTerms = {
     VOTING_FINALIZATION_DURATION: new web3.BigNumber(daysToSeconds(5)),
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul(0.5),
     VOTING_MAJORITY_FRAC: Q18.mul(0.5),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
   },
   durTerms: {
     WHITELIST_DURATION: new web3.BigNumber(daysToSeconds(8)),
@@ -88,6 +81,7 @@ export const hnwiEtoDeSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Rich",
     EQUITY_TOKEN_SYMBOL: "RCH",
+    ISIN: "DE038748939874",
     MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.42376189"),
@@ -98,16 +92,14 @@ export const hnwiEtoDeSecurityTerms = {
     EQUITY_TOKEN_DECIMALS: indivisibleEquityTokenDecimals,
   },
   etoTerms: {
-    ETO_TERMS_CONSTRAINTS: null,
-    DURATION_TERMS: null,
-    TOKEN_TERMS: null,
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
+    AUTHORIZED_CAPITAL: Q18.mul(1273),
     EXISTING_SHARE_CAPITAL: Q18.mul(41976),
     MIN_TICKET_EUR_ULPS: Q18.mul(100000),
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
-    SHAREHOLDER_RIGHTS: null,
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
@@ -120,14 +112,16 @@ export const retailEtoDeVmaTerms = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul("9000"),
+    AUTHORIZED_CAPITAL: Q18.mul(0),
     MIN_TICKET_EUR_ULPS: "10000000000000000000",
     MAX_TICKET_EUR_ULPS: "10000000000000000000000000",
     ENABLE_TRANSFERS_ON_SUCCESS: false,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmcoZxecpVUaWCG2CjdNucNtRzKsCYBGaTkC54eW6MkRg3",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmdJQ9mrepd6mNQ6KTyoPwPELhbRZnN4pYUVyg2VY2vTG1",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -137,7 +131,6 @@ export const retailEtoDeVmaTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmdJQ9mrepd6mNQ6KTyoPwPELhbRZnN4pYUVyg2VY2vTG1",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -148,6 +141,7 @@ export const retailEtoDeVmaTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "NOMERA",
     EQUITY_TOKEN_SYMBOL: "NOM",
+    ISIN: "",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("15000000"),
     TOKEN_PRICE_EUR_ULPS: "666666666666666667",
@@ -166,14 +160,16 @@ export const miniEtoLiTerms = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul("5000"),
+    AUTHORIZED_CAPITAL: Q18.mul("652"),
     MIN_TICKET_EUR_ULPS: "10000000000000000000",
     MAX_TICKET_EUR_ULPS: "5000000000000000000000000",
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "400000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -183,7 +179,6 @@ export const miniEtoLiTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -194,6 +189,7 @@ export const miniEtoLiTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Blok",
     EQUITY_TOKEN_SYMBOL: "BLKK",
+    ISIN: "LI7632819987982",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("5000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("6000000"),
     TOKEN_PRICE_EUR_ULPS: "600000000000000000",
@@ -212,14 +208,16 @@ export const miniEtoLiNominalValueTerms = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "PLN",
     EXISTING_SHARE_CAPITAL: Q18.mul("27800"),
+    AUTHORIZED_CAPITAL: Q18.mul(0),
     MIN_TICKET_EUR_ULPS: Q18.mul("100"),
     MAX_TICKET_EUR_ULPS: Q18.mul("5000000"),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: Q18.mul("0.1"),
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -229,7 +227,6 @@ export const miniEtoLiNominalValueTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
     VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
   },
   durTerms: {
     WHITELIST_DURATION: "604800",
@@ -240,6 +237,7 @@ export const miniEtoLiNominalValueTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "6-SHARES",
     EQUITY_TOKEN_SYMBOL: "SSH",
+    ISIN: "",
     MIN_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("6000000"),
     MAX_NUMBER_OF_TOKENS: indivisibleEquityTokenPower.mul("30000000"),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.161870503597122302"),
@@ -258,14 +256,16 @@ export const hnwiEtoLiSecurityTerms = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul("10050"),
+    AUTHORIZED_CAPITAL: Q18.mul("2342"),
     MIN_TICKET_EUR_ULPS: "100000000000000000000000",
     MAX_TICKET_EUR_ULPS: "15920398009950248756218905",
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -275,7 +275,6 @@ export const hnwiEtoLiSecurityTerms = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   durTerms: {
     WHITELIST_DURATION: "1209600",
@@ -286,6 +285,7 @@ export const hnwiEtoLiSecurityTerms = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Bionic",
     EQUITY_TOKEN_SYMBOL: "BNIC",
+    ISIN: "LI837111821",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("10000000"),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul("20000000"),
     TOKEN_PRICE_EUR_ULPS: "796019900497512438",
@@ -304,14 +304,16 @@ export const retailSMEEtoLi = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
     EXISTING_SHARE_CAPITAL: Q18.mul("10050"),
+    AUTHORIZED_CAPITAL: Q18.mul("125"),
     MIN_TICKET_EUR_ULPS: Q18.mul("10"),
     MAX_TICKET_EUR_ULPS: Q18.mul("20000000"),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
     INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
-  shareholderTerms: {
+  tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
     TAG_ALONG_VOTING_RULE: "2",
     LIQUIDATION_PREFERENCE_MULTIPLIER_FRAC: "0",
@@ -321,7 +323,6 @@ export const retailSMEEtoLi = {
     VOTING_FINALIZATION_DURATION: "604800",
     SHAREHOLDERS_VOTING_QUORUM_FRAC: "500000000000000000",
     VOTING_MAJORITY_FRAC: "500000000000000000",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   durTerms: {
     WHITELIST_DURATION: "1209600",
@@ -332,6 +333,7 @@ export const retailSMEEtoLi = {
   tokenTerms: {
     EQUITY_TOKEN_NAME: "Quintessence",
     EQUITY_TOKEN_SYMBOL: "QTT",
+    ISIN: "LI037619281",
     MIN_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(1000 * 10000),
     MAX_NUMBER_OF_TOKENS: stdEquityTokenPower.mul(3452 * 10000),
     TOKEN_PRICE_EUR_ULPS: Q18.mul("0.32376189"),

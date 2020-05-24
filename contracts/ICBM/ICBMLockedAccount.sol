@@ -4,7 +4,7 @@ import "../AccessControl/AccessControlled.sol";
 import "./ICBMRoles.sol";
 import "../AccessRoles.sol";
 import "../IsContract.sol";
-import "../MigrationSource.sol";
+import "./MigrationSource.sol";
 import "./ICBMLockedAccountMigration.sol";
 import "../Neumark.sol";
 import "../Standards/IERC677Token.sol";
@@ -18,7 +18,6 @@ contract ICBMLockedAccount is
     AccessControlled,
     ICBMRoles,
     TimeSource,
-    Math,
     IsContract,
     MigrationSource,
     IERC677Callback,
@@ -211,7 +210,7 @@ contract ICBMLockedAccount is
 
         Account storage account = _accounts[investor];
         account.balance = addBalance(account.balance, amount);
-        account.neumarksDue = add(account.neumarksDue, neumarks);
+        account.neumarksDue = Math.add(account.neumarksDue, neumarks);
 
         if (account.unlockDate == 0) {
             // this is new account - unlockDate always > 0
@@ -449,7 +448,7 @@ contract ICBMLockedAccount is
         internal
         returns (uint256)
     {
-        _totalLockedAmount = add(_totalLockedAmount, amount);
+        _totalLockedAmount = Math.add(_totalLockedAmount, amount);
         uint256 newBalance = balance + amount;
         return newBalance;
     }
@@ -513,7 +512,7 @@ contract ICBMLockedAccount is
             // take the penalty if before unlockDate
             if (currentTime() < accountInMem.unlockDate) {
                 require(_penaltyDisbursalAddress != address(0));
-                uint256 penalty = decimalFraction(accountInMem.balance, PENALTY_FRACTION);
+                uint256 penalty = Math.decimalFraction(accountInMem.balance, PENALTY_FRACTION);
 
                 // distribute penalty
                 if (isContract(_penaltyDisbursalAddress)) {

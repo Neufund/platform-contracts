@@ -13,7 +13,8 @@ import {
 } from "./helpers/deployContracts";
 import { TriState, GLOBAL } from "./helpers/triState";
 import roles from "./helpers/roles";
-import { toBytes32, Q18, ZERO_ADDRESS, contractId, daysToSeconds } from "./helpers/constants";
+import { Q18, ZERO_ADDRESS, daysToSeconds } from "./helpers/constants";
+import { toBytes32, contractId } from "./helpers/utils";
 import { identityClaims } from "./helpers/identityClaims";
 import increaseTime from "./helpers/increaseTime";
 import { latestTimestamp } from "./helpers/latestTime";
@@ -21,6 +22,7 @@ import { knownInterfaces } from "./helpers/knownInterfaces";
 import EvmError from "./helpers/EVMThrow";
 import { decodeLogs, eventValue, eventValueAtIndex } from "./helpers/events";
 import { divRound } from "./helpers/unitConverter";
+import { expectLogDisbursalCreated } from "./helpers/disbursal";
 
 const FeeDisbursalController = artifacts.require("FeeDisbursalController");
 const EtherToken = artifacts.require("EtherToken");
@@ -215,29 +217,6 @@ contract(
       /**
        * Assertion helpers
        */
-      function expectLogDisbursalCreated(
-        tx,
-        proRataToken,
-        token,
-        amount,
-        disburserAddr,
-        recycleDur,
-        index,
-      ) {
-        const event = eventValue(tx, "LogDisbursalCreated");
-        expect(event).to.exist;
-        expect(event.args.proRataToken).to.eq(proRataToken);
-        expect(event.args.token).to.eq(token);
-        expect(event.args.amount).to.be.bignumber.eq(amount);
-        expect(event.args.recycleAfterDuration).to.be.bignumber.eq(
-          recycleDur || platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
-        );
-        expect(event.args.disburser).to.eq(disburserAddr);
-        if (index) {
-          expect(event.args.index).to.be.bignumber.eq(index);
-        }
-      }
-
       function expectLogDisbursalAccepted(
         tx,
         claimer,
@@ -867,7 +846,10 @@ contract(
           neumark.address,
           investors[0],
         );
-        const expectedEmptyClaimables = [[0, 0, 0, 0], [0, 0, 0, 0]];
+        const expectedEmptyClaimables = [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ];
         expectClaimablesToEqual(emptyClaimables, expectedEmptyClaimables);
         await shouldDisburseToken(etherToken, disburseEtherToken);
         const recycleEther = await recycleAfterFromNow();
@@ -2262,12 +2244,9 @@ contract(
             TriState.Allow,
           );
           await etherToken.deposit({ from: disburser, value: Q18 });
-          const disburse2lTx = await etherToken.transfer["address,uint256,bytes"](
-            testDisburser.address,
-            Q18,
-            "",
-            { from: disburser },
-          );
+          const disburse2lTx = await etherToken.transfer[
+            "address,uint256,bytes"
+          ](testDisburser.address, Q18, "", { from: disburser });
           disburse2lTx.logs = decodeLogs(disburse2lTx, feeDisbursal.address, feeDisbursal.abi);
           expectLogDisbursalCreated(
             disburse2lTx,
@@ -2541,7 +2520,10 @@ contract(
             proRatas,
             investors[0],
           );
-          expectClaimablesToEqual(empty, [[0, 0, 0, 0], [0, 0, 0, 0]]);
+          expectClaimablesToEqual(empty, [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ]);
           const emptyTx = await feeDisbursal.acceptMultipleByProRataToken(
             etherToken.address,
             proRatas,
@@ -2622,7 +2604,14 @@ contract(
           });
           tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
           // icbm ether token gets converted and we expect new etherToken
-          expectLogDisbursalCreated(tx, neumark.address, etherToken.address, Q18, disburser);
+          expectLogDisbursalCreated(
+            tx,
+            neumark.address,
+            etherToken.address,
+            Q18,
+            disburser,
+            platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+          );
         });
 
         it("disburse via approveAndCall with icbm euro token conversion", async () => {
@@ -2655,7 +2644,14 @@ contract(
           });
           tx.logs = decodeLogs(tx, feeDisbursal.address, feeDisbursal.abi);
           // icbm euro token gets converted and we expect new euroToken
-          expectLogDisbursalCreated(tx, neumark.address, euroToken.address, Q18, disburser);
+          expectLogDisbursalCreated(
+            tx,
+            neumark.address,
+            euroToken.address,
+            Q18,
+            disburser,
+            platformTermsDict.DEFAULT_DISBURSAL_RECYCLE_AFTER_DURATION,
+          );
         });
       });
     });

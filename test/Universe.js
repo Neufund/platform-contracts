@@ -3,7 +3,8 @@ import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { eventValue } from "./helpers/events";
 import { knownInterfaces } from "./helpers/knownInterfaces";
 import registerSingletons from "./helpers/registerSingletons";
-import { ZERO_ADDRESS, contractId } from "./helpers/constants";
+import { ZERO_ADDRESS } from "./helpers/constants";
+import { contractId } from "./helpers/utils";
 import { deployUniverse } from "./helpers/deployContracts";
 
 contract(

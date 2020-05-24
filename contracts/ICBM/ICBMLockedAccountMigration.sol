@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "../MigrationTarget.sol";
+import "./MigrationTarget.sol";
 
 
 /// @notice implemented in the contract that is the target of LockedAccount migration

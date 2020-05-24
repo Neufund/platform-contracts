@@ -1,5 +1,5 @@
 const confirm = require("node-ask").confirm;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 export async function initializeMigrationStep(config, artifacts, web3) {
   const Universe = artifacts.require(config.artifacts.UNIVERSE);

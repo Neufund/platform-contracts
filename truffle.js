@@ -13,7 +13,7 @@ const devNetworkDeploymentConfigOverride = {
     ICBM_COMMITMENT: "MockICBMCommitment",
     STANDARD_ETO_COMMITMENT: "MockETOCommitment",
     ETO_TERMS_CONSTRAINTS: "MockETOTermsConstraints",
-    PLACEHOLDER_EQUITY_TOKEN_CONTROLLER: "GranularTransferController",
+    EQUITY_TOKEN_CONTROLLER: "GranularTransferController",
   },
   // other addresses set to DEPLOYER
   addresses: {
@@ -80,7 +80,7 @@ module.exports = {
       provider: Ganache.provider({
         gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
-        hardfork: "istanbul",
+        hardfork: "muirGlacier",
       }),
     },
     nf_private: {
@@ -165,15 +165,16 @@ module.exports = {
     },
     nano_live: {
       network_id: 1,
-      gas: 1500000,
+      gas: 500000,
       provider: nanoProvider(
         "https://ndfull.neufund.org/",
         // "44'/60'/0'/0",
         // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
-        "44'/60'/105'/0", // legal rep (M)
-        // "44'/60'/105'/2", // eurt legal manager (M)
+        // "44'/60'/105'/0", // legal rep (M)
+        "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
+        // "44'/60'/105'/10", //ETO DEPLOYER
         // "44'/60'/106'/16",
         "nano_live",
       ),
@@ -202,7 +203,7 @@ module.exports = {
       provider: Ganache.provider({
         gasLimit: gasLimitForDev,
         accounts: Array(10).fill({ balance: "12300000000000000000000000" }),
-        hardfork: "istanbul",
+        hardfork: "muirGlacier",
       }),
       gas: gasLimitForDev,
     },
@@ -219,7 +220,7 @@ module.exports = {
         deterministic: true,
         gasLimit: 0xffffffff,
         accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
-        hardfork: "istanbul",
+        hardfork: "muirGlacier",
       }),
     },
   },

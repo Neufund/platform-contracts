@@ -5,7 +5,7 @@ import "../../Agreement.sol";
 import "../../Universe.sol";
 
 
-contract TestETOCommitmentPlaceholderTokenController is
+contract TestETOCommitmentSingleTokenController is
     IETOCommitmentStates,
     Agreement
 {
@@ -50,15 +50,19 @@ contract TestETOCommitmentPlaceholderTokenController is
         Agreement(universe.accessPolicy(), universe.forkArbiter())
     {
         ETO_TERMS = etoTerms;
-        EQUITY_TOKEN = equityToken;
         COMPANY_LEGAL_REPRESENTATIVE = companyLegalRep;
         NOMINEE = nominee;
-        COMMITMENT_OBSERVER = IETOCommitmentObserver(EQUITY_TOKEN.tokenController());
+        EQUITY_TOKEN = equityToken;
     }
 
     ////////////////////////
     // Public Methods
     ////////////////////////
+
+    function setStartDate(ETOTerms /*etoTerms*/, IEquityToken equityToken, uint256 /*startDate*/) public {
+        require(equityToken == EQUITY_TOKEN, "NF_TEST_EQ_TOKEN_MISMATCH");
+        COMMITMENT_OBSERVER = IETOCommitmentObserver(EQUITY_TOKEN.tokenController());
+    }
 
     //
     // Public Methods required by registerTokenOfferingPrivate in Placeholder Token Controller
@@ -78,6 +82,10 @@ contract TestETOCommitmentPlaceholderTokenController is
 
     function companyLegalRep() public constant returns (address) {
         return COMPANY_LEGAL_REPRESENTATIVE;
+    }
+
+    function commitmentObserver() public constant returns (IETOCommitmentObserver) {
+        return COMMITMENT_OBSERVER;
     }
 
     //
@@ -110,7 +118,7 @@ contract TestETOCommitmentPlaceholderTokenController is
     }
 
     //
-    // partial implementation of
+    // partial implementation of state machine
     //
     // to provide basic state information
     //
@@ -133,6 +141,7 @@ contract TestETOCommitmentPlaceholderTokenController is
     {
         _state = newState;
         _stateTransitions[uint256(_state)] = block.timestamp;
+        require(COMMITMENT_OBSERVER != address(0), "NF_TEST_OBSERVER_REQUIRED");
         COMMITMENT_OBSERVER.onStateTransition(prevState, newState);
     }
 

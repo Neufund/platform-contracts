@@ -1,106 +1,12 @@
 pragma solidity 0.4.26;
 
+import "./EquityTokenholderRights.sol";
 import "../Standards/IAgreement.sol";
-import "./ShareholderRights.sol";
 
 
 contract IControllerGovernance is
     IAgreement
 {
-
-    ////////////////////////
-    // Types
-    ////////////////////////
-
-    // defines state machine of the token controller which goes from I to T without loops
-    enum GovState {
-        Setup, // Initial state
-        Offering, // primary token offering in progress
-        Funded, // token offering succeeded, execution of shareholder rights possible
-        Closing, // company is being closed
-        Closed, // terminal state, company closed
-        Migrated // terminal state, contract migrated
-    }
-
-    enum Action {
-        None, // no on-chain action on resolution
-        StopToken, // blocks transfers
-        ContinueToken, // enables transfers
-        CloseToken, // any liquidation: dissolution, tag, drag, exit (settlement time, amount eur, amount eth)
-        Payout, // any dividend payout (amount eur, amount eth)
-        RegisterOffer, // start new token offering
-        ChangeTokenController, // (new token controller)
-        AmendISHA, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur)
-        IssueTokensForExistingShares, // (number of converted shares, allocation (address => balance))
-        ChangeNominee,
-        Downround // results in issuance of new equity token and disbursing it to current token holders
-    }
-
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    // logged on controller state transition
-    event LogGovStateTransition(
-        uint32 oldState,
-        uint32 newState,
-        uint32 timestamp
-    );
-
-    // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
-    event LogResolutionExecuted(
-        bytes32 resolutionId,
-        Action action
-    );
-
-    // logged when transferability of given token was changed
-    event LogTransfersStateChanged(
-        bytes32 resolutionId,
-        address equityToken,
-        bool transfersEnabled
-    );
-
-    // logged when ISHA was amended (new text, new shareholders, new cap table, offline round etc.)
-    event LogISHAAmended(
-        bytes32 resolutionId,
-        string ISHAUrl,
-        uint256 shareCapital,
-        uint256 companyValuationEurUlps,
-        address newShareholderRights
-    );
-
-    // offering of the token in ETO failed (Refund)
-    event LogOfferingFailed(
-        address etoCommitment,
-        address equityToken
-    );
-
-    // offering of the token in ETO succeeded (with all on-chain consequences)
-    event LogOfferingSucceeded(
-        address etoCommitment,
-        address equityToken,
-        uint256 newShares
-    );
-
-    // logs when company issues official information to shareholders
-    event LogGeneralInformation(
-        address companyLegalRep,
-        string informationType,
-        string informationUrl
-    );
-
-    //
-    event LogOfferingRegistered(
-        bytes32 resolutionId,
-        address etoCommitment,
-        address equityToken
-    );
-
-    event LogMigratedTokenController(
-        bytes32 resolutionId,
-        address newController
-    );
-
     ////////////////////////
     // Interface methods
     ////////////////////////
@@ -109,7 +15,7 @@ contract IControllerGovernance is
     function state()
         public
         constant
-        returns (GovState);
+        returns (Gov.State);
 
     // address of company legal representative able to sign agreements
     function companyLegalRepresentative()
@@ -124,16 +30,20 @@ contract IControllerGovernance is
         returns (
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
-            ShareholderRights shareholderRights
+            uint256 authorizedCapital,
+            string shaUrl
         );
 
-    // returns cap table
-    function capTable()
+    // returns list of tokens and associated holder rights
+    function tokens()
         public
         constant
         returns (
-            address[] equityTokens,
-            uint256[] shares
+            address[1] token,
+            Gov.TokenType[1] tokenType,
+            Gov.TokenState[1] tokenState,
+            address[1] holderRights,
+            bool[1] tokenTransferable
         );
 
     // returns all started offerings
@@ -141,27 +51,17 @@ contract IControllerGovernance is
         public
         constant
         returns (
-            address[] offerings,
-            address[] equityTokens
+            address[] offerings
         );
 
     // officially inform shareholders, can be quarterly report, yearly closing
     // @dev this can be called only by company wallet
-    function issueGeneralInformation(
-        string informationType,
+    /*function issueGeneralInformation(
+        bytes32 resolutionId,
+        string title,
         string informationUrl
     )
-        public;
-
-    // start new resolution vs shareholders. required due to General Information Rights even in case of no voting right
-    // @dev payload in RLP encoded and will be parsed in the implementation
-    // @dev this can be called only by company wallet
-    function startResolution(string title, string resolutionUri, Action action, bytes payload)
-        public
-        returns (bytes32 resolutionId);
-
-    // execute on-chain action of the given resolution if it has passed accordint to implemented governance
-    function executeResolution(bytes32 resolutionId) public;
+        public;*/
 
     // this will close company (transition to terminal state) and close all associated tokens
     // requires decision to be made before according to implemented governance
@@ -173,15 +73,7 @@ contract IControllerGovernance is
     // being able to cancel closing should not depend on who is calling the function.
     function cancelCompanyClosing() public;
 
-    /// @notice replace current token controller
-    /// @dev please note that this process is also controlled by existing controller so for example resolution may be required
-    function changeTokenController(IControllerGovernance newController) public;
-
-    // in Migrated state - an address of actual token controller
-    /// @dev should return zero address on other states
-    function newTokenController() public constant returns (address);
-
-    // an address of previous controller (in Migrated state)
-    /// @dev should return zero address if is the first controller
-    function oldTokenController() public constant returns (address);
+    // list of governance modules in controller, same scheme as IContractId
+    /// @dev includes contractId as last one
+    // function moduleId() public pure returns (bytes32[6] ids, uint256[6] versions);
 }

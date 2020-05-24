@@ -14,8 +14,7 @@ import "./Helpers/MTokenTransfer.sol";
 contract BasicToken is
     MTokenTransfer,
     MTokenTransferController,
-    IBasicToken,
-    Math
+    IBasicToken
 {
 
     ////////////////////////
@@ -80,8 +79,8 @@ contract BasicToken is
         require(to != address(0));
         require(mOnTransfer(from, to, amount));
 
-        _balances[from] = sub(_balances[from], amount);
-        _balances[to] = add(_balances[to], amount);
+        _balances[from] = Math.sub(_balances[from], amount);
+        _balances[to] = Math.add(_balances[to], amount);
         emit Transfer(from, to, amount);
     }
 }

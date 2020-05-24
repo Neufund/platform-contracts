@@ -1,7 +1,7 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
-const toBytes32 = require("../test/helpers/constants").toBytes32;
+const toBytes32 = require("../test/helpers/utils").toBytes32;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
 const roles = require("../test/helpers/roles").default;
 const { TriState } = require("../test/helpers/triState");

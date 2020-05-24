@@ -5,7 +5,7 @@ import "..//Reclaimable.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
 import "../SnapshotToken/StandardToken.sol";
 import "../Standards/IWithdrawableToken.sol";
-import "../MigrationSource.sol";
+import "./MigrationSource.sol";
 import "./ICBMEuroTokenMigrationTarget.sol";
 import "./ICBMRoles.sol";
 
@@ -100,8 +100,8 @@ contract ICBMEuroToken is
         returns (bool)
     {
         require(to != address(0));
-        _balances[to] = add(_balances[to], amount);
-        _totalSupply = add(_totalSupply, amount);
+        _balances[to] = Math.add(_balances[to], amount);
+        _totalSupply = Math.add(_totalSupply, amount);
         setAllowedTransferTo(to, true);
         emit LogDeposit(to, amount);
         emit Transfer(address(0), to, amount);
@@ -115,8 +115,8 @@ contract ICBMEuroToken is
         public
     {
         require(_balances[msg.sender] >= amount);
-        _balances[msg.sender] = sub(_balances[msg.sender], amount);
-        _totalSupply = sub(_totalSupply, amount);
+        _balances[msg.sender] = Math.sub(_balances[msg.sender], amount);
+        _totalSupply = Math.sub(_totalSupply, amount);
         emit LogWithdrawal(msg.sender, amount);
         emit Transfer(msg.sender, address(0), amount);
     }
@@ -169,7 +169,7 @@ contract ICBMEuroToken is
         uint256 amount = _balances[msg.sender];
         if (amount > 0) {
             _balances[msg.sender] = 0;
-            _totalSupply = sub(_totalSupply, amount);
+            _totalSupply = Math.sub(_totalSupply, amount);
         }
         // remove all transfer permissions
         _allowedTransferTo[msg.sender] = false;

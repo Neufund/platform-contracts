@@ -1,9 +1,7 @@
 pragma solidity 0.4.26;
 
-import "../Identity/IIdentityRegistry.sol";
 
-
-contract TestUpdatedIdentityRecord is IdentityRecord {
+contract TestUpdatedIdentityRecord {
 
     ////////////////////////
     // Public functions

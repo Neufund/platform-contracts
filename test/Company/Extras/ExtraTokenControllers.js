@@ -4,30 +4,33 @@ import {
   deployUniverse,
   deployIdentityRegistry,
 } from "../../helpers/deployContracts";
-import { contractId, toBytes32, daysToSeconds } from "../../helpers/constants";
-import { prettyPrintGasCost } from "../../helpers/gasUtils";
+import { daysToSeconds } from "../../helpers/constants";
+import { toBytes32, contractId } from "../../helpers/utils";
+import { prettyPrintGasCost, printCodeSize } from "../../helpers/gasUtils";
 import EvmError from "../../helpers/EVMThrow";
 import { CommitmentState } from "../../helpers/commitmentState";
 import {
   deployDurationTerms,
   deployETOTerms,
-  deployShareholderRights,
+  deployTokenholderRights,
   deployTokenTerms,
   deployETOTermsConstraintsUniverse,
 } from "../../helpers/deployTerms";
 import { knownInterfaces } from "../../helpers/knownInterfaces";
 import increaseTime from "../../helpers/increaseTime";
+import { getCommitmentResolutionId } from "../../helpers/govUtils";
 
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
+const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const EquityToken = artifacts.require("EquityToken");
 
+const GovLibrary = artifacts.require("Gov");
 const GranularTransferController = artifacts.require("GranularTransferController");
-const TestETOCommitmentPlaceholderTokenController = artifacts.require(
-  "TestETOCommitmentPlaceholderTokenController",
+const TestETOCommitmentSingleTokenController = artifacts.require(
+  "TestETOCommitmentSingleTokenController",
 );
 const RegDTransferController = artifacts.require("RegDTransferController");
 
@@ -45,14 +48,21 @@ contract(
     let etoTerms;
     let tokenTerms;
     let testCommitment;
-    let shareholderRights;
+    let tokenholderRights;
     let durationTerms;
     let termsConstraints;
+
+    before(async () => {
+      const lib = await GovLibrary.new();
+      GovLibrary.address = lib.address;
+      await GranularTransferController.link(GovLibrary, lib.address);
+      await RegDTransferController.link(GovLibrary, lib.address);
+    });
 
     beforeEach(async () => {
       [universe] = await deployUniverse(admin, admin);
       await deployPlatformTerms(universe, admin);
-      [shareholderRights] = await deployShareholderRights(ShareholderRights);
+      [tokenholderRights] = await deployTokenholderRights(TokenholderRights);
       [durationTerms] = await deployDurationTerms(ETODurationTerms);
       [tokenTerms] = await deployTokenTerms(ETOTokenTerms);
     });
@@ -60,17 +70,21 @@ contract(
     describe("GranularTransferController", () => {
       it("should deploy", async () => {
         await deployController(GranularTransferController);
+        await deployETO();
+        await registerOffering();
         await prettyPrintGasCost("GranularTransferController deploy", equityTokenController);
+        await printCodeSize("GranularTransferController deploy", equityTokenController);
         const cId = await equityTokenController.contractId();
-        expect(cId[0]).to.eq(contractId("PlaceholderEquityTokenController"));
+        expect(cId[0]).to.eq(contractId("SingleEquityTokenController"));
         // temporary override marker
         expect(cId[1]).to.be.bignumber.eq(0xff);
       });
 
       describe("post investment transfers on transferable token", () => {
         beforeEach(async () => {
-          await deployController(GranularTransferController, { ENABLE_TRANSFERS_ON_SUCCESS: true });
-          await deployETO();
+          await deployController(GranularTransferController);
+          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
+          await registerOffering();
           await makeInvestment(totalShares, inv1DistAmount);
         });
 
@@ -167,10 +181,9 @@ contract(
 
       describe("post investment transfers on non-transferable token", () => {
         beforeEach(async () => {
-          await deployController(GranularTransferController, {
-            ENABLE_TRANSFERS_ON_SUCCESS: false,
-          });
-          await deployETO();
+          await deployController(GranularTransferController);
+          await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: false });
+          await registerOffering();
           await makeInvestment(totalShares, inv1DistAmount);
         });
 
@@ -236,7 +249,10 @@ contract(
     describe("RegDTransferController", async () => {
       it("should deploy", async () => {
         await deployController(RegDTransferController);
+        await deployETO();
+        await registerOffering();
         await prettyPrintGasCost("RegDTransferController deploy", equityTokenController);
+        await printCodeSize("GranularTransferController deploy", equityTokenController);
       });
 
       it("should lock during lockin period", async () => {
@@ -247,8 +263,9 @@ contract(
           from: admin,
         });
         // simulate ETO
-        await deployController(RegDTransferController, { ENABLE_TRANSFERS_ON_SUCCESS: true });
-        await deployETO();
+        await deployController(RegDTransferController);
+        await deployETO({ ENABLE_TRANSFERS_ON_SUCCESS: true });
+        await registerOffering();
         await makeInvestment(totalShares, inv1DistAmount);
         // investor 2 is a regular investor with transfer rights
         await testCommitment._distributeTokens(investor2, "1");
@@ -281,7 +298,26 @@ contract(
       });
     });
 
-    async function deployController(impl, termsOverride, constraintsOverride) {
+    async function deployController(impl) {
+      equityTokenController = await impl.new(universe.address, company);
+
+      equityToken = await EquityToken.new(
+        universe.address,
+        equityTokenController.address,
+        tokenTerms.address,
+        nominee,
+        company,
+      );
+      await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
+      await universe.setCollectionsInterfaces(
+        [knownInterfaces.equityTokenInterface, knownInterfaces.equityTokenControllerInterface],
+        [equityToken.address, equityTokenController.address],
+        [true, true],
+        { from: admin },
+      );
+    }
+
+    async function deployETO(termsOverride, constraintsOverride) {
       [termsConstraints] = await deployETOTermsConstraintsUniverse(
         admin,
         universe,
@@ -295,23 +331,12 @@ contract(
         ETOTerms,
         durationTerms,
         tokenTerms,
-        shareholderRights,
+        tokenholderRights,
         termsConstraints,
         termsOverride,
       );
-      equityTokenController = await impl.new(universe.address, company);
-      equityToken = await EquityToken.new(
-        universe.address,
-        equityTokenController.address,
-        tokenTerms.address,
-        nominee,
-        company,
-      );
-      await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
-    }
 
-    async function deployETO() {
-      testCommitment = await TestETOCommitmentPlaceholderTokenController.new(
+      testCommitment = await TestETOCommitmentSingleTokenController.new(
         universe.address,
         nominee,
         company,
@@ -319,20 +344,27 @@ contract(
         equityToken.address,
       );
       await universe.setCollectionsInterfaces(
-        [
-          knownInterfaces.commitmentInterface,
-          knownInterfaces.equityTokenInterface,
-          knownInterfaces.equityTokenControllerInterface,
-        ],
-        [testCommitment.address, equityToken.address, equityTokenController.address],
-        [true, true, true],
+        [knownInterfaces.commitmentInterface, knownInterfaces.termsInterface],
+        [testCommitment.address, etoTerms.address],
+        [true, true],
         { from: admin },
       );
       await testCommitment.amendAgreement("AGREEMENT#HASH", { from: nominee });
     }
 
+    async function registerOffering() {
+      // start new offering
+      const resolutionId = getCommitmentResolutionId(testCommitment.address);
+      await equityTokenController.startNewOffering(resolutionId, testCommitment.address, {
+        from: company,
+      });
+      // pass equity token to eto commitment
+      await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+    }
+
     async function makeInvestment(shares, inv1amount) {
       // register new offering
+      await testCommitment._triggerStateTransition(CommitmentState.Setup, CommitmentState.Setup);
       await testCommitment._triggerStateTransition(
         CommitmentState.Setup,
         CommitmentState.Whitelist,

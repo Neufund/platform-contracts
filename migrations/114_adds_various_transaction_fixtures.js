@@ -4,7 +4,7 @@ const { join } = require("path");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const Q18 = require("../test/helpers/constants").Q18;
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -42,7 +42,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       k => etoFixtures[k].name === "ETOInClaimState",
     );
     const equityToken = await EquityToken.at(etoFixtures[claimFixture].equityToken);
-    // const tokenController = await PlaceholderEquityTokenController.at(await equityToken.tokenController());
+    // const tokenController = await SingleEquityTokenController.at(await equityToken.tokenController());
     // console.log(await tokenController.onTransfer(sender, sender, receiver, 7));
     await equityToken.transfer(receiver, 7, { from: sender });
     // withdraw and send

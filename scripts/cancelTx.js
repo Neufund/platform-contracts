@@ -2,7 +2,7 @@
 /* eslint-disable no-continue */
 
 require("babel-register");
-const promisify = require("../test/helpers/evmCommands").promisify;
+const promisify = require("../test/helpers/utils").promisify;
 const confirm = require("node-ask").confirm;
 
 module.exports = async function cancelTx() {

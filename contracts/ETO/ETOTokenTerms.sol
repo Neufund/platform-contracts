@@ -7,16 +7,11 @@ import "../Standards/IContractId.sol";
 // 0 - initial version
 // 1 - added SHARE_NOMINAL_VALUE_ULPS, SHARE_NOMINAL_VALUE_EUR_ULPS, TOKEN_NAME, TOKEN_SYMBOL, SHARE_PRICE
 // 2 - renamed EQUITY_TOKEN_PRECISION to EQUITY_TOKEN_DECIMALS
+// 3 - added ISIN
 
 
 /// @title sets terms for tokens in ETO
-contract ETOTokenTerms is Math, IContractId {
-
-    ////////////////////////
-    // Constants state
-    ////////////////////////
-
-    bytes32 private constant EMPTY_STRING_HASH = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
+contract ETOTokenTerms is IContractId {
 
     ////////////////////////
     // Immutable state
@@ -25,6 +20,7 @@ contract ETOTokenTerms is Math, IContractId {
     // equity token metadata
     string public EQUITY_TOKEN_NAME;
     string public EQUITY_TOKEN_SYMBOL;
+    string public ISIN;
 
     // minimum number of tokens being offered. will set min cap
     uint256 public MIN_NUMBER_OF_TOKENS;
@@ -55,6 +51,7 @@ contract ETOTokenTerms is Math, IContractId {
     constructor(
         string equityTokenName,
         string equityTokenSymbol,
+        string isin,
         uint256 minNumberOfTokens,
         uint256 maxNumberOfTokens,
         uint256 tokenPriceEurUlps,
@@ -75,8 +72,8 @@ contract ETOTokenTerms is Math, IContractId {
         require(shareNominalValueUlps > 0);
         require(shareNominalValueEurUlps > 0);
         require(equityTokensPerShare > 0);
-        require(keccak256(abi.encodePacked(equityTokenName)) != EMPTY_STRING_HASH);
-        require(keccak256(abi.encodePacked(equityTokenSymbol)) != EMPTY_STRING_HASH);
+        require(bytes(equityTokenName).length != 0);
+        require(bytes(equityTokenSymbol).length != 0);
         // overflows cannot be possible
         require(maxNumberOfTokens < 2**128, "NF_TOO_MANY_TOKENS");
 
@@ -88,12 +85,13 @@ contract ETOTokenTerms is Math, IContractId {
         SHARE_NOMINAL_VALUE_ULPS = shareNominalValueUlps;
         EQUITY_TOKEN_NAME = equityTokenName;
         EQUITY_TOKEN_SYMBOL = equityTokenSymbol;
+        ISIN = isin;
         EQUITY_TOKENS_PER_SHARE = equityTokensPerShare;
         EQUITY_TOKEN_DECIMALS = equityTokenDecimals;
         EQUITY_TOKENS_POWER = 10**uint256(EQUITY_TOKEN_DECIMALS);
 
         require(equityTokensPerShare > 0 && equityTokensPerShare % EQUITY_TOKENS_POWER == 0, "NF_SHARES_NOT_WHOLE_TOKENS");
-        require(proportion(tokenPriceEurUlps, maxNumberOfTokens, EQUITY_TOKENS_POWER) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
+        require(Math.proportion(tokenPriceEurUlps, maxNumberOfTokens, EQUITY_TOKENS_POWER) < 2**112, "NF_TOO_MUCH_FUNDS_COLLECTED");
     }
 
     ////////////////////////
@@ -101,7 +99,7 @@ contract ETOTokenTerms is Math, IContractId {
     ////////////////////////
 
     function SHARE_PRICE_EUR_ULPS() public constant returns (uint256) {
-        return proportion(TOKEN_PRICE_EUR_ULPS, EQUITY_TOKENS_PER_SHARE, EQUITY_TOKENS_POWER);
+        return Math.proportion(TOKEN_PRICE_EUR_ULPS, EQUITY_TOKENS_PER_SHARE, EQUITY_TOKENS_POWER);
     }
 
     //

@@ -5,9 +5,13 @@ import "../Standards/IERC223Callback.sol";
 
 
 /// @title default interface of commitment process
-///  investment always happens via payment token ERC223 callback
-///  methods for checking finality and success/fail of the process are vailable
-///  commitment event is standardized for tracking
+/// @notice we assume that every commitment contract supports the following
+///     1. a snapshot token (assetToken) that is being offered
+///     2. EUR as base currency, other currencies are converted on spot prices and equivalent in base currency is available
+///     3. there's always reservation agreement attached
+///     4. simple state machine with final success/failed state
+///     5. start and stop timestamps
+///     6. contract id information
 contract ICommitment is
     IAgreement,
     IERC223Callback

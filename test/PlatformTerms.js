@@ -2,7 +2,8 @@ import { expect } from "chai";
 import { prettyPrintGasCost } from "./helpers/gasUtils";
 import { divRound, etherToWei } from "./helpers/unitConverter";
 import { deployUniverse, deployPlatformTerms } from "./helpers/deployContracts";
-import { contractId, Q18 } from "./helpers/constants";
+import { Q18 } from "./helpers/constants";
+import { contractId } from "./helpers/utils";
 import { verifyTerms } from "./helpers/deployTerms";
 
 contract("PlatformTerms", ([_, admin]) => {

@@ -1,4 +1,4 @@
-import { promisify } from "./evmCommands";
+import { promisify } from "./utils";
 
 export const weiPrice = 300e-18; // http://coincap.io/
 export const gasPrice = 21e9 * weiPrice; // https://ethstats.net
@@ -27,4 +27,16 @@ export const prettyPrintGasCost = async (what, obj) => {
 
   // eslint-disable-next-line no-console
   console.log(`\t${what} took ${gasCostString(gas)}`);
+};
+
+export const printCodeSize = async (what, obj) => {
+  let addr;
+  if (typeof obj === "string") {
+    addr = obj;
+  } else if (obj.address) {
+    addr = obj.address;
+  }
+  const code = await promisify(web3.eth.getCode)(addr);
+  // eslint-disable-next-line no-console
+  console.log(`\t${what} code size is ${code.length / 2 - 1}`);
 };

@@ -7,7 +7,7 @@ import {
   deployPlatformTerms,
 } from "../helpers/deployContracts";
 import {
-  deployShareholderRights,
+  deployTokenholderRights,
   deployDurationTerms,
   deployTokenTerms,
   deployETOTermsConstraintsUniverse,
@@ -16,14 +16,15 @@ import {
   defTokenTerms,
   verifyTerms,
 } from "../helpers/deployTerms";
-import { Q18, contractId, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
+import { Q18, web3, defEquityTokenPower, decimalBase } from "../helpers/constants";
+import { contractId } from "../helpers/utils";
 import roles from "../helpers/roles";
 import createAccessPolicy from "../helpers/createAccessPolicy";
 
 const ETOTerms = artifacts.require("ETOTerms");
 const ETODurationTerms = artifacts.require("ETODurationTerms");
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
-const ShareholderRights = artifacts.require("ShareholderRights");
+const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const ETOTermsConstraints = artifacts.require("ETOTermsConstraints");
 
 contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investors]) => {
@@ -32,8 +33,8 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   let termsConstraints;
   let etoTerms;
   let terms, termsKeys;
-  let shareholderRights;
-  let shareholderTerms, shareholderTermsKeys;
+  let tokenholderRights;
+  let tokenholderTerms, tokenholderTermsKeys;
   let durationTerms;
   let durTerms, durationTermsKeys;
   let etoTokenTerms, tokenTerms, tokenTermsKeys;
@@ -43,8 +44,8 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     await deployIdentityRegistry(universe, admin, admin);
     await deployPlatformTerms(universe, admin);
 
-    [shareholderRights, shareholderTerms, shareholderTermsKeys] = await deployShareholderRights(
-      ShareholderRights,
+    [tokenholderRights, tokenholderTerms, tokenholderTermsKeys] = await deployTokenholderRights(
+      TokenholderRights,
     );
     [durationTerms, durTerms, durationTermsKeys] = await deployDurationTerms(ETODurationTerms);
     [etoTokenTerms, tokenTerms, tokenTermsKeys] = await deployTokenTerms(ETOTokenTerms);
@@ -55,11 +56,11 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
   });
 
   it("should deploy", async () => {
-    await prettyPrintGasCost("ShareholderRights deploy", shareholderRights);
+    await prettyPrintGasCost("TokenholderRights deploy", tokenholderRights);
     await prettyPrintGasCost("ETODurationTerms deploy", durationTerms);
     await prettyPrintGasCost("ETOTerms deploy", etoTerms);
     await prettyPrintGasCost("ETOTokenTerms deploy", etoTokenTerms);
-    expect((await shareholderRights.contractId())[0]).to.eq(contractId("ShareholderRights"));
+    expect((await tokenholderRights.contractId())[0]).to.eq(contractId("EquityTokenholderRights"));
     expect((await durationTerms.contractId())[0]).to.eq(contractId("ETODurationTerms"));
     expect((await etoTerms.contractId())[0]).to.eq(contractId("ETOTerms"));
     expect((await etoTokenTerms.contractId())[0]).to.eq(contractId("ETOTokenTerms"));
@@ -78,7 +79,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
       ETOTerms,
       durationTerms,
       etoTokenTerms,
-      shareholderRights,
+      tokenholderRights,
       termsConstraints,
       etoTermsOverride,
     );
@@ -98,7 +99,7 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
         ETOTerms,
         durationTerms,
         etoTokenTerms,
-        shareholderRights,
+        tokenholderRights,
         termsConstraints,
         {},
       ),
@@ -131,11 +132,11 @@ contract("ETOTerms", ([, admin, investorDiscount, investorNoDiscount, ...investo
     await verifyTerms(etoTokenTerms, tokenTermsKeys, tokenTerms);
   });
 
-  it("should verify terms in ShareholderRights", async () => {
-    await verifyTerms(shareholderRights, shareholderTermsKeys, shareholderTerms);
+  it("should verify terms in TokenholderRights", async () => {
+    await verifyTerms(tokenholderRights, tokenholderTermsKeys, tokenholderTerms);
   });
 
-  it("ShareholderRights todo: also verify constant parameters");
+  it("TokenholderRights todo: also verify constant parameters");
 
   it("should verify default eto terms", async () => {
     await etoTerms.requireValidTerms();
