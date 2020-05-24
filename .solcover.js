@@ -8,6 +8,8 @@ module.exports = {
     "Snapshot/Extras/Daily.sol",
     "Snapshot/Extras/EveryBlock.sol",
     "Snapshot/Extras/Snapshotable.sol",
+    "Company/Extras/",
+    "test/"
   ],
   testrpcOptions:
     '--port 8555 --gasPrice 1 \
