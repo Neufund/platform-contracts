@@ -76,7 +76,9 @@ jobs:
       - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
       - run: sudo cp ./bin/solc.4.26 /usr/bin/
       - run: source /opt/circleci/.nvm/nvm.sh && yarn solctruffle
-      - run: source /opt/circleci/.nvm/nvm.sh && make -B coverage
+      - run:
+          command: source /opt/circleci/.nvm/nvm.sh && make -B coverage
+          no_output_timeout: 90m
 
 workflows:
   version: 2
