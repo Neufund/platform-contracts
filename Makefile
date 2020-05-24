@@ -30,6 +30,7 @@ tests:
 
 coverage:
 	# requires COVERALLS_REPO_TOKEN env variable with the coveralls repo token
+	yarn test:coverage
 	cat coverage/lcov.info | yarn coveralls
 
 down:
