@@ -58,6 +58,28 @@ jobs:
             - node_modules
           key: v3-deps-{{ checksum "package.json" }}
 
+  coverage:
+    machine:
+      enabled: true
+      image: circleci/classic:edge
+      docker_layer_caching: true
+
+    working_directory: /home/circleci/app
+
+    steps:
+      - checkout
+      - run: ./.circleci/install-yarn.sh
+      - restore_cache:
+          keys:
+          - v3-deps-{{ checksum "package.json" }}
+          - v3-deps-
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn --production
+      - run: sudo cp ./bin/solc.4.26 /usr/bin/
+      - run: source /opt/circleci/.nvm/nvm.sh && yarn solctruffle
+      - run:
+          command: source /opt/circleci/.nvm/nvm.sh && make -B coverage
+          no_output_timeout: 90m
+
 workflows:
   version: 2
 
@@ -66,6 +88,7 @@ workflows:
       - lint-and-build
       - test-container
       - tests
+      - coverage
 
   nightly:
     triggers:
@@ -76,6 +99,4 @@ workflows:
               only:
                 - master
     jobs:
-      - lint-and-build
-      - test-container
-      - tests
+      - coverage

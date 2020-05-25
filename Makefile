@@ -28,6 +28,11 @@ tests:
 	EQUITY_TOKEN_DECIMALS=0 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
 	EQUITY_TOKEN_DECIMALS=10 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
 
+coverage:
+	# requires COVERALLS_REPO_TOKEN env variable with the coveralls repo token
+	yarn test:coverage
+	cat coverage/lcov.info | yarn coveralls
+
 down:
 ifneq ($(shell docker ps -q -f NAME=^/platform-contracts$),)
 	-docker stop platform-contracts
