@@ -197,8 +197,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         "NF_VC_CAMP_INCONSISTENT",
       );
 
-      // offchain tally data if present must be all
-      const invOffchain = Object.assign({}, noVotingPeriodParams, { votingLegalRep });
+      // offchain tally data must be all if voting power set
+      const invOffchain = Object.assign({}, noVotingPeriodParams, {
+        offchainVotingPower: Q18.div("4"),
+        votingLegalRep,
+      });
       await expect(addProposal(votingContract, proposalId, invOffchain)).to.be.rejectedWith(
         "NF_VC_TALLY_INCONSISTENT",
       );
@@ -455,6 +458,19 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       // open proposal
       proposalId = randomBytes32();
       await openProposal(proposalId, noCampaignProposalParams);
+    });
+
+    it("should return correct voting power", async () => {
+      expect(await votingContract.getVotingPower(proposalId, accounts[0])).to.be.bignumber.eq(
+        holders[accounts[0]],
+      );
+      expect(await votingContract.getVotingPower(proposalId, accounts[2])).to.be.bignumber.eq(
+        holders[accounts[2]],
+      );
+      expect(await votingContract.getVotingPower(proposalId, owner2)).to.be.bignumber.eq(zero);
+      await expect(votingContract.getVotingPower("free lunch", owner2)).to.be.rejectedWith(
+        "NF_VC_PROP_NOT_EXIST",
+      );
     });
 
     it("should allow tokenholders to vote with power as in their tokenBalance at proposal creation snapshot", async () => {
@@ -1065,6 +1081,29 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         from: votingLegalRep,
       });
     });
+
+    it("should skip tally if all voting power belongs to token", async () => {
+      // zero off-chain voting power should also enforce no legal rep and no tally period
+      const totalTokenPower = await token.totalSupply();
+      const noOffchainPower = Object.assign({}, noCampaignProposalParams, {
+        offchainVotingPower: totalTokenPower,
+      });
+      // in list offchainVotingPower takes place of totalTokenPower, do not modify, pass directly
+      const [list] = constructVotingParams(proposalId, noOffchainPower);
+
+      await votingContract.addProposal(...list, { from: owner });
+      const proposal = await votingContract.proposal(proposalId);
+      // offchain voting power must be 0
+      expect(proposal[6]).to.be.bignumber.eq(zero);
+      // tally duration must be zero
+      const deadlines = proposal[10];
+      const t = deadlines[0];
+      expect(deadlines[4]).to.be.bignumber.eq(noOffchainPower.votingPeriod.add(t));
+      await increaseTime(noCampaignProposalParams.votingPeriod.toNumber());
+      // and we are in final state
+      const tally = await votingContract.tally(proposalId);
+      expect(tally[0]).to.be.bignumber.eq(ProposalState.Final);
+    });
   });
 
   describe("proposal observer", () => {
@@ -1501,9 +1540,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
   }
 
   async function addProposal(votingCenter, proposalId, defaultParams, txParamsOvr) {
-    const params = Object.assign({}, defaultParams, { proposalId, token: token.address });
-    // should be ordered as defaultProposalParams
-    const list = Object.values(params);
+    const [list, params] = constructVotingParams(proposalId, defaultParams);
     const txParams = Object.assign({ from: owner }, txParamsOvr || {});
     // replace offchain voting power with total voting power by adding token balance at snapshot - 1
     if (params.offchainVotingPower.gt(0)) {
@@ -1515,6 +1552,12 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     }
     const tx = await votingCenter.addProposal(...list, txParams);
     return [tx, params];
+  }
+
+  function constructVotingParams(proposalId, defaultParams) {
+    const params = Object.assign({}, defaultParams, { proposalId, token: token.address });
+    // should be ordered as defaultProposalParams
+    return [Object.values(params), params];
   }
 
   async function openProposal(proposalId, proposalParams, txParamsOvr) {

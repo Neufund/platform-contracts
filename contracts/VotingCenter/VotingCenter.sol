@@ -150,7 +150,7 @@ contract VotingCenter is IVotingCenter {
             "NF_VC_CAMP_INCONSISTENT"
         );
         require(
-            offchainVotePeriod >= 0 && totalVotingPower > 0 && votingLegalRep != address(0) ||
+            offchainVotePeriod > 0 && totalVotingPower > 0 && votingLegalRep != address(0) ||
             offchainVotePeriod == 0 && totalVotingPower == 0 && votingLegalRep == address(0),
             "NF_VC_TALLY_INCONSISTENT"
         );
@@ -316,6 +316,15 @@ contract VotingCenter is IVotingCenter {
     {
         VotingProposal.Proposal storage p = _proposals[proposalId];
         return p.token != address(0);
+    }
+
+    function getVotingPower(bytes32 proposalId, address voter)
+        public
+        constant
+        returns (uint256)
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+        return p.token.balanceOfAt(voter, p.snapshotId);
     }
 
     //
