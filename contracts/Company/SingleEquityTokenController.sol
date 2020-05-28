@@ -119,7 +119,7 @@ contract SingleEquityTokenController is
             _t._token.changeTokenController(newController);
         }
         transitionTo(Gov.State.Migrated);
-        // emit LogResolutionExecuted(0, Action.ChangeTokenController);
+
         emit LogMigratedTo(address(this), newController);
     }
 
@@ -269,23 +269,6 @@ contract SingleEquityTokenController is
         returns (Gov.State)
     {
         return _preMigrationState;
-    }
-
-    ////////////////////////
-    // Internal Methods
-    ////////////////////////
-
-    //
-    // Observes MGovernanceObserver
-    //
-
-    function mAfterShareCapitalChange(uint256 newShareCapital)
-        internal
-    {
-        // update total voting power of the equity token
-        if (_t._type == Gov.TokenType.Equity) {
-            Gov.setEquityTokenTotalVotingPower(_t, IEquityToken(_t._token), newShareCapital);
-        }
     }
 
 }
