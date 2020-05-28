@@ -132,7 +132,9 @@ library VotingProposal {
         deadlines[1] = t + campaignDuration;
         // no reveal now
         deadlines[2] = deadlines[3] = t + votingPeriod;
-        deadlines[4] = deadlines[3] + offchainVotePeriod;
+        // offchain voting deadline
+        // if all voting power belongs to token holders then off-chain tally must be skipped
+        deadlines[4] = deadlines[3] + (totalVotingPower == totalTokenVotes ? 0 : offchainVotePeriod);
 
         // can't use struct constructor because it goes through memory
         // p is already allocated storage slot
