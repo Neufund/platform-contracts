@@ -1,7 +1,8 @@
 module.exports = {
   port: 8255,
-  testCommand: "node --max-old-space-size=8196 ../node_modules/.bin/truffle test --network coverage",
-  compileCommand: '../node_modules/.bin/truffle compile --all',
+  testCommand:
+    "node --max-old-space-size=8196 ../node_modules/.bin/truffle test --network coverage",
+  compileCommand: "../node_modules/.bin/truffle compile --all",
   skipFiles: [
     "SnapshotToken/Extensions/Disbursal.sol",
     "SnapshotToken/Extensions/Vote.sol",
@@ -9,7 +10,7 @@ module.exports = {
     "Snapshot/Extras/EveryBlock.sol",
     "Snapshot/Extras/Snapshotable.sol",
     "Company/Extras/",
-    "test/"
+    "test/",
   ],
   testrpcOptions:
     '--port 8555 --gasPrice 1 \

@@ -59,10 +59,6 @@ const ETODurationTerms = artifacts.require("ETODurationTerms");
 const TokenholderRights = artifacts.require("EquityTokenholderRights");
 const TestFeeDistributionPool = artifacts.require("TestFeeDistributionPool");
 
-// in a few places we use linear approximations and we require high precision
-// all other big numbers are integers
-web3.BigNumber.config({ DECIMAL_PLACES: 100 });
-
 const PLATFORM_SHARE = web3.toBigNumber("2");
 const minDepositAmountEurUlps = Q18.mul(50);
 const minWithdrawAmountEurUlps = Q18.mul(20);
@@ -80,6 +76,10 @@ const inverseTokenFeeDec = defaultPlatformTerms.TOKEN_PARTICIPATION_FEE_FRACTION
 const two = new web3.BigNumber(2);
 const one = new web3.BigNumber(1);
 const zero = new web3.BigNumber(0);
+
+// in a few places we use linear approximations and we require high precision
+// all other big numbers are integers
+web3.BigNumber.config({ DECIMAL_PLACES: 100 });
 
 contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   // basic infrastructure
@@ -4037,13 +4037,14 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
     );
     expect(generalInformation[2]).to.be.bignumber.eq(etoTermsDict.AUTHORIZED_CAPITAL);
     expect(generalInformation[3]).to.eq(await etoCommitment.signedInvestmentAgreementUrl());
+    expect(generalInformation[4]).to.eq(tokenholderRights.address);
 
-    const tokens = await equityTokenController.tokens();
-    expect(tokens[0][0]).to.eq(equityToken.address);
-    expect(tokens[1][0]).to.be.bignumber.eq(GovTokenType.Equity);
-    expect(tokens[2][0]).to.be.bignumber.eq(GovTokenState.Open);
-    expect(tokens[3][0]).to.eq(tokenholderRights.address);
-    expect(tokens[4][0]).to.eq(etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS);
+    const tokens = await equityTokenController.governanceToken();
+    expect(tokens[0]).to.eq(equityToken.address);
+    expect(tokens[1]).to.be.bignumber.eq(GovTokenType.Equity);
+    expect(tokens[2]).to.be.bignumber.eq(GovTokenState.Open);
+    expect(tokens[3]).to.eq(tokenholderRights.address);
+    expect(tokens[4]).to.eq(etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS);
 
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([etoCommitment.address]);
     expect(await equityToken.sharesTotalSupply()).to.be.bignumber.eq(contribution[0]);
@@ -4199,16 +4200,17 @@ contract("ETOCommitment", ([, admin, company, nominee, ...investors]) => {
   }
 
   async function expectEmptyTokenController() {
-    const tokens = await equityTokenController.tokens();
-    for (const vals of tokens) {
-      expect(vals.length).to.eq(1);
-    }
+    const tokens = await equityTokenController.governanceToken();
+    const z = tokens[1];
+    expect(z).to.be.bignumber.eq(zero);
+    expect(tokens).to.deep.eq([ZERO_ADDRESS, z, z, ZERO_ADDRESS, false]);
     expect(await equityTokenController.tokenOfferings()).to.deep.eq([]);
     const generalInfo = await equityTokenController.shareholderInformation();
     expect(generalInfo[0]).to.be.bignumber.eq(GovTokenType.None);
     expect(generalInfo[1]).to.be.bignumber.eq(0);
     expect(generalInfo[2]).to.be.bignumber.eq(0);
     expect(generalInfo[3]).eq("");
+    expect(generalInfo[4]).eq(ZERO_ADDRESS);
   }
 
   async function expectStateStarts(pastStatesTable, durationTable) {
