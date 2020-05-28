@@ -55,6 +55,15 @@ contract ControllerGeneralInformation is
     uint256 internal _companyValuationEurUlps;
 
     ////////////////////////
+    // Modifiers
+    ////////////////////////
+
+    modifier onlyGeneralActions(Gov.Action a) {
+        require(isGeneralAction(a), "NF_NOT_GENERAL_ACTION");
+        _;
+    }
+
+    ////////////////////////
     // Constructor
     ////////////////////////
 
@@ -75,7 +84,8 @@ contract ControllerGeneralInformation is
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
             uint256 authorizedCapital,
-            string shaUrl
+            string shaUrl,
+            ITokenholderRights tokenholderRights
         )
     {
         if (amendmentsCount() > 0) {
@@ -85,7 +95,8 @@ contract ControllerGeneralInformation is
             _shareCapital,
             _companyValuationEurUlps,
             _authorizedCapital,
-            shaUrl
+            shaUrl,
+            _t._tokenholderRights
         );
     }
 
@@ -116,35 +127,30 @@ contract ControllerGeneralInformation is
     }
 
     // used to change company governance, if run in Setup state it may create a controller
-    // without token, for example to use with ESOP
+    // without a token, for example to use with ESOP
     function amendISHAResolution(
         bytes32 resolutionId,
         string ISHAUrl,
         uint256 shareCapitalUlps,
         uint256 authorizedCapital,
         uint256 companyValuationEurUlps,
-        EquityTokenholderRights newShareholderRights
+        ITokenholderRights newTokenholderRights
     )
         public
         onlyStates(Gov.State.Setup, Gov.State.Funded)
         withAtomicExecution(resolutionId, defaultValidator)
         withGovernance(
             resolutionId,
-            Gov.Action.AmendISHA,
+            Gov.Action.AmendGovernance,
             ISHAUrl
         )
     {
         // if in Setup, transition to Funded
         if (_g._state == Gov.State.Setup) {
-            require(!newShareholderRights.HAS_VOTING_RIGHTS(), "NF_TOKEN_REQ_VOTING_RIGHTS");
             transitionTo(Gov.State.Funded);
         }
         amendISHA(resolutionId, ISHAUrl);
-        // directly write new bylaws to storage and generate amend token event
-        // for new controller this will fall back to None token which exactly what we need
-        _t._tokenholderRights = newShareholderRights;
-        emit LogTokenholderRightsAmended(resolutionId, _t._type, _t._token, _t._tokenholderRights);
-
+        amendGovernance(resolutionId, newTokenholderRights);
         amendCompanyValuation(resolutionId, companyValuationEurUlps);
         amendShareCapital(resolutionId, shareCapitalUlps);
         establishAuthorizedCapital(resolutionId, authorizedCapital);
@@ -205,26 +211,26 @@ contract ControllerGeneralInformation is
         amendCompanyValuation(resolutionId, companyValuationEurUlps);
     }
 
-    // todo: generic (None) THR
-
     //
     // Migration storage access
     //
 
     function migrateGeneralInformation(
-        string ISHAUrl,
         uint256 shareCapital,
+        uint256 companyValuationEurUlps,
         uint256 authorizedCapital,
-        uint256 companyValuationEurUlps
+        string shaUrl,
+        ITokenholderRights tokenholderRights
     )
         public
         onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        this.amendAgreement(ISHAUrl);
+        this.amendAgreement(shaUrl);
         setShareCapital(shareCapital);
         _authorizedCapital = authorizedCapital;
         _companyValuationEurUlps = companyValuationEurUlps;
+        _t._tokenholderRights = tokenholderRights;
     }
 
     ////////////////////////
@@ -298,5 +304,17 @@ contract ControllerGeneralInformation is
         _shareCapital = newShareCapital;
         // call observer in final contract
         mAfterShareCapitalChange(newShareCapital);
+    }
+
+    function isGeneralAction(Gov.Action a)
+        internal
+        pure
+        returns (bool)
+    {
+        return a == Gov.Action.None ||
+            a == Gov.Action.RestrictedNone ||
+            a == Gov.Action.AnnualGeneralMeeting ||
+            a == Gov.Action.CompanyNone ||
+            a == Gov.Action.THRNone;
     }
 }
