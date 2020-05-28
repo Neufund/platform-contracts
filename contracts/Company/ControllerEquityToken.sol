@@ -29,22 +29,18 @@ contract ControllerEquityToken is
 
     constructor () internal {}
 
-    function tokens()
+    function governanceToken()
         public
         constant
         returns (
-            address[1] token,
-            Gov.TokenType[1] tokenType,
-            Gov.TokenState[1] tokenState,
-            address[1] holderRights,
-            bool[1] tokenTransferable
+            IControlledToken token,
+            Gov.TokenType tokenType,
+            Gov.TokenState tokenState,
+            ITokenholderRights holderRights,
+            bool tokenTransferable
         )
     {
-        token[0] = _t._token;
-        tokenType[0] = _t._type;
-        tokenState[0] = _t._state;
-        holderRights[0] = _t._tokenholderRights;
-        tokenTransferable[0] = _t._transferable;
+        return (_t._token, _t._type, _t._state, _t._tokenholderRights, _t._transferable);
     }
 
     //
@@ -55,22 +51,14 @@ contract ControllerEquityToken is
         IControlledToken token,
         Gov.TokenType tokenType,
         Gov.TokenState state,
-        EquityTokenholderRights rights,
+        ITokenholderRights rights,
         bool transfersEnabled
     )
         public
         onlyState(Gov.State.Setup)
         only(ROLE_COMPANY_UPGRADE_ADMIN)
     {
-        _t._type = tokenType;
-        _t._state = state;
-        _t._transferable = transfersEnabled;
-        _t._token = token;
-        _t._tokenholderRights = rights;
-
-        if (tokenType == Gov.TokenType.Equity) {
-            Gov.setAdditionalEquityTokenData(_t, IEquityToken(token));
-        }
+        Gov.setToken(_t, token, tokenType, state, rights, transfersEnabled);
     }
 
     ////////////////////////
@@ -84,5 +72,18 @@ contract ControllerEquityToken is
             _t._transferable = transfersEnabled;
         }
         emit LogTransfersStateChanged(resolutionId, _t._token, transfersEnabled);
+    }
+
+    //
+    // Observes MGovernanceObserver
+    //
+
+    function mAfterShareCapitalChange(uint256 newShareCapital)
+        internal
+    {
+        // update total voting power of the equity token
+        if (_t._type == Gov.TokenType.Equity) {
+            Gov.setEquityTokenTotalVotingPower(_t, IEquityToken(_t._token), newShareCapital);
+        }
     }
 }
