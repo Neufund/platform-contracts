@@ -1,3 +1,5 @@
+const fs = require("fs");
+const { join } = require("path");
 const confirm = require("node-ask").confirm;
 const promisify = require("../test/helpers/utils").promisify;
 
@@ -29,4 +31,13 @@ export async function initializeMigrationStep(config, artifacts, web3) {
   }
 
   return universe;
+}
+
+export function loadEtoFixtures() {
+  const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
+  return JSON.parse(fs.readFileSync(etoFixturesPath));
+}
+
+export function getEtoFixtureByName(etoFixtures, name) {
+  return etoFixtures[Object.keys(etoFixtures).find(k => etoFixtures[k].name === name)];
 }

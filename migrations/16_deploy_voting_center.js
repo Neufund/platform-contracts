@@ -3,6 +3,7 @@ const getConfig = require("./config").getConfig;
 const getDeployerAccount = require("./config").getDeployerAccount;
 const initializeMigrationStep = require("./helpers").initializeMigrationStep;
 const createAccessPolicy = require("../test/helpers/createAccessPolicy").default;
+const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const { TriState } = require("../test/helpers/triState");
 const roles = require("../test/helpers/roles").default;
 
@@ -11,28 +12,31 @@ module.exports = function deployContracts(deployer, network, accounts) {
   if (CONFIG.shouldSkipStep(__filename)) return;
 
   const RoleBasedAccessPolicy = artifacts.require(CONFIG.artifacts.ROLE_BASED_ACCESS_POLICY);
-  const FeeDisbursal = artifacts.require(CONFIG.artifacts.FEE_DISBURSAL);
-  const FeeDisbursalController = artifacts.require(CONFIG.artifacts.FEE_DISBURSAL_CONTROLLER);
+  const VotingCenter = artifacts.require(CONFIG.artifacts.VOTING_CENTER);
+  const VotingController = artifacts.require(CONFIG.artifacts.VOTING_CENTER_CONTROLLER);
   const DEPLOYER = getDeployerAccount(network, accounts);
 
   deployer.then(async () => {
     const universe = await initializeMigrationStep(CONFIG, artifacts, web3);
-    console.log("Temporary permission for ROLE_DISBURSAL_MANAGER");
+    // deploy fee disbursal and controller
+    console.log("Deploying VotingController");
+    await deployer.deploy(VotingController, universe.address);
+    const controller = await VotingController.deployed();
+    console.log("Deploying VotingCenter");
+    await deployer.deploy(VotingCenter, controller.address);
+    const votingCenter = await VotingCenter.deployed();
+
     const accessPolicy = await RoleBasedAccessPolicy.at(await universe.accessPolicy());
-    const feeDisbursalAddress = await universe.feeDisbursal();
     await createAccessPolicy(accessPolicy, [
-      // temporary disbursal manager to change controller, will be dropped in finalize
+      // temporary access to universe, will be dropped in finalize
       {
         subject: DEPLOYER,
-        role: roles.disbursalManager,
+        role: roles.universeManager,
         state: TriState.Allow,
       },
     ]);
-    console.log("Deploying FeeDisbursalController");
-    await deployer.deploy(FeeDisbursalController, universe.address);
-    const controller = await FeeDisbursalController.deployed();
-    console.log("Changing fee disbursal controller");
-    const feeDisbursal = await FeeDisbursal.at(feeDisbursalAddress);
-    await feeDisbursal.changeFeeDisbursalController(controller.address);
+
+    console.log("Setting singletons");
+    await universe.setSingleton(knownInterfaces.votingCenter, votingCenter.address);
   });
 };

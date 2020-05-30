@@ -20,6 +20,7 @@ const {
 } = require("./configETOFixtures");
 const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
 const stringify = require("../test/helpers/utils").stringify;
+const DAY_SNAPSHOT = require("../test/helpers/constants").DAY_SNAPSHOT;
 const Q18 = require("../test/helpers/constants").Q18;
 const decimalBase = require("../test/helpers/constants").decimalBase;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
@@ -277,7 +278,7 @@ async function simulateETO(
   final,
   govLib,
 ) {
-  const [etoCommitment, equityToken, , etoTerms] = await deployETO(
+  const [etoCommitment, equityToken, tokenController, etoTerms] = await deployETO(
     artifacts,
     DEPLOYER,
     CONFIG,
@@ -322,7 +323,7 @@ async function simulateETO(
   const whitelistD = etoDefiniton.durTerms.WHITELIST_DURATION.add(1);
   const publicD = etoDefiniton.durTerms.PUBLIC_DURATION.add(1);
   const signingDelay = etoDefiniton.durTerms.SIGNING_DURATION.div(2).round();
-  const claimD = etoDefiniton.durTerms.CLAIM_DURATION.add(1);
+  const claimD = etoDefiniton.durTerms.CLAIM_DURATION;
   let logStartDate = startDate;
   if (final >= CommitmentState.Public) {
     logStartDate = logStartDate.sub(whitelistD);
@@ -395,7 +396,7 @@ async function simulateETO(
     return etoCommitment;
   }
   console.log("Going to public");
-  await etoCommitment._mockShiftBackTime(whitelistD);
+  await shiftBackTime(etoCommitment, tokenController, null, whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
 
@@ -421,7 +422,7 @@ async function simulateETO(
   }
   if (final === CommitmentState.Refund) {
     console.log("Going to Refund");
-    await etoCommitment._mockShiftBackTime(publicD);
+    await shiftBackTime(etoCommitment, tokenController, null, publicD);
     await etoCommitment.handleStateTransitions();
     await ensureState(etoCommitment, CommitmentState.Refund);
     return etoCommitment;
@@ -442,7 +443,7 @@ async function simulateETO(
     amountMinTokensEur,
     "EUR",
   );
-  await etoCommitment._mockShiftBackTime(publicD);
+  await shiftBackTime(etoCommitment, tokenController, null, publicD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Signing);
   if (final === CommitmentState.Signing) {
@@ -452,7 +453,7 @@ async function simulateETO(
     // eslint-disable-next-line max-len
     `Going to Claim.. putting signatures ${etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
   );
-  await etoCommitment._mockShiftBackTime(signingDelay);
+  await shiftBackTime(etoCommitment, tokenController, null, signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
     etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
@@ -476,11 +477,27 @@ async function simulateETO(
   }
   console.log("Going to payout");
   // shift time
-  await etoCommitment._mockShiftBackTime(claimD);
+  await shiftBackTime(etoCommitment, tokenController, equityToken, claimD);
   // no need to check state afterwards, payout ensures it
   await etoCommitment.payout();
   // console.log(await etoCommitment.startOfStates());
   return etoCommitment;
+}
+
+async function shiftBackTime(etoCommitment, tokenController, equityToken, delta) {
+  // shifts all internal timestamp in ETO-related
+  await etoCommitment._mockShiftBackTime(delta);
+  await tokenController._mockShiftBackTime(delta);
+  if (equityToken) {
+    // equity token may only by shifted by full days
+    if (delta % dayInSeconds > 0) {
+      throw new Error(
+        `shift time on equity token must be in full days, is ${delta / dayInSeconds}`,
+      );
+    }
+    const days = delta / dayInSeconds;
+    await equityToken._decreaseSnapshots(DAY_SNAPSHOT.mul(days));
+  }
 }
 
 async function ensureState(etoCommitment, requiredState) {
@@ -532,9 +549,11 @@ async function describeETO(config, fas, etoCommitment, etoDefinition, state) {
     nominee: toChecksumAddress(await etoCommitment.nominee()),
     company: toChecksumAddress(await etoCommitment.companyLegalRep()),
     equityToken: toChecksumAddress(await etoCommitment.equityToken()),
+    tokenController: toChecksumAddress(await etoCommitment.commitmentObserver()),
     etoTerms: toChecksumAddress(await etoCommitment.etoTerms()),
     definition: etoDefinition,
     investmentAgreement: await etoCommitment.signedInvestmentAgreementUrl(),
+    contractId: await etoCommitment.contractId(),
   };
   const whitelist = {};
   const investors = {};

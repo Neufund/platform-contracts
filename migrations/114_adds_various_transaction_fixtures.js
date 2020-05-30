@@ -1,10 +1,9 @@
 require("babel-register");
-const fs = require("fs");
-const { join } = require("path");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const Q18 = require("../test/helpers/constants").Q18;
 const promisify = require("../test/helpers/utils").promisify;
+const { loadEtoFixtures, getEtoFixtureByName } = require("./helpers");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -36,12 +35,9 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // send NEU to someone
     await neumark.transfer(receiver, Q18.mul(65.3761), { from: sender });
     // send claimed token to someone
-    const etoFixturesPath = join(__dirname, "../build/eto_fixtures.json");
-    const etoFixtures = JSON.parse(fs.readFileSync(etoFixturesPath));
-    const claimFixture = Object.keys(etoFixtures).find(
-      k => etoFixtures[k].name === "ETOInClaimState",
-    );
-    const equityToken = await EquityToken.at(etoFixtures[claimFixture].equityToken);
+    const etoFixtures = loadEtoFixtures();
+    const claimFixture = getEtoFixtureByName(etoFixtures, "ETOInClaimState");
+    const equityToken = await EquityToken.at(claimFixture.equityToken);
     // const tokenController = await SingleEquityTokenController.at(await equityToken.tokenController());
     // console.log(await tokenController.onTransfer(sender, sender, receiver, 7));
     await equityToken.transfer(receiver, 7, { from: sender });
