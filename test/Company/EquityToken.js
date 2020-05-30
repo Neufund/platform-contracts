@@ -22,11 +22,12 @@ import createAccessPolicy from "../helpers/createAccessPolicy";
 import { snapshotTokenTests } from "../helpers/snapshotTokenTestCases";
 import { mineBlock } from "../helpers/evmCommands";
 import increaseTime from "../helpers/increaseTime";
-import { ZERO_ADDRESS, defEquityTokenDecimals } from "../helpers/constants";
+import { ZERO_ADDRESS, defEquityTokenDecimals, Q18, DAY_SNAPSHOT } from "../helpers/constants";
 import { contractId } from "../helpers/utils";
 import EvmError from "../helpers/EVMThrow";
 
 const EquityToken = artifacts.require("EquityToken");
+const MockEquityToken = artifacts.require("MockEquityToken");
 const TestMockableEquityTokenController = artifacts.require("TestMockableEquityTokenController");
 const TestSnapshotToken = artifacts.require("TestSnapshotToken"); // for cloning tests
 const ETOTokenTerms = artifacts.require("ETOTokenTerms");
@@ -328,21 +329,59 @@ contract("EquityToken", ([admin, nominee, company, broker, ...holders]) => {
       return equityToken;
     };
 
-    const advanceSnapshotId = async snapshotable => {
-      // EquityToken is Daily so forward time to create snapshot
-      const prevSnapshotId = await snapshotable.currentSnapshotId.call();
-      await increaseTime(24 * 60 * 60 + 1);
-      await mineBlock();
-      const nextSnapshotId = await snapshotable.currentSnapshotId.call();
-      expect(prevSnapshotId).to.be.bignumber.not.eq(nextSnapshotId);
-      return nextSnapshotId;
-    };
-
     const createClone = async (parentToken, parentSnapshotId) =>
       TestSnapshotToken.new(parentToken.address, parentSnapshotId);
 
     snapshotTokenTests(getToken, createClone, advanceSnapshotId, holders[1], holders[2], broker);
   });
+
+  describe("equity token mock", () => {
+    beforeEach(async () => {
+      equityToken = await MockEquityToken.new(
+        universe.address,
+        equityTokenController.address,
+        tokenTerms.address,
+        nominee,
+        company,
+      );
+      await equityToken.amendAgreement("AGREEMENT#HASH", { from: nominee });
+    });
+
+    it("should shift snapshots", async () => {
+      const iId = await equityToken.currentSnapshotId.call();
+      const firstId = await advanceSnapshotId(equityToken);
+      await equityToken.issueTokens(Q18, { from: holders[0] });
+      await advanceSnapshotId(equityToken);
+      await equityToken.issueTokens(Q18, { from: holders[1] });
+      await equityToken.transfer(holders[4], Q18.div("2"), { from: holders[0] });
+
+      // shift time
+      expect(await equityToken.totalSupplyAt(iId)).to.be.bignumber.eq(0);
+      // move by one daily snapshot
+      await equityToken._decreaseSnapshots(DAY_SNAPSHOT);
+      // should have 2*Q18 at initial supply after the shift
+      expect(await equityToken.totalSupplyAt(iId)).to.be.bignumber.eq(Q18);
+      // Q18 holder 0 at initial
+      expect(await equityToken.balanceOfAt(holders[0], iId)).to.be.bignumber.eq(Q18);
+      expect(await equityToken.balanceOfAt(holders[1], iId)).to.be.bignumber.eq(0);
+      // first snapshot
+      expect(await equityToken.totalSupplyAt(firstId)).to.be.bignumber.eq(Q18.mul(2));
+      // holders at first
+      expect(await equityToken.balanceOfAt(holders[0], firstId)).to.be.bignumber.eq(Q18.div(2));
+      expect(await equityToken.balanceOfAt(holders[1], firstId)).to.be.bignumber.eq(Q18);
+      expect(await equityToken.balanceOfAt(holders[4], firstId)).to.be.bignumber.eq(Q18.div(2));
+    });
+  });
+
+  async function advanceSnapshotId(snapshotable) {
+    // EquityToken is Daily so forward time to create snapshot
+    const prevSnapshotId = await snapshotable.currentSnapshotId.call();
+    await increaseTime(24 * 60 * 60 + 1);
+    await mineBlock();
+    const nextSnapshotId = await snapshotable.currentSnapshotId.call();
+    expect(prevSnapshotId).to.be.bignumber.not.eq(nextSnapshotId);
+    return nextSnapshotId;
+  }
 
   function expectLogTokensIssued(tx, owner, controller, amount) {
     const event = eventValue(tx, "LogTokensIssued");

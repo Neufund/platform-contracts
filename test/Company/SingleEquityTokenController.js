@@ -686,6 +686,30 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
   });
 
+  describe("mock controller", () => {
+    it("should shift time", async () => {
+      const mockController = await MockSingleEquityTokenController.new(universe.address, company);
+      await deployController(mockController);
+      await deployETO();
+      const resolutionId = await registerOffering();
+      const resolution = await mockController.resolution(resolutionId);
+      const delta = daysToSeconds(1);
+      await mockController._mockShiftBackTime(delta);
+      const shifted = await mockController.resolution(resolutionId);
+      expect(resolution[2]).to.be.bignumber.eq(shifted[2].add(delta));
+      expect(resolution[3]).to.be.bignumber.eq(0);
+      expect(resolution[7]).to.be.bignumber.eq(0);
+      await preparePostInvestmentState();
+      // another shift with finished resolution
+      const preshifted2 = await mockController.resolution(resolutionId);
+      await mockController._mockShiftBackTime(delta);
+      const shifted2 = await mockController.resolution(resolutionId);
+      expect(preshifted2[2]).to.be.bignumber.eq(shifted2[2].add(delta));
+      expect(preshifted2[3]).to.be.bignumber.eq(shifted2[3].add(delta));
+      expect(preshifted2[7]).to.be.bignumber.eq(0);
+    });
+  });
+
   describe("special migrations", () => {
     let newController;
 
@@ -1583,6 +1607,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
     // pass equity token to eto commitment
     await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+    return resolutionId;
   }
 
   async function runOffering(commitmentOvr) {
