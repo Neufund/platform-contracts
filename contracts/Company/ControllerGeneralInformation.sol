@@ -106,6 +106,7 @@ contract ControllerGeneralInformation is
     //  - RestrictedNone - restricted ordinary shareholder resolution
     //  - AnnualGeneralMeeting - annual meeting resolution
     //  - CompanyNone - general information from the company
+    //  - THRNone - tokenholder voting/resolution, pro-rata
     function generalResolution(
         bytes32 resolutionId,
         Gov.Action generalAction,

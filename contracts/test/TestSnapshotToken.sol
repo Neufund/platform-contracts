@@ -2,17 +2,17 @@ pragma solidity 0.4.26;
 
 import "../Snapshot/DailyAndSnapshotable.sol";
 import "../SnapshotToken/Helpers/TokenMetadata.sol";
-import "../SnapshotToken/StandardSnapshotToken.sol";
 import "../Standards/IWithdrawableToken.sol";
 import "../Standards/IERC223Token.sol";
 import "../Standards/IERC223Callback.sol";
 import "../IsContract.sol";
 import "./TestMockableTokenController.sol";
+import "./MockSnapshotIdToken.sol";
 
 
 contract TestSnapshotToken is
     DailyAndSnapshotable,
-    StandardSnapshotToken,
+    MockSnapshotIdToken,
     // we mixin controller into token and wire it as internal calls
     TestMockableTokenController,
     IWithdrawableToken,
@@ -75,7 +75,7 @@ contract TestSnapshotToken is
         returns (bool)
     {
         // it is necessary to point out implementation to be called
-        BasicSnapshotToken.mTransfer(msg.sender, to, amount);
+        mTransfer(msg.sender, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {
