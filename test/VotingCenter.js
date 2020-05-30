@@ -234,7 +234,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         );
       }
 
-      async function registerInitiator(initiator) {
+      async function registerInitiatorInterface(initiator) {
         // make it equity token controller
         await universe.setCollectionInterface(
           knownInterfaces.equityTokenControllerInterface,
@@ -246,13 +246,34 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         );
       }
 
-      it("should register proposal", async () => {
+      async function registerInitatorRole(initiator, object) {
+        // add voting initator role over voting center
+        await createAccessPolicy(accessPolicy, [
+          { subject: initiator, role: roles.votingInitiator, object },
+        ]);
+      }
+
+      it("should register proposal with initator interface", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
         await registerToken();
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
         const proposal = await openProposal(proposalId, noCampaignProposalParams);
+        expect(proposal[0]).to.be.bignumber.eq(ProposalState.Public);
+      });
+
+      it("should register proposal with initator role", async () => {
+        const proposalId = randomBytes32();
+        await issueTokens(2);
+        await registerToken();
+        // must give global rights as controller checks msg.sender
+        await registerInitatorRole(owner, ZERO_ADDRESS);
+        expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
+        // still proposal will open on voting center scope
+        await registerInitatorRole(owner2, votingContract.address);
+        expect(await votingController.onAddProposal(proposalId, owner2, token.address)).to.be.false;
+        const proposal = await openProposal(proposalId, noCampaignProposalParams, { from: owner2 });
         expect(proposal[0]).to.be.bignumber.eq(ProposalState.Public);
       });
 
@@ -272,7 +293,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         // close snapshot
         await increaseTime(daysToSeconds(1));
         // open proposal
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         const proposalId = randomBytes32();
         // now the voting controller cached invalid neumark so recreate
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.false;
@@ -290,7 +311,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       it("rejects proposal for unsupported token", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.false;
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
@@ -308,7 +329,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
         );
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
         await openProposal(proposalId, noCampaignProposalParams);
       });
@@ -316,7 +337,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       it("should change voting controller", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
         );
@@ -1437,7 +1458,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       params.votingPeriod.add(t).add(params.offchainVotePeriod),
     );
     if (state === ProposalState.Public) {
-      let initiator = owner;
+      let initiator = tx.receipt.from;
       if (!hasEvent(tx, "LogProposalStateTransition")) {
         // if log is not found try to decode abi directly (in case tx was done via observer contract)
         const etcLogs = decodeLogs(tx, votingContract.address, VotingCenter.abi);

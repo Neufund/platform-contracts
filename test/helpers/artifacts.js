@@ -28,6 +28,7 @@ export const artifacts = {
   TOKEN_EXCHANGE_RATE_ORACLE: "ITokenExchangeRateOracle",
   ETO_TERMS_CONSTRAINTS: "ETOTermsConstraints",
   VOTING_CENTER: "VotingCenter",
+  VOTING_CENTER_CONTROLLER: "VotingController",
   // not implemented
   // PLATFORM_PORTFOLIO: "IPlatformPortfolio"
 };
