@@ -20,18 +20,14 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
         Universe universe,
         address companyLegalRep,
         IEquityToken token,
-        EquityTokenholderRights tokenholderRights,
+        ITokenholderRights tokenholderRights,
         Gov.State state,
         uint256 shareCapital
     )
         public
         ControllerGovernanceEngine(universe, companyLegalRep)
     {
-        _t._type = Gov.TokenType.Equity;
-        _t._state = Gov.TokenState.Open;
-        _t._tokenholderRights = tokenholderRights;
-        _t._token = token;
-        Gov.setAdditionalEquityTokenData(_t, token);
+        Gov.setToken(_t, token, Gov.TokenType.Equity, Gov.TokenState.Open, tokenholderRights, true);
         // compute total voting power
         Gov.setEquityTokenTotalVotingPower(_t, token, shareCapital);
         transitionTo(state);
@@ -157,7 +153,7 @@ contract TestControllerGovernanceEngine is ControllerGovernanceEngine {
     //
 
     function _hasProposalPassed(
-        Gov.Action action,
+        uint8 action,
         uint256 inFavor,
         uint256 against,
         uint256 offchainInFavor,

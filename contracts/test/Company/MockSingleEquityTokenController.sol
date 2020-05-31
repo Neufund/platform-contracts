@@ -50,6 +50,19 @@ contract MockSingleEquityTokenController is
         transitionTo(state);
     }
 
+    // to shift all internal state timestamps by seconds
+    function _mockShiftBackTime(uint32 delta) public {
+        for(uint256 ii = 0; ii < _g._resolutionIds.length; ii += 1) {
+            Gov.ResolutionExecution storage e = _g._resolutions[_g._resolutionIds[ii]];
+            uint32 finishedAt = e.finishedAt > 0 ? e.finishedAt - delta : 0;
+            uint32 cancelAt = e.cancelAt > 0 ? e.cancelAt - delta : 0;
+            uint32 startedAt = e.startedAt - delta;
+            e.startedAt = startedAt;
+            e.finishedAt = finishedAt;
+            e.cancelAt = cancelAt;
+        }
+    }
+
     //
     // Implements IMigrationChain
     //

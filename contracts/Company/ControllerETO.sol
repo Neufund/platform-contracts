@@ -226,6 +226,7 @@ contract ControllerETO is
             uint256 increasedValuationEurUlps,
             string memory ISHAUrl
         ) = Gov.calculateNewValuationAndInstallToken(_t, tokenOffering);
+        // token was already set in library
         emit LogTokenholderRightsAmended(resolutionId, _t._type, _t._token, _t._tokenholderRights);
         // set new ISHA, increase share capital and company valuations
         amendISHA(resolutionId, ISHAUrl);

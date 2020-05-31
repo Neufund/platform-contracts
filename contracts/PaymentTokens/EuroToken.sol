@@ -317,7 +317,7 @@ contract EuroToken is
         private
         returns (bool success)
     {
-        BasicToken.mTransfer(from, to, amount);
+        mTransfer(from, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {

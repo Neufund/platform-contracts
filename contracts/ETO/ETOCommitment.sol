@@ -23,7 +23,7 @@ import "../Standards/IFeeDisbursal.sol";
 // 3 - capitalIncrease returned in ISHA currency, ABI and return values backward compatible
 //     calculateContribution returns actually spent amount at index 7
 // 4 - (1) removed actually spent amount (2) equity tokens generated only on claim (3) contributionSummary returns eth and eur breakdown before signing
-//     (4) removed equity token from contructor - taken at setStartDate instead (5) calls commitment observer with Setup -> Setup transition and setStartDate
+//     (4) calls commitment observer with Setup -> Setup transition and setStartDate (5) actually spent amount removed from calculateContribution
 
 /// @title represents token offering organized by Company
 ///  token offering goes through states as defined in ETOTimedStateMachine

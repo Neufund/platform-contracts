@@ -34,14 +34,14 @@ export const interfaceToArtifacts = {
   [keyToKey.icbmCommitment]: [artifacts.ICBM_COMMITMENT],
   [keyToKey.universe]: [artifacts.UNIVERSE],
   [keyToKey.platformTerms]: [artifacts.PLATFORM_TERMS],
+  [keyToKey.votingCenter]: [artifacts.VOTING_CENTER],
+  [keyToKey.paymentTokenInterface]: ["IERC223Token"],
   // more than one artifact (abi) planned soon
   [keyToKey.commitmentInterface]: [artifacts.STANDARD_ETO_COMMITMENT, ""],
   [keyToKey.equityTokenInterface]: [artifacts.STANDARD_EQUITY_TOKEN, ""],
   [keyToKey.equityTokenControllerInterface]: [artifacts.EQUITY_TOKEN_CONTROLLER, ""],
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
-  [keyToKey.paymentTokenInterface]: ["IERC223Token"],
   [keyToKey.etoTermsConstraints]: [artifacts.ETO_TERMS_CONSTRAINTS, ""],
-  [keyToKey.votingCenter]: [artifacts.VOTING_CENTER, ""],
 };
 
 // verify all known interfaces are mapped

@@ -29,6 +29,14 @@ library VotingProposal {
         Final
     }
 
+    // Łukasiewicz logic values for state of a vote of particular voter
+    /// @dev note that Abstain is meaningful only in Final/Tally state
+    enum TriState {
+        Abstain,
+        InFavor,
+        Against
+    }
+
     /// @dev note that voting power is always expressed in tokens of the associated snapshot token
     ///     and reflect decimals of the token. voting power of 1 token with 18 decimals is Q18
     struct Proposal {
@@ -69,7 +77,7 @@ library VotingProposal {
         bool observing;
 
         // you can vote only once
-        mapping (address => bool) hasVoted;
+        mapping (address => TriState) hasVoted;
     }
 
     /////////////////////////
@@ -132,7 +140,9 @@ library VotingProposal {
         deadlines[1] = t + campaignDuration;
         // no reveal now
         deadlines[2] = deadlines[3] = t + votingPeriod;
-        deadlines[4] = deadlines[3] + offchainVotePeriod;
+        // offchain voting deadline
+        // if all voting power belongs to token holders then off-chain tally must be skipped
+        deadlines[4] = deadlines[3] + (totalVotingPower == totalTokenVotes ? 0 : offchainVotePeriod);
 
         // can't use struct constructor because it goes through memory
         // p is already allocated storage slot

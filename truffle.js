@@ -13,7 +13,8 @@ const devNetworkDeploymentConfigOverride = {
     ICBM_COMMITMENT: "MockICBMCommitment",
     STANDARD_ETO_COMMITMENT: "MockETOCommitment",
     ETO_TERMS_CONSTRAINTS: "MockETOTermsConstraints",
-    EQUITY_TOKEN_CONTROLLER: "GranularTransferController",
+    EQUITY_TOKEN_CONTROLLER: "MockSingleEquityTokenController",
+    STANDARD_EQUITY_TOKEN: "MockEquityToken",
   },
   // other addresses set to DEPLOYER
   addresses: {

@@ -51,6 +51,10 @@ contract VotingController is
     {
         bool tokenAllowed = token == NEUMARK || UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_TOKEN_INTERFACES, token);
         bool initiatorAllowed = UNIVERSE.isAnyOfInterfaceCollectionInstance(ALLOWED_INITIATOR_INTERFACES, initiator);
+        if (!initiatorAllowed) {
+            // ROLE_VOTING_INITATOR must be enabled on voting center contract (msg.sender is voting center)
+            initiatorAllowed = ACCESS_POLICY.allowed(initiator, ROLE_VOTING_INITIATOR, msg.sender, msg.sig);
+        }
 
         return tokenAllowed && initiatorAllowed;
     }

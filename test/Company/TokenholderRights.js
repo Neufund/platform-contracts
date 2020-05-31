@@ -49,7 +49,7 @@ contract("TokenholderRights", () => {
     expect((await tokenholderRights.contractId())[1]).to.be.bignumber.eq(ZERO_BN);
     expect(await tokenholderRights.HAS_VOTING_RIGHTS()).to.be.true;
     const bylaws = await tokenholderRights.ACTION_BYLAWS();
-    expect(bylaws.length).to.eq(25);
+    expect(bylaws.length).to.eq(26);
 
     await verifyTerms(tokenholderRights, tokenholderTermsKeys, tokenholderTerms);
   });
@@ -192,17 +192,20 @@ contract("TokenholderRights", () => {
   }
 
   // expected escalations of all possible actions
+  // must correspond to the GoAction order
   const expectedEscalations = [
     GovActionEscalation.SHR,
     GovActionEscalation.SHR,
+    GovActionEscalation.SHR,
+    GovActionEscalation.SHR,
+    GovActionEscalation.CompanyLegalRep,
+    GovActionEscalation.THR,
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.ParentResolution,
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.SHR,
-    GovActionEscalation.SHR,
     GovActionEscalation.Anyone,
-    GovActionEscalation.SHR,
     GovActionEscalation.SHR,
     GovActionEscalation.SHR,
     GovActionEscalation.Nominee,
@@ -217,7 +220,6 @@ contract("TokenholderRights", () => {
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.CompanyLegalRep,
     GovActionEscalation.Anyone,
-    GovActionEscalation.CompanyLegalRep,
   ];
 
   function escalationToRep(escalation) {
@@ -249,9 +251,12 @@ contract("TokenholderRights", () => {
       expect(decodedBylaw[7], decodedBylaw[0]).to.be.bignumber.eq(
         expectedLegalRep(expectedEscalations[ii]),
       );
-      // tokenholder voting initiative (only None has it)
+      // tokenholder voting initiative (only None and THRNone have it)
       expect(decodedBylaw[9], decodedBylaw[0]).to.be.bignumber.eq(
-        ii === GovAction.None && isVotingEscalation(expectedEscalations[ii]) ? 1 : 0,
+        (ii === GovAction.None || ii === GovAction.THRNone) &&
+          isVotingEscalation(expectedEscalations[ii])
+          ? 1
+          : 0,
       );
       expectBylawCore(decodedBylaw);
     }
@@ -275,6 +280,8 @@ contract("TokenholderRights", () => {
         expect(decodedBylaw[6], decodedBylaw[0]).to.be.bignumber.eq(
           sourceTerms.TAG_ALONG_VOTING_RULE,
         );
+      } else if (GovAction[decodedBylaw[0]] === GovAction.THRNone) {
+        expect(decodedBylaw[6], decodedBylaw[0]).to.be.bignumber.eq(GovTokenVotingRule.Prorata);
       } else {
         expect(decodedBylaw[6], decodedBylaw[0]).to.be.bignumber.eq(
           sourceTerms.GENERAL_VOTING_RULE,

@@ -6,7 +6,7 @@ import "../VotingCenter/IVotingCenter.sol";
 import "../VotingCenter/VotingProposal.sol";
 import "./IEquityToken.sol";
 import "../Deprecations/IEquityToken_v0.sol";
-import "./EquityTokenholderRights.sol";
+import "./ITokenholderRights.sol";
 import "../ETO/IETOCommitment.sol";
 
 
@@ -49,20 +49,39 @@ library Gov {
         Migrated // terminal state, contract migrated
     }
 
+    // governance actions available in setup state
+    enum SetupAction {
+        // no on-chain action on resolution, default bylaw with voting initative
+        None,
+        // start new token offering
+        RegisterOffer,
+        // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur, new authorized capital)
+        AmendGovernance
+    }
+
+    // general governance actions
+    /// @dev must start with SetupAction
     enum Action {
-        None, // no on-chain action on resolution, default bylaw
-        RestrictedNone, // no on-chain action on resolution, restricted act bylaw
-        StopToken, // blocks transfers
-        ContinueToken, // enables transfers
+        None,
+        RegisterOffer,
+        AmendGovernance,
+        // no on-chain action on resolution, restricted act bylaw
+        RestrictedNone,
+        // general information from the company
+        CompanyNone,
+        // token holder resolution without on-chain action, with voting initative
+        THRNone,
+        // blocks transfers
+        StopToken,
+        // enables transfers
+        ContinueToken,
         // requires change of control resolution/dissolution to be in executing state
         // on entering executing state will stop token
         // will be completed on payout of certain amount of nEUR
         CloseToken,
         OrdinaryPayout, // any scheduled or expected payout initiated by company legal rep
         ExtraordinaryPayout, // a payout that requires resolution to pass
-        RegisterOffer, // start new token offering
         ChangeTokenController, // (new token controller)
-        AmendISHA, // for example off-chain investment (agreement url, new number of shares, new shareholder rights, new valuation eur, new authorized capital)
         // allocates tokens against shares that are transferred to nominee
         // requires SHR
         IssueTokensForExistingShares,
@@ -96,9 +115,7 @@ library Gov {
         // changes valuation, keeping number of shares
         AmendValuation,
         // a resolution that cancels another resolution, like calling off dividend payout or company closing
-        CancelResolution,
-        // general information from the company
-        CompanyNone
+        CancelResolution
     }
 
     // permissions required to execute an action
@@ -193,7 +210,7 @@ library Gov {
         bytes32 payload;
         // next WORD
         // initial action being executed
-        Action action; // 8-bit
+        uint8 action; // 8-bit
         // state of the execution
         ExecutionState state; // 8-bit
         // resolution started
@@ -240,7 +257,7 @@ library Gov {
         // address of a token
         IControlledToken _token;
         // set of equity token rights associated with the token
-        EquityTokenholderRights _tokenholderRights;
+        ITokenholderRights _tokenholderRights;
         // nominee address
         address _nominee;
         // quantum in which token may be created and destroyed, typically tokens per share
@@ -258,7 +275,7 @@ library Gov {
         GovernanceStorage storage g,
         TokenStorage storage t,
         bytes32 resolutionId,
-        Action action,
+        uint8 action,
         bytes payload
     )
         public
@@ -273,7 +290,8 @@ library Gov {
         if (prevState == ExecutionState.New) {
             // try to escalate to execution state
             if (g._state == State.Setup) {
-                nextState = escalateNewResolutionInSetup(g, action);
+                // in setup we suport a subset of Actions
+                nextState = escalateNewResolutionInSetup(g, SetupAction(action));
             } else {
                 nextState = escalateNewResolution(g, t, resolutionId, action, payload);
             }
@@ -314,7 +332,7 @@ library Gov {
         returns (ExecutionState state)
     {
         (uint8 s,,,,,,,uint256 action,,,) = vc.timedProposal(resolutionId);
-        ActionBylaw memory bylaw = deserializeBylaw(t._tokenholderRights.getBylaw(Action(action)));
+        ActionBylaw memory bylaw = deserializeBylaw(t._tokenholderRights.getBylaw(uint8(action)));
         require(s == uint8(VotingProposal.State.Final), "NF_GOV_VOTING_NOT_FINAL");
         return hasProposalPassed(vc, resolutionId, bylaw);
     }
@@ -344,16 +362,10 @@ library Gov {
     {
         // get token data and put into the storage
         IEquityToken equityToken = tokenOffering.equityToken();
-        EquityTokenholderRights tokenholderRights = tokenOffering.etoTerms().TOKENHOLDER_RIGHTS();
+        ITokenholderRights tokenholderRights = tokenOffering.etoTerms().TOKENHOLDER_RIGHTS();
         bool transferable = tokenOffering.etoTerms().ENABLE_TRANSFERS_ON_SUCCESS();
 
-        t._type = TokenType.Equity;
-        t._state = TokenState.Open;
-        t._transferable = transferable;
-        t._token = IControlledToken(equityToken);
-        t._tokenholderRights = tokenholderRights;
-
-        setAdditionalEquityTokenData(t, equityToken);
+        setToken(t, equityToken, TokenType.Equity, TokenState.Open, tokenholderRights, transferable);
     }
 
     function calculateNewValuationAndInstallToken(TokenStorage storage t, IETOCommitment tokenOffering)
@@ -373,14 +385,6 @@ library Gov {
     //////////////////////////////
     // Internal Library Methods
     //////////////////////////////
-
-    function isGeneralAction(Action a)
-        internal
-        pure
-        returns (bool)
-    {
-        return a == Action.None || a == Action.RestrictedNone || a == Action.AnnualGeneralMeeting || a == Action.CompanyNone;
-    }
 
     function promiseForSelector(bytes4 selector)
         internal
@@ -421,6 +425,27 @@ library Gov {
             mstore(add(decodedBylaw, 256), div(and(vrules, 0x40), 64))
             // set voting legal rep
             mstore(add(decodedBylaw, 192), and(vrules, 7))
+        }
+    }
+
+    function setToken(
+        TokenStorage storage t,
+        IControlledToken token,
+        TokenType tokenType,
+        TokenState state,
+        ITokenholderRights rights,
+        bool transfersEnabled
+    )
+        internal
+    {
+        t._type = tokenType;
+        t._state = state;
+        t._transferable = transfersEnabled;
+        t._token = token;
+        t._tokenholderRights = rights;
+
+        if (tokenType == TokenType.Equity) {
+            setAdditionalEquityTokenData(t, IEquityToken(token));
         }
     }
 
@@ -564,6 +589,7 @@ library Gov {
             // if token holders do not have voting rights, voting initator may execute action
             s = initiator == expectedInitator ? ExecutionState.Executing : ExecutionState.Rejected;
         } else {
+            require(address(token) != address(0), "NF_GOV_NO_GOVERNANCE_TOKEN");
             if (initiator == expectedInitator) {
                 // voting initator may start voting
                 s = ExecutionState.Escalating;
@@ -579,16 +605,16 @@ library Gov {
         }
     }
 
-    function escalateNewResolutionInSetup(GovernanceStorage storage g, Action action)
+    function escalateNewResolutionInSetup(GovernanceStorage storage g, SetupAction action)
         private
         returns (ExecutionState)
     {
         address companyLegalRep = g.COMPANY_LEGAL_REPRESENTATIVE;
         // may be called only in New state
-        if (action == Action.RegisterOffer && (msg.sender == companyLegalRep || isUniverseManager(g.UNIVERSE, msg.sender))) {
+        if (action == SetupAction.RegisterOffer && (msg.sender == companyLegalRep || isUniverseManager(g.UNIVERSE, msg.sender))) {
             // anyone can register a legitimate offering in setup state
             return ExecutionState.Executing;
-        } else if (action == Action.AmendISHA && msg.sender == companyLegalRep) {
+        } else if (action == SetupAction.AmendGovernance && msg.sender == companyLegalRep) {
             // company can start company governance with ISHA
             return ExecutionState.Executing;
         }
@@ -602,7 +628,7 @@ library Gov {
         GovernanceStorage storage g,
         TokenStorage storage t,
         bytes32 resolutionId,
-        Action action,
+        uint8 action,
         bytes payload
     )
         private
@@ -675,14 +701,13 @@ library Gov {
         TokenStorage storage t,
         IVotingCenter vc,
         bytes32 resolutionId,
-        Action action,
+        uint8 action,
         bytes payload,
         address votingLegalRep,
         ActionBylaw memory bylaw
     )
         private
     {
-        // uint32 votingPeriod = bylaw.votingPeriodDays * 1 days;
         vc.addProposal(
             resolutionId,
             t._token,
@@ -690,7 +715,7 @@ library Gov {
             0,
             bylaw.votingPeriodDays * 1 days,
             votingLegalRep,
-            votingLegalRep != address(0) ? uint32(t._tokenholderRights.VOTING_FINALIZATION_DURATION()) : 0,
+            votingLegalRep != address(0) ? uint32(bylaw.votingPeriodDays * 1 days) : 0,
             votingLegalRep != address(0) ? t._totalVotingPower : 0,
             uint256(action),
             payload,
@@ -702,16 +727,13 @@ library Gov {
         TokenStorage storage t,
         IVotingCenter vc,
         bytes32 resolutionId,
-        Action action,
+        uint8 action,
         bytes payload,
-        // uint32 votingPeriod,
-        // uint256 minAbsoluteMajorityFrac,
         address votingLegalRep,
         ActionBylaw memory bylaw
     )
         private
     {
-        // uint32 votingPeriod = bylaw.votingPeriodDays * 1 days;
         vc.addProposal(
             resolutionId,
             t._token,
@@ -719,7 +741,7 @@ library Gov {
             votingInitativeThresholdFrac(bylaw),
             2 * bylaw.votingPeriodDays * 1 days,
             votingLegalRep,
-            votingLegalRep != address(0) ? uint32(t._tokenholderRights.VOTING_FINALIZATION_DURATION()) : 0,
+            votingLegalRep != address(0) ? uint32(bylaw.votingPeriodDays * 1 days) : 0,
             votingLegalRep != address(0) ? t._totalVotingPower : 0,
             uint256(action),
             payload,

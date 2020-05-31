@@ -63,4 +63,7 @@ contract AccessRoles {
 
     // allows to manage voting center controller keccak("VotingCenterManager)
     bytes32 internal constant ROLE_VOTING_CENTERL_MANAGER = 0x9bcacccc20bcbf1767ee8e29e2864147661ed440e7f387fcae3af0d5151f44d8;
+
+    // allows to manage voting center controller keccak("VotingInitator")
+    bytes32 internal constant ROLE_VOTING_INITIATOR = 0x2b98b258a9bc663ad7d67d2e8b9ecc3370fa01131dc3d51cafc10da966bf1eb3;
 }

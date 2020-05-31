@@ -189,7 +189,7 @@ contract Neumark is
         returns (bool)
     {
         // it is necessary to point out implementation to be called
-        BasicSnapshotToken.mTransfer(msg.sender, to, amount);
+        mTransfer(msg.sender, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {

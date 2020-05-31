@@ -128,7 +128,7 @@ contract EtherToken is
         public
         returns (bool)
     {
-        BasicToken.mTransfer(msg.sender, to, amount);
+        mTransfer(msg.sender, to, amount);
 
         // Notify the receiving contract.
         if (isContract(to)) {

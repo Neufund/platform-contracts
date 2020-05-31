@@ -1,6 +1,6 @@
 pragma solidity 0.4.26;
 
-import "./EquityTokenholderRights.sol";
+import "./Gov.sol";
 import "../Standards/IAgreement.sol";
 
 
@@ -31,19 +31,20 @@ contract IControllerGovernance is
             uint256 shareCapital,
             uint256 companyValuationEurUlps,
             uint256 authorizedCapital,
-            string shaUrl
+            string shaUrl,
+            ITokenholderRights tokenholderRights
         );
 
     // returns list of tokens and associated holder rights
-    function tokens()
+    function governanceToken()
         public
         constant
         returns (
-            address[1] token,
-            Gov.TokenType[1] tokenType,
-            Gov.TokenState[1] tokenState,
-            address[1] holderRights,
-            bool[1] tokenTransferable
+            IControlledToken token,
+            Gov.TokenType tokenType,
+            Gov.TokenState tokenState,
+            ITokenholderRights holderRights,
+            bool tokenTransferable
         );
 
     // returns all started offerings

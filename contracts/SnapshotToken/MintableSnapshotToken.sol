@@ -26,6 +26,14 @@ contract MintableSnapshotToken is
         internal
     {}
 
+    ////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    //
+    // Implements MTokenMint
+    //
+
     /// @notice Generates `amount` tokens that are assigned to `owner`
     /// @param owner The address that will be assigned the new tokens
     /// @param amount The quantity of tokens generated

@@ -101,6 +101,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.EstablishAuthorizedCapital,
@@ -230,6 +231,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId2,
+          equityToken.address,
           "",
           docUrl,
           GovAction.ChangeOfControl,
@@ -299,6 +301,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.EstablishAuthorizedCapital,
@@ -341,6 +344,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.EstablishAuthorizedCapital,
@@ -683,6 +687,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.None,
@@ -765,6 +770,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.TagAlong,
@@ -903,6 +909,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.None,
@@ -962,7 +969,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         // move to final, skipping tally due to timeout - still voting is valid if enough power participated
         await increaseTime(
           defaultTokenholderTerms.GENERAL_VOTING_DURATION.add(
-            defaultTokenholderTerms.VOTING_FINALIZATION_DURATION,
+            defaultTokenholderTerms.GENERAL_VOTING_DURATION,
           )
             .add(60)
             .toNumber(),
@@ -979,6 +986,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.None,
@@ -1027,6 +1035,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.EstablishAuthorizedCapital,
@@ -1081,6 +1090,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.None,
@@ -1095,7 +1105,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         // move to final, skipping tally due to timeout - still voting is valid if enough power participated
         await increaseTime(
           defaultTokenholderTerms.GENERAL_VOTING_DURATION.add(
-            defaultTokenholderTerms.VOTING_FINALIZATION_DURATION,
+            defaultTokenholderTerms.GENERAL_VOTING_DURATION,
           )
             .add(60)
             .toNumber(),
@@ -1175,6 +1185,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           docUrl,
           GovAction.TagAlong,
@@ -1212,7 +1223,7 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         // move to final, skipping tally due to timeout
         await increaseTime(
           defaultTokenholderTerms.GENERAL_VOTING_DURATION.add(
-            defaultTokenholderTerms.VOTING_FINALIZATION_DURATION,
+            defaultTokenholderTerms.GENERAL_VOTING_DURATION,
           )
             .add(60)
             .toNumber(),
@@ -1260,7 +1271,16 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
       });
 
     const expectResStarted = (tx, action, resolutionId, state = GovExecutionState.Executing) =>
-      expectLogResolutionStarted(tx, 0, resolutionId, "", docUrl, action, state);
+      expectLogResolutionStarted(
+        tx,
+        0,
+        resolutionId,
+        equityToken.address,
+        "",
+        docUrl,
+        action,
+        state,
+      );
 
     const expectAccessDenied = (initiator, action, resolutionId) =>
       expect(makeResolution(initiator, action, resolutionId)).to.be.rejectedWith(
@@ -1440,6 +1460,8 @@ contract("TestControllerGovernanceEngine", ([_, admin, company, nominee, anyone,
         makeResolution(investors[2], GovAction.RestrictedNone, resolutionId),
       ).to.be.rejectedWith("NF_VC_TOTPOWER_LT_TOKEN");
     });
+
+    it("should escalate for SHR without off-chain voting power");
   });
 
   describe("evaluate passing proposal", () => {

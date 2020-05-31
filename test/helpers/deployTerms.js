@@ -30,7 +30,6 @@ export const defaultTokenholderTerms = {
   HAS_FOUNDERS_VESTING: true,
   GENERAL_VOTING_DURATION: bn(daysToSeconds(10)),
   RESTRICTED_ACT_VOTING_DURATION: bn(daysToSeconds(14)),
-  VOTING_FINALIZATION_DURATION: bn(daysToSeconds(5)),
   SHAREHOLDERS_VOTING_QUORUM_FRAC: Q18.mul("0.1"),
   VOTING_MAJORITY_FRAC: Q18.mul("0.5"),
 };
@@ -136,6 +135,8 @@ export function validateTerms(artifact, terms) {
         break;
       case "uint56[24]":
       case "uint56[25]":
+      case "uint56[26]":
+      case "uint56[27]":
         if (typeof termValue === "object") {
           typeMatch = termValue.constructor.name.includes("Array");
         }
@@ -309,6 +310,21 @@ export function generateDefaultBylaws(terms) {
           ),
         );
         break;
+      case "THRNone":
+        bylaws.push(
+          encodeBylaw(
+            GovActionEscalation.THR,
+            terms.GENERAL_VOTING_DURATION,
+            terms.SHAREHOLDERS_VOTING_QUORUM_FRAC,
+            terms.VOTING_MAJORITY_FRAC,
+            ZERO_BN,
+            GovTokenVotingRule.Prorata,
+            GovActionLegalRep.None,
+            GovActionLegalRep.Nominee,
+            true,
+          ),
+        );
+        break;
       case "ChangeNominee":
         bylaws.push(
           encodeBylaw(
@@ -395,7 +411,7 @@ export function generateDefaultBylaws(terms) {
         break;
       case "ExtraordinaryPayout":
       case "RegisterOffer":
-      case "AmendISHA":
+      case "AmendGovernance":
       case "IssueTokensForExistingShares":
       case "IssueSharesForExistingTokens":
       case "EstablishAuthorizedCapital":

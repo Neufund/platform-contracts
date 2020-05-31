@@ -35,6 +35,7 @@ contract IVotingCenter is IContractId {
     /// @dev increase the voting power on a given proposal by the token balance of the sender
     ///   throws if proposal does not exist or the vote on it has ended already. Votes are final,
     ///   changing the vote is not allowed
+    /// @dev reverts if proposal does not exist
     /// @param proposalId of the proposal to be voted on
     /// @param voteInFavor if true, voting power goes for proposal, if false - against
     function vote(bytes32 proposalId, bool voteInFavor)
@@ -71,6 +72,7 @@ contract IVotingCenter is IContractId {
 
     /// @notice obtains proposal after internal state is updated due to time
     /// @dev    this is the getter you should use
+    /// @dev reverts if proposal does not exist
     function timedProposal(bytes32 proposalId)
         public
         constant
@@ -90,6 +92,7 @@ contract IVotingCenter is IContractId {
 
     /// @notice obtains proposal state without time transitions
     /// @dev    used mostly to detect propositions requiring timed transitions
+    /// @dev reverts if proposal does not exist
     function proposal(bytes32 proposalId)
         public
         constant
@@ -107,11 +110,13 @@ contract IVotingCenter is IContractId {
             uint32[5] deadlines
         );
 
-    /// @notice tells if voter cast a vote for particular proposal
-    function isVoteCast(bytes32 proposalId, address voter)
+    /// @notice tells if voter cast a for/against vote or abstained
+    /// @dev reverts if proposal does not exist
+    /// @return see TriState in VotingProposal
+    function getVote(bytes32 proposalId, address voter)
         public
         constant
-        returns (bool);
+        returns (uint8);
 
     /// @notice tells if proposal with given id was opened
     function hasProposal(bytes32 proposalId)
@@ -119,4 +124,10 @@ contract IVotingCenter is IContractId {
         constant
         returns (bool);
 
+    /// @notice returns voting power for given proposal / voter
+    /// @dev voters with zero voting power cannot participate in voting
+    function getVotingPower(bytes32 proposalId, address voter)
+        public
+        constant
+        returns (uint256);
 }

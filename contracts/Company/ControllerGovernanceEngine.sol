@@ -32,9 +32,10 @@ contract ControllerGovernanceEngine is
     // logged when new resolution is registered for execution
     event LogResolutionStarted(
         bytes32 indexed resolutionId,
+        IControlledToken token,
         string resolutionTitle,
         string documentUrl,
-        Gov.Action action,
+        uint8 action,
         Gov.ExecutionState state,
         bytes promise
     );
@@ -42,7 +43,7 @@ contract ControllerGovernanceEngine is
     // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
     event LogResolutionExecuted(
         bytes32 indexed resolutionId,
-        Gov.Action action,
+        uint8 action,
         Gov.ExecutionState state
     );
 
@@ -50,8 +51,8 @@ contract ControllerGovernanceEngine is
     event LogTokenholderRightsAmended(
         bytes32 indexed resolutionId,
         Gov.TokenType tokenType,
-        address token,
-        address tokenholderRights
+        IControlledToken token,
+        ITokenholderRights tokenholderRights
     );
 
     ////////////////////////
@@ -92,11 +93,6 @@ contract ControllerGovernanceEngine is
     modifier onlyStates(Gov.State state1, Gov.State state2) {
         Gov.State s = _g._state;
         require(s == state1 || s == state2, "NF_INV_STATE");
-        _;
-    }
-
-    modifier onlyGeneralActions(Gov.Action a) {
-        require(Gov.isGeneralAction(a), "NF_NOT_GENERAL_ACTION");
         _;
     }
 
@@ -265,7 +261,7 @@ contract ControllerGovernanceEngine is
         public
         constant
         returns (
-            Gov.Action action,
+            uint8 action,
             Gov.ExecutionState,
             uint32 startedAt,
             uint32 finishedAt,
@@ -296,7 +292,7 @@ contract ControllerGovernanceEngine is
 
     function migrateResolutions(
         bytes32[] resolutionId,
-        Gov.Action[] action,
+        uint8[] action,
         Gov.ExecutionState[] s,
         uint32[] startedAt,
         uint32[] finishedAt,
@@ -336,6 +332,16 @@ contract ControllerGovernanceEngine is
     {
         emit LogGovStateTransition(uint32(_g._state), uint32(newState), uint32(block.timestamp));
         _g._state = newState;
+    }
+
+    // amends bylaws for the governance (main) token - typically equity token
+    function amendGovernance(bytes32 resolutionId, ITokenholderRights newTokenholderRights)
+        internal
+    {
+        // for controller without governance token this will fall back to None which excludes THR/SHR escalation
+        // but supports all other bylaws
+        _t._tokenholderRights = newTokenholderRights;
+        emit LogTokenholderRightsAmended(resolutionId, _t._type, _t._token, _t._tokenholderRights);
     }
 
     // defines validator function that will be called before resolution execution is started or continued
@@ -386,16 +392,16 @@ contract ControllerGovernanceEngine is
             _g,
             _t,
             resolutionId,
-            action,
+            uint8(action),
             cdata
         );
         // emit event only when transitioning from new to !new
         if (prevState == Gov.ExecutionState.New && nextState != Gov.ExecutionState.New) {
-            emit LogResolutionStarted(resolutionId, title, documentUrl, action, nextState, cdata);
+            emit LogResolutionStarted(resolutionId, _t._token, title, documentUrl, uint8(action), nextState, cdata);
         }
         // if we get terminal state, emit event
         if (nextState == Gov.ExecutionState.Rejected) {
-            emit LogResolutionExecuted(resolutionId, action, nextState);
+            emit LogResolutionExecuted(resolutionId, uint8(action), nextState);
         }
         return nextState;
     }

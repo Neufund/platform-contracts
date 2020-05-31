@@ -150,7 +150,7 @@ contract VotingCenter is IVotingCenter {
             "NF_VC_CAMP_INCONSISTENT"
         );
         require(
-            offchainVotePeriod >= 0 && totalVotingPower > 0 && votingLegalRep != address(0) ||
+            offchainVotePeriod > 0 && totalVotingPower > 0 && votingLegalRep != address(0) ||
             offchainVotePeriod == 0 && totalVotingPower == 0 && votingLegalRep == address(0),
             "NF_VC_TALLY_INCONSISTENT"
         );
@@ -183,7 +183,7 @@ contract VotingCenter is IVotingCenter {
         withVotingOpen(proposalId)
     {
         VotingProposal.Proposal storage p = _proposals[proposalId];
-        require(!p.hasVoted[msg.sender], "NF_VC_ALREADY_VOTED");
+        require(p.hasVoted[msg.sender] == VotingProposal.TriState.Abstain, "NF_VC_ALREADY_VOTED");
         castVote(p, proposalId, voteInFavor, msg.sender);
     }
 
@@ -300,13 +300,13 @@ contract VotingCenter is IVotingCenter {
         actionPayload = p.actionPayload;
     }
 
-    function isVoteCast(bytes32 proposalId, address voter)
+    function getVote(bytes32 proposalId, address voter)
         public
         constant
-        returns (bool)
+        returns (uint8)
     {
         VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
-        return p.hasVoted[voter];
+        return uint8(p.hasVoted[voter]);
     }
 
     function hasProposal(bytes32 proposalId)
@@ -316,6 +316,15 @@ contract VotingCenter is IVotingCenter {
     {
         VotingProposal.Proposal storage p = _proposals[proposalId];
         return p.token != address(0);
+    }
+
+    function getVotingPower(bytes32 proposalId, address voter)
+        public
+        constant
+        returns (uint256)
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+        return p.token.balanceOfAt(voter, p.snapshotId);
     }
 
     //
@@ -376,7 +385,7 @@ contract VotingCenter is IVotingCenter {
         assert(isValidSignature(proposalId, voteInFavor, voter, r, s, v));
         // solium-enable indentation
         VotingProposal.Proposal storage p = _proposals[proposalId];
-        require(!p.hasVoted[voter], "NF_VC_ALREADY_VOTED");
+        require(p.hasVoted[voter] == VotingProposal.TriState.Abstain, "NF_VC_ALREADY_VOTED");
         castVote(p, proposalId, voteInFavor, voter);
     }
 
@@ -527,7 +536,7 @@ contract VotingCenter is IVotingCenter {
             r, s, v
         );
         // cast vote if not cast before
-        if (!p.hasVoted[voter]) {
+        if (p.hasVoted[voter] == VotingProposal.TriState.Abstain) {
             power = p.token.balanceOfAt(voter, p.snapshotId);
             // if not holding token, power is 0
             markVoteCast(p, proposalId, voter, voteInFavor, power);
@@ -539,7 +548,7 @@ contract VotingCenter is IVotingCenter {
         private
     {
         if (power > 0) {
-            p.hasVoted[voter] = true;
+            p.hasVoted[voter] = voteInFavor ? VotingProposal.TriState.InFavor : VotingProposal.TriState.Against;
             emit LogVoteCast(proposalId, p.initiator, p.token, voter, voteInFavor, power);
         }
     }

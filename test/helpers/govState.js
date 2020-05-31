@@ -26,33 +26,40 @@ export function hasVotingRights(vr) {
 
 // Needs to match GovernanceTypes:Action
 
-export const GovAction = {
-  None: 0,
-  RestrictedNone: 1,
-  StopToken: 2,
-  ContinueToken: 3,
-  CloseToken: 4,
-  OrdinaryPayout: 5,
-  ExtraordinaryPayout: 6,
-  RegisterOffer: 7,
-  ChangeTokenController: 8,
-  AmendISHA: 9,
-  IssueTokensForExistingShares: 10,
-  IssueSharesForExistingTokens: 11,
-  ChangeNominee: 12,
-  AntiDilutionProtection: 13,
-  EstablishAuthorizedCapital: 14,
-  EstablishESOP: 15,
-  ConvertESOP: 16,
-  ChangeOfControl: 17,
-  DissolveCompany: 18,
-  TagAlong: 19,
-  AnnualGeneralMeeting: 20,
-  AmendSharesAndValuation: 21,
-  AmendValuation: 22,
-  CancelResolution: 23,
-  CompanyNone: 24,
-};
+const actionList = [
+  "None",
+  "RegisterOffer",
+  "AmendGovernance",
+  "RestrictedNone",
+  "CompanyNone",
+  "THRNone",
+  "StopToken",
+  "ContinueToken",
+  "CloseToken",
+  "OrdinaryPayout",
+  "ExtraordinaryPayout",
+  "ChangeTokenController",
+  "IssueTokensForExistingShares",
+  "IssueSharesForExistingTokens",
+  "ChangeNominee",
+  "AntiDilutionProtection",
+  "EstablishAuthorizedCapital",
+  "EstablishESOP",
+  "ConvertESOP",
+  "ChangeOfControl",
+  "DissolveCompany",
+  "TagAlong",
+  "AnnualGeneralMeeting",
+  "AmendSharesAndValuation",
+  "AmendValuation",
+  "CancelResolution",
+];
+
+export const GovAction = actionList.reduce((obj, cur, i) => {
+  // eslint-disable-next-line
+  obj[cur] = i;
+  return obj;
+}, {});
 
 // permissions required to execute an action
 export const GovActionEscalation = {

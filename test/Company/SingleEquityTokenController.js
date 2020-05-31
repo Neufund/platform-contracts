@@ -3,7 +3,6 @@ import {
   deployPlatformTerms,
   deployUniverse,
   deployEuroTokenUniverse,
-  // deployEtherTokenUniverse,
   deployIdentityRegistry,
   deployFeeDisbursalUniverse,
 } from "../helpers/deployContracts";
@@ -67,7 +66,7 @@ const TestETOCommitmentSingleTokenController = artifacts.require(
 const MockSingleEquityTokenController = artifacts.require("MockSingleEquityTokenController");
 const IControllerGovernancev13 = artifacts.require("IControllerGovernance_v1_3");
 const zero = new web3.BigNumber(0);
-const ZERO_TOKENS = [[ZERO_ADDRESS], [zero], [zero], [ZERO_ADDRESS], [false]];
+const ZERO_GOVERNANCE_TOKEN = [ZERO_ADDRESS, zero, zero, ZERO_ADDRESS, false];
 
 contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investors]) => {
   let equityToken;
@@ -116,10 +115,9 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     await printCodeSize("SingleEquityTokenController code size", equityTokenController);
     expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Setup);
     const shareholderInfo = await equityTokenController.shareholderInformation();
-    expect(shareholderInfo).to.deep.eq([zero, zero, zero, ""]);
-    const tokens = await equityTokenController.tokens();
-    expect(tokens.length).to.eq(5);
-    expect(tokens).to.deep.eq(ZERO_TOKENS);
+    expect(shareholderInfo).to.deep.eq([zero, zero, zero, "", ZERO_ADDRESS]);
+    const tokens = await equityTokenController.governanceToken();
+    expect(tokens).to.deep.eq(ZERO_GOVERNANCE_TOKEN);
 
     const tokenOfferings = await equityTokenController.tokenOfferings();
     expect(tokenOfferings.length).to.eq(0);
@@ -166,13 +164,14 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Offering);
       expect(await equityTokenController.state()).to.be.bignumber.eq(GovState.Offering);
       // no cap table
-      expect(await equityTokenController.tokens()).to.deep.eq(ZERO_TOKENS);
+      expect(await equityTokenController.governanceToken()).to.deep.eq(ZERO_GOVERNANCE_TOKEN);
       // no shareholder info yet
       expect(await equityTokenController.shareholderInformation()).to.deep.eq([
         zero,
         zero,
         zero,
         "",
+        ZERO_ADDRESS,
       ]);
       // no offerings registered
       expect(await equityTokenController.tokenOfferings()).to.deep.eq([]);
@@ -329,12 +328,12 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       expectLogShareCapitalAmended(tx, resolutionId, increasedShareCapitalUlps);
       expectLogAuthorizedCapitalEstablished(tx, resolutionId, etoTermsDict.AUTHORIZED_CAPITAL);
       // verify offerings and cap table
-      expect(await equityTokenController.tokens()).to.deep.equal([
-        [equityToken.address],
-        [new web3.BigNumber(GovTokenType.Equity)],
-        [new web3.BigNumber(GovTokenState.Open)],
-        [tokenholderRights.address],
-        [etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS],
+      expect(await equityTokenController.governanceToken()).to.deep.equal([
+        equityToken.address,
+        new web3.BigNumber(GovTokenType.Equity),
+        new web3.BigNumber(GovTokenState.Open),
+        tokenholderRights.address,
+        etoTermsDict.ENABLE_TRANSFERS_ON_SUCCESS,
       ]);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([testCommitment.address]);
       // check if agreement was amended
@@ -425,7 +424,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // no ISHA amended
       expect(hasEvent(tx, "LogISHAAmended")).to.be.false;
       // verify offerings and cap table
-      expect(await equityTokenController.tokens()).to.deep.equal(ZERO_TOKENS);
+      expect(await equityTokenController.governanceToken()).to.deep.equal(ZERO_GOVERNANCE_TOKEN);
       expect(await equityTokenController.tokenOfferings()).to.deep.equal([]);
       // expect failed resolution
       const resolutionId = getCommitmentResolutionId(testCommitment.address);
@@ -471,6 +470,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         newOfferTx,
         0,
         newResolutionId,
+        // no token if previous eto failed
+        primaryResolutionState === GovExecutionState.Failed ? ZERO_ADDRESS : equityToken.address,
         "",
         etoTermsDict.INVESTOR_OFFERING_DOCUMENT_URL,
         GovAction.RegisterOffer,
@@ -533,12 +534,12 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await expect(oldCommitment._distributeTokens(investors[0], 1)).to.be.revert;
 
       // verify offerings and cap table
-      expect(await equityTokenController.tokens()).to.deep.equal([
-        [equityToken.address],
-        [new web3.BigNumber(GovTokenType.Equity)],
-        [new web3.BigNumber(GovTokenState.Open)],
-        [tokenholderRights.address],
-        [false],
+      expect(await equityTokenController.governanceToken()).to.deep.equal([
+        equityToken.address,
+        new web3.BigNumber(GovTokenType.Equity),
+        new web3.BigNumber(GovTokenState.Open),
+        tokenholderRights.address,
+        false,
       ]);
       expect(await equityTokenController.tokenOfferings()).to.be.deep.eq([newCommitment.address]);
       await expectEquityTokenSupply(sharesAmount);
@@ -578,8 +579,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // distribute and transfer (transfers were enabled for non retail eto)
       await newCommitment._distributeTokens(investors[0], 10);
       await equityToken.transfer(investors[1], 1, { from: investors[0] });
-      const tokens = await equityTokenController.tokens();
-      expect(tokens[4][0]).to.eq(true); // transfers were set to true
+      const tokens = await equityTokenController.governanceToken();
+      expect(tokens[4]).to.eq(true); // transfers were set to true
     });
 
     it("rejects on secondary ETO with new equity token");
@@ -682,6 +683,30 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await testCommitment._triggerStateTransition(CommitmentState.Signing, CommitmentState.Refund);
 
       await expect(testCommitment._distributeTokens(investors[0], 1)).to.be.revert;
+    });
+  });
+
+  describe("mock controller", () => {
+    it("should shift time", async () => {
+      const mockController = await MockSingleEquityTokenController.new(universe.address, company);
+      await deployController(mockController);
+      await deployETO();
+      const resolutionId = await registerOffering();
+      const resolution = await mockController.resolution(resolutionId);
+      const delta = daysToSeconds(1);
+      await mockController._mockShiftBackTime(delta);
+      const shifted = await mockController.resolution(resolutionId);
+      expect(resolution[2]).to.be.bignumber.eq(shifted[2].add(delta));
+      expect(resolution[3]).to.be.bignumber.eq(0);
+      expect(resolution[7]).to.be.bignumber.eq(0);
+      await preparePostInvestmentState();
+      // another shift with finished resolution
+      const preshifted2 = await mockController.resolution(resolutionId);
+      await mockController._mockShiftBackTime(delta);
+      const shifted2 = await mockController.resolution(resolutionId);
+      expect(preshifted2[2]).to.be.bignumber.eq(shifted2[2].add(delta));
+      expect(preshifted2[3]).to.be.bignumber.eq(shifted2[3].add(delta));
+      expect(preshifted2[7]).to.be.bignumber.eq(0);
     });
   });
 
@@ -970,7 +995,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         ),
       ).to.be.rejectedWith("NF_GOV_EXEC_ACCESS_DENIED");
 
-      // mind that tokenholderRights should not contain voting rights for the nominee
+      // mind that tokenholderRights should not contain voting rights
 
       const tx = await equityTokenController.amendISHAResolution(
         resolutionId,
@@ -995,14 +1020,8 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       // in setup we transition to Funded
       expectLogGovStateTransition(tx, GovState.Setup, GovState.Funded);
       // expect None token to be present
-      const tokens = await equityTokenController.tokens();
-      expect(tokens).to.deep.eq([
-        [ZERO_ADDRESS],
-        [zero],
-        [zero],
-        [tokenholderRights.address],
-        [false],
-      ]);
+      const tokens = await equityTokenController.governanceToken();
+      expect(tokens).to.deep.eq([ZERO_ADDRESS, zero, zero, tokenholderRights.address, false]);
 
       // can execute any action ie. amend valuation
       const amendRid = randomBytes32();
@@ -1018,6 +1037,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         amendTx,
         0,
         amendRid,
+        ZERO_ADDRESS,
         "",
         docUrl,
         GovAction.AmendValuation,
@@ -1048,13 +1068,13 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await runOffering();
       // issue equity tokens and move to claim
       await generateTokens();
-      const newTokens = await equityTokenController.tokens();
+      const newTokens = await equityTokenController.governanceToken();
       expect(newTokens).to.deep.eq([
-        [equityToken.address],
-        [new web3.BigNumber(GovTokenType.Equity)],
-        [zero],
-        [tokenholderRights.address],
-        [true],
+        equityToken.address,
+        new web3.BigNumber(GovTokenType.Equity),
+        zero,
+        tokenholderRights.address,
+        true,
       ]);
     });
 
@@ -1069,11 +1089,22 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
       await registerOffering(company);
     });
 
-    it("rejects amend ISHA in setup with voting rights", async () => {
+    it("rejects amend ISHA after setup with voting rights and no token", async () => {
       // deploy governance with voting rights
       [tokenholderRights] = await deployTokenholderRights(TokenholderRights, votingRightsOvr);
       // company may amend ISHA in Setup state and make it operational without token and ETO
-      const resolutionId = randomBytes32();
+      let resolutionId = randomBytes32();
+      await equityTokenController.amendISHAResolution(
+        resolutionId,
+        ishaUrl,
+        shareCapitalUlps,
+        authorizedCapital,
+        companyValuationEurUlps,
+        tokenholderRights.address,
+        { from: company },
+      );
+      resolutionId = randomBytes32();
+      // here we try to do SHR but there's no token so governance will fail
       await expect(
         equityTokenController.amendISHAResolution(
           resolutionId,
@@ -1084,7 +1115,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tokenholderRights.address,
           { from: company },
         ),
-      ).to.be.rejectedWith("NF_TOKEN_REQ_VOTING_RIGHTS");
+      ).to.be.rejectedWith("NF_GOV_NO_GOVERNANCE_TOKEN");
     });
   });
 
@@ -1111,6 +1142,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "TOKENHOLDERS CALL",
           "ipfs:blah",
           GovAction.CompanyNone,
@@ -1143,7 +1175,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         await expect(
           equityTokenController.generalResolution(
             resolutionId,
-            GovAction.AmendISHA,
+            GovAction.AmendGovernance,
             "TOKENHOLDERS CALL",
             "ipfs:blah",
             {
@@ -1158,7 +1190,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         await expect(equityTokenController.amendAgreement("NEW")).to.be.revert;
       });
 
-      it("should amned ISHA", async () => {
+      it("should amend ISHA", async () => {
         const ishaUrl = "ipfs:739ann3092id903";
         const shareCapitalUlps = Q18.mul("25000");
         // valuation not yet known
@@ -1183,12 +1215,13 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
         expect(information[1]).to.be.bignumber.eq(companyValuationEurUlps);
         expect(information[2]).to.be.bignumber.eq(authorizedCapital);
         expect(information[3]).to.eq(ishaUrl);
+        expect(information[4]).to.eq(newRights.address);
         // check agreement
         const agreement = await equityTokenController.currentAgreement();
         expect(agreement[2]).to.eq(ishaUrl);
         // check if rights with the token changed
-        const tokens = await equityTokenController.tokens();
-        expect(tokens[3][0]).to.eq(newRights.address);
+        const tokens = await equityTokenController.governanceToken();
+        expect(tokens[3]).to.eq(newRights.address);
       });
 
       it("should establish authorized capital", async () => {
@@ -1204,6 +1237,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           "",
           GovAction.EstablishAuthorizedCapital,
@@ -1233,6 +1267,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "SHAREHOLDER MEETING",
           assemblyDoc,
           GovAction.AnnualGeneralMeeting,
@@ -1260,6 +1295,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           "",
           GovAction.AmendValuation,
@@ -1297,6 +1333,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           "",
           GovAction.AmendSharesAndValuation,
@@ -1322,7 +1359,9 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     describe("voting rights", () => {
       it("should escalate to THR voting on tag along without voting rights");
 
-      it("should start SHR with investor initiative");
+      it("should start SHR with token holder initiative");
+
+      it("should start THR with token holder initiative");
     });
 
     describe("economic rights", () => {
@@ -1354,6 +1393,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
           tx,
           0,
           resolutionId,
+          equityToken.address,
           "",
           "",
           GovAction.OrdinaryPayout,
@@ -1567,6 +1607,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
     // pass equity token to eto commitment
     await testCommitment.setStartDate(etoTerms.address, equityToken.address, "0");
+    return resolutionId;
   }
 
   async function runOffering(commitmentOvr) {
@@ -1612,7 +1653,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(await oldController.migratedTo()).to.eq(ZERO_ADDRESS);
     // read state
     const state = await oldController.preMigrationState();
-    const tokens = await oldController.tokens();
+    const tokens = await oldController.governanceToken();
     const offerings = await oldController.tokenOfferings();
     // const agreement = await oldController.currentAgreement();
     const information = await oldController.shareholderInformation();
@@ -1632,19 +1673,15 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     // governance engine module
     await newController.migrateResolutions(resolutionIds, ...resolutions, { from: admin });
     // token module
-    const extractedTokens = tokens.map(v => v[0]);
     if (opts.transfersEnabled !== undefined) {
-      extractedTokens[4] = opts.transfersEnabled;
+      tokens[4] = opts.transfersEnabled;
     }
-    await newController.migrateToken(...extractedTokens, { from: admin });
+    await newController.migrateToken(...tokens, { from: admin });
     // general information module
-    await newController.migrateGeneralInformation(
-      information[3],
-      information[0],
-      opts.authorizedCapital || information[2],
-      information[1],
-      { from: admin },
-    );
+    if (opts.authorizedCapital !== undefined) {
+      information[2] = opts.authorizedCapital;
+    }
+    await newController.migrateGeneralInformation(...information, { from: admin });
     // offering module
     await newController.migrateOfferings(offerings, { from: admin });
 
@@ -1686,11 +1723,11 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(agreementData[2]).to.eq((await newController.currentAgreement())[2]);
 
     // token module
-    const tokens = await oldController.tokens();
+    const tokens = await oldController.governanceToken();
     if (opts.transfersEnabled !== undefined) {
-      tokens[4] = [opts.transfersEnabled];
+      tokens[4] = opts.transfersEnabled;
     }
-    expect(tokens).to.deep.equal(await newController.tokens());
+    expect(tokens).to.deep.equal(await newController.governanceToken());
 
     // offerings module
     expect(await oldController.tokenOfferings()).to.deep.equal(

@@ -31,6 +31,7 @@ export function expectLogResolutionStarted(
   tx,
   logIdx,
   resolutionId,
+  token,
   title,
   documentUrl,
   actionType,
@@ -39,6 +40,7 @@ export function expectLogResolutionStarted(
   const event = eventWithIdxValue(tx, logIdx, "LogResolutionStarted");
   expect(event).to.exist;
   expect(event.args.resolutionId).to.eq(resolutionId);
+  expect(event.args.token).to.eq(token);
   expect(event.args.resolutionTitle).to.eq(title);
   expect(event.args.documentUrl).to.eq(documentUrl);
   expect(event.args.action).to.be.bignumber.eq(actionType);

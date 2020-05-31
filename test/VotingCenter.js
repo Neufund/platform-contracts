@@ -8,7 +8,7 @@ import {
   deployUniverse,
   deployNeumarkUniverse,
 } from "./helpers/deployContracts";
-import { ProposalState } from "./helpers/voting";
+import { ProposalState, VotingTriState } from "./helpers/voting";
 import { prettyPrintGasCost, printCodeSize } from "./helpers/gasUtils";
 import { txTimestamp } from "./helpers/latestTime";
 import increaseTime from "./helpers/increaseTime";
@@ -93,8 +93,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
   });
 
   it("should deploy", async () => {
-    await prettyPrintGasCost("SingleEquityTokenController deploy", votingContract);
-    await printCodeSize("SingleEquityTokenController code size", votingContract);
+    await prettyPrintGasCost("VotingCenter deploy", votingContract);
+    await printCodeSize("VotingCenter code size", votingContract);
     expect(await votingContract.votingController()).to.eq(votingController.address);
     expect(await votingContract.contractId()).to.deep.eq([contractId("IVotingCenter"), zero]);
   });
@@ -197,8 +197,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         "NF_VC_CAMP_INCONSISTENT",
       );
 
-      // offchain tally data if present must be all
-      const invOffchain = Object.assign({}, noVotingPeriodParams, { votingLegalRep });
+      // offchain tally data must be all if voting power set
+      const invOffchain = Object.assign({}, noVotingPeriodParams, {
+        offchainVotingPower: Q18.div("4"),
+        votingLegalRep,
+      });
       await expect(addProposal(votingContract, proposalId, invOffchain)).to.be.rejectedWith(
         "NF_VC_TALLY_INCONSISTENT",
       );
@@ -231,7 +234,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         );
       }
 
-      async function registerInitiator(initiator) {
+      async function registerInitiatorInterface(initiator) {
         // make it equity token controller
         await universe.setCollectionInterface(
           knownInterfaces.equityTokenControllerInterface,
@@ -243,13 +246,34 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         );
       }
 
-      it("should register proposal", async () => {
+      async function registerInitatorRole(initiator, object) {
+        // add voting initator role over voting center
+        await createAccessPolicy(accessPolicy, [
+          { subject: initiator, role: roles.votingInitiator, object },
+        ]);
+      }
+
+      it("should register proposal with initator interface", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
         await registerToken();
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
         const proposal = await openProposal(proposalId, noCampaignProposalParams);
+        expect(proposal[0]).to.be.bignumber.eq(ProposalState.Public);
+      });
+
+      it("should register proposal with initator role", async () => {
+        const proposalId = randomBytes32();
+        await issueTokens(2);
+        await registerToken();
+        // must give global rights as controller checks msg.sender
+        await registerInitatorRole(owner, ZERO_ADDRESS);
+        expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
+        // still proposal will open on voting center scope
+        await registerInitatorRole(owner2, votingContract.address);
+        expect(await votingController.onAddProposal(proposalId, owner2, token.address)).to.be.false;
+        const proposal = await openProposal(proposalId, noCampaignProposalParams, { from: owner2 });
         expect(proposal[0]).to.be.bignumber.eq(ProposalState.Public);
       });
 
@@ -269,7 +293,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         // close snapshot
         await increaseTime(daysToSeconds(1));
         // open proposal
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         const proposalId = randomBytes32();
         // now the voting controller cached invalid neumark so recreate
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.false;
@@ -287,7 +311,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       it("rejects proposal for unsupported token", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.false;
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
@@ -305,7 +329,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
         );
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         expect(await votingController.onAddProposal(proposalId, owner, token.address)).to.be.true;
         await openProposal(proposalId, noCampaignProposalParams);
       });
@@ -313,7 +337,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       it("should change voting controller", async () => {
         const proposalId = randomBytes32();
         await issueTokens(2);
-        await registerInitiator(owner);
+        await registerInitiatorInterface(owner);
         await expect(openProposal(proposalId, noCampaignProposalParams)).to.be.rejectedWith(
           "NF_VC_CTR_ADD_REJECTED",
         );
@@ -455,6 +479,19 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       // open proposal
       proposalId = randomBytes32();
       await openProposal(proposalId, noCampaignProposalParams);
+    });
+
+    it("should return correct voting power", async () => {
+      expect(await votingContract.getVotingPower(proposalId, accounts[0])).to.be.bignumber.eq(
+        holders[accounts[0]],
+      );
+      expect(await votingContract.getVotingPower(proposalId, accounts[2])).to.be.bignumber.eq(
+        holders[accounts[2]],
+      );
+      expect(await votingContract.getVotingPower(proposalId, owner2)).to.be.bignumber.eq(zero);
+      await expect(votingContract.getVotingPower("free lunch", owner2)).to.be.rejectedWith(
+        "NF_VC_PROP_NOT_EXIST",
+      );
     });
 
     it("should allow tokenholders to vote with power as in their tokenBalance at proposal creation snapshot", async () => {
@@ -827,7 +864,9 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       let vtx = await votingContract.vote(proposalId, false, { from: accounts[1] });
       const [, contra] = await verifyVote(vtx, proposalId, zero, zero, holders[accounts[1]], false);
       expect(contra).to.be.bignumber.eq(one);
-      expect(await votingContract.isVoteCast(proposalId2, accounts[1])).to.be.false;
+      expect(await votingContract.getVote(proposalId2, accounts[1])).to.be.bignumber.eq(
+        VotingTriState.Abstain,
+      );
       // account 1 has no balance to vote on prop2
       const sig1 = await createSignedVote(proposalId2, true, accounts[1], votingContract.address);
       vtx = await votingContract.batchRelayedVotes(
@@ -1064,6 +1103,29 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       await votingContract.addOffchainVote(proposalId, proOff, contraOff, "uri:freeLunch", {
         from: votingLegalRep,
       });
+    });
+
+    it("should skip tally if all voting power belongs to token", async () => {
+      // zero off-chain voting power should also enforce no legal rep and no tally period
+      const totalTokenPower = await token.totalSupply();
+      const noOffchainPower = Object.assign({}, noCampaignProposalParams, {
+        offchainVotingPower: totalTokenPower,
+      });
+      // in list offchainVotingPower takes place of totalTokenPower, do not modify, pass directly
+      const [list] = constructVotingParams(proposalId, noOffchainPower);
+
+      await votingContract.addProposal(...list, { from: owner });
+      const proposal = await votingContract.proposal(proposalId);
+      // offchain voting power must be 0
+      expect(proposal[6]).to.be.bignumber.eq(zero);
+      // tally duration must be zero
+      const deadlines = proposal[10];
+      const t = deadlines[0];
+      expect(deadlines[4]).to.be.bignumber.eq(noOffchainPower.votingPeriod.add(t));
+      await increaseTime(noCampaignProposalParams.votingPeriod.toNumber());
+      // and we are in final state
+      const tally = await votingContract.tally(proposalId);
+      expect(tally[0]).to.be.bignumber.eq(ProposalState.Final);
     });
   });
 
@@ -1398,7 +1460,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       params.votingPeriod.add(t).add(params.offchainVotePeriod),
     );
     if (state === ProposalState.Public) {
-      let initiator = owner;
+      let initiator = tx.receipt.from;
       if (!hasEvent(tx, "LogProposalStateTransition")) {
         // if log is not found try to decode abi directly (in case tx was done via observer contract)
         const etcLogs = decodeLogs(tx, votingContract.address, VotingCenter.abi);
@@ -1434,7 +1496,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     expect(outcome[1]).to.be.bignumber.eq(currFavor.add(fav));
     expect(outcome[2]).to.be.bignumber.eq(currContra.add(contra));
     // make sure has voted flag is set
-    expect(await votingContract.isVoteCast(proposalId, voter || vtx.receipt.from)).to.be.true;
+    const effectiveVoter = voter || vtx.receipt.from;
+    const expectedVote = inFavor ? VotingTriState.InFavor : VotingTriState.Against;
+    expect(await votingContract.getVote(proposalId, effectiveVoter)).to.be.bignumber.eq(
+      expectedVote,
+    );
 
     return [outcome[1], outcome[2]];
   }
@@ -1458,7 +1524,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     } else {
       contra = contra.add(power);
     }
-    expect(await votingContract.isVoteCast(proposalId, voter)).to.be.true;
+    const expectedVote = inFavor ? VotingTriState.InFavor : VotingTriState.Against;
+    expect(await votingContract.getVote(proposalId, voter)).to.be.bignumber.eq(expectedVote);
 
     return [fav, contra];
   }
@@ -1501,9 +1568,7 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
   }
 
   async function addProposal(votingCenter, proposalId, defaultParams, txParamsOvr) {
-    const params = Object.assign({}, defaultParams, { proposalId, token: token.address });
-    // should be ordered as defaultProposalParams
-    const list = Object.values(params);
+    const [list, params] = constructVotingParams(proposalId, defaultParams);
     const txParams = Object.assign({ from: owner }, txParamsOvr || {});
     // replace offchain voting power with total voting power by adding token balance at snapshot - 1
     if (params.offchainVotingPower.gt(0)) {
@@ -1515,6 +1580,12 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     }
     const tx = await votingCenter.addProposal(...list, txParams);
     return [tx, params];
+  }
+
+  function constructVotingParams(proposalId, defaultParams) {
+    const params = Object.assign({}, defaultParams, { proposalId, token: token.address });
+    // should be ordered as defaultProposalParams
+    return [Object.values(params), params];
   }
 
   async function openProposal(proposalId, proposalParams, txParamsOvr) {
