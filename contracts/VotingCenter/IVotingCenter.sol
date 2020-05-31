@@ -110,12 +110,13 @@ contract IVotingCenter is IContractId {
             uint32[5] deadlines
         );
 
-    /// @notice tells if voter cast a vote for particular proposal
+    /// @notice tells if voter cast a for/against vote or abstained
     /// @dev reverts if proposal does not exist
-    function isVoteCast(bytes32 proposalId, address voter)
+    /// @return see TriState in VotingProposal
+    function getVote(bytes32 proposalId, address voter)
         public
         constant
-        returns (bool);
+        returns (uint8);
 
     /// @notice tells if proposal with given id was opened
     function hasProposal(bytes32 proposalId)

@@ -29,6 +29,14 @@ library VotingProposal {
         Final
     }
 
+    // Łukasiewicz logic values for state of a vote of particular voter
+    /// @dev note that Abstain is meaningful only in Final/Tally state
+    enum TriState {
+        Abstain,
+        InFavor,
+        Against
+    }
+
     /// @dev note that voting power is always expressed in tokens of the associated snapshot token
     ///     and reflect decimals of the token. voting power of 1 token with 18 decimals is Q18
     struct Proposal {
@@ -69,7 +77,7 @@ library VotingProposal {
         bool observing;
 
         // you can vote only once
-        mapping (address => bool) hasVoted;
+        mapping (address => TriState) hasVoted;
     }
 
     /////////////////////////

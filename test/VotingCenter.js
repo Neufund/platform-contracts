@@ -8,7 +8,7 @@ import {
   deployUniverse,
   deployNeumarkUniverse,
 } from "./helpers/deployContracts";
-import { ProposalState } from "./helpers/voting";
+import { ProposalState, VotingTriState } from "./helpers/voting";
 import { prettyPrintGasCost, printCodeSize } from "./helpers/gasUtils";
 import { txTimestamp } from "./helpers/latestTime";
 import increaseTime from "./helpers/increaseTime";
@@ -93,8 +93,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
   });
 
   it("should deploy", async () => {
-    await prettyPrintGasCost("SingleEquityTokenController deploy", votingContract);
-    await printCodeSize("SingleEquityTokenController code size", votingContract);
+    await prettyPrintGasCost("VotingCenter deploy", votingContract);
+    await printCodeSize("VotingCenter code size", votingContract);
     expect(await votingContract.votingController()).to.eq(votingController.address);
     expect(await votingContract.contractId()).to.deep.eq([contractId("IVotingCenter"), zero]);
   });
@@ -864,7 +864,9 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       let vtx = await votingContract.vote(proposalId, false, { from: accounts[1] });
       const [, contra] = await verifyVote(vtx, proposalId, zero, zero, holders[accounts[1]], false);
       expect(contra).to.be.bignumber.eq(one);
-      expect(await votingContract.isVoteCast(proposalId2, accounts[1])).to.be.false;
+      expect(await votingContract.getVote(proposalId2, accounts[1])).to.be.bignumber.eq(
+        VotingTriState.Abstain,
+      );
       // account 1 has no balance to vote on prop2
       const sig1 = await createSignedVote(proposalId2, true, accounts[1], votingContract.address);
       vtx = await votingContract.batchRelayedVotes(
@@ -1494,7 +1496,11 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     expect(outcome[1]).to.be.bignumber.eq(currFavor.add(fav));
     expect(outcome[2]).to.be.bignumber.eq(currContra.add(contra));
     // make sure has voted flag is set
-    expect(await votingContract.isVoteCast(proposalId, voter || vtx.receipt.from)).to.be.true;
+    const effectiveVoter = voter || vtx.receipt.from;
+    const expectedVote = inFavor ? VotingTriState.InFavor : VotingTriState.Against;
+    expect(await votingContract.getVote(proposalId, effectiveVoter)).to.be.bignumber.eq(
+      expectedVote,
+    );
 
     return [outcome[1], outcome[2]];
   }
@@ -1518,7 +1524,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     } else {
       contra = contra.add(power);
     }
-    expect(await votingContract.isVoteCast(proposalId, voter)).to.be.true;
+    const expectedVote = inFavor ? VotingTriState.InFavor : VotingTriState.Against;
+    expect(await votingContract.getVote(proposalId, voter)).to.be.bignumber.eq(expectedVote);
 
     return [fav, contra];
   }
