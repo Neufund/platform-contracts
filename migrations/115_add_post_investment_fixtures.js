@@ -1,9 +1,9 @@
 require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
+const { sha3 } = require("web3-utils");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
-const { randomBytes32 } = require("../test/helpers/utils");
 const { GovAction, GovExecutionState } = require("../test/helpers/govState");
 const { shareCapitalToTokens } = require("../test/helpers/govUtils");
 const { loadEtoFixtures, getEtoFixtureByName } = require("./helpers");
@@ -33,8 +33,13 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const payoutController = await TokenController.at(payoutFixture.tokenController);
     const equityToken = await EquityToken.at(payoutFixture.equityToken);
 
-    // issue general information
-    const generalInfoRID = randomBytes32();
+    function deterministicBytes32(seed) {
+      return sha3(seed, { encoding: "hex" });
+    }
+
+    // issue general information, create resolutionId deterministically based on
+    // token controller address so they do not change between identical deployments
+    const generalInfoRID = deterministicBytes32(payoutFixture.tokenController);
     console.log(`executing general information with ${generalInfoRID}`);
     await payoutController.generalResolution(
       generalInfoRID,
@@ -46,7 +51,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // issue annual meeting resolution (SHR escalation)
     // note that offering, token and token controller were time-shifted
     // to provide balances at past snapshot
-    const annualRID = randomBytes32();
+    const annualRID = deterministicBytes32(generalInfoRID);
     console.log(`executing annual meeting resolution ${annualRID}`);
     await payoutController.generalResolution(
       annualRID,
@@ -72,7 +77,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     ]);
 
     // create proposal
-    const proposalId = randomBytes32();
+    const proposalId = deterministicBytes32(annualRID);
     console.log(`opening independent proposal ${proposalId}`);
 
     async function shareCapitalVotingPower(shareCapital) {
