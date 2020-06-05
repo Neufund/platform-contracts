@@ -66,6 +66,8 @@ library VotingProposal {
         uint256 action;
         // on chain proposal action payload
         bytes actionPayload;
+        // off-chain official results
+        string offchainVoteDocumentUri;
 
         // when states end, indexed by state, keep it word aligned
         uint32[STATES_COUNT] deadlines;

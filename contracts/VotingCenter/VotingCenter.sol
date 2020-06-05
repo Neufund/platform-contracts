@@ -200,6 +200,7 @@ contract VotingCenter is IVotingCenter {
 
         p.offchainInFavor = inFavor;
         p.offchainAgainst = against;
+        p.offchainVoteDocumentUri = documentUri;
 
         emit LogOffChainProposalResult(proposalId, p.initiator, p.token, msg.sender, inFavor, against, documentUri);
     }
@@ -233,6 +234,15 @@ contract VotingCenter is IVotingCenter {
         tokenVotingPower = p.token.totalSupplyAt(p.snapshotId);
         totalVotingPower = tokenVotingPower + p.offchainVotingPower;
         campaignQuorumTokenAmount = p.campaignQuorumTokenAmount;
+    }
+
+    function offchainVoteDocumentUri(bytes32 proposalId)
+        public
+        constant
+        returns (string)
+    {
+        VotingProposal.Proposal storage p = ensureExistingProposal(proposalId);
+        return p.offchainVoteDocumentUri;
     }
 
     function timedProposal(bytes32 proposalId)
