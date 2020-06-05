@@ -974,6 +974,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
       expect(proposal[0]).to.be.bignumber.eq(ProposalState.Tally);
       // reject voting
       await expectProposalRevertOnAllVotingMethods(proposalId, "NV_VC_VOTING_CLOSED");
+      // offchain result document not yet available
+      expect(await votingContract.offchainVoteDocumentUri(proposalId)).to.eq("");
       // provide off-chain tally
       const offTx = await votingContract.addOffchainVote(
         proposalId,
@@ -999,6 +1001,8 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
         owner,
         false,
       );
+      // offchain result document should be available
+      expect(await votingContract.offchainVoteDocumentUri(proposalId)).to.eq("uri:freeLunch");
     });
 
     it("should go to off chain tally only in tally state", async () => {

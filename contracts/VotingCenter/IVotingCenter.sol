@@ -70,6 +70,13 @@ contract IVotingCenter is IContractId {
             bool hasObserverInterface
         );
 
+    /// @notice returns official document with off-chain vote result/statement
+    /// @dev meaningful only in final state
+    function offchainVoteDocumentUri(bytes32 proposalId)
+        public
+        constant
+        returns (string);
+
     /// @notice obtains proposal after internal state is updated due to time
     /// @dev    this is the getter you should use
     /// @dev reverts if proposal does not exist
