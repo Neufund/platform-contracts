@@ -1,7 +1,6 @@
 require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
-const { sha3 } = require("web3-utils");
 const getConfig = require("./config").getConfig;
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
 const { GovAction, GovExecutionState } = require("../test/helpers/govState");
@@ -33,31 +32,28 @@ module.exports = function deployContracts(deployer, network, accounts) {
     const payoutController = await TokenController.at(payoutFixture.tokenController);
     const equityToken = await EquityToken.at(payoutFixture.equityToken);
 
-    function deterministicBytes32(seed) {
-      return sha3(seed, { encoding: "hex" });
-    }
-
-    // issue general information, create resolutionId deterministically based on
-    // token controller address so they do not change between identical deployments
-    const generalInfoRID = deterministicBytes32(payoutFixture.tokenController);
+    // proposals/resolutions must be hardcoded if you use a real ipfs document
+    // that has proposal in it's envelope. this is the case in all resolutions below
+    const generalInfoRID = "0x57cd9bf3f51b148c4b1e353719485a92f81ffcc3824a9b628446b0f4e4f01a6b";
     console.log(`executing general information with ${generalInfoRID}`);
     await payoutController.generalResolution(
       generalInfoRID,
       GovAction.CompanyNone,
       "A general information from ISSUER_PAYOUT 2020",
-      "ifps:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+      // TODO: generate fancy document
+      "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
       { from: issuer },
     );
     // issue annual meeting resolution (SHR escalation)
     // note that offering, token and token controller were time-shifted
     // to provide balances at past snapshot
-    const annualRID = deterministicBytes32(generalInfoRID);
+    const annualRID = "0x880b841d14fcd67b241bd96e031b0af256d80778605e17508cfa6711ce0e296d";
     console.log(`executing annual meeting resolution ${annualRID}`);
     await payoutController.generalResolution(
       annualRID,
       GovAction.AnnualGeneralMeeting,
       "A Notice of General Meeting 2020",
-      "ifps:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+      "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
       { from: issuer },
     );
 
@@ -77,7 +73,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     ]);
 
     // create proposal
-    const proposalId = deterministicBytes32(annualRID);
+    const proposalId = "0x6400a3523bc839d6bad3232d118c4234d9ef6b2408ca6afcadcbff728f06d220";
     console.log(`opening independent proposal ${proposalId}`);
 
     async function shareCapitalVotingPower(shareCapital) {
@@ -87,7 +83,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
         await equityToken.shareNominalValueUlps(),
       );
     }
-
+    // ipfs document below will be deployed by the backend
     await votingCenter.addProposal(
       proposalId,
       equityToken.address,
@@ -98,7 +94,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       decodedBylaw[2],
       await shareCapitalVotingPower(shareholderInformation[0]),
       GovAction.AnnualGeneralMeeting,
-      "General Meeting 2020 Resolution,ifps:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+      "General Meeting 2020 Resolution,ipfs:Qmd1jkPCGCEG92znAmRj6TdQuUtX8LxwVosbt1Xa9pgn7f",
       false,
       { from: issuer },
     );
