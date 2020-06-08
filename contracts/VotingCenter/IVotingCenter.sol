@@ -14,7 +14,7 @@ contract IVotingCenter is IContractId {
     /// @param votingPeriod total duration (s) in which the proposal can be voted on by tokenholders after it was created
     /// @param votingLegalRep a legal representative for the vote, which may provide off-chain voting results
     /// @param offchainVotePeriod duration (s) after voting is ended when voting legal rep may provide results
-    /// @param offchainVotingPower voting power (tokens) held offchain and provided by legal rep at the end of voting
+    /// @param totalVotingPower combined voting power of on-chain (token total supply) and held off-chain (ie. shares) expressed in tokens
     /// @param action initiator defined action code on which voting happens
     /// @param actionPayload initiator defined action payload on which voting happens
     function addProposal(
@@ -25,7 +25,7 @@ contract IVotingCenter is IContractId {
         uint32 votingPeriod,
         address votingLegalRep,
         uint32 offchainVotePeriod,
-        uint256 offchainVotingPower,
+        uint256 totalVotingPower,
         uint256 action,
         bytes actionPayload,
         bool enableObserver
