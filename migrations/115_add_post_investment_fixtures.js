@@ -94,7 +94,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       decodedBylaw[2],
       await shareCapitalVotingPower(shareholderInformation[0]),
       GovAction.AnnualGeneralMeeting,
-      "General Meeting 2020 Resolution,ipfs:Qma7w9sti8z4F1nZDpJC2ZRuKZf8NpCG8YREjDKM6H9A2d",
+      "General Meeting 2020 Resolution,ipfs:QmYKcra5eRZLSdmoFDRX8uD65bfPj8AbaRreYiAPNtoEKk",
       false,
       { from: issuer },
     );
