@@ -117,7 +117,8 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
       provider: multiWalletProvider(
-        "https://platform.neufund.net/nodes/mainnet-fork",
+        // https://platform.neufund.net/nodes/mainnet-fork
+        "http://ethexp2-node.neustg.net:8545",
         "forked_live",
       ),
     },
@@ -135,6 +136,13 @@ module.exports = {
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
       // from: "0x08712307a86632b15d13ecfebe732c07cc026915", // -> for deployment "44'/60'/105'/11"
       gasPrice: 10000000000, // 10 gwei /shannon
+    },
+    console_pk_forked_live: {
+      network_id: 72,
+      gas: gasLimitForLive,
+      deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
+      gasPrice: 10000000000, // 10 gwei /shannon
+      provider: consolePKProvider("http://ethexp2-node.neustg.net:8545", "console_pk_forked_live"),
     },
     live: {
       network_id: 1, // Ethereum public network
@@ -184,7 +192,7 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      gasPrice: 10000000000, // 10 gwei /shannon
+      gasPrice: 40000000000, // 10 gwei /shannon
     },
     localhost_live: {
       network_id: "*",
