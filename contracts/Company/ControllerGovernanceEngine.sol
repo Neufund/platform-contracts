@@ -1,59 +1,15 @@
 pragma solidity 0.4.26;
 
 import "../Agreement.sol";
-import "./Gov.sol";
+import "./IControllerGovernanceEngine.sol";
 import "./MGovernanceObserver.sol";
-import "../Standards/IContractId.sol";
 
 
 contract ControllerGovernanceEngine is
     Agreement,
-    IVotingObserver,
+    IControllerGovernanceEngine,
     MGovernanceObserver
 {
-    ////////////////////////
-    // Governance Module Id
-    ////////////////////////
-
-    bytes32 internal constant ControllerGovernanceEngineId = 0xd8b228c791b70f75338df4d4d644c638f1a58faec0b2f187daf42fb3722af438;
-    uint256 internal constant ControllerGovernanceEngineV = 0;
-
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    // logged on controller state transition
-    event LogGovStateTransition(
-        uint32 oldState,
-        uint32 newState,
-        uint32 timestamp
-    );
-
-    // logged when new resolution is registered for execution
-    event LogResolutionStarted(
-        bytes32 indexed resolutionId,
-        IControlledToken token,
-        string resolutionTitle,
-        string documentUrl,
-        uint8 action,
-        Gov.ExecutionState state,
-        bytes promise
-    );
-
-    // logged on action that is a result of shareholder resolution (on-chain, off-chain), or should be shareholder resolution
-    event LogResolutionExecuted(
-        bytes32 indexed resolutionId,
-        uint8 action,
-        Gov.ExecutionState state
-    );
-
-    // logged when company bylaws are amended
-    event LogTokenholderRightsAmended(
-        bytes32 indexed resolutionId,
-        Gov.TokenType tokenType,
-        IControlledToken token,
-        ITokenholderRights tokenholderRights
-    );
 
     ////////////////////////
     // Constants
@@ -203,7 +159,27 @@ contract ControllerGovernanceEngine is
     }
 
     //
-    // Implements IControllerGovernance
+    // Implements IVotingObserver
+    //
+
+    function onProposalStateTransition(
+        bytes32 /*proposalId*/,
+        uint8 /*oldState*/,
+        uint8 /*newState*/)
+        public
+    {}
+
+    function votingResult(address votingCenter, bytes32 proposalId)
+        public
+        constant
+        returns (bool inFavor)
+    {
+        // delegatecall
+        return Gov.hasProposalPassed(_t, IVotingCenter(votingCenter), proposalId) == Gov.ExecutionState.Executing;
+    }
+
+    //
+    // Implements IControllerGovernanceEngine
     //
 
     function state()
@@ -223,26 +199,6 @@ contract ControllerGovernanceEngine is
         returns (address)
     {
         return _g.COMPANY_LEGAL_REPRESENTATIVE;
-    }
-
-    //
-    // Implements IVotingObserver
-    //
-
-    function onProposalStateTransition(
-        bytes32 /*proposalId*/,
-        uint8 /*oldState*/,
-        uint8 /*newState*/)
-        public
-    {}
-
-    function votingResult(address votingCenter, bytes32 proposalId)
-        public
-        constant
-        returns (bool inFavor)
-    {
-        // delegatecall
-        return Gov.hasProposalPassed(_t, IVotingCenter(votingCenter), proposalId) == Gov.ExecutionState.Executing;
     }
 
     //

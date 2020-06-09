@@ -3,20 +3,22 @@ pragma solidity 0.4.26;
 import "../Reclaimable.sol";
 
 import "./IEquityTokenController.sol";
-import "./IControllerGovernance.sol";
+import "../Standards/IContractId.sol";
 import "./ControllerETO.sol";
 import "./ControllerDividends.sol";
 import "../Standards/IMigrationChain.sol";
 
 
-/// @title on-chain company management with shareholder rights execution support
+/// @title on-chain company governance with shareholder rights execution support
 /// several simplifications apply:
 /// - only single token is supported
 /// - not all shareholder rights are yet supported
 /// - secondary offering must be on the same token
 contract SingleEquityTokenController is
-    IControllerGovernance,
     IEquityTokenController,
+    ControllerGovernanceEngine,
+    ControllerGeneralInformation,
+    ControllerEquityToken,
     ControllerETO,
     ControllerDividends,
     IMigrationChain,
@@ -62,24 +64,6 @@ contract SingleEquityTokenController is
     ////////////////////////
     // Public Methods
     ////////////////////////
-
-    //
-    // Implements IControllerGovernance
-    //
-
-    function closeCompany()
-        public
-        onlyState(Gov.State.Closing)
-    {
-        revert("NF_NOT_IMPL");
-    }
-
-    function cancelCompanyClosing()
-        public
-        onlyState(Gov.State.Closing)
-    {
-        revert("NF_NOT_IMPL");
-    }
 
     //
     // Implements IMigrationChain

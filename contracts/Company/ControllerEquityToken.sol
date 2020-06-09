@@ -1,33 +1,22 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGovernanceEngine.sol";
+import "./IControllerEquityToken.sol";
+
 
 contract ControllerEquityToken is
-    ControllerGovernanceEngine
+    ControllerGovernanceEngine,
+    IControllerEquityToken
 {
-    ////////////////////////
-    // Governance Module Id
-    ////////////////////////
-
-    bytes32 internal constant ControllerEquityTokenId = 0x76a4af32c7ac3d96283e121f8ebe6756f83a719635f832b64ad5c6da800ed89f;
-    uint256 internal constant ControllerEquityTokenV = 0;
-
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    // logged when transferability of given token was changed
-    event LogTransfersStateChanged(
-        bytes32 indexed resolutionId,
-        address equityToken,
-        bool transfersEnabled
-    );
-
     ////////////////////////
     // Constructor
     ////////////////////////
 
     constructor () internal {}
+
+    //
+    // Implements IControllerEquityToken
+    //
 
     function governanceToken()
         public

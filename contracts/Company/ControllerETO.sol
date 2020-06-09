@@ -3,51 +3,22 @@ pragma solidity 0.4.26;
 import "./ControllerGeneralInformation.sol";
 import "./ControllerEquityToken.sol";
 import "./IEquityTokenController.sol";
+import "./IControllerETO.sol";
 
 
 contract ControllerETO is
-    IETOCommitmentObserver,
     IEquityTokenController,
     ControllerGeneralInformation,
     ControllerEquityToken,
+    IControllerETO,
     KnownInterfaces
 {
-    ////////////////////////
-    // Governance Module Id
-    ////////////////////////
-
-    bytes32 internal constant ControllerETOId = 0x1c7166c78ec7465184d422ad6e22121b4881a63128a89653179065e03625ae87;
-    uint256 internal constant ControllerETOV = 0;
 
     ////////////////////////
     // Constants
     ////////////////////////
 
     string private constant NF_ETC_ETO_NOT_U = "NF_ETC_ETO_NOT_U";
-
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    // offering of the token in ETO failed (Refund)
-    event LogOfferingFailed(
-        address etoCommitment,
-        address equityToken
-    );
-
-    // offering of the token in ETO succeeded (with all on-chain consequences)
-    event LogOfferingSucceeded(
-        address etoCommitment,
-        address equityToken,
-        uint256 newShares
-    );
-
-    //
-    event LogOfferingRegistered(
-        bytes32 indexed resolutionId,
-        address etoCommitment,
-        address equityToken
-    );
 
     ////////////////////////
     // Mutable state
@@ -62,9 +33,9 @@ contract ControllerETO is
 
     constructor () internal {}
 
-    ////////////////////////
-    // Public Methods
-    ////////////////////////
+    //
+    // Implements IControllerETO
+    //
 
     function tokenOfferings()
         public
