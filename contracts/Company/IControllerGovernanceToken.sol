@@ -6,14 +6,14 @@ import "./Gov.sol";
 /// @title interface of governance module to manage governance (main) token of the controller
 /// @dev interface assumes single governance token that is a default token for voting and proceed distribution
 ///      governance token is optional, it's possible to setup a controller without any token
-contract IControllerEquityToken {
+contract IControllerGovernanceToken {
 
     ////////////////////////
     // Governance Module Id
     ////////////////////////
 
-    bytes32 internal constant ControllerEquityTokenId = 0x76a4af32c7ac3d96283e121f8ebe6756f83a719635f832b64ad5c6da800ed89f;
-    uint256 internal constant ControllerEquityTokenV = 0;
+    bytes32 internal constant ControllerGovernanceTokenId = 0x156c4a2914517b2fdbf2f694bac9d69e03910b75d3298033e1f4f431b517703d;
+    uint256 internal constant ControllerGovernanceTokenV = 0;
 
     ////////////////////////
     // Events

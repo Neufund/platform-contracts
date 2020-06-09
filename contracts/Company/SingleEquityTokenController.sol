@@ -18,7 +18,7 @@ contract SingleEquityTokenController is
     IEquityTokenController,
     ControllerGovernanceEngine,
     ControllerGeneralInformation,
-    ControllerEquityToken,
+    ControllerGovernanceToken,
     ControllerETO,
     ControllerDividends,
     IMigrationChain,
@@ -194,7 +194,7 @@ contract SingleEquityTokenController is
         return ([
             ControllerGovernanceEngineId,
             ControllerGeneralInformationId,
-            ControllerEquityTokenId,
+            ControllerGovernanceTokenId,
             ControllerETOId,
             ControllerDividendsId,
             SingleEquityTokenControllerId
@@ -202,7 +202,7 @@ contract SingleEquityTokenController is
         [
             ControllerGovernanceEngineV,
             ControllerGeneralInformationV,
-            ControllerEquityTokenV,
+            ControllerGovernanceTokenV,
             ControllerETOV,
             ControllerDividendsV,
             SingleEquityTokenControllerV

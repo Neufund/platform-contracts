@@ -1,12 +1,12 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGovernanceEngine.sol";
-import "./IControllerEquityToken.sol";
+import "./IControllerGovernanceToken.sol";
 
 
-contract ControllerEquityToken is
+contract ControllerGovernanceToken is
     ControllerGovernanceEngine,
-    IControllerEquityToken
+    IControllerGovernanceToken
 {
     ////////////////////////
     // Constructor

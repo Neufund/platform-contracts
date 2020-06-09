@@ -3,7 +3,7 @@ pragma solidity 0.4.26;
 import "./Gov.sol";
 import "./IControllerGovernanceEngine.sol";
 import "./IControllerGeneralInformation.sol";
-import "./IControllerEquityToken.sol";
+import "./IControllerGovernanceToken.sol";
 import "./IControllerETO.sol";
 import "./IEquityTokenController.sol";
 import "./IControllerDividends.sol";
@@ -17,7 +17,7 @@ contract IControllerGovernance is
     IEquityTokenController,
     IControllerGovernanceEngine,
     IControllerGeneralInformation,
-    IControllerEquityToken,
+    IControllerGovernanceToken,
     IControllerETO,
     IControllerDividends,
     IContractId

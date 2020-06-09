@@ -1,7 +1,7 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGeneralInformation.sol";
-import "./ControllerEquityToken.sol";
+import "./ControllerGovernanceToken.sol";
 import "./IEquityTokenController.sol";
 import "./IControllerETO.sol";
 
@@ -9,7 +9,7 @@ import "./IControllerETO.sol";
 contract ControllerETO is
     IEquityTokenController,
     ControllerGeneralInformation,
-    ControllerEquityToken,
+    ControllerGovernanceToken,
     IControllerETO,
     KnownInterfaces
 {
