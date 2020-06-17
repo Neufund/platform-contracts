@@ -1,18 +1,13 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGovernanceEngine.sol";
+import "./IControllerDividends.sol";
 
 contract ControllerDividends is
     ControllerGovernanceEngine,
+    IControllerDividends,
     KnownInterfaces
 {
-    ////////////////////////
-    // Governance Module Id
-    ////////////////////////
-
-    bytes32 internal constant ControllerDividendsId = 0x6f34e3bc451d7c62ae86b2e212b7cb207815b826f8de016c0128b0d3762753ae;
-    uint256 internal constant ControllerDividendsV = 0;
-
     ////////////////////////
     // Public Methods
     ////////////////////////

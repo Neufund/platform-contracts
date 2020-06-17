@@ -136,7 +136,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     expect(moduleId[1][0]).to.be.bignumber.eq(zero);
     expect(moduleId[0][1]).to.eq(contractId("ControllerGeneralInformation"));
     expect(moduleId[1][1]).to.be.bignumber.eq(zero);
-    expect(moduleId[0][2]).to.eq(contractId("ControllerEquityToken"));
+    expect(moduleId[0][2]).to.eq(contractId("ControllerGovernanceToken"));
     expect(moduleId[1][2]).to.be.bignumber.eq(zero);
     expect(moduleId[0][3]).to.eq(contractId("ControllerETO"));
     expect(moduleId[1][3]).to.be.bignumber.eq(zero);
@@ -1464,7 +1464,7 @@ contract("SingleEquityTokenController", ([_, admin, company, nominee, ...investo
     });
 
     describe("dissolve and change of control", () => {
-      it("reverts on investor rights when operational", async () => {
+      it.skip("reverts on investor rights when operational", async () => {
         await expect(equityTokenController.closeCompany()).to.be.rejectedWith("NF_INV_STATE");
         await expect(equityTokenController.cancelCompanyClosing()).to.be.rejectedWith(
           "NF_INV_STATE",

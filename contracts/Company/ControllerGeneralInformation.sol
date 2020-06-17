@@ -1,46 +1,13 @@
 pragma solidity 0.4.26;
 
 import "./ControllerGovernanceEngine.sol";
+import "./IControllerGeneralInformation.sol";
+
 
 contract ControllerGeneralInformation is
-    ControllerGovernanceEngine
+    ControllerGovernanceEngine,
+    IControllerGeneralInformation
 {
-    ////////////////////////
-    // Governance Module Id
-    ////////////////////////
-
-    bytes32 internal constant ControllerGeneralInformationId = 0x41a703b63c912953a0cd27ec13238571806cc14534c4a31a6874db8759b9aa6a;
-    uint256 internal constant ControllerGeneralInformationV = 0;
-
-    ////////////////////////
-    // Events
-    ////////////////////////
-
-    // logged when ISHA was amended (new text, new shareholders, new cap table, offline round etc.)
-    event LogISHAAmended(
-        bytes32 indexed resolutionId,
-        string ISHAUrl
-    );
-
-    // logged when company valuation changes, in case of completed offering, it's POST valuation
-    event LogCompanyValuationAmended(
-        bytes32 indexed resolutionId,
-        uint256 companyValuationEurUlps
-    );
-
-    // logged when share capital changes
-    event LogShareCapitalAmended(
-        bytes32 indexed resolutionId,
-        uint256 shareCapitalUlps
-    );
-
-
-    // logged when authorized share capital is established
-    event LogAuthorizedCapitalEstablished(
-        bytes32 indexed resolutionId,
-        uint256 authorizedCapitalUlps
-    );
-
     ////////////////////////
     // Mutable state
     ////////////////////////
@@ -74,7 +41,7 @@ contract ControllerGeneralInformation is
     ////////////////////////
 
     //
-    // Implements IControllerGovernance
+    // Implements IControllerGeneralInformation
     //
 
     function shareholderInformation()
@@ -100,13 +67,6 @@ contract ControllerGeneralInformation is
         );
     }
 
-    // single entry for general resolutions without on chain consequences
-    // general actions are:
-    //  - None - ordinary shareholder resolution,
-    //  - RestrictedNone - restricted ordinary shareholder resolution
-    //  - AnnualGeneralMeeting - annual meeting resolution
-    //  - CompanyNone - general information from the company
-    //  - THRNone - tokenholder voting/resolution, pro-rata
     function generalResolution(
         bytes32 resolutionId,
         Gov.Action generalAction,
@@ -127,8 +87,6 @@ contract ControllerGeneralInformation is
         // no special on chain consequences
     }
 
-    // used to change company governance, if run in Setup state it may create a controller
-    // without a token, for example to use with ESOP
     function amendISHAResolution(
         bytes32 resolutionId,
         string ISHAUrl,
