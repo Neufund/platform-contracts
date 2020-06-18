@@ -1,13 +1,10 @@
 require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
-const getConfig = require("./config").getConfig;
+const { getConfig, getDeployerAccount } = require("./config");
 const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
-const getDeployerAccount = require("./config").getDeployerAccount;
-const deployETO = require("./deployETO").deployETO;
-const deployGovLib = require("./deployETO").deployGovLib;
-const checkETO = require("./deployETO").checkETO;
-const deployWhitelist = require("./deployETO").deployWhitelist;
+const { deployETO, deployGovLib, checkETO, deployWhitelist } = require("./deployETO");
+const { shiftBackTime } = require("./helpers");
 const {
   prepareEtoTerms,
   defEtoTerms,
@@ -18,11 +15,9 @@ const {
   hnwiEtoLiSecurityTerms,
   retailSMEEtoLi,
 } = require("./configETOFixtures");
-const dayInSeconds = require("../test/helpers/constants").dayInSeconds;
+const { knownInterfaces } = require("../test/helpers/knownInterfaces");
+const { dayInSeconds, Q18, decimalBase } = require("../test/helpers/constants");
 const stringify = require("../test/helpers/utils").stringify;
-const DAY_SNAPSHOT = require("../test/helpers/constants").DAY_SNAPSHOT;
-const Q18 = require("../test/helpers/constants").Q18;
-const decimalBase = require("../test/helpers/constants").decimalBase;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
 
@@ -293,6 +288,10 @@ async function simulateETO(
     govLib,
     true,
   );
+  // get voting center for correct time-shifting
+  const votingCenterAddress = await universe.getSingleton(knownInterfaces.votingCenter);
+  const VotingCenter = artifacts.require(CONFIG.artifacts.VOTING_CENTER);
+  const votingCenter = await VotingCenter.at(votingCenterAddress);
   // nominee sets agreement
   console.log("Nominee sets agreements");
   await etoCommitment.amendAgreement(etoDefiniton.reservationAndAcquisitionAgreement, {
@@ -396,7 +395,7 @@ async function simulateETO(
     return etoCommitment;
   }
   console.log("Going to public");
-  await shiftBackTime(etoCommitment, tokenController, null, whitelistD);
+  await shiftBackTime(etoCommitment, tokenController, votingCenter, null, whitelistD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Public);
 
@@ -422,7 +421,7 @@ async function simulateETO(
   }
   if (final === CommitmentState.Refund) {
     console.log("Going to Refund");
-    await shiftBackTime(etoCommitment, tokenController, null, publicD);
+    await shiftBackTime(etoCommitment, tokenController, votingCenter, null, publicD);
     await etoCommitment.handleStateTransitions();
     await ensureState(etoCommitment, CommitmentState.Refund);
     return etoCommitment;
@@ -433,17 +432,20 @@ async function simulateETO(
   const amountMinTokensEur = etoDefiniton.tokenTerms.MIN_NUMBER_OF_TOKENS.mul(
     etoDefiniton.tokenTerms.TOKEN_PRICE_EUR_ULPS,
   ).divToInt(tokenPower);
+  const totalInvestment = await etoCommitment.totalInvestment();
 
-  // TODO: Leave it here. It makes ETO successfull
-  await investAmount(
-    fas.INV_HAS_EUR_HAS_KYC.address,
-    CONFIG,
-    universe,
-    etoCommitment,
-    amountMinTokensEur,
-    "EUR",
-  );
-  await shiftBackTime(etoCommitment, tokenController, null, publicD);
+  if (totalInvestment[0].lt(amountMinTokensEur)) {
+    // TODO: Leave it here. It makes ETO successfull
+    await investAmount(
+      fas.INV_HAS_EUR_HAS_KYC.address,
+      CONFIG,
+      universe,
+      etoCommitment,
+      amountMinTokensEur,
+      "EUR",
+    );
+  }
+  await shiftBackTime(etoCommitment, tokenController, votingCenter, null, publicD);
   await etoCommitment.handleStateTransitions();
   await ensureState(etoCommitment, CommitmentState.Signing);
   if (final === CommitmentState.Signing) {
@@ -453,7 +455,7 @@ async function simulateETO(
     // eslint-disable-next-line max-len
     `Going to Claim.. putting signatures ${etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL}`,
   );
-  await shiftBackTime(etoCommitment, tokenController, null, signingDelay);
+  await shiftBackTime(etoCommitment, tokenController, votingCenter, null, signingDelay);
   await etoCommitment.companySignsInvestmentAgreement(
     etoDefiniton.etoTerms.INVESTMENT_AGREEMENT_TEMPLATE_URL,
     { from: issuer.address },
@@ -477,27 +479,11 @@ async function simulateETO(
   }
   console.log("Going to payout");
   // shift time
-  await shiftBackTime(etoCommitment, tokenController, equityToken, claimD);
+  await shiftBackTime(etoCommitment, tokenController, votingCenter, equityToken, claimD);
   // no need to check state afterwards, payout ensures it
   await etoCommitment.payout();
   // console.log(await etoCommitment.startOfStates());
   return etoCommitment;
-}
-
-async function shiftBackTime(etoCommitment, tokenController, equityToken, delta) {
-  // shifts all internal timestamp in ETO-related
-  await etoCommitment._mockShiftBackTime(delta);
-  await tokenController._mockShiftBackTime(delta);
-  if (equityToken) {
-    // equity token may only by shifted by full days
-    if (delta % dayInSeconds > 0) {
-      throw new Error(
-        `shift time on equity token must be in full days, is ${delta / dayInSeconds}`,
-      );
-    }
-    const days = delta / dayInSeconds;
-    await equityToken._decreaseSnapshots(DAY_SNAPSHOT.mul(days));
-  }
 }
 
 async function ensureState(etoCommitment, requiredState) {

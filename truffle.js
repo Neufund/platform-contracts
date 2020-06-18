@@ -15,6 +15,7 @@ const devNetworkDeploymentConfigOverride = {
     ETO_TERMS_CONSTRAINTS: "MockETOTermsConstraints",
     EQUITY_TOKEN_CONTROLLER: "MockSingleEquityTokenController",
     STANDARD_EQUITY_TOKEN: "MockEquityToken",
+    VOTING_CENTER: "MockVotingCenter",
   },
   // other addresses set to DEPLOYER
   addresses: {

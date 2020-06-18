@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { createSignedVote } from "./helpers/relayedVoteSigning";
-import { ZERO_ADDRESS, Q18, daysToSeconds } from "./helpers/constants";
+import { ZERO_ADDRESS, Q18, daysToSeconds, dayInSeconds } from "./helpers/constants";
 import { divRound } from "./helpers/unitConverter";
 import { randomBytes32, contractId } from "./helpers/utils";
 import {
@@ -22,6 +22,7 @@ const TestVotingObserver = artifacts.require("TestVotingObserver");
 const TestVotingController = artifacts.require("TestVotingController");
 const VotingController = artifacts.require("VotingController");
 const VotingCenter = artifacts.require("VotingCenter");
+const MockVotingCenter = artifacts.require("MockVotingCenter");
 
 const bn = n => new web3.BigNumber(n);
 const one = bn("1");
@@ -97,6 +98,23 @@ contract("VotingCenter", ([_, admin, owner, owner2, votingLegalRep, ...accounts]
     await printCodeSize("VotingCenter code size", votingContract);
     expect(await votingContract.votingController()).to.eq(votingController.address);
     expect(await votingContract.contractId()).to.deep.eq([contractId("IVotingCenter"), zero]);
+  });
+
+  it("should shift time on mock", async () => {
+    // deploy mock in place of regular contract
+    votingContract = await MockVotingCenter.new(votingController.address);
+    // open proposal
+    const proposalId = randomBytes32();
+    await issueTokens(2);
+    const proposal = await openProposal(proposalId, noCampaignProposalParams);
+    const deadlines = proposal[10];
+    // shift time one day
+    await votingContract._shiftProposalDeadlines(proposalId, dayInSeconds);
+    const shiftedProposal = await votingContract.proposal(proposalId);
+    const shiftedDeadlines = shiftedProposal[10];
+    for (let ii = 0; ii < 5; ii += 1) {
+      expect(deadlines[ii].sub(shiftedDeadlines[ii])).to.be.bignumber.eq(dayInSeconds);
+    }
   });
 
   describe("opening proposals", () => {
