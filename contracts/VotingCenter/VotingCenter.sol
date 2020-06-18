@@ -466,6 +466,20 @@ contract VotingCenter is IVotingCenter {
     }
 
     /////////////////////////
+    // Internal functions
+    ////////////////////////
+
+    function ensureExistingProposal(bytes32 proposalId)
+        internal
+        constant
+        returns (VotingProposal.Proposal storage p)
+    {
+        p = _proposals[proposalId];
+        require(p.token != address(0), "NF_VC_PROP_NOT_EXIST");
+        return p;
+    }
+
+    /////////////////////////
     // Private functions
     ////////////////////////
 
@@ -486,16 +500,6 @@ contract VotingCenter is IVotingCenter {
             p.against = Math.add(p.against, power);
         }
         markVoteCast(p, proposalId, voter, voteInFavor, power);
-    }
-
-    function ensureExistingProposal(bytes32 proposalId)
-        private
-        constant
-        returns (VotingProposal.Proposal storage p)
-    {
-        p = _proposals[proposalId];
-        require(p.token != address(0), "NF_VC_PROP_NOT_EXIST");
-        return p;
     }
 
     function relayBatchInternal(
