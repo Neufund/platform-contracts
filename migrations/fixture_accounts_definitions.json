@@ -371,7 +371,8 @@
         },
         "ETOInPayoutState": {
           "ETH": {
-            "icbm": 3.71621
+            "icbm": 5.71621,
+            "wallet": 9082.2812
           }
         },
         "ETOInRefundState": {
@@ -486,6 +487,9 @@
         "ETOInPayoutState": {
           "ETH": {
             "icbm": 3.71621
+          },
+          "EUR": {
+            "wallet": 2000000.23
           }
         },
         "ETOInRefundState": {
@@ -675,6 +679,9 @@
         "ETOInPayoutState": {
           "ETH": {
             "wallet": 289
+          },
+          "EUR": {
+            "wallet": 27611.21
           }
         },
         "ETOInRefundState": {

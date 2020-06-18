@@ -2,6 +2,7 @@ const fs = require("fs");
 const { join } = require("path");
 const confirm = require("node-ask").confirm;
 const promisify = require("../test/helpers/utils").promisify;
+const { dayInSeconds, DAY_SNAPSHOT } = require("../test/helpers/constants");
 
 export async function initializeMigrationStep(config, artifacts, web3) {
   const Universe = artifacts.require(config.artifacts.UNIVERSE);
@@ -40,4 +41,41 @@ export function loadEtoFixtures() {
 
 export function getEtoFixtureByName(etoFixtures, name) {
   return etoFixtures[Object.keys(etoFixtures).find(k => etoFixtures[k].name === name)];
+}
+
+export async function shiftBackTime(
+  etoCommitment,
+  tokenController,
+  votingCenter,
+  equityToken,
+  delta,
+) {
+  console.log(
+    `shifting contract set of issuer ${await tokenController.companyLegalRepresentative()}
+    by ${delta} s`,
+  );
+  // shifts all internal timestamp in ETO-related group of contracts
+  if (equityToken) {
+    // equity token may only by shifted by full days
+    if (delta % dayInSeconds > 0) {
+      throw new Error(
+        `shift time on equity token must be in full days, is ${delta / dayInSeconds}`,
+      );
+    }
+    const days = delta / dayInSeconds;
+    await equityToken._decreaseSnapshots(DAY_SNAPSHOT.mul(days));
+  }
+  await etoCommitment._mockShiftBackTime(delta);
+  await tokenController._mockShiftBackTime(delta);
+  // shift all ongoing voting proposals
+  if (votingCenter) {
+    const resolutionIds = await tokenController.resolutionsList();
+    for (const rid of resolutionIds) {
+      const hasProposal = await votingCenter.hasProposal(rid);
+      if (hasProposal) {
+        console.log(`shifting proposal ${rid} by ${delta} s`);
+        await votingCenter._shiftProposalDeadlines(rid, delta);
+      }
+    }
+  }
 }
