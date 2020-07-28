@@ -163,7 +163,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       GovAction.CompanyNone,
       "A general information from ISSUER_PAYOUT 2020",
       // TODO: generate fancy document
-      "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+      "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
       { from: issuer },
     );
     // issue annual meeting resolution (SHR escalation)
@@ -175,7 +175,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       annualRID,
       GovAction.AnnualGeneralMeeting,
       "A Notice of General Meeting 2020",
-      "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+      "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
       { from: issuer },
     );
 
