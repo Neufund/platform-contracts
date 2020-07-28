@@ -49,14 +49,14 @@ export const defEtoTerms = {
     MIN_TICKET_EUR_ULPS: Q18.mul(10),
     MAX_TICKET_EUR_ULPS: Q18.mul(5000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
     INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0),
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const hnwiEtoDeSecurityTerms = {
@@ -96,14 +96,14 @@ export const hnwiEtoDeSecurityTerms = {
     MIN_TICKET_EUR_ULPS: Q18.mul(100000),
     MAX_TICKET_EUR_ULPS: Q18.mul(10000000),
     ENABLE_TRANSFERS_ON_SUCCESS: true,
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmWKa6zVZjZu3x2CtJnSNTHUwWMeAcyfv9iZDnoawmULeT",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
     INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNPyPao7dEsQzKarCYCyGyDrutzWyACDMcq8HbQ1eGt2E",
     WHITELIST_DISCOUNT_FRAC: Q18.mul(0.3),
     PUBLIC_DISCOUNT_FRAC: Q18.mul(0.2),
   },
   etoTermsConstraints: "hnwi eto de security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const retailEtoDeVmaTerms = {
@@ -116,8 +116,8 @@ export const retailEtoDeVmaTerms = {
     ENABLE_TRANSFERS_ON_SUCCESS: false,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmcoZxecpVUaWCG2CjdNucNtRzKsCYBGaTkC54eW6MkRg3",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmdJQ9mrepd6mNQ6KTyoPwPELhbRZnN4pYUVyg2VY2vTG1",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmPxCKpuaEFoGaHF419BTRvQHM3NxTx7fPcCKXmyF6jo8C",
   },
   tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
@@ -150,7 +150,7 @@ export const retailEtoDeVmaTerms = {
   },
   etoTermsConstraints: "retail eto de vma",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const miniEtoLiTerms = {
@@ -163,8 +163,8 @@ export const miniEtoLiTerms = {
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "400000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmPxCKpuaEFoGaHF419BTRvQHM3NxTx7fPcCKXmyF6jo8C",
   },
   tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
@@ -197,7 +197,7 @@ export const miniEtoLiTerms = {
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const miniEtoLiNominalValueTerms = {
@@ -210,8 +210,8 @@ export const miniEtoLiNominalValueTerms = {
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: Q18.mul("0.1"),
     PUBLIC_DISCOUNT_FRAC: "0",
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
-    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmNzSHHHqe6NQbB3NnxmWvzyLHNjovU8cBxyJRWHDVGFfE",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
+    INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmPxCKpuaEFoGaHF419BTRvQHM3NxTx7fPcCKXmyF6jo8C",
   },
   tokenholderTerms: {
     GENERAL_VOTING_RULE: "1",
@@ -244,7 +244,7 @@ export const miniEtoLiNominalValueTerms = {
   },
   etoTermsConstraints: "mini eto li",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const hnwiEtoLiSecurityTerms = {
@@ -257,7 +257,7 @@ export const hnwiEtoLiSecurityTerms = {
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
     INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   tokenholderTerms: {
@@ -291,7 +291,7 @@ export const hnwiEtoLiSecurityTerms = {
   },
   etoTermsConstraints: "hnwi eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 export const retailSMEEtoLi = {
@@ -304,7 +304,7 @@ export const retailSMEEtoLi = {
     ENABLE_TRANSFERS_ON_SUCCESS: true,
     WHITELIST_DISCOUNT_FRAC: "300000000000000000",
     PUBLIC_DISCOUNT_FRAC: "0",
-    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmZrZrjMeGAGbKgnfo8HjAo2EsYNJ8bVjpvWTt8y1FMf5N",
+    INVESTOR_OFFERING_DOCUMENT_URL: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
     INVESTMENT_AGREEMENT_TEMPLATE_URL: "ipfs:QmaRkcbpuf8sinZkbHvjnjBNY8J3diRu1aWQuS9kQPkv1S",
   },
   tokenholderTerms: {
@@ -338,7 +338,7 @@ export const retailSMEEtoLi = {
   },
   etoTermsConstraints: "retail EU-SME eto li security",
   reservationAndAcquisitionAgreement: "ipfs:QmQsmERwxd9p4njM91aaT5nVhF6q1G3V35JYAzpvFMKrxp",
-  companyTokenHolderAgreement: "ipfs:QmVEJvxmo4M5ugvfSQfKzejW8cvXsWe8261MpGChov7DQt",
+  companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
 // function cloneObject(obj) {
