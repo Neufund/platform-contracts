@@ -189,7 +189,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
       for (const id of ids) {
         resolutions[id] = await controller.resolution(id);
         // add to proposals to describe from voting center
-        if (resolutions[id][1] === GovExecutionState.Escalating) {
+        if (resolutions[id][1].eq(GovExecutionState.Escalating)) {
           proposalIds.push(id);
         }
       }
