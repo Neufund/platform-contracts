@@ -15,6 +15,19 @@
     "privateKey": "0x7ccdc091ae2a3cccb338d1aa00f8ec7ff60f30abb9a447a17fe3326ebc0849f1",
     "notes": "used ONLY to deploy UNIVERSE so this address never changes, do not touch, do not use!"
   },
+  "DEPLOYER_EQUITY_TOKEN_CONTROLLERS": {
+    "address": "0x015F6C944aB6E80aB1cdAa52F021476F8e5733fa",
+    "type": "external",
+    "seed": "present cheese proud old observe village chair angry garment message erosion vast vanish liar brown memory match toe entry diary monkey tooth gun strike",
+    "derivationPath": "m/44'/60'/0'/0/0",
+    "privateKey": "0x7484275d2663eef3e45dd656a6571d08b43676cdc882957d381a064fc13c5fec",
+    "notes": "used ONLY to deploy EQUITY TOKEN CONTROLLER so this address never changes, do not touch, do not use!",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 8372.18218
+    }
+  },
   "INV_ETH_ICBM_NO_KYC": {
     "address": "0x429123b08DF32b0006fd1F3b0Ef893A8993802f3",
     "type": "investor",

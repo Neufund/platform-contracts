@@ -287,6 +287,8 @@ async function simulateETO(
     etoDefiniton.etoTerms.ETO_TERMS_CONSTRAINTS,
     govLib,
     true,
+    // use separate address to deploy token controller so their addresses are deterministic
+    fas.DEPLOYER_EQUITY_TOKEN_CONTROLLERS.address,
   );
   // get voting center for correct time-shifting
   const votingCenterAddress = await universe.getSingleton(knownInterfaces.votingCenter);
