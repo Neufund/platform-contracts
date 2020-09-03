@@ -188,45 +188,11 @@ Neumark smart contract
 4.  Enter smart-contract address for the case of Neumark
     `0xd8f36d2de608987a8b6e19016a20645032ae6647`
 5.  Enter smart contract name as written in the `.sol` file in this case `Neumark`
-6.  Choose the correct compiler in our case `solc 0.4.15+commit` with Optimization enabled
+6.  Choose the correct compiler in our case `solc 0.4.26+commit` with Optimization enabled
 7.  Copy the flattened source code from `./build/flatten/Neumark.sol` and paste in the source code
     section.
 8.  Copy the constructor arguments and paste in the relative sections
 9.  Verify and Publish
-
-### Prefill Agreements
-
-Run
-
-```
-yarn prefillAgreements
-```
-
-In order to prefill legal Agreements with correct addresses of contracts and roles. The script
-automatically fills both `NEUMARK TOKEN HOLDER AGREEMENT` and `RESERVATION AGREEMENT` with correct
-addresses for
-
-- Neumark contract address
-- Commitment contract Address
-- PLATFORM_OPERATOR_REPRESENTATIVE
-
-### Upload files to IPFS
-
-run
-
-```
-yarn uploadAgreements <IPFS node address> [filePath1,filePath2 ...]
-```
-
-In order to upload files to IPFS you can run this script, you must provide an IPFS node address.
-This tool will use IPFS api in order to upload files to IPFS You can leave files empty to upload
-default files
-
-Currently default files are
-
-`./legal/NEUMARK TOKEN HOLDER AGREEMENT.out`
-
-`./legal/RESERVATION AGREEMENT.out`
 
 ### Byzantium and pre-byzantium error handling for calls and transaction
 
@@ -260,7 +226,7 @@ Ganache-cli finally returns revert codes in exception string, this also applies 
 `eth_call`. **Parity however has undefined behavior on eth_call with revert - AFAIK it returns whole
 EVM stack frame**
 
-### Test coverage -to be fixed soon-
+### Test coverage
 
 ```
 yarn test:coverage
@@ -479,11 +445,12 @@ _EURT DEPOSIT MANAGER issues to -> investor (has transfer to) which approves -> 
 
 Full list of transfer permission is as follows.
 
-| who            | transfer to | transfer from |
-| -------------- | ----------- | ------------- |
-| EUR-T investor | Y           | N             |
-| Commitment     | Y           | Y             |
-| LockedAccount  | Y           | Y             |
+| who             | transfer to | transfer from |
+| --------------- | ----------- | ------------- |
+| EUR-T investor  | Y           | N             |
+| Commitment      | Y           | Y             |
+| LockedAccount   | Y           | Y             |
+| EquityTokenC... | Y           | Y             |
 
 ### Linking LockedAccount (4_link_contracts.js)
 
