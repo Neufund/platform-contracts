@@ -104,6 +104,7 @@ module.exports = async function deploy() {
       etoTerms.ETO_TERMS_CONSTRAINTS,
       govLib,
       canControlNeu,
+      DEPLOYER,
     );
   } catch (e) {
     console.log(e);

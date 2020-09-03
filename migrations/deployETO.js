@@ -92,6 +92,7 @@ export async function deployETO(
   etoTermsConstraintsAddress,
   govLib,
   canControlNeu,
+  tokenControllerDeployer,
 ) {
   const RoleBasedAccessPolicy = artifacts.require(config.artifacts.ROLE_BASED_ACCESS_POLICY);
   const EquityToken = artifacts.require(config.artifacts.STANDARD_EQUITY_TOKEN);
@@ -138,7 +139,10 @@ export async function deployETO(
   logDeployed(etoTerms);
   // deploy equity token controller which is company management contract
   console.log(`Deploying ${config.artifacts.EQUITY_TOKEN_CONTROLLER}`);
-  const equityTokenController = await SingleEquityTokenController.new(universe.address, company);
+  // use tokenControllerDeployer for deterministic address in fixtures, production use will pass deployer here
+  const equityTokenController = await SingleEquityTokenController.new(universe.address, company, {
+    from: tokenControllerDeployer,
+  });
   logDeployed(equityTokenController);
   // deploy equity token
   console.log("Deploying EquityToken");
