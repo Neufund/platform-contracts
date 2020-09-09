@@ -12,7 +12,7 @@ const canDeployETO = require("../migrations/deployETO").canDeployETO;
 const deployGovLib = require("../migrations/deployETO").deployGovLib;
 const getConfig = require("../migrations/config").getConfig;
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
-const recoverBigNumbers = require("../test/helpers/constants").recoverBigNumbers;
+const recoverBigNumbers = require("../test/helpers/utils").recoverBigNumbers;
 const { explainTerms, printConstants } = require("./helpers");
 
 module.exports = async function deploy() {

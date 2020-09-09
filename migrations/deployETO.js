@@ -75,7 +75,7 @@ export async function canDeployETO(artifacts, deployer, config, universe) {
       : wrong(deployerBalanceEth.toNumber())),
   );
 
-  return [!canManageUniverse || !deployerHasBalance, canControlNeu];
+  return [canManageUniverse && deployerHasBalance, canControlNeu];
 }
 
 export async function deployETO(
