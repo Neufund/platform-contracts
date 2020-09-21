@@ -9,6 +9,7 @@ const Promise = require("bluebird");
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
 
 const getAccounts = Promise.promisify(web3.eth.getAccounts);
+const getBalance = Promise.promisify(web3.eth.getBalance);
 
 // TODO general question is how script should exit in case of problems. Just exit with console.log.
 //  Or maybe throw new Error or specialised errors? It might help with testing.
@@ -43,6 +44,15 @@ module.exports = async function investIntoETO() {
     options.universe || CONFIG.UNIVERSE_ADDRESS || "0x9bad13807cd939c7946008e3772da819bd98fa7b";
 
   const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(universeAddress);
+  const etherToken = await artifacts
+    .require(CONFIG.artifacts.ETHER_TOKEN)
+    .at(await universe.etherToken());
+  const euroToken = await artifacts
+    .require(CONFIG.artifacts.EURO_TOKEN)
+    .at(await universe.euroToken());
+  const identityRegistry = await artifacts
+    .require(CONFIG.artifacts.IDENTITY_REGISTRY)
+    .at(await universe.identityRegistry());
 
   // TODO: for nano we need instruction about how to setup derivation paths if user would like to
   //  use non standard one
@@ -52,11 +62,15 @@ module.exports = async function investIntoETO() {
 
   const account = (await getAccounts())[0];
   console.log(`Investment will be done using account: ${account}`);
-  // TODO: print balances of ETH, ETH-t and nEUR
+  console.log(`ETH balance ${web3.fromWei(await getBalance(account), "ether").toString()}`);
+  console.log(
+    `ETH-T balance ${web3.fromWei(await etherToken.balanceOf(account), "ether").toString()}`,
+  );
+  console.log(
+    `nEUR balance ${web3.fromWei(await euroToken.balanceOf(account), "ether").toString()}`,
+  );
 
   // check KYC
-  const identityRegistry = await artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY)
-    .at(await universe.identityRegistry());
   const claims = deserializeClaims(await identityRegistry.getClaims(account));
   if (!claims[0].isVerified) {
     throw new Error("Account doesn't valid KYC");
@@ -96,7 +110,7 @@ module.exports = async function investIntoETO() {
   // Steps:
   // gas price API (optional)
   // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
-  // display your ticket
+  // display your ticket. It's about displaying data taken from command line to ensure it is correct
   // calculateContribution - check if you are eligible and display calculated tokens
   // y/n input to continue
   // perform ERC223 transfer on ETH/EUR token
