@@ -6,8 +6,12 @@ const commandLineArgs = require("command-line-args");
 const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfaces;
 const getConfig = require("../migrations/config").getConfig;
 const Promise = require("bluebird");
+const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
 
 const getAccounts = Promise.promisify(web3.eth.getAccounts);
+
+// TODO general question is how script should exit in case of problems. Just exit with console.log.
+//  Or maybe throw new Error or specialised errors? It might help with testing.
 
 module.exports = async function investIntoETO() {
   const optionDefinitions = [
@@ -48,9 +52,17 @@ module.exports = async function investIntoETO() {
 
   const account = (await getAccounts())[0];
   console.log(`Investment will be done using account: ${account}`);
+  // TODO: print balances of ETH, ETH-t and nEUR
 
   // check KYC
-  // const identityRegistry = await artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY).at(await universe.identityRegistry());
+  const identityRegistry = await artifacts.require(CONFIG.artifacts.IDENTITY_REGISTRY)
+    .at(await universe.identityRegistry());
+  const claims = deserializeClaims(await identityRegistry.getClaims(account));
+  if (!claims[0].isVerified) {
+    throw new Error("Account doesn't valid KYC");
+  } else {
+    console.log("Account passed KYC");
+  }
 
   options.eto = "0x84A89a974273bD6C99DB2A2Dcd07C97e8C3E295f";
   // Check if eto address is present in universe and is a commitment contract
@@ -60,7 +72,6 @@ module.exports = async function investIntoETO() {
       options.eto,
     ))
   ) {
-    // TODO maybe just exit? Question is how to test it.
     throw new Error(`${options.eto} is not commitment contract`);
   }
   console.log(`${options.eto} is commitment contract`);
