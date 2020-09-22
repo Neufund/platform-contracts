@@ -7,9 +7,25 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfac
 const getConfig = require("../migrations/config").getConfig;
 const Promise = require("bluebird");
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
+const fetch = require("node-fetch");
 
 const getAccounts = Promise.promisify(web3.eth.getAccounts);
 const getBalance = Promise.promisify(web3.eth.getBalance);
+const getNetwork = Promise.promisify(web3.version.getNetwork);
+
+const DEFAULT_GAS_PRICE = 20; // Default gas price used for dev and stage networks
+const GAS_PRICE_SPEED = "fast";
+
+async function obtainGasPrice(apiKey) {
+  if (!apiKey) {
+    throw new Error("You didn't provide defipulse api key. Use --api_key parameter");
+  }
+  // eslint-disable-next-line max-len
+  const gasStationUrl = `https://data-api.defipulse.com/api/v1/egs/api/ethgasAPI.json?api-key=${apiKey}`;
+  const response = await fetch(gasStationUrl);
+  const json = await response.json();
+  return json[GAS_PRICE_SPEED] / 10; // gas station returns price in Gwei multiplied by 10 0_o
+}
 
 // TODO general question is how script should exit in case of problems. Just exit with console.log.
 //  Or maybe throw new Error or specialised errors? It might help with testing.
@@ -23,6 +39,7 @@ module.exports = async function investIntoETO() {
     { name: "eto", type: String },
     { name: "amount", type: Number },
     { name: "gas_price", type: Number, description: "in Gwei" },
+    { name: "api_key", type: String, description: "Optional api key to defipulse gas station" },
   ];
 
   let options;
@@ -110,7 +127,23 @@ module.exports = async function investIntoETO() {
   // TODO: check if eto is in correct state - whitelist or public
 
   // Steps:
-  // gas price API (optional)
+
+  let gasPrice;
+  if (options.gas_price) {
+    console.log(`gas_price parameter was provided with value ${options.gas_price} Gwei`);
+    gasPrice = options.gas_price;
+  } else if ((await getNetwork()) === "1") {
+    console.log(
+      // eslint-disable-next-line max-len
+      `You didn't set gas_price parameter and you are on mainnet. We will try to get price from ethgasstation.info for ${GAS_PRICE_SPEED} speed`,
+    );
+    gasPrice = await obtainGasPrice(options.api_key);
+    console.log(`Got ${gasPrice} Gwei`);
+  } else {
+    console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE} Gwei`);
+    gasPrice = DEFAULT_GAS_PRICE;
+  }
+
   // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
   // display your ticket. It's about displaying data taken from command line to ensure it is correct
   // calculateContribution - check if you are eligible and display calculated tokens
