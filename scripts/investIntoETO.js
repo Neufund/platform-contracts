@@ -144,14 +144,25 @@ module.exports = async function investIntoETO() {
     gasPrice = DEFAULT_GAS_PRICE;
   }
 
-  // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
   // display your ticket. It's about displaying data taken from command line to ensure it is correct
+  // TODO: if investment from eth calculate eth value. Display rate
+  const amountToInvest = web3.toWei(1000, "ether");
+  // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
   // calculateContribution - check if you are eligible and display calculated tokens
+
+  const contribution = await eto.calculateContribution(account, false, amountToInvest);
+  console.log(`Are you whitelisted: ${contribution[0]}`);
+  // TODO: if not eligible quit with message
+  console.log(`Are you eligible to invest: ${contribution[1]}`);
+  console.log(`Minimum ticket: ${web3.fromWei(contribution[2], "ether")}`);
+  console.log(`Maximum ticket: ${web3.fromWei(contribution[3], "ether")}`);
+  console.log(`You will get : ${contribution[4]} equity tokens`); // TODO: something is not right here in place where investorTicket is displayed we have to use fromWei - invesitgate
+  console.log(`Your NEU reward will be : ${web3.fromWei(contribution[5], "ether")}`);
+  console.log(`Your investment would fill max cap: ${contribution[6]}`);
+
   // y/n input to continue
 
   // perform ERC223 transfer on ETH/EUR token
-
-  const amountToInvest = web3.toWei(1000, "ether");
   const tx1 = await etherToken.deposit({ from: account, value: amountToInvest });
   console.log(tx1);
   const tx2 = await etherToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
