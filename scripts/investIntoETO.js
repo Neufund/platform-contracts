@@ -14,7 +14,7 @@ const getAccounts = Promise.promisify(web3.eth.getAccounts);
 const getBalance = Promise.promisify(web3.eth.getBalance);
 const getNetwork = Promise.promisify(web3.version.getNetwork);
 
-const DEFAULT_GAS_PRICE = 20; // Default gas price used for dev and stage networks
+const DEFAULT_GAS_PRICE_GWEI = 20; // Default gas price used for dev and stage networks
 const GAS_PRICE_SPEED = "fast";
 
 function etherToWei(number) {
@@ -136,21 +136,22 @@ module.exports = async function investIntoETO() {
   console.log(`etoState: ${etoState}, token name: ${tokenName},  token symbol: ${tokenSymbol}`);
   // TODO: check if eto is in correct state - whitelist or public
 
-  let gasPrice;
+  let gasPriceGwei;
   if (options.gas_price) {
     console.log(`gas_price parameter was provided with value ${options.gas_price} Gwei`);
-    gasPrice = options.gas_price;
+    gasPriceGwei = options.gas_price;
   } else if ((await getNetwork()) === "1") {
     console.log(
       // eslint-disable-next-line max-len
       `You didn't set gas_price parameter and you are on mainnet. We will try to get price from ethgasstation.info for ${GAS_PRICE_SPEED} speed`,
     );
-    gasPrice = await obtainGasPrice(options.api_key);
-    console.log(`Got ${gasPrice} Gwei`);
+    gasPriceGwei = await obtainGasPrice(options.api_key);
+    console.log(`Got ${gasPriceGwei} Gwei`);
   } else {
-    console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE} Gwei`);
-    gasPrice = DEFAULT_GAS_PRICE;
+    console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE_GWEI} Gwei`);
+    gasPriceGwei = DEFAULT_GAS_PRICE_GWEI;
   }
+  const gasPrice = web3.toWei(gasPriceGwei, "gwei");
 
   console.log(`You want to invest ${options.amount} of ${options.currency}`);
   if (!(options.currency === "ETH" || options.currency === "EUR")) {
@@ -161,7 +162,7 @@ module.exports = async function investIntoETO() {
   if (options.currency === "ETH") {
     const ethAmountWei = etherToWei(options.amount);
     const exchangeRate = weiToEther(
-      await tokenExchangeRateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress)[0],
+      (await tokenExchangeRateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress))[0],
     );
     contributionAmountToInvest = ethAmountWei.times(exchangeRate);
     console.log(
@@ -189,17 +190,41 @@ module.exports = async function investIntoETO() {
     throw new Error("Aborting!");
   }
 
+  // TODO: Think about checking if there is previous investment you can use investorTicket function and see what was there.
   // perform ERC223 transfer on ETH/EUR token
-  const tx1 = await etherToken.deposit({ from: account, value: amountToInvest });
-  console.log(tx1);
-  const tx2 = await etherToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
-    from: account,
-  });
-  console.log(tx2);
+  // TODO: check how await works when sending transaction is it returning struct with tx hash or awaits for tx to be mined.
+  // TODO: compute gas limit?
+  const gasLimit = 1000000;
 
-  // TODO:  - check how await works here is it returning struct with tx hash or awaits for tx to be mined.
+  const amountToInvest = etherToWei(options.amount);
+  if (options.currency === "ETH") {
+    // TODO here compute amount of eth to send - see how much eth-t there is and act accordingly
+    const ethToSend = amountToInvest;
+    const tx = await etherToken.depositAndTransfer["address,uint256,bytes"](
+      options.eto,
+      amountToInvest,
+      "",
+      {
+        value: ethToSend,
+        from: account,
+        gas: gasLimit,
+        gasPrice,
+      },
+    );
+  } else {
+    // TODO just for dev - delete later
+    await euroToken.deposit(account, amountToInvest, "", { from: account });
+
+    const tx = await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
+      from: account,
+      gas: gasLimit,
+      gasPrice,
+    });
+  }
+
   // display tx data when mining
 
+  // display investment status
   const ticket = await eto.investorTicket(account);
   console.log("Your investment is successful");
   console.log(`EUR equivalent: ${web3.fromWei(ticket[0], "ether").toString()}`);
