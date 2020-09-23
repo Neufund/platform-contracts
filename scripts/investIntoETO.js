@@ -109,14 +109,14 @@ module.exports = async function investIntoETO() {
   //  would use it here it fails. Something to investigate further.
 
   const account = (await getAccounts())[0];
+  // TODO: Use Promise.all?
+  const accountETHBalance = await getBalance(account);
+  const accountETHTBalance = await etherToken.balanceOf(account);
+  const accountEURBalance = await euroToken.balanceOf(account);
   console.log(`Investment will be done using account: ${account}`);
-  console.log(`ETH balance ${web3.fromWei(await getBalance(account), "ether").toString()}`);
-  console.log(
-    `ETH-T balance ${web3.fromWei(await etherToken.balanceOf(account), "ether").toString()}`,
-  );
-  console.log(
-    `nEUR balance ${web3.fromWei(await euroToken.balanceOf(account), "ether").toString()}`,
-  );
+  console.log(`ETH balance ${web3.fromWei(accountETHBalance, "ether").toString()}`);
+  console.log(`ETH-T balance ${web3.fromWei(accountETHTBalance, "ether").toString()}`);
+  console.log(`nEUR balance ${web3.fromWei(accountEURBalance, "ether").toString()}`);
 
   // check KYC
   const claims = deserializeClaims(await identityRegistry.getClaims(account));
@@ -197,25 +197,26 @@ module.exports = async function investIntoETO() {
   const gasLimit = 1000000;
 
   const amountToInvest = etherToWei(options.amount);
+
   if (options.currency === "ETH") {
-    // TODO here compute amount of eth to send - see how much eth-t there is and act accordingly
-    const ethToSend = amountToInvest;
-    const tx = await etherToken.depositAndTransfer["address,uint256,bytes"](
-      options.eto,
-      amountToInvest,
-      "",
-      {
-        value: ethToSend,
-        from: account,
-        gas: gasLimit,
-        gasPrice,
-      },
-    );
+    let ethToSend = amountToInvest;
+    if (accountETHTBalance > 0) {
+      ethToSend = amountToInvest - accountETHTBalance;
+      if (ethToSend < 0) {
+        ethToSend = 0;
+      }
+    }
+    await etherToken.depositAndTransfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
+      value: ethToSend,
+      from: account,
+      gas: gasLimit,
+      gasPrice,
+    });
   } else {
     // TODO just for dev - delete later
     await euroToken.deposit(account, amountToInvest, "", { from: account });
 
-    const tx = await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
+    await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
       from: account,
       gas: gasLimit,
       gasPrice,
