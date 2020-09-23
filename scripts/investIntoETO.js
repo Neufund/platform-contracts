@@ -8,6 +8,7 @@ const getConfig = require("../migrations/config").getConfig;
 const Promise = require("bluebird");
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
 const fetch = require("node-fetch");
+const confirm = require("node-ask").confirm;
 
 const getAccounts = Promise.promisify(web3.eth.getAccounts);
 const getBalance = Promise.promisify(web3.eth.getBalance);
@@ -15,6 +16,14 @@ const getNetwork = Promise.promisify(web3.version.getNetwork);
 
 const DEFAULT_GAS_PRICE = 20; // Default gas price used for dev and stage networks
 const GAS_PRICE_SPEED = "fast";
+
+function etherToWei(number) {
+  return new web3.BigNumber(web3.toWei(number, "ether"));
+}
+
+function weiToEther(number) {
+  return new web3.BigNumber(web3.fromWei(number, "ether"));
+}
 
 async function obtainGasPrice(apiKey) {
   if (!apiKey) {
@@ -38,6 +47,7 @@ module.exports = async function investIntoETO() {
     { name: "universe", type: String },
     { name: "eto", type: String },
     { name: "amount", type: Number },
+    { name: "currency", type: String },
     { name: "gas_price", type: Number, description: "in Gwei" },
     { name: "api_key", type: String, description: "Optional api key to defipulse gas station" },
   ];
@@ -62,15 +72,16 @@ module.exports = async function investIntoETO() {
 
   // Preparing contract instances
   const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(universeAddress);
-  const etherToken = await artifacts
-    .require(CONFIG.artifacts.ETHER_TOKEN)
-    .at(await universe.etherToken());
-  const euroToken = await artifacts
-    .require(CONFIG.artifacts.EURO_TOKEN)
-    .at(await universe.euroToken());
+  const etherTokenAddress = await universe.etherToken();
+  const euroTokenAddress = await universe.euroToken();
+  const etherToken = await artifacts.require(CONFIG.artifacts.ETHER_TOKEN).at(etherTokenAddress);
+  const euroToken = await artifacts.require(CONFIG.artifacts.EURO_TOKEN).at(euroTokenAddress);
   const identityRegistry = await artifacts
     .require(CONFIG.artifacts.IDENTITY_REGISTRY)
     .at(await universe.identityRegistry());
+  const tokenExchangeRateOracle = await artifacts
+    .require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE)
+    .at(await universe.gasExchange());
 
   options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae"; // TODO: remove it just for dev
   // Check if eto address is present in universe and is a commitment contract
@@ -123,10 +134,7 @@ module.exports = async function investIntoETO() {
   // TODO: print it nicely. Is there place that translates etoState into human readable state?
   // there is helper test/helpers/commitmentState.js
   console.log(`etoState: ${etoState}, token name: ${tokenName},  token symbol: ${tokenSymbol}`);
-
   // TODO: check if eto is in correct state - whitelist or public
-
-  // Steps:
 
   let gasPrice;
   if (options.gas_price) {
@@ -144,13 +152,28 @@ module.exports = async function investIntoETO() {
     gasPrice = DEFAULT_GAS_PRICE;
   }
 
-  // display your ticket. It's about displaying data taken from command line to ensure it is correct
-  // TODO: if investment from eth calculate eth value. Display rate
-  const amountToInvest = web3.toWei(1000, "ether");
-  // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
-  // calculateContribution - check if you are eligible and display calculated tokens
+  console.log(`You want to invest ${options.amount} of ${options.currency}`);
+  if (!(options.currency === "ETH" || options.currency === "EUR")) {
+    throw new Error(`Parameter --currency with value ${options.currency} is not ETH nor EUR`);
+  }
 
-  const contribution = await eto.calculateContribution(account, false, amountToInvest);
+  let contributionAmountToInvest;
+  if (options.currency === "ETH") {
+    const ethAmountWei = etherToWei(options.amount);
+    const exchangeRate = weiToEther(
+      await tokenExchangeRateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress)[0],
+    );
+    contributionAmountToInvest = ethAmountWei.times(exchangeRate);
+    console.log(
+      `You are investing in ETH. It's value in EUR is ${weiToEther(
+        contributionAmountToInvest,
+      ).toNumber()} used conversion rate ${exchangeRate} EUR for ETH`,
+    );
+  } else {
+    contributionAmountToInvest = etherToWei(options.amount);
+  }
+
+  const contribution = await eto.calculateContribution(account, false, contributionAmountToInvest);
   console.log(`Are you whitelisted: ${contribution[0]}`);
   // TODO: if not eligible quit with message
   console.log(`Are you eligible to invest: ${contribution[1]}`);
@@ -160,7 +183,11 @@ module.exports = async function investIntoETO() {
   console.log(`Your NEU reward will be : ${web3.fromWei(contribution[5], "ether")}`);
   console.log(`Your investment would fill max cap: ${contribution[6]}`);
 
-  // y/n input to continue
+  // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
+
+  if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
+    throw new Error("Aborting!");
+  }
 
   // perform ERC223 transfer on ETH/EUR token
   const tx1 = await etherToken.deposit({ from: account, value: amountToInvest });
