@@ -73,8 +73,11 @@ module.exports = async function investIntoETO() {
 
   // Preparing contract instances
   const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(universeAddress);
-  const etherTokenAddress = await universe.etherToken();
-  const euroTokenAddress = await universe.euroToken();
+  const [etherTokenAddress, euroTokenAddress] = await Promise.all([
+    universe.etherToken(),
+    universe.euroToken(),
+  ]);
+
   const etherToken = await artifacts.require(CONFIG.artifacts.ETHER_TOKEN).at(etherTokenAddress);
   const euroToken = await artifacts.require(CONFIG.artifacts.EURO_TOKEN).at(euroTokenAddress);
   const identityRegistry = await artifacts
@@ -115,9 +118,9 @@ module.exports = async function investIntoETO() {
   const accountETHTBalance = await etherToken.balanceOf(account);
   const accountEURBalance = await euroToken.balanceOf(account);
   console.log(`Investment will be done using account: ${account}`);
-  console.log(`ETH balance ${web3.fromWei(accountETHBalance, "ether").toString()}`);
-  console.log(`ETH-T balance ${web3.fromWei(accountETHTBalance, "ether").toString()}`);
-  console.log(`nEUR balance ${web3.fromWei(accountEURBalance, "ether").toString()}`);
+  console.log(`ETH balance ${weiToEther(accountETHBalance).toString()}`);
+  console.log(`ETH-T balance ${weiToEther(accountETHTBalance).toString()}`);
+  console.log(`nEUR balance ${weiToEther(accountEURBalance).toString()}`);
 
   // check KYC
   const claims = deserializeClaims(await identityRegistry.getClaims(account));
@@ -127,10 +130,8 @@ module.exports = async function investIntoETO() {
     console.log("Account passed KYC");
   }
 
-  // TODO those three calls can but put into promise all if I want to be cool JS kid
   const etoState = (await eto.state()).toString();
-  const tokenName = await equityToken.name();
-  const tokenSymbol = await equityToken.symbol();
+  const [tokenName, tokenSymbol] = await Promise.all([equityToken.name(), equityToken.symbol()]);
 
   // TODO: print it nicely. Is there place that translates etoState into human readable state?
   // there is helper test/helpers/commitmentState.js
@@ -179,10 +180,10 @@ module.exports = async function investIntoETO() {
   console.log(`Are you whitelisted: ${contribution[0]}`);
   // TODO: if not eligible quit with message
   console.log(`Are you eligible to invest: ${contribution[1]}`);
-  console.log(`Minimum ticket: ${web3.fromWei(contribution[2], "ether")}`);
-  console.log(`Maximum ticket: ${web3.fromWei(contribution[3], "ether")}`);
+  console.log(`Minimum ticket: ${weiToEther(contribution[2])}`);
+  console.log(`Maximum ticket: ${weiToEther(contribution[3])}`);
   console.log(`You will get : ${contribution[4]} equity tokens`); // TODO: something is not right here in place where investorTicket is displayed we have to use fromWei - invesitgate
-  console.log(`Your NEU reward will be : ${web3.fromWei(contribution[5], "ether")}`);
+  console.log(`Your NEU reward will be : ${weiToEther(contribution[5])}`);
   console.log(`Your investment would fill max cap: ${contribution[6]}`);
 
   // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
@@ -192,7 +193,6 @@ module.exports = async function investIntoETO() {
   }
 
   // TODO: Think about checking if there is previous investment you can use investorTicket function and see what was there.
-  // perform ERC223 transfer on ETH/EUR token
   // TODO: check how await works when sending transaction is it returning struct with tx hash or awaits for tx to be mined.
 
   const amountToInvest = etherToWei(options.amount);
@@ -217,7 +217,9 @@ module.exports = async function investIntoETO() {
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
     const txFee = newGasLimit * gasPrice;
     console.log(
-      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`,
+      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
+        txFee,
+      )} ETH`,
     );
 
     if (ethToSend + txFee > accountETHBalance) {
@@ -245,7 +247,9 @@ module.exports = async function investIntoETO() {
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
     const txFee = newGasLimit * gasPrice;
     console.log(
-      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`,
+      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
+        txFee,
+      )} ETH`,
     );
     if (txFee > accountETHBalance) {
       throw new Error(`You don't have enough ETH for on your account.`);
@@ -262,14 +266,14 @@ module.exports = async function investIntoETO() {
   // display investment status
   const ticket = await eto.investorTicket(account);
   console.log("Your investment is successful");
-  console.log(`EUR equivalent: ${web3.fromWei(ticket[0], "ether").toString()}`);
-  console.log(`NEU reward: ${web3.fromWei(ticket[1], "ether").toString()}`);
+  console.log(`EUR equivalent: ${weiToEther(ticket[0]).toString()}`);
+  console.log(`NEU reward: ${weiToEther(ticket[1]).toString()}`);
   console.log(`You will get: ${ticket[2].toString()} ${tokenSymbol} tokens`); // TODO: what is precision here
-  console.log(`You will get : ${web3.fromWei(ticket[3], "ether").toString()} shares`); // TODO: what is precision here
-  console.log(`Token price: ${web3.fromWei(ticket[4], "ether").toString()}`); // TODO: round plox
-  console.log(`NEU rate: ${web3.fromWei(ticket[5], "ether").toString()}`); // TODO: add info about unit [EUR]?
-  console.log(`You spent ETH: ${web3.fromWei(ticket[6], "ether").toString()}`);
-  console.log(`You spent EUR: ${web3.fromWei(ticket[7], "ether").toString()}`);
+  console.log(`You will get : ${weiToEther(ticket[3]).toString()} shares`); // TODO: what is precision here
+  console.log(`Token price: ${weiToEther(ticket[4]).toString()}`); // TODO: round plox
+  console.log(`NEU rate: ${weiToEther(ticket[5]).toString()}`); // TODO: add info about unit [EUR]?
+  console.log(`You spent ETH: ${weiToEther(ticket[6]).toString()}`);
+  console.log(`You spent EUR: ${weiToEther(ticket[7]).toString()}`);
 
   /*
   What to test happy path that investment happened
