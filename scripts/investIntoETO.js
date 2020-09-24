@@ -197,6 +197,7 @@ module.exports = async function investIntoETO() {
 
   const amountToInvest = etherToWei(options.amount);
 
+  let txInfo;
   if (options.currency === "ETH") {
     let ethToSend = amountToInvest;
     if (accountETHTBalance > 0) {
@@ -226,12 +227,17 @@ module.exports = async function investIntoETO() {
       throw new Error(`You don't have enough ETH for on your account.`);
     }
 
-    await etherToken.depositAndTransfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
-      value: ethToSend,
-      from: account,
-      gas: newGasLimit,
-      gasPrice,
-    });
+    txInfo = await etherToken.depositAndTransfer["address,uint256,bytes"](
+      options.eto,
+      amountToInvest,
+      "",
+      {
+        value: ethToSend,
+        from: account,
+        gas: newGasLimit,
+        gasPrice,
+      },
+    );
   } else {
     // TODO just for dev - delete later
     await euroToken.deposit(account, amountToInvest, "", { from: account });
@@ -254,18 +260,20 @@ module.exports = async function investIntoETO() {
     if (txFee > accountETHBalance) {
       throw new Error(`You don't have enough ETH for on your account.`);
     }
-    await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
+    txInfo = await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
       from: account,
       gas: newGasLimit,
       gasPrice,
     });
   }
 
-  // display tx data when mining
+  console.log(
+    `Tx hash: ${txInfo.tx} status: ${txInfo.receipt.status === "0x1" ? "Success" : "Failed"}`,
+  );
 
   // display investment status
   const ticket = await eto.investorTicket(account);
-  console.log("Your investment is successful");
+  console.log("Your investment status");
   console.log(`EUR equivalent: ${weiToEther(ticket[0]).toString()}`);
   console.log(`NEU reward: ${weiToEther(ticket[1]).toString()}`);
   console.log(`You will get: ${ticket[2].toString()} ${tokenSymbol} tokens`); // TODO: what is precision here
