@@ -16,6 +16,7 @@ const getNetwork = Promise.promisify(web3.version.getNetwork);
 
 const DEFAULT_GAS_PRICE_GWEI = 20; // Default gas price used for dev and stage networks
 const GAS_PRICE_SPEED = "fast";
+const SAFETY_COEFFICIENT = 1.2;
 
 function etherToWei(number) {
   return new web3.BigNumber(web3.toWei(number, "ether"));
@@ -193,8 +194,6 @@ module.exports = async function investIntoETO() {
   // TODO: Think about checking if there is previous investment you can use investorTicket function and see what was there.
   // perform ERC223 transfer on ETH/EUR token
   // TODO: check how await works when sending transaction is it returning struct with tx hash or awaits for tx to be mined.
-  // TODO: compute gas limit?
-  const gasLimit = 1000000;
 
   const amountToInvest = etherToWei(options.amount);
 
@@ -206,19 +205,54 @@ module.exports = async function investIntoETO() {
         ethToSend = 0;
       }
     }
+    const gasLimit = await etherToken.depositAndTransfer["address,uint256,bytes"].estimateGas(
+      options.eto,
+      amountToInvest,
+      "",
+      {
+        value: ethToSend,
+        from: account,
+      },
+    );
+    const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
+    const txFee = newGasLimit * gasPrice;
+    console.log(
+      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`,
+    );
+
+    if (ethToSend + txFee > accountETHBalance) {
+      throw new Error(`You don't have enough ETH for on your account.`);
+    }
+
     await etherToken.depositAndTransfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
       value: ethToSend,
       from: account,
-      gas: gasLimit,
+      gas: newGasLimit,
       gasPrice,
     });
   } else {
     // TODO just for dev - delete later
     await euroToken.deposit(account, amountToInvest, "", { from: account });
 
+    const gasLimit = await euroToken.transfer["address,uint256,bytes"].estimateGas(
+      options.eto,
+      amountToInvest,
+      "",
+      {
+        from: account,
+      },
+    );
+    const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
+    const txFee = newGasLimit * gasPrice;
+    console.log(
+      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`,
+    );
+    if (txFee > accountETHBalance) {
+      throw new Error(`You don't have enough ETH for on your account.`);
+    }
     await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
       from: account,
-      gas: gasLimit,
+      gas: newGasLimit,
       gasPrice,
     });
   }
