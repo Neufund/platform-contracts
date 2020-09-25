@@ -52,31 +52,27 @@ module.exports = async function investIntoETO() {
     { name: "amount", type: Number },
     { name: "currency", type: String },
     { name: "gas_price", type: Number, description: "in Gwei" },
-    { name: "api_key", type: String, description: "Optional api key to defipulse gas station" },
+    { name: "api_key", type: String, description: "Optional api key for defipulse gas station" },
   ];
 
   let options;
   try {
     options = commandLineArgs(optionDefinitions);
   } catch (e) {
-    // TODO: somehow this part is not working as suppose to
+    // TODO: somehow this part is not working as suppose to it allows empty parameters
     console.log(`Invalid command line: ${e}`);
     console.log("Expected parameters:");
     console.log(optionDefinitions);
     console.log("where definition is a file path or url to eto listing api");
     throw e;
   }
-
-  options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae"; // TODO: remove it just for dev
-
+  // TODO: remove it just for dev
+  options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae";
+  options.universe = "0x9bad13807cd939c7946008e3772da819bd98fa7b";
   const CONFIG = getConfig(web3, options.network, []);
 
-  // TODO: improve handling parameters what we should assume about universe address?
-  const universeAddress =
-    options.universe || CONFIG.UNIVERSE_ADDRESS || "0x9bad13807cd939c7946008e3772da819bd98fa7b";
-
-  // Prepare contract instances
-  const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(universeAddress);
+  // Preparing contract instances
+  const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(options.universe);
   const [etherTokenAddress, euroTokenAddress] = await Promise.all([
     universe.etherToken(),
     universe.euroToken(),
@@ -90,6 +86,8 @@ module.exports = async function investIntoETO() {
     .require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE)
     .at(await universe.gasExchange());
 
+  console.log("----------------------------------");
+  console.log("Information about eto:");
   // Check if eto address is present in universe and is a commitment contract
   if (
     !(await universe.isInterfaceCollectionInstance(
@@ -101,10 +99,18 @@ module.exports = async function investIntoETO() {
   }
   console.log(`${options.eto} is commitment contract`);
   const eto = await artifacts.require(CONFIG.artifacts.STANDARD_ETO_COMMITMENT).at(options.eto);
-  const equityTokenAddress = await eto.equityToken();
   const equityToken = await artifacts
     .require(CONFIG.artifacts.STANDARD_EQUITY_TOKEN)
-    .at(equityTokenAddress);
+    .at(await eto.equityToken());
+
+  const [tokenName, tokenSymbol] = await Promise.all([equityToken.name(), equityToken.symbol()]);
+  console.log(`Token name: ${tokenName}, token symbol: ${tokenSymbol}`);
+
+  const etoState = (await eto.state()).toNumber();
+  console.log(`Eto is in ${CommitmentStateRev[etoState]} state`);
+  if (![CommitmentState.Public, CommitmentState.Whitelist].includes(etoState)) {
+    throw new Error(`Eto is in state that wont allow investment`);
+  }
 
   // TODO: for nano we need instruction about how to setup derivation paths if user would like to
   //  use non standard one
@@ -112,59 +118,38 @@ module.exports = async function investIntoETO() {
   //  truffle? Somehow migrations are using accounts passed into arguments of function but if I
   //  would use it here it fails. Something to investigate further.
 
-  // Get information about account data, balances, KYC status.
+  // Get account that will be used to invest, obtain currency balances and KYC status
   // TODO: check how it can work with fixtures. What do we need to use it on .io and later.
   const account = (await getAccounts())[0];
-  const [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
+  // TODO: let is just for dev delete later
+  let [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
     getBalance(account),
     etherToken.balanceOf(account),
     euroToken.balanceOf(account),
   ]);
+  console.log("----------------------------------");
+  console.log("Information about account that will be used to invest:");
   console.log(`Investment will be done using account: ${account}`);
-  console.log(`ETH balance ${weiToEther(accountETHBalance).toString()}`);
-  console.log(`ETH-T balance ${weiToEther(accountETHTBalance).toString()}`);
-  console.log(`nEUR balance ${weiToEther(accountEURBalance).toString()}`);
+  console.log(`ETH balance: ${weiToEther(accountETHBalance).toString()}`);
+  console.log(`ETH-T balance: ${weiToEther(accountETHTBalance).toString()}`);
+  console.log(`nEUR balance: ${weiToEther(accountEURBalance).toString()}`);
 
   // check KYC
   const claims = deserializeClaims(await identityRegistry.getClaims(account));
   if (!claims[0].isVerified) {
-    throw new Error("Account doesn't valid KYC");
+    throw new Error("Account doesn't have valid KYC");
   } else {
     console.log("Account passed KYC");
   }
 
-  const etoState = (await eto.state()).toNumber();
-  const [tokenName, tokenSymbol] = await Promise.all([equityToken.name(), equityToken.symbol()]);
-
-  console.log(
-    `etoState: ${CommitmentStateRev[etoState]}, token name: ${tokenName},  token symbol: ${tokenSymbol}`,
-  );
-  if (![CommitmentState.Public, CommitmentState.Whitelist].includes(etoState)) {
-    throw new Error(`Eto is in state that wont allow investment.`);
-  }
-
-  let gasPriceGwei;
-  if (options.gas_price) {
-    console.log(`gas_price parameter was provided with value ${options.gas_price} Gwei`);
-    gasPriceGwei = options.gas_price;
-  } else if ((await getNetwork()) === "1") {
-    console.log(
-      // eslint-disable-next-line max-len
-      `You didn't set gas_price parameter and you are on mainnet. We will try to get price from ethgasstation.info for ${GAS_PRICE_SPEED} speed`,
-    );
-    gasPriceGwei = await obtainGasPrice(options.api_key);
-    console.log(`Got ${gasPriceGwei} Gwei`);
-  } else {
-    console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE_GWEI} Gwei`);
-    gasPriceGwei = DEFAULT_GAS_PRICE_GWEI;
-  }
-  const gasPrice = web3.toWei(gasPriceGwei, "gwei");
-
-  console.log(`You want to invest ${options.amount} of ${options.currency}`);
+  console.log("----------------------------------");
+  console.log("Information about investment ticket:");
+  console.log(`You want to invest ${options.amount} ${options.currency}`);
   if (!(options.currency === "ETH" || options.currency === "EUR")) {
     throw new Error(`Parameter --currency with value ${options.currency} is not ETH nor EUR`);
   }
 
+  // Computing EUR value of investment
   let contributionAmountToInvest;
   if (options.currency === "ETH") {
     const ethAmountWei = etherToWei(options.amount);
@@ -175,28 +160,51 @@ module.exports = async function investIntoETO() {
     console.log(
       `You are investing in ETH. It's value in EUR is ${weiToEther(
         contributionAmountToInvest,
-      ).toNumber()} used conversion rate ${exchangeRate} EUR for ETH`,
+      ).toNumber()}. Conversion rate ${exchangeRate} EUR for ETH`,
     );
   } else {
     contributionAmountToInvest = etherToWei(options.amount);
   }
 
+  // TODO: Think about checking if there was previous investment you can use investorTicket function and see what was there.
+  // Calculating contribution
   const contribution = await eto.calculateContribution(account, false, contributionAmountToInvest);
+  const eligibleToInvest = contribution[1];
   console.log(`Are you whitelisted: ${contribution[0]}`);
-  // TODO: if not eligible quit with message
-  console.log(`Are you eligible to invest: ${contribution[1]}`);
+  console.log(`Are you eligible to invest: ${eligibleToInvest}`);
   console.log(`Minimum ticket: ${weiToEther(contribution[2])}`);
   console.log(`Maximum ticket: ${weiToEther(contribution[3])}`);
-  console.log(`You will get : ${contribution[4]} equity tokens`); // TODO: something is not right here in place where investorTicket is displayed we have to use fromWei - invesitgate
-  console.log(`Your NEU reward will be : ${weiToEther(contribution[5])}`);
+  console.log(`You will get ${contribution[4]} equity tokens`); // TODO: something is not right here in place where investorTicket is displayed we have to use fromWei - invesitgate
+  console.log(`Your NEU reward will be: ${weiToEther(contribution[5])}`);
   console.log(`Your investment would fill max cap: ${contribution[6]}`);
+
+  if (!eligibleToInvest) {
+    throw new Error("Account is not eligible to invest");
+  }
 
   if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
     throw new Error("Aborting!");
   }
 
-  // TODO: Think about checking if there is previous investment you can use investorTicket function and see what was there.
-  // TODO: check how await works when sending transaction is it returning struct with tx hash or awaits for tx to be mined.
+  console.log("----------------------------------");
+  console.log("Technical info about sending Ethereum transaction:");
+  // Gas price computation
+  let gasPriceGwei;
+  if (options.gas_price) {
+    console.log(`Using gas price from commandline: ${options.gas_price} Gwei`);
+    gasPriceGwei = options.gas_price;
+  } else if ((await getNetwork()) === "1") {
+    console.log(
+      // eslint-disable-next-line max-len
+      `You didn't set gas_price parameter and you are on mainnet. Will try to get price from ethgasstation.info for ${GAS_PRICE_SPEED} speed`,
+    );
+    gasPriceGwei = await obtainGasPrice(options.api_key);
+    console.log(`Got ${gasPriceGwei} Gwei`);
+  } else {
+    console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE_GWEI} Gwei`);
+    gasPriceGwei = DEFAULT_GAS_PRICE_GWEI;
+  }
+  const gasPrice = web3.toWei(gasPriceGwei, "gwei");
 
   const amountToInvest = etherToWei(options.amount);
 
@@ -228,7 +236,7 @@ module.exports = async function investIntoETO() {
 
     if (ethToSend + txFee > accountETHBalance) {
       throw new Error(
-        `You don't have enough ETH on your account to invest and perform transaction.`,
+        `You don't have enough ETH on your account to invest and perform transaction`,
       );
     }
 
@@ -246,9 +254,10 @@ module.exports = async function investIntoETO() {
   } else {
     // TODO just for dev - delete later
     await euroToken.deposit(account, amountToInvest, "", { from: account });
+    accountEURBalance += amountToInvest;
 
     if (amountToInvest > accountEURBalance) {
-      throw new Error(`You don't have enough EUR to invest.`);
+      throw new Error(`You don't have enough EUR to invest`);
     }
 
     const gasLimit = await euroToken.transfer["address,uint256,bytes"].estimateGas(
@@ -268,7 +277,7 @@ module.exports = async function investIntoETO() {
     );
     if (txFee > accountETHBalance) {
       throw new Error(
-        `You don't have enough ETH on your account to perform investment transaction.`,
+        `You don't have enough ETH on your account to perform investment transaction`,
       );
     }
     txInfo = await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
@@ -282,13 +291,14 @@ module.exports = async function investIntoETO() {
     `Tx hash: ${txInfo.tx} status: ${txInfo.receipt.status === "0x1" ? "Success" : "Failed"}`,
   );
 
+  console.log("----------------------------------");
+  console.log("Summary of your investment into eto:");
   // display investment status
   const ticket = await eto.investorTicket(account);
-  console.log("Your investment status");
   console.log(`EUR equivalent: ${weiToEther(ticket[0]).toString()}`);
   console.log(`NEU reward: ${weiToEther(ticket[1]).toString()}`);
   console.log(`You will get: ${ticket[2].toString()} ${tokenSymbol} tokens`); // TODO: what is precision here
-  console.log(`You will get : ${weiToEther(ticket[3]).toString()} shares`); // TODO: what is precision here
+  console.log(`You will get: ${weiToEther(ticket[3]).toString()} shares`); // TODO: what is precision here
   console.log(`Token price: ${weiToEther(ticket[4]).toString()}`); // TODO: round plox
   console.log(`NEU rate: ${weiToEther(ticket[5]).toString()}`); // TODO: add info about unit [EUR]?
   console.log(`You spent ETH: ${weiToEther(ticket[6]).toString()}`);
