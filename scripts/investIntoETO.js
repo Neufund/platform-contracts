@@ -7,6 +7,8 @@ const knownInterfaces = require("../test/helpers/knownInterfaces").knownInterfac
 const getConfig = require("../migrations/config").getConfig;
 const Promise = require("bluebird");
 const deserializeClaims = require("../test/helpers/identityClaims").deserializeClaims;
+const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
+const CommitmentStateRev = require("../test/helpers/commitmentState").CommitmentStateRev;
 const fetch = require("node-fetch");
 const confirm = require("node-ask").confirm;
 
@@ -65,19 +67,20 @@ module.exports = async function investIntoETO() {
     throw e;
   }
 
+  options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae"; // TODO: remove it just for dev
+
   const CONFIG = getConfig(web3, options.network, []);
 
   // TODO: improve handling parameters what we should assume about universe address?
   const universeAddress =
     options.universe || CONFIG.UNIVERSE_ADDRESS || "0x9bad13807cd939c7946008e3772da819bd98fa7b";
 
-  // Preparing contract instances
+  // Prepare contract instances
   const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(universeAddress);
   const [etherTokenAddress, euroTokenAddress] = await Promise.all([
     universe.etherToken(),
     universe.euroToken(),
   ]);
-
   const etherToken = await artifacts.require(CONFIG.artifacts.ETHER_TOKEN).at(etherTokenAddress);
   const euroToken = await artifacts.require(CONFIG.artifacts.EURO_TOKEN).at(euroTokenAddress);
   const identityRegistry = await artifacts
@@ -87,7 +90,6 @@ module.exports = async function investIntoETO() {
     .require(CONFIG.artifacts.TOKEN_EXCHANGE_RATE_ORACLE)
     .at(await universe.gasExchange());
 
-  options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae"; // TODO: remove it just for dev
   // Check if eto address is present in universe and is a commitment contract
   if (
     !(await universe.isInterfaceCollectionInstance(
@@ -98,9 +100,7 @@ module.exports = async function investIntoETO() {
     throw new Error(`${options.eto} is not commitment contract`);
   }
   console.log(`${options.eto} is commitment contract`);
-
   const eto = await artifacts.require(CONFIG.artifacts.STANDARD_ETO_COMMITMENT).at(options.eto);
-
   const equityTokenAddress = await eto.equityToken();
   const equityToken = await artifacts
     .require(CONFIG.artifacts.STANDARD_EQUITY_TOKEN)
@@ -112,11 +112,14 @@ module.exports = async function investIntoETO() {
   //  truffle? Somehow migrations are using accounts passed into arguments of function but if I
   //  would use it here it fails. Something to investigate further.
 
+  // Get information about account data, balances, KYC status.
+  // TODO: check how it can work with fixtures. What do we need to use it on .io and later.
   const account = (await getAccounts())[0];
-  // TODO: Use Promise.all?
-  const accountETHBalance = await getBalance(account);
-  const accountETHTBalance = await etherToken.balanceOf(account);
-  const accountEURBalance = await euroToken.balanceOf(account);
+  const [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
+    getBalance(account),
+    etherToken.balanceOf(account),
+    euroToken.balanceOf(account),
+  ]);
   console.log(`Investment will be done using account: ${account}`);
   console.log(`ETH balance ${weiToEther(accountETHBalance).toString()}`);
   console.log(`ETH-T balance ${weiToEther(accountETHTBalance).toString()}`);
@@ -130,13 +133,15 @@ module.exports = async function investIntoETO() {
     console.log("Account passed KYC");
   }
 
-  const etoState = (await eto.state()).toString();
+  const etoState = (await eto.state()).toNumber();
   const [tokenName, tokenSymbol] = await Promise.all([equityToken.name(), equityToken.symbol()]);
 
-  // TODO: print it nicely. Is there place that translates etoState into human readable state?
-  // there is helper test/helpers/commitmentState.js
-  console.log(`etoState: ${etoState}, token name: ${tokenName},  token symbol: ${tokenSymbol}`);
-  // TODO: check if eto is in correct state - whitelist or public
+  console.log(
+    `etoState: ${CommitmentStateRev[etoState]}, token name: ${tokenName},  token symbol: ${tokenSymbol}`,
+  );
+  if (![CommitmentState.Public, CommitmentState.Whitelist].includes(etoState)) {
+    throw new Error(`Eto is in state that wont allow investment.`);
+  }
 
   let gasPriceGwei;
   if (options.gas_price) {
@@ -186,8 +191,6 @@ module.exports = async function investIntoETO() {
   console.log(`Your NEU reward will be : ${weiToEther(contribution[5])}`);
   console.log(`Your investment would fill max cap: ${contribution[6]}`);
 
-  // check if you have enough funds (ETH + ETH token) or nEUR. mind the gas
-
   if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
     throw new Error("Aborting!");
   }
@@ -224,7 +227,9 @@ module.exports = async function investIntoETO() {
     );
 
     if (ethToSend + txFee > accountETHBalance) {
-      throw new Error(`You don't have enough ETH for on your account.`);
+      throw new Error(
+        `You don't have enough ETH on your account to invest and perform transaction.`,
+      );
     }
 
     txInfo = await etherToken.depositAndTransfer["address,uint256,bytes"](
@@ -242,6 +247,10 @@ module.exports = async function investIntoETO() {
     // TODO just for dev - delete later
     await euroToken.deposit(account, amountToInvest, "", { from: account });
 
+    if (amountToInvest > accountEURBalance) {
+      throw new Error(`You don't have enough EUR to invest.`);
+    }
+
     const gasLimit = await euroToken.transfer["address,uint256,bytes"].estimateGas(
       options.eto,
       amountToInvest,
@@ -258,7 +267,9 @@ module.exports = async function investIntoETO() {
       )} ETH`,
     );
     if (txFee > accountETHBalance) {
-      throw new Error(`You don't have enough ETH for on your account.`);
+      throw new Error(
+        `You don't have enough ETH on your account to perform investment transaction.`,
+      );
     }
     txInfo = await euroToken.transfer["address,uint256,bytes"](options.eto, amountToInvest, "", {
       from: account,
