@@ -66,9 +66,6 @@ module.exports = async function investIntoETO() {
     console.log("where definition is a file path or url to eto listing api");
     throw e;
   }
-  // TODO: remove it just for dev
-  options.eto = "0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae";
-  options.universe = "0x9bad13807cd939c7946008e3772da819bd98fa7b";
   const CONFIG = getConfig(web3, options.network, []);
 
   // Preparing contract instances
@@ -121,8 +118,7 @@ module.exports = async function investIntoETO() {
   // Get account that will be used to invest, obtain currency balances and KYC status
   // TODO: check how it can work with fixtures. What do we need to use it on .io and later.
   const account = (await getAccounts())[0];
-  // TODO: let is just for dev delete later
-  let [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
+  const [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
     getBalance(account),
     etherToken.balanceOf(account),
     euroToken.balanceOf(account),
@@ -182,6 +178,7 @@ module.exports = async function investIntoETO() {
     throw new Error("Account is not eligible to invest");
   }
 
+  console.log("----------------------------------");
   if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
     throw new Error("Aborting!");
   }
@@ -204,17 +201,17 @@ module.exports = async function investIntoETO() {
     console.log(`Defaulting to gas price ${DEFAULT_GAS_PRICE_GWEI} Gwei`);
     gasPriceGwei = DEFAULT_GAS_PRICE_GWEI;
   }
-  const gasPrice = web3.toWei(gasPriceGwei, "gwei");
+  const gasPrice = new web3.BigNumber(web3.toWei(gasPriceGwei, "gwei"));
 
   const amountToInvest = etherToWei(options.amount);
 
   let txInfo;
   if (options.currency === "ETH") {
     let ethToSend = amountToInvest;
-    if (accountETHTBalance > 0) {
-      ethToSend = amountToInvest - accountETHTBalance;
-      if (ethToSend < 0) {
-        ethToSend = 0;
+    if (accountETHTBalance.gt(0)) {
+      ethToSend = amountToInvest.minus(accountETHTBalance);
+      if (ethToSend.lt(0)) {
+        ethToSend = new web3.BigNumber(0);
       }
     }
     const gasLimit = await etherToken.depositAndTransfer["address,uint256,bytes"].estimateGas(
@@ -227,14 +224,14 @@ module.exports = async function investIntoETO() {
       },
     );
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
-    const txFee = newGasLimit * gasPrice;
+    const txFee = new web3.BigNumber(newGasLimit).times(gasPrice);
     console.log(
       `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
         txFee,
       )} ETH`,
     );
 
-    if (ethToSend + txFee > accountETHBalance) {
+    if (ethToSend.add(txFee).gt(accountETHBalance)) {
       throw new Error(
         `You don't have enough ETH on your account to invest and perform transaction`,
       );
@@ -252,11 +249,7 @@ module.exports = async function investIntoETO() {
       },
     );
   } else {
-    // TODO just for dev - delete later
-    await euroToken.deposit(account, amountToInvest, "", { from: account });
-    accountEURBalance += amountToInvest;
-
-    if (amountToInvest > accountEURBalance) {
+    if (amountToInvest.gt(accountEURBalance)) {
       throw new Error(`You don't have enough EUR to invest`);
     }
 
@@ -269,13 +262,13 @@ module.exports = async function investIntoETO() {
       },
     );
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
-    const txFee = newGasLimit * gasPrice;
+    const txFee = new web3.BigNumber(newGasLimit).times(gasPrice);
     console.log(
       `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
         txFee,
       )} ETH`,
     );
-    if (txFee > accountETHBalance) {
+    if (txFee.gt(accountETHBalance)) {
       throw new Error(
         `You don't have enough ETH on your account to perform investment transaction`,
       );
