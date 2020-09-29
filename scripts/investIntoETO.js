@@ -111,12 +111,8 @@ module.exports = async function investIntoETO() {
 
   // TODO: for nano we need instruction about how to setup derivation paths if user would like to
   //  use non standard one
-  // TODO: should we use web3.eth.accounts for account maybe it could / should be taken from
-  //  truffle? Somehow migrations are using accounts passed into arguments of function but if I
-  //  would use it here it fails. Something to investigate further.
 
   // Get account that will be used to invest, obtain currency balances and KYC status
-  // TODO: check how it can work with fixtures. What do we need to use it on .io and later.
   const account = (await getAccounts())[0];
   const [accountETHBalance, accountETHTBalance, accountEURBalance] = await Promise.all([
     getBalance(account),
@@ -290,15 +286,10 @@ module.exports = async function investIntoETO() {
   const ticket = await eto.investorTicket(account);
   console.log(`EUR equivalent: ${weiToEther(ticket[0]).toString()}`);
   console.log(`NEU reward: ${weiToEther(ticket[1]).toString()}`);
-  console.log(`You will get: ${ticket[2].toString()} ${tokenSymbol} tokens`); // TODO: what is precision here
-  console.log(`You will get: ${weiToEther(ticket[3]).toString()} shares`); // TODO: what is precision here
-  console.log(`Token price: ${weiToEther(ticket[4]).toString()}`); // TODO: round plox
-  console.log(`NEU rate: ${weiToEther(ticket[5]).toString()}`); // TODO: add info about unit [EUR]?
+  console.log(`You will get: ${ticket[2].toString()} ${tokenSymbol} tokens`);
+  console.log(`You will get: ${weiToEther(ticket[3]).toString()} shares`);
+  console.log(`Token price: ${weiToEther(ticket[4]).toString()}`);
+  console.log(`NEU rate: ${weiToEther(ticket[5]).toString()}`);
   console.log(`You spent ETH: ${weiToEther(ticket[6]).toString()}`);
   console.log(`You spent EUR: ${weiToEther(ticket[7]).toString()}`);
-
-  /*
-  What to test happy path that investment happened
-  check if amount and type of token that is entered into command line is correctly transferred and invested.
-   */
 };

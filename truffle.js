@@ -77,6 +77,20 @@ module.exports = {
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
       provider: multiWalletProvider("http://localhost:8545", "localhost"),
     },
+    console_pk_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: consolePKProvider("http://localhost:8545", "console_pk_localhost"),
+    },
+    nano_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: nanoProvider("http://localhost:8545", "44'/60'/0'/0", "nano_localhost"),
+    },
     inprocess: {
       network_id: "*",
       provider: Ganache.provider({
@@ -103,6 +117,17 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
       provider: multiWalletProvider("https://platform.neufund.io/nodes/private", "nf_private_io"),
+    },
+    nano_nf_private_io: {
+      network_id: "17",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: nanoProvider(
+        "https://platform.neufund.io/nodes/private",
+        "44'/60'/0'/0",
+        "nano_nf_private_io",
+      ),
     },
     coverage: {
       network_id: "*",
