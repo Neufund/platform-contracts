@@ -221,11 +221,8 @@ module.exports = async function investIntoETO() {
     );
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
     const txFee = new web3.BigNumber(newGasLimit).times(gasPrice);
-    console.log(
-      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
-        txFee,
-      )} ETH`,
-    );
+    // prettier-ignore
+    console.log(`Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`); // eslint-disable-line max-len
 
     if (ethToSend.add(txFee).gt(accountETHBalance)) {
       throw new Error(
@@ -259,11 +256,8 @@ module.exports = async function investIntoETO() {
     );
     const newGasLimit = Math.round(new web3.BigNumber(gasLimit).times(SAFETY_COEFFICIENT));
     const txFee = new web3.BigNumber(newGasLimit).times(gasPrice);
-    console.log(
-      `Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(
-        txFee,
-      )} ETH`,
-    );
+    // prettier-ignore
+    console.log(`Tx will use ${newGasLimit} units of gas including ${SAFETY_COEFFICIENT} safety coefficient. It will cost ${weiToEther(txFee)} ETH`); // eslint-disable-line max-len
     if (txFee.gt(accountETHBalance)) {
       throw new Error(
         `You don't have enough ETH on your account to perform investment transaction`,
