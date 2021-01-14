@@ -194,7 +194,7 @@ module.exports = async function investIntoETO() {
   console.log(`Are you eligible to invest: ${eligibleToInvest}`);
   console.log(`Minimum ticket: ${weiToEther(contribution[2])}`);
   console.log(`Maximum ticket: ${weiToEther(contribution[3])}`);
-  console.log(`You will get ${contribution[4]} equity tokens`); // TODO: something is not right here in place where investorTicket is displayed we have to use fromWei - invesitgate
+  console.log(`You will get ${contribution[4]} equity tokens`);
   console.log(`Your NEU reward will be: ${weiToEther(contribution[5])}`);
   console.log(`Your investment would fill max cap: ${contribution[6]}`);
 
