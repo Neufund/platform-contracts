@@ -54,6 +54,7 @@ module.exports = async function investIntoETO() {
     { name: "currency", type: String },
     { name: "gas_price", type: Number, description: "in Gwei" },
     { name: "api_key", type: String, description: "Optional api key for defipulse gas station" },
+    { name: "skip_confirmation", type: Boolean },
   ];
 
   const options = commandLineArgs(optionDefinitions);
@@ -111,9 +112,6 @@ module.exports = async function investIntoETO() {
   if (![CommitmentState.Public, CommitmentState.Whitelist].includes(etoState)) {
     throw new Error(`Eto is in state that wont allow investment`);
   }
-
-  // TODO: for nano we need instruction about how to setup derivation paths if user would like to
-  //  use non standard one
 
   // Get account that will be used to invest, obtain currency balances and KYC status
   const account = (await getAccounts())[0];
@@ -196,9 +194,11 @@ module.exports = async function investIntoETO() {
     throw new Error("Account is not eligible to invest");
   }
 
-  console.log("----------------------------------");
-  if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
-    throw new Error("Aborting!");
+  if (!options.skip_confirmation) {
+    console.log("----------------------------------");
+    if (!(await confirm("Are you sure you want to invest? [y/n] "))) {
+      throw new Error("Aborting!");
+    }
   }
 
   console.log("----------------------------------");
