@@ -40,9 +40,6 @@ async function obtainGasPrice(apiKey) {
   return json[GAS_PRICE_SPEED] / 10; // gas station returns price in Gwei multiplied by 10 0_o
 }
 
-// TODO general question is how script should exit in case of problems. Just exit with console.log.
-//  Or maybe throw new Error or specialised errors? It might help with testing.
-
 module.exports = async function investIntoETO() {
   const optionDefinitions = [
     { name: "network", type: String },
