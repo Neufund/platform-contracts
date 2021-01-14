@@ -135,6 +135,15 @@ module.exports = async function investIntoETO() {
     console.log("Account passed KYC");
   }
 
+  const existingTicket = await eto.investorTicket(account);
+  if (existingTicket[6].toNumber() > 0 || existingTicket[7].toNumber() > 0) {
+    console.log(
+      `It's not first investment into this ETO. Already invested ${weiToEther(
+        existingTicket[6],
+      ).toString()} ETH and ${weiToEther(existingTicket[7]).toString()} EUR`,
+    );
+  }
+
   console.log("----------------------------------");
   console.log("Information about investment ticket:");
   console.log(`You want to invest ${options.amount} ${options.currency}`);
@@ -178,7 +187,6 @@ module.exports = async function investIntoETO() {
     contributionAmountToInvest = etherToWei(options.amount);
   }
 
-  // TODO: Think about checking if there was previous investment you can use investorTicket function and see what was there.
   // Calculating contribution
   const contribution = await eto.calculateContribution(account, false, contributionAmountToInvest);
   const eligibleToInvest = contribution[1];
@@ -297,7 +305,7 @@ module.exports = async function investIntoETO() {
   );
 
   console.log("----------------------------------");
-  console.log("Summary of your investment into eto:");
+  console.log("Summary of your total investment into eto:");
   // display investment status
   const ticket = await eto.investorTicket(account);
   console.log(`EUR equivalent: ${weiToEther(ticket[0]).toString()}`);
