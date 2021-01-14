@@ -56,17 +56,16 @@ module.exports = async function investIntoETO() {
     { name: "api_key", type: String, description: "Optional api key for defipulse gas station" },
   ];
 
-  let options;
-  try {
-    options = commandLineArgs(optionDefinitions);
-  } catch (e) {
-    // TODO: somehow this part is not working as suppose to it allows empty parameters
-    console.log(`Invalid command line: ${e}`);
-    console.log("Expected parameters:");
-    console.log(optionDefinitions);
-    console.log("where definition is a file path or url to eto listing api");
-    throw e;
+  const options = commandLineArgs(optionDefinitions);
+  const valid =
+    options.network && options.universe && options.eto && options.amount && options.currency;
+
+  if (!valid) {
+    throw new Error(
+      "You didn't provide every one of required parameters: network, universe, eto, amount, currency",
+    );
   }
+
   const CONFIG = getConfig(web3, options.network, []);
 
   // Preparing contract instances
@@ -162,12 +161,12 @@ module.exports = async function investIntoETO() {
     if (tokenRateExpirationPeriod > tokenRateAge) {
       console.log(
         // eslint-disable-next-line max-len
-        `Age of eth price in token rate oracle is ${tokenRateAge} which is younger then allowed ${tokenRateExpirationPeriod}[s]`,
+        `Age of eth price in token rate oracle is ${tokenRateAge}s which is younger then allowed ${tokenRateExpirationPeriod}s`,
       );
     } else {
       throw new Error(
         // eslint-disable-next-line max-len
-        `Age of eth price in token rate oracle is ${tokenRateAge} which is older then allowed ${tokenRateExpirationPeriod}[s]`,
+        `Age of eth price in token rate oracle is ${tokenRateAge}s which is older then allowed ${tokenRateExpirationPeriod}s`,
       );
     }
 
