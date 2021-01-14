@@ -14,6 +14,7 @@ const confirm = require("node-ask").confirm;
 
 const getAccounts = Promise.promisify(web3.eth.getAccounts);
 const getBalance = Promise.promisify(web3.eth.getBalance);
+const getBlock = Promise.promisify(web3.eth.getBlock);
 const getNetwork = Promise.promisify(web3.version.getNetwork);
 
 const DEFAULT_GAS_PRICE_GWEI = 20; // Default gas price used for dev and stage networks
@@ -70,6 +71,9 @@ module.exports = async function investIntoETO() {
 
   // Preparing contract instances
   const universe = await artifacts.require(CONFIG.artifacts.UNIVERSE).at(options.universe);
+  const platformTerms = await artifacts
+    .require(CONFIG.artifacts.PLATFORM_TERMS)
+    .at(await universe.platformTerms());
   const [etherTokenAddress, euroTokenAddress] = await Promise.all([
     universe.etherToken(),
     universe.euroToken(),
@@ -144,10 +148,29 @@ module.exports = async function investIntoETO() {
   // Computing EUR value of investment
   let contributionAmountToInvest;
   if (options.currency === "ETH") {
+    const tokenRateExpirationPeriod = await platformTerms.TOKEN_RATE_EXPIRES_AFTER();
     const ethAmountWei = etherToWei(options.amount);
-    const exchangeRate = weiToEther(
-      (await tokenExchangeRateOracle.getExchangeRate(etherTokenAddress, euroTokenAddress))[0],
+    const exchangeRateStruct = await tokenExchangeRateOracle.getExchangeRate(
+      etherTokenAddress,
+      euroTokenAddress,
     );
+    const exchangeRate = weiToEther(exchangeRateStruct[0]);
+    const exchangeRateAge = exchangeRateStruct[1].toNumber();
+    const latestBlockTimestamp = (await getBlock("latest")).timestamp;
+    const tokenRateAge = latestBlockTimestamp - exchangeRateAge;
+
+    if (tokenRateExpirationPeriod > tokenRateAge) {
+      console.log(
+        // eslint-disable-next-line max-len
+        `Age of eth price in token rate oracle is ${tokenRateAge} which is younger then allowed ${tokenRateExpirationPeriod}[s]`,
+      );
+    } else {
+      throw new Error(
+        // eslint-disable-next-line max-len
+        `Age of eth price in token rate oracle is ${tokenRateAge} which is older then allowed ${tokenRateExpirationPeriod}[s]`,
+      );
+    }
+
     contributionAmountToInvest = ethAmountWei.times(exchangeRate);
     console.log(
       `You are investing in ETH. It's value in EUR is ${weiToEther(
