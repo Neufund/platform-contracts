@@ -62,6 +62,11 @@ const consolePKProvider = (providerUrl, network) =>
     ? require("./consolePKProvider").consolePKProvider(providerUrl)
     : undefined;
 
+const cmdLinePKProvider = (providerUrl, network) =>
+  process.argv.some(arg => arg === network)
+    ? require("./cmdLinePKProvider").cmdLinePKProvider(providerUrl)
+    : undefined;
+
 // If you change this, also change argument  in './scripts/testrpc.sh'
 // and the configuration of the parity-node
 const gasLimitForDev = 8000000;
@@ -90,6 +95,13 @@ module.exports = {
       gasPrice: 21000000000,
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
       provider: nanoProvider("http://localhost:8545", "44'/60'/0'/0", "nano_localhost"),
+    },
+    cmdline_pk_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: cmdLinePKProvider("http://localhost:8545", "cmdline_pk_localhost"),
     },
     inprocess: {
       network_id: "*",

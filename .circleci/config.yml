@@ -36,6 +36,18 @@ jobs:
       - checkout
       - run: make test-container
 
+  test-invest-into-eto-script:
+    machine:
+      enabled: true
+      image: circleci/classic:edge
+      docker_layer_caching: true
+
+    working_directory: /home/circleci/app
+
+    steps:
+      - checkout
+      - run: make test-invest-into-eto-script
+
   tests:
     machine:
       enabled: true
@@ -87,6 +99,7 @@ workflows:
     jobs:
       - lint-and-build
       - test-container
+      - test-invest-into-eto-script
       - tests
       - coverage
 

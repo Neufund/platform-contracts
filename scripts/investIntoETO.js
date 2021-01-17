@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-/* eslint-disable no-continue */
 
 require("babel-register");
 const commandLineArgs = require("command-line-args");
@@ -43,8 +42,6 @@ async function obtainGasPrice(apiKey) {
 module.exports = async function investIntoETO() {
   const optionDefinitions = [
     { name: "network", type: String },
-    { name: "exec", type: String, multiple: true, defaultOption: true },
-
     { name: "universe", type: String },
     { name: "eto", type: String },
     { name: "amount", type: Number },
@@ -54,7 +51,7 @@ module.exports = async function investIntoETO() {
     { name: "skip_confirmation", type: Boolean },
   ];
 
-  const options = commandLineArgs(optionDefinitions);
+  const options = commandLineArgs(optionDefinitions, { partial: true });
   const valid =
     options.network && options.universe && options.eto && options.amount && options.currency;
 
