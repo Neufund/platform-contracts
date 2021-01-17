@@ -4,17 +4,17 @@
 
 /* eslint-disable no-console */
 require("babel-register");
-
 const commandLineArgs = require("command-line-args");
 const getConfig = require("../migrations/config").getConfig;
 const serializeClaims = require("../test/helpers/identityClaims").serializeClaims;
 const Promise = require("bluebird");
+// eslint-disable-next-line
 const Accounts = require("web3-eth-accounts");
 const getDeployerAccount = require("../migrations/config").getDeployerAccount;
 
 const sendTransaction = Promise.promisify(web3.eth.sendTransaction);
 
-module.exports = async function investIntoETO() {
+module.exports = async function investIntoETOPrepare() {
   const optionDefinitions = [
     { name: "network", type: String },
     { name: "universe", type: String },
@@ -29,11 +29,9 @@ module.exports = async function investIntoETO() {
       "You didn't provide every one of required parameters: network, universe, pk, amount",
     );
   }
-
   const DEPLOYER = getDeployerAccount(options.network, []);
-
-  // const address = '6C1086C292a7E1FdF66C68776eA972038467A370'
   const address = Accounts.prototype.privateKeyToAccount(options.pk).address;
+  console.log("Preparing system for testing investIntoETO script");
   console.log(`Resolved PK to ${address}`);
 
   const CONFIG = getConfig(web3, options.network, []);

@@ -6,7 +6,6 @@ const ProviderEngine = require("web3-provider-engine");
 const Web3Subprovider = require("web3-provider-engine/subproviders/web3.js");
 const HookedWalletEthTxSubprovider = require("web3-provider-engine/subproviders/hooked-wallet-ethtx");
 const inherits = require("util").inherits;
-const readlineSync = require("readline-sync");
 const commandLineArgs = require("command-line-args");
 
 // https://github.com/ethereumjs/ethereumjs-wallet/blob/master/src/provider-engine.js
