@@ -38,7 +38,7 @@ export function cmdLinePKProvider(nodeUrl) {
 
   const optionDefinitions = [{ name: "pk", type: String }];
   const options = commandLineArgs(optionDefinitions, { partial: true });
-  if (!options) {
+  if (!options.pk) {
     throw new Error("Private key wasn't provided. Use --pk paremeter");
   }
 
