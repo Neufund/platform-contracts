@@ -28,4 +28,4 @@ ADD legal legal
 ADD migrations migrations
 RUN mkdir -p test
 ADD test/helpers test/helpers
-ADD mocha.js nanoWeb3Provider.js multiWalletProvider.js truffle.js ./
+ADD mocha.js nanoWeb3Provider.js multiWalletProvider.js cmdLinePKProvider.js consolePKProvider.js truffle.js ./

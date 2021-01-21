@@ -62,6 +62,11 @@ const consolePKProvider = (providerUrl, network) =>
     ? require("./consolePKProvider").consolePKProvider(providerUrl)
     : undefined;
 
+const cmdLinePKProvider = (providerUrl, network) =>
+  process.argv.some(arg => arg === network)
+    ? require("./cmdLinePKProvider").cmdLinePKProvider(providerUrl)
+    : undefined;
+
 // If you change this, also change argument  in './scripts/testrpc.sh'
 // and the configuration of the parity-node
 const gasLimitForDev = 8000000;
@@ -76,6 +81,27 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
       provider: multiWalletProvider("http://localhost:8545", "localhost"),
+    },
+    console_pk_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: consolePKProvider("http://localhost:8545", "console_pk_localhost"),
+    },
+    nano_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: nanoProvider("http://localhost:8545", "44'/60'/0'/0", "nano_localhost"),
+    },
+    cmdline_pk_localhost: {
+      network_id: "*",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: cmdLinePKProvider("http://localhost:8545", "cmdline_pk_localhost"),
     },
     inprocess: {
       network_id: "*",
@@ -103,6 +129,17 @@ module.exports = {
       from: "0x8a194c13308326173423119f8dcb785ce14c732b",
       deploymentConfigOverride: devNetworkDeploymentConfigOverride,
       provider: multiWalletProvider("https://platform.neufund.io/nodes/private", "nf_private_io"),
+    },
+    nano_nf_private_io: {
+      network_id: "17",
+      gas: gasLimitForDev,
+      gasPrice: 21000000000,
+      deploymentConfigOverride: devNetworkDeploymentConfigOverride,
+      provider: nanoProvider(
+        "https://platform.neufund.io/nodes/private",
+        "44'/60'/0'/0",
+        "nano_nf_private_io",
+      ),
     },
     coverage: {
       network_id: "*",
