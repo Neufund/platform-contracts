@@ -156,7 +156,7 @@ module.exports = {
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
       provider: multiWalletProvider(
         // https://platform.neufund.net/nodes/mainnet-fork
-        "http://ethexp2-node.neustg.net:8545",
+        "http://10.15.1.14:8545",
         "forked_live",
       ),
     },
@@ -164,7 +164,7 @@ module.exports = {
       network_id: 72,
       gas: gasLimitForLive,
       provider: nanoProvider(
-        "http://ethexp2-node.neustg.net:8545",
+        "http://10.15.1.14:8545",
         // "44'/60'/0'/1",
         // "44'/60'/105'/2", // eurt legal manager
         "44'/60'/105'/10",
@@ -180,7 +180,7 @@ module.exports = {
       gas: gasLimitForLive,
       deploymentConfigOverride: forkedLiveNetworkDeploymentConfigOverride,
       gasPrice: 10000000000, // 10 gwei /shannon
-      provider: consolePKProvider("http://ethexp2-node.neustg.net:8545", "console_pk_forked_live"),
+      provider: consolePKProvider("http://10.15.1.14:8545", "console_pk_forked_live"),
     },
     live: {
       network_id: 1, // Ethereum public network
