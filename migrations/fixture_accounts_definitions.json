@@ -816,6 +816,36 @@
       "initialEth": 0
     }
   },
+  "INV_ETH_EUR_SMALL_INVESTMENT": {
+    "address": "0x0D2c8711F344FBFe33bbDAD7C27b5F68708292E0",
+    "type": "investor",
+    "identityClaims": {
+      "isVerified": true,
+      "hasBankAccount": true
+    },
+    "seed": "quiz pact audit toddler world grape battle disease private phrase knife uncover random ancient marriage shine like drill long often time myth local child",
+    "derivationPath": "m/44'/60'/0'/0/0",
+    "privateKey": "0x5252778cf319ac7bddf3d033ed876a4cba248686d4ab6c05cd60009bafdac4a5",
+    "balances": {
+      "euroToken": 100,
+      "initialEth": 5
+    },
+    "etoParticipations": {
+      "sale": {
+        "ETOInPayoutState": {
+          "ETH": {
+            "wallet": 0.1
+          },
+          "EUR": {
+            "wallet": 100
+          }
+        }
+      },
+      "claim": [
+        "ETOInPayoutState"
+      ]
+    }
+  },
   "ISSUER_BLANK_QA": {
     "address": "0xd9f858Ad167506a9D25FD6007BcDb7AE61bc5F87",
     "type": "issuer",
