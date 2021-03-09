@@ -28,6 +28,9 @@ tests:
 	EQUITY_TOKEN_DECIMALS=0 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
 	EQUITY_TOKEN_DECIMALS=10 yarn truffle test test/ETO/* test/Company/* test/setup.js --network inprocess_test
 
+test-single:
+	yarn truffle test $(test) test/setup.js --network inprocess_test --migrations_directory migrations_null
+
 test-invest-into-eto-script: container
 	docker run --detach -it -p 8545:8545 --name platform-contracts --rm neufund/platform-contracts yarn testrpc
 	sleep 5

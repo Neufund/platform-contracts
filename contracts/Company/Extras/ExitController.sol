@@ -13,7 +13,7 @@ import "../../Standards/IContractId.sol";
 /*
 To test:
 * Disbursal by nominee
-* 
+*
  */
 
 contract ExitController is
@@ -92,11 +92,11 @@ contract ExitController is
 
     constructor(
         Universe universe,
-        IEquityToken equityToken,
-        address companyLegalRep
+        IEquityToken equityToken
     )
         public
         Agreement(universe.accessPolicy(), universe.forkArbiter())
+        Reclaimable()
     {
         UNIVERSE = universe;
         EURO_TOKEN = UNIVERSE.euroToken();
@@ -115,6 +115,16 @@ contract ExitController is
         return _state;
     }
 
+    function payoutInfo()
+        public
+        constant
+        returns (uint256 exitEquityTokenSupply, uint256 exitAquisitionPriceEurUlps, uint256 manualPayoutResolutionStart)
+    {
+        return (
+            _exitEquityTokenSupply, _exitAquisitionPriceEurUlps, _manualPayoutResolutionStart
+        );
+    }
+
     // calculate how many eurotokens one would receive for the given amount of tokens
     function eligibleProceedsForTokens(uint256 amountTokens)
         public
@@ -124,7 +134,7 @@ contract ExitController is
         if (_state == State.Setup ) {
             return 0;
         }
-        // calculate the amount of eligible proceeds based on the total equity token supply and the 
+        // calculate the amount of eligible proceeds based on the total equity token supply and the
         // acquisition price
         return Math.mul(_exitAquisitionPriceEurUlps, amountTokens) / _exitEquityTokenSupply;
     }
@@ -133,7 +143,7 @@ contract ExitController is
     function eligibleProceedsForInvestor(address investor)
         public
         constant
-        returns (uint256 equityTokens, uint256 proceeds) 
+        returns (uint256 equityTokens, uint256 proceeds)
     {
         equityTokens = 0;
         proceeds = 0;
@@ -160,19 +170,19 @@ contract ExitController is
     /// this can only be done in the funded state
     function tokenFallback(address from, uint256 amount, bytes)
         public
-    {   
-        require(amount > 0, "NF_NOTHING_SENT");
+    {
+        require(amount > 0, "NF_ZERO_TOKENS");
 
         // if we're in the setup state, this contract is waiting
         // for the nominee to send the exit funds
         if (_state == State.Setup) {
             // we only allow eurotokens for this operation
-            require(msg.sender == address(EURO_TOKEN), "NF_ETO_UNK_TOKEN");
+            require(msg.sender == address(EURO_TOKEN), "NF_ETO_INCORRECT_TOKEN");
             // only the nominee may send proceeds to this contract
             require(from == EQUITY_TOKEN.nominee(), "NF_ONLY_NOMINEE");
             // start the payout
             startPayout();
-        }   
+        }
         // when we already are in the closing state, investors can send
         // their tokens to  be burned and converted to euro token
         else if ( _state == State.Payout ) {
@@ -190,36 +200,41 @@ contract ExitController is
     function startManualPayoutResolution()
         public
     {
-        require(msg.sender == EQUITY_TOKEN.nominee(), "NF_NO_ACCESS");
+        require(_state == State.Payout, "NF_INCORRECT_STATE");
+        require(msg.sender == EQUITY_TOKEN.nominee(), "NF_ONLY_NOMINEE");
         transitionTo(State.ManualPayoutResolution);
-        _manualPayoutResolutionStart = block.timestamp;
+        _manualPayoutResolutionStart = EQUITY_TOKEN.currentSnapshotId();
     }
 
     function payoutManually(address lostWallet, address newWallet)
         public
-    {   
+    {
+        // only in manual payout state
+        require(_state == State.ManualPayoutResolution, "NF_INCORRECT_STATE");
         // only the nominee may do manual payouts
-        require(msg.sender == EQUITY_TOKEN.nominee(), "NF_NO_ACCESS");
+        require(msg.sender == EQUITY_TOKEN.nominee(), "NF_ONLY_NOMINEE");
         // we need a valid receiver address
         require(newWallet != 0x0, "NF_INVALID_NEW_WALLET");
         // we can only process wallets that have not been manually resolved yet
         require(payoutManuallyResolved[lostWallet] == false, "NF_ALREADY_PAYED_OUT");
-        require(_state == State.ManualPayoutResolution, "NF_INCORRECT_STATE");
+        // only allow when timestamp has moved to next date
+        require(_manualPayoutResolutionStart < EQUITY_TOKEN.currentSnapshotId(), "NF_WAIT");
 
         (uint256 _tokens, uint256 _proceeds) = eligibleProceedsForInvestor(lostWallet);
+        require(_proceeds > 0, "NF_NO_PROCEEDS");
+
         payoutManuallyResolved[lostWallet] = true;
         EURO_TOKEN.transfer(newWallet, _proceeds, "");
         emit LogProceedsManuallyResolved(lostWallet, newWallet, _tokens, _proceeds);
     }
-    
+
 
     //
     // Implements IContractId
-    // 
+    //
 
-    // TODO!
     function contractId() public pure returns (bytes32 id, uint256 version) {
-        return (0x0, 1);
+        return (0x2d1ac7522107965d7626cc53b73381123e95c12589b64ae4bc7fac5015dc964b, 1);
     }
 
     ////////////////////////
@@ -235,12 +250,12 @@ contract ExitController is
 
     ////////////////////////
     // Private functions
-    ////////////////////////    
+    ////////////////////////
 
     // start the exit when nominee sends exit funds
     function startPayout()
         private
-    {   
+    {
         // get total number of equity tokens
         _exitEquityTokenSupply = EQUITY_TOKEN.totalSupply();
         // get the total exit amount in eur-t for the given euqity tokens
