@@ -104,6 +104,10 @@ contract ExitController is
         _state = State.Setup;
     }
 
+    ////////////////////////
+    // External functions
+    ////////////////////////
+
     //
     // Implements IControllerGovernance
     //
@@ -230,7 +234,7 @@ contract ExitController is
 
 
     //
-    // Implements IContractId
+    // Implements IContractId (neufund-platform:ExitController)
     //
 
     function contractId() public pure returns (bytes32 id, uint256 version) {

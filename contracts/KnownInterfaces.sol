@@ -100,5 +100,8 @@ contract KnownInterfaces {
     // Voting Center keccak256("IVotingCenter")
     bytes4 internal constant KNOWN_INTERFACE_VOTING_CENTER = 0xff5dbb18;
 
+    // Voting Center keccak256("ExitController")
+    bytes4 internal constant KNOWN_INTERFACE_EXIT_CONTROLLER = 0xca32f084;
+
     constructor() internal {}
 }
