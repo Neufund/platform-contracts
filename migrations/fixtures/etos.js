@@ -14,16 +14,52 @@ const getFixtureAccounts = require("./accounts").getFixtureAccounts;
 const fas = getFixtureAccounts();
 
 export const etoFixtures = {
-  null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST, hnwiEtoLiSecurityTerms],
-  [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP, defEtoTerms],
-  [CommitmentState.Whitelist]: [
-    "ETOInWhitelistState",
-    fas.ISSUER_WHITELIST,
-    hnwiEtoDeSecurityTerms,
-  ],
-  [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
-  [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, retailSMEEtoLi],
-  [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, miniEtoLiNominalValueTerms],
-  [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
-  [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
+  ETONoStartDate: {
+    state: null,
+    issuer: fas.ISSUER_SETUP_NO_ST,
+    terms: hnwiEtoLiSecurityTerms,
+  },
+
+  ETOInSetupState: {
+    state: CommitmentState.Setup,
+    issuer: fas.ISSUER_SETUP,
+    terms: defEtoTerms,
+  },
+
+  ETOInWhitelistState: {
+    state: CommitmentState.Whitelist,
+    issuer: fas.ISSUER_WHITELIST,
+    terms: hnwiEtoDeSecurityTerms,
+  },
+
+  ETOInPublicState: {
+    state: CommitmentState.Public,
+    issuer: fas.ISSUER_PUBLIC,
+    terms: miniEtoLiTerms,
+  },
+
+  ETOInSigningState: {
+    state: CommitmentState.Signing,
+    issuer: fas.ISSUER_SIGNING,
+    terms: retailSMEEtoLi,
+  },
+
+  ETOInClaimState: {
+    state: CommitmentState.Claim,
+    issuer: fas.ISSUER_CLAIMS,
+    terms: miniEtoLiNominalValueTerms,
+  },
+
+  ETOInPayoutState: {
+    state: CommitmentState.Payout,
+    issuer: fas.ISSUER_PAYOUT,
+    terms: retailEtoDeVmaTerms,
+  },
+
+  ETOInRefundState: {
+    state: CommitmentState.Refund,
+    issuer: fas.ISSUER_REFUND,
+    terms: defEtoTerms,
+  },
+
 };

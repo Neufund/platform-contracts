@@ -28,24 +28,24 @@ module.exports = function deployContracts(deployer, network, accounts) {
     // deploy library and use single lib for all ETOs
     const govLib = await deployGovLib(artifacts);
     const describedETOs = {};
-    for (const state of Object.keys(etoFixtures)) {
-      const etoVars = etoFixtures[state];
-      const etoTerms = prepareEtoTerms(etoVars[0], etoVars[2]);
+    for (const name of Object.keys(etoFixtures)) {
+      const etoVars = etoFixtures[name];
+      const etoTerms = prepareEtoTerms(name, etoVars.terms);
       console.log(
-        `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
+        `Deploying eto fixture ${name} state ${etoVars.state} issuer ${etoVars.issuer}`,
       );
 
-      const nominee = findNomineeForEto(etoVars[0], fas);
+      const nominee = findNomineeForEto(name, fas);
 
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
         universe,
         nominee,
-        etoVars[1],
+        etoVars.issuer,
         etoTerms,
         fas,
-        parseInt(state, 10),
+        parseInt(etoVars.state, 10),
         govLib,
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
