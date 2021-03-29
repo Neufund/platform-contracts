@@ -76,7 +76,7 @@ contract ExitController is
 
     // exit values get set when exit proceedings start
     uint256 private _exitEquityTokenSupply = 0;
-    uint256 private _exitAquisitionPriceEurUlps = 0;
+    uint256 private _exitAcquisitionPriceEurUlps = 0;
     uint256 private _manualPayoutResolutionStart = 0;
 
     // keep record of manually resolved payout
@@ -108,9 +108,6 @@ contract ExitController is
     // External functions
     ////////////////////////
 
-    //
-    // Implements IControllerGovernance
-    //
     function state()
         public
         constant
@@ -125,7 +122,7 @@ contract ExitController is
         returns (uint256 exitEquityTokenSupply, uint256 exitAquisitionPriceEurUlps, uint256 manualPayoutResolutionStart)
     {
         return (
-            _exitEquityTokenSupply, _exitAquisitionPriceEurUlps, _manualPayoutResolutionStart
+            _exitEquityTokenSupply, _exitAcquisitionPriceEurUlps, _manualPayoutResolutionStart
         );
     }
 
@@ -140,7 +137,7 @@ contract ExitController is
         }
         // calculate the amount of eligible proceeds based on the total equity token supply and the
         // acquisition price
-        return Math.mul(_exitAquisitionPriceEurUlps, amountTokens) / _exitEquityTokenSupply;
+        return Math.mul(_exitAcquisitionPriceEurUlps, amountTokens) / _exitEquityTokenSupply;
     }
 
     // calculate how many eurotokens the user with the given address would receive
@@ -188,7 +185,7 @@ contract ExitController is
             startPayout();
         }
         // when we already are in the closing state, investors can send
-        // their tokens to  be burned and converted to euro token
+        // their tokens to be burned and converted to euro token
         else if ( _state == State.Payout ) {
             // now we only allow conversion of the tokens into neumarks
             require(msg.sender == address(EQUITY_TOKEN), "NF_ETO_UNK_TOKEN");
@@ -228,7 +225,7 @@ contract ExitController is
         require(_proceeds > 0, "NF_NO_PROCEEDS");
 
         payoutManuallyResolved[lostWallet] = true;
-        EURO_TOKEN.transfer(newWallet, _proceeds, "");
+        require(EURO_TOKEN.transfer(newWallet, _proceeds, ""));
         emit LogProceedsManuallyResolved(lostWallet, newWallet, _tokens, _proceeds);
     }
 
@@ -263,7 +260,7 @@ contract ExitController is
         // get total number of equity tokens
         _exitEquityTokenSupply = EQUITY_TOKEN.totalSupply();
         // get the total exit amount in eur-t for the given euqity tokens
-        _exitAquisitionPriceEurUlps = EURO_TOKEN.balanceOf(this);
+        _exitAcquisitionPriceEurUlps = EURO_TOKEN.balanceOf(this);
         // mark the company as closing, in our case this means "exiting"
         transitionTo(State.Payout);
     }
@@ -274,7 +271,7 @@ contract ExitController is
     {
         // payout euro tokens to investor
         uint256 _eligibleProceeds = eligibleProceedsForTokens(equityTokenAmount);
-        EURO_TOKEN.transfer(investor, _eligibleProceeds, "");
+        require(EURO_TOKEN.transfer(investor, _eligibleProceeds, ""));
         emit LogProceedsPayed(investor, equityTokenAmount, _eligibleProceeds);
     }
 
