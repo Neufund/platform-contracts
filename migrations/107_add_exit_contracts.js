@@ -12,6 +12,7 @@ const fs = require("fs");
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
 
+  if (CONFIG.shouldSkipStep(__filename)) return;
   if (CONFIG.isLiveDeployment) return;
 
   deployer.then(async () => {
