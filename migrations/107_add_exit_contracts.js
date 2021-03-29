@@ -60,12 +60,12 @@ module.exports = function deployContracts(deployer, network, accounts) {
         });
 
         // verify that payout has started
-        const state = await exitController.state();
+        const state = (await exitController.state()).toNumber();
         if (state !== 1) {
-          throw new Error("ExitController in incorrect state after deployment");
+          throw new Error(`ExitController in incorrect state ${state} after deployment`);
         }
 
-        console.log(`Validate exit controller state is ${state}`);
+        console.log(`Validated exit controller state is ${state}`);
 
         // save exit controller
         exitControllers[name] = stringify({
