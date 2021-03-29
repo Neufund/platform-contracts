@@ -56,6 +56,13 @@ export const etoFixtures = {
     terms: retailEtoDeVmaTerms,
   },
 
+  ETOInPayoutStateWithExitContract: {
+    state: CommitmentState.Payout,
+    issuer: fas.ISSUER_EXIT,
+    terms: retailEtoDeVmaTerms,
+    hasExitContract: true
+  },
+
   ETOInRefundState: {
     state: CommitmentState.Refund,
     issuer: fas.ISSUER_REFUND,

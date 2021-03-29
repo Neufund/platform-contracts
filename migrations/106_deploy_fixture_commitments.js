@@ -422,7 +422,7 @@ async function simulateETO(
       CONFIG,
       universe,
       etoCommitment,
-      amountMinTokensEur,
+      amountMinTokensEur.minus(totalInvestment[0]),
       "EUR",
     );
   }

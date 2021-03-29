@@ -418,7 +418,7 @@ export async function deployWhitelist(
     priceFracs.push(Q18.mul(parsedPriceFrac));
     console.log(
       // eslint-disable-next-line max-len
-      `Will add ${ticket.address} with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
+      `Will add whitelist ${ticket.address} with ${parsedDiscountAmount} and price fraction ${parsedPriceFrac}`,
     );
   }
   console.log(`Adding ${addresses.length}`);
