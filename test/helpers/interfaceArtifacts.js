@@ -42,6 +42,7 @@ export const interfaceToArtifacts = {
   [keyToKey.equityTokenControllerInterface]: [artifacts.EQUITY_TOKEN_CONTROLLER, ""],
   [keyToKey.termsInterface]: [artifacts.STANDARD_ETO_TERMS, ""],
   [keyToKey.etoTermsConstraints]: [artifacts.ETO_TERMS_CONSTRAINTS, ""],
+  [keyToKey.exitController]: [artifacts.EXIT_CONTROLLER, ""],
 };
 
 // verify all known interfaces are mapped

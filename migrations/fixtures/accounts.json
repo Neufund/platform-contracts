@@ -1717,7 +1717,8 @@
     "address": "0x5A72Dce8025165C416F77739c157403E978738dE",
     "type": "nominee",
     "balances": {
-      "initialEth": 100
+      "initialEth": 100,
+      "euroToken": 20000000
     },
     "identityClaims": {
       "isVerified": true,

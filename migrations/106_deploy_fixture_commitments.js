@@ -31,9 +31,7 @@ module.exports = function deployContracts(deployer, network, accounts) {
     for (const name of Object.keys(etoFixtures)) {
       const etoVars = etoFixtures[name];
       const etoTerms = prepareEtoTerms(name, etoVars.terms);
-      console.log(
-        `Deploying eto fixture ${name} state ${etoVars.state} issuer ${etoVars.issuer}`,
-      );
+      console.log(`Deploying eto fixture ${name} state ${etoVars.state} issuer ${etoVars.issuer}`);
 
       const nominee = findNomineeForEto(name, fas);
 
