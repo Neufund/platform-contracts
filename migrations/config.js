@@ -3,7 +3,7 @@ const deployableArtifacts = require("../test/helpers/artifacts").artifacts;
 const path = require("path");
 const networks = require("../truffle.js").networks;
 
-export { constraints } from "./configETOTermsFixtures";
+export { constraints } from "./fixtures/eto_terms_constraints";
 
 export function getDeployerAccount(network, accounts) {
   const netDefinitions = networks[network];

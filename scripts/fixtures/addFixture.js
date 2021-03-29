@@ -12,7 +12,7 @@ const validateNumber = text => {
 };
 (function addFixture() {
   const args = process.argv.slice(2);
-  const fixturesDataPath = `${__dirname}/../../migrations/fixture_accounts_definitions.json`;
+  const fixturesDataPath = `${__dirname}/../../migrations/fixtures/accounts.json`;
   const accounts = JSON.parse(fs.readFileSync(fixturesDataPath));
 
   const etoList = [

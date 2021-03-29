@@ -29,6 +29,8 @@ export const artifacts = {
   ETO_TERMS_CONSTRAINTS: "ETOTermsConstraints",
   VOTING_CENTER: "VotingCenter",
   VOTING_CENTER_CONTROLLER: "VotingController",
+  EXIT_CONTROLLER: "ExitController",
+
   // not implemented
   // PLATFORM_PORTFOLIO: "IPlatformPortfolio"
 };

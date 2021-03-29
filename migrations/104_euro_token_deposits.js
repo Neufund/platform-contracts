@@ -1,6 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./fixtures/accounts").getFixtureAccounts;
 const getDeployerAccount = require("./config").getDeployerAccount;
 
 module.exports = function deployContracts(deployer, network, accounts) {

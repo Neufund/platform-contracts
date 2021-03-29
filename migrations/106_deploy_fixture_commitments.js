@@ -2,24 +2,16 @@ require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
 const { getConfig, getDeployerAccount } = require("./config");
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./fixtures/accounts").getFixtureAccounts;
 const { deployETO, deployGovLib, checkETO, deployWhitelist } = require("./deployETO");
 const { shiftBackTime } = require("./helpers");
-const {
-  prepareEtoTerms,
-  defEtoTerms,
-  hnwiEtoDeSecurityTerms,
-  retailEtoDeVmaTerms,
-  miniEtoLiTerms,
-  miniEtoLiNominalValueTerms,
-  hnwiEtoLiSecurityTerms,
-  retailSMEEtoLi,
-} = require("./configETOFixtures");
+const { prepareEtoTerms } = require("./fixtures/eto_terms");
 const { knownInterfaces } = require("../test/helpers/knownInterfaces");
 const { dayInSeconds, Q18, decimalBase } = require("../test/helpers/constants");
 const stringify = require("../test/helpers/utils").stringify;
 const CommitmentState = require("../test/helpers/commitmentState").CommitmentState;
 const toChecksumAddress = require("web3-utils").toChecksumAddress;
+const { etoFixtures } = require("./fixtures/etos");
 
 module.exports = function deployContracts(deployer, network, accounts) {
   const CONFIG = getConfig(web3, network, accounts);
@@ -32,41 +24,26 @@ module.exports = function deployContracts(deployer, network, accounts) {
 
   deployer.then(async () => {
     const universe = await Universe.deployed();
-    const etoFixtures = {
-      null: ["ETONoStartDate", fas.ISSUER_SETUP_NO_ST, hnwiEtoLiSecurityTerms],
-      [CommitmentState.Setup]: ["ETOInSetupState", fas.ISSUER_SETUP, defEtoTerms],
-      [CommitmentState.Whitelist]: [
-        "ETOInWhitelistState",
-        fas.ISSUER_WHITELIST,
-        hnwiEtoDeSecurityTerms,
-      ],
-      [CommitmentState.Public]: ["ETOInPublicState", fas.ISSUER_PUBLIC, miniEtoLiTerms],
-      [CommitmentState.Signing]: ["ETOInSigningState", fas.ISSUER_SIGNING, retailSMEEtoLi],
-      [CommitmentState.Claim]: ["ETOInClaimState", fas.ISSUER_CLAIMS, miniEtoLiNominalValueTerms],
-      [CommitmentState.Payout]: ["ETOInPayoutState", fas.ISSUER_PAYOUT, retailEtoDeVmaTerms],
-      [CommitmentState.Refund]: ["ETOInRefundState", fas.ISSUER_REFUND, defEtoTerms],
-    };
+
     // deploy library and use single lib for all ETOs
     const govLib = await deployGovLib(artifacts);
     const describedETOs = {};
-    for (const state of Object.keys(etoFixtures)) {
-      const etoVars = etoFixtures[state];
-      const etoTerms = prepareEtoTerms(etoVars[0], etoVars[2]);
-      console.log(
-        `Deploying eto fixture ${etoVars[0]} state ${state} issuer ${etoVars[1].address}`,
-      );
+    for (const name of Object.keys(etoFixtures)) {
+      const etoVars = etoFixtures[name];
+      const etoTerms = prepareEtoTerms(name, etoVars.terms);
+      console.log(`Deploying eto fixture ${name} state ${etoVars.state} issuer ${etoVars.issuer}`);
 
-      const nominee = findNomineeForEto(etoVars[0], fas);
+      const nominee = findNomineeForEto(name, fas);
 
       const etoCommitment = await simulateETO(
         DEPLOYER,
         CONFIG,
         universe,
         nominee,
-        etoVars[1],
+        etoVars.issuer,
         etoTerms,
         fas,
-        parseInt(state, 10),
+        parseInt(etoVars.state, 10),
         govLib,
       );
       await checkETO(artifacts, CONFIG, etoCommitment.address);
@@ -443,7 +420,7 @@ async function simulateETO(
       CONFIG,
       universe,
       etoCommitment,
-      amountMinTokensEur,
+      amountMinTokensEur.minus(totalInvestment[0]),
       "EUR",
     );
   }

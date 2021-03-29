@@ -1,6 +1,6 @@
 require("babel-register");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./fixtures/accounts").getFixtureAccounts;
 const Q18 = require("../test/helpers/constants").Q18;
 const promisify = require("../test/helpers/utils").promisify;
 const { loadEtoFixtures, getEtoFixtureByName } = require("./helpers");

@@ -227,6 +227,10 @@
           "discountAmount": 500000,
           "discount": 0.5
         },
+        "ETOInPayoutStateWithExitContract": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
         "ETOInRefundState": {
           "discountAmount": 500000,
           "discount": 0.5
@@ -279,6 +283,10 @@
           "discountAmount": 500000,
           "discount": 0.5
         },
+        "ETOInPayoutStateWithExitContract": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
         "ETOInRefundState": {
           "discountAmount": 500000,
           "discount": 0.5
@@ -328,6 +336,10 @@
           "discount": 0.5
         },
         "ETOInPayoutState": {
+          "discountAmount": 500000,
+          "discount": 0.5
+        },
+        "ETOInPayoutStateWithExitContract": {
           "discountAmount": 500000,
           "discount": 0.5
         },
@@ -388,13 +400,19 @@
             "wallet": 9082.2812
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "icbm": 5.71621,
+            "wallet": 9082.2812
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "icbm": 3.71621
           }
         }
       },
-      "claim": ["ETOInPayoutState"]
+      "claim": ["ETOInPayoutState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP": {
@@ -445,13 +463,18 @@
             "icbm": 3.71621
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "icbm": 3.71621
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "icbm": 3.71621
           }
         }
       },
-      "claim": ["ETOInPayoutState"]
+      "claim": ["ETOInPayoutState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_2": {
@@ -505,13 +528,21 @@
             "wallet": 2000000.23
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "icbm": 3.71621
+          },
+          "EUR": {
+            "wallet": 2000000.23
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "icbm": 3.71621
           }
         }
       },
-      "claim": ["ETOInPayoutState"]
+      "claim": ["ETOInPayoutState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_ICBM_ETH_M_HAS_KYC_DUP_HAS_NEURO": {
@@ -562,13 +593,18 @@
             "icbm": 3.71621
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "icbm": 3.71621
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "icbm": 3.71621
           }
         }
       },
-      "claim": ["ETOInPayoutState"]
+      "claim": ["ETOInPayoutState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_ICBM_EUR_M_HAS_KYC": {
@@ -618,6 +654,11 @@
             "icbm": 100000
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "EUR": {
+            "icbm": 100000
+          }
+        },
         "ETOInRefundState": {
           "EUR": {
             "icbm": 100000
@@ -663,6 +704,10 @@
           "discountAmount": 0,
           "discount": 0
         },
+        "ETOInPayoutStateWithExitContract": {
+          "discountAmount": 0,
+          "discount": 0
+        },
         "ETOInRefundState": {
           "discountAmount": 0,
           "discount": 0
@@ -697,6 +742,14 @@
             "wallet": 27611.21
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "wallet": 289
+          },
+          "EUR": {
+            "wallet": 27611.21
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "wallet": 289
@@ -706,7 +759,7 @@
           }
         }
       },
-      "claim": ["ETOInClaimState"]
+      "claim": ["ETOInClaimState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_HAS_EUR_HAS_KYC_2": {
@@ -746,6 +799,10 @@
           "discountAmount": 0,
           "discount": 0
         },
+        "ETOInPayoutStateWithExitContract": {
+          "discountAmount": 0,
+          "discount": 0
+        },
         "ETOInRefundState": {
           "discountAmount": 0,
           "discount": 0
@@ -777,6 +834,11 @@
             "wallet": 289
           }
         },
+        "ETOInPayoutStateWithExitContract": {
+          "ETH": {
+            "wallet": 289
+          }
+        },
         "ETOInRefundState": {
           "ETH": {
             "wallet": 289
@@ -786,7 +848,7 @@
           }
         }
       },
-      "claim": ["ETOInClaimState"]
+      "claim": ["ETOInClaimState", "ETOInPayoutStateWithExitContract"]
     }
   },
   "INV_HAS_ETH_T_NO_KYC": {
@@ -953,6 +1015,21 @@
       "initialEth": 5
     },
     "notes": "etoissuer4"
+  },
+  "ISSUER_EXIT": {
+    "address": "0x990E4B3B0BDA3389F535750EB19eE1887D884F4D",
+    "type": "issuer",
+    "identityClaims": {
+      "isVerified": true
+    },
+    "seed": "keep unhappy metal drum body cliff call nature comfort nurse guess sea flame mimic kingdom lecture rabbit husband tape habit talk potato front buyer",
+    "derivationPath": "m/44'/60'/0'/0",
+    "privateKey": "0x655766fa61f198b8696790d0cbf4b8fa3c6f80418c91d6494e17a3a153874782",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 5
+    }
   },
   "ISSUER_REFUND": {
     "address": "0x51305B1CC683dedF60b39E92AeF52f4e09E9E781",
@@ -1640,14 +1717,15 @@
     "address": "0x5A72Dce8025165C416F77739c157403E978738dE",
     "type": "nominee",
     "balances": {
-      "initialEth": 100
+      "initialEth": 100,
+      "euroToken": 20000000
     },
     "identityClaims": {
       "isVerified": true,
       "hasBankAccount": true,
       "isSophisticatedInvestor": false
     },
-    "notarizes": ["ETOInPayoutState"]
+    "notarizes": ["ETOInPayoutState", "ETOInPayoutStateWithExitContract"]
   },
   "NOMINEE_REFUND": {
     "seed": "process cherry royal law capable neck depart state gym rib casual swamp recipe pony defy clay boring prevent receive liquid wife census venue trip",
