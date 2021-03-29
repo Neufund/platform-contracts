@@ -954,6 +954,21 @@
     },
     "notes": "etoissuer4"
   },
+  "ISSUER_EXIT": {
+    "address": "0x990E4B3B0BDA3389F535750EB19eE1887D884F4D",
+    "type": "issuer",
+    "identityClaims": {
+      "isVerified": true
+    },
+    "seed": "keep unhappy metal drum body cliff call nature comfort nurse guess sea flame mimic kingdom lecture rabbit husband tape habit talk potato front buyer",
+    "derivationPath": "m/44'/60'/0'/0",
+    "privateKey": "0x655766fa61f198b8696790d0cbf4b8fa3c6f80418c91d6494e17a3a153874782",
+    "balances": {
+      "etherToken": 0,
+      "euroToken": 0,
+      "initialEth": 5
+    }
+  },
   "ISSUER_REFUND": {
     "address": "0x51305B1CC683dedF60b39E92AeF52f4e09E9E781",
     "type": "issuer",

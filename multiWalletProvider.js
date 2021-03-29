@@ -5,7 +5,7 @@ const Web3Subprovider = require("web3-provider-engine/subproviders/web3.js");
 const HookedWalletEthTxSubprovider = require("web3-provider-engine/subproviders/hooked-wallet-ethtx");
 const Wallet = require("ethereumjs-wallet");
 
-const getFixtureAccounts = require("./migrations/getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./migrations/fixtures/accounts").getFixtureAccounts;
 
 const inherits = require("util").inherits;
 

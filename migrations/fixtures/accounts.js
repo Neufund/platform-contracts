@@ -2,7 +2,7 @@ import fromPairs from "lodash";
 
 const fs = require("fs");
 
-const fixturesDataPath = `${__dirname}/fixture_accounts_definitions.json`;
+const fixturesDataPath = `${__dirname}/accounts.json`;
 const accounts = JSON.parse(fs.readFileSync(fixturesDataPath));
 
 const createFixtures = () => {

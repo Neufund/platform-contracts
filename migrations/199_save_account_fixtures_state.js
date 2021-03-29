@@ -1,7 +1,7 @@
 require("babel-register");
 const fs = require("fs");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./fixtures/accounts").getFixtureAccounts;
 const stringify = require("../test/helpers/utils").stringify;
 const { join } = require("path");
 const promisify = require("../test/helpers/utils").promisify;

@@ -2,7 +2,7 @@ require("babel-register");
 const fs = require("fs");
 const { join } = require("path");
 const getConfig = require("./config").getConfig;
-const getFixtureAccounts = require("./getFixtureAccounts").getFixtureAccounts;
+const getFixtureAccounts = require("./fixtures/accounts").getFixtureAccounts;
 const { GovAction, GovExecutionState } = require("../test/helpers/govState");
 const { shareCapitalToTokens } = require("../test/helpers/govUtils");
 const { loadEtoFixtures, getEtoFixtureByName, shiftBackTime } = require("./helpers");

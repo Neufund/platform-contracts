@@ -1,9 +1,9 @@
-import { web3, Q18 } from "../test/helpers/constants";
+import { web3, Q18 } from "../../test/helpers/constants";
 import {
   OfferingDocumentType,
   OfferingDocumentSubType,
   AssetType,
-} from "../test/helpers/termsConstants";
+} from "../../test/helpers/termsConstants";
 
 export const constraints = [
   {

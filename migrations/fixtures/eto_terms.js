@@ -1,7 +1,7 @@
-import { web3, decimalBase, Q18, daysToSeconds } from "../test/helpers/constants";
-import { recoverBigNumbers } from "../test/helpers/utils";
+import { web3, decimalBase, Q18, daysToSeconds } from "../../test/helpers/constants";
+import { recoverBigNumbers } from "../../test/helpers/utils";
 
-const getETOConstraintFixtureAndAddressByName = require("./configETOTermsFixtures")
+const getETOConstraintFixtureAndAddressByName = require("./eto_terms_constraints")
   .getFixtureAndAddressByName;
 
 // standard 18 decimals scale
