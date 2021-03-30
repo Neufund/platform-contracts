@@ -37,8 +37,8 @@ test-invest-into-eto-script: container
 	docker exec platform-contracts yarn build
 	$(MAKE) deploy
 	docker exec platform-contracts yarn truffle exec scripts/investIntoETOPrepare.js --network localhost --universe 0x9bad13807cd939c7946008e3772da819bd98fa7b --pk 0x44bdba69b6ca73889a8580e6968349677ed577bea3fa417c142bcc57cdcedd5b --amount 15
-	docker exec platform-contracts yarn truffle exec scripts/investIntoETO.js --network cmdline_pk_localhost  --universe 0x9bad13807cd939c7946008e3772da819bd98fa7b --pk 0x44bdba69b6ca73889a8580e6968349677ed577bea3fa417c142bcc57cdcedd5b --eto 0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae --amount 10 --currency ETH --skip_confirmation
-	docker exec platform-contracts yarn truffle exec scripts/investIntoETOCheck.js --network cmdline_pk_localhost  --pk 0x44bdba69b6ca73889a8580e6968349677ed577bea3fa417c142bcc57cdcedd5b --eto 0x52e3f3Dd59A8931dd95Eb60160B3ec4fA85EdBae --amount 10
+	docker exec platform-contracts yarn truffle exec scripts/investIntoETO.js --network cmdline_pk_localhost  --universe 0x9bad13807cd939c7946008e3772da819bd98fa7b --pk 0x44bdba69b6ca73889a8580e6968349677ed577bea3fa417c142bcc57cdcedd5b --eto 0x048046BeFE77b1c2cc48181c137709d7d9B4a7Aa --amount 10 --currency ETH --skip_confirmation
+	docker exec platform-contracts yarn truffle exec scripts/investIntoETOCheck.js --network cmdline_pk_localhost  --pk 0x44bdba69b6ca73889a8580e6968349677ed577bea3fa417c142bcc57cdcedd5b --eto 0x048046BeFE77b1c2cc48181c137709d7d9B4a7Aa --amount 10
 	$(MAKE) down
 
 coverage:
