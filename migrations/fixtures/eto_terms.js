@@ -153,6 +153,11 @@ export const retailEtoDeVmaTerms = {
   companyTokenHolderAgreement: "ipfs:QmdMo4GqAsZVyXBh6iJsL4n2DqrEjehMaJbjZBCAaMzD1Q",
 };
 
+export const retailEtoDeVmaTermsTransferable = Object.assign({}, retailEtoDeVmaTerms);
+retailEtoDeVmaTermsTransferable.etoTerms = Object.assign({}, retailEtoDeVmaTerms.etoTerms);
+retailEtoDeVmaTermsTransferable.etoTerms.ENABLE_TRANSFERS_ON_SUCCESS = true;
+retailEtoDeVmaTermsTransferable.etoTermsConstraints = "retail eto li security";
+
 export const miniEtoLiTerms = {
   etoTerms: {
     SHARE_CAPITAL_CURRENCY_CODE: "EUR",
