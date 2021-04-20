@@ -214,15 +214,16 @@ module.exports = {
       network_id: 1,
       gas: 500000,
       provider: nanoProvider(
-        "https://ndfull.neufund.org/",
+        "https://nd.neufund.org/",
         // "44'/60'/0'/0",
         // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
         // "44'/60'/105'/0", // legal rep (M)
-        "44'/60'/105'/2", // eurt legal manager (M)
+        // "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
         // "44'/60'/105'/10", //ETO DEPLOYER
-        // "44'/60'/106'/16",
+        // "44'/60'/106'/16", 
+        "44'/60'/105'/12", // voting intiator  (A)
         "nano_live",
       ),
       deploymentConfigOverride: {
@@ -269,6 +270,18 @@ module.exports = {
         accounts: Array(100).fill({ balance: "12300000000000000000000000" }),
         hardfork: "muirGlacier",
       }),
+    },
+    // local forking
+    // yarn run ganache-cli --fork <use full archive node url here>@12238177 --unlock "0xABa4430574f2353C0A22Ca4CF2d4a122f0031245"
+    local_fork_live: {
+      network_id: 1,
+      host: "localhost",
+      port: 8545,
+      deploymentConfigOverride: {
+        ICBM_COMMITMENT_ADDRESS: "0xf432cec23b2a0d6062b969467f65669de81f4653",
+        UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
+        ISOLATED_UNIVERSE: false,
+      },
     },
   },
 };
