@@ -2,6 +2,7 @@ const {
   defEtoTerms,
   hnwiEtoDeSecurityTerms,
   retailEtoDeVmaTerms,
+  retailEtoDeVmaTermsTransferable,
   miniEtoLiTerms,
   miniEtoLiNominalValueTerms,
   hnwiEtoLiSecurityTerms,
@@ -59,7 +60,7 @@ export const etoFixtures = {
   ETOInPayoutStateWithExitContract: {
     state: CommitmentState.Payout,
     issuer: fas.ISSUER_EXIT,
-    terms: retailEtoDeVmaTerms,
+    terms: retailEtoDeVmaTermsTransferable,
     exit: "11000000", // 11 mio
   },
 
