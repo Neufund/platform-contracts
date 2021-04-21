@@ -222,8 +222,8 @@ module.exports = {
         // "44'/60'/105'/2", // eurt legal manager (M)
         // "44'/60'/105'/11", //DEPLOYER (admin)
         // "44'/60'/105'/10", //ETO DEPLOYER
-        // "44'/60'/106'/16", 
-        "44'/60'/105'/12", // voting intiator  (A)
+        // "44'/60'/106'/16"
+        "44'/60'/105'/12", // voting initiator  (A)
         "nano_live",
       ),
       deploymentConfigOverride: {
