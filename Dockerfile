@@ -17,7 +17,7 @@ RUN mkdir -p /usr/src/platform-contracts && chmod 777 /usr/src/platform-contract
 WORKDIR /usr/src/platform-contracts
 # only things required by yarn install
 ADD .babelrc package.json yarn.lock ./
-RUN yarn --production
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 yarn --production
 # all other files
 ADD bin/solc.4.26 /usr/bin/
 ADD scripts scripts
