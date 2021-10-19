@@ -208,13 +208,13 @@ module.exports = {
         UNIVERSE_ADDRESS: "0x82fb5126506b6c315fa4a7ae3d4cb8a46a1aae67",
         ISOLATED_UNIVERSE: false,
       },
-      provider: consolePKProvider("https://platform.neufund.org/nodes/mainnet", "console_pk_live"),
+      provider: consolePKProvider("https://platform.neufund.org/node", "console_pk_live"),
     },
     nano_live: {
       network_id: 1,
       gas: 500000,
       provider: nanoProvider(
-        "https://ndfull.neufund.org/",
+        "https://platform.neufund.org/node",
         // "44'/60'/0'/0",
         // "44'/60'/105'/7", // identity management (A)
         // "44'/60'/105'/3", // reclaimer
